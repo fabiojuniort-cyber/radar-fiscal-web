@@ -45,7 +45,7 @@ A página reserva os campos:
 - importadas hoje;
 - total no Acervo.
 
-Nenhum endpoint foi inventado. Sem contrato público, métricas exibem `—`. Status estáticos do draft são conservadores: federais em **Em validação**, SP em **Em validação** e demais UFs em **Em implantação**, sem promover fonte a Online sem evidência.
+Nenhum endpoint foi inventado. Sem contrato público ativo no frontend, **status operacional e métricas exibem `—`**. Os rótulos permitidos quando a API estiver disponível são **Online / Em validação / Em implantação**.
 
 ## Sonar
 
@@ -69,7 +69,7 @@ O header usa a assinatura horizontal oficial `tribusca-logo-horizontal-light.png
 - requisitos de senha em tempo real;
 - seleção do carrossel com SP fixo em primeiro;
 - 27 cards estaduais na Cobertura;
-- placeholders sem API;
+- status e métricas como placeholders sem API;
 - presença do carrossel Decodifica.
 
 ## Pendências
