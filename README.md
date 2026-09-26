@@ -1,5 +1,31 @@
 # TriBusca — frontend definitivo
 
-Este repositório foi reservado para o frontend definitivo do TriBusca. Ainda não há implementação da aplicação aqui. O protótipo Railway não é a fonte do código deste repositório.
+Primeira frente pública iniciada pela **WEB-01**.
 
-Antes de iniciar uma frente, leia [AGENTS.md](AGENTS.md), o [contexto do frontend](https://github.com/fabiojuniort-cyber/tribusca-control/blob/main/contexts/WEB.md), o [estado oficial](https://github.com/fabiojuniort-cyber/tribusca-control/blob/main/PROJECT_STATE.md) e a Issue atribuída na [central de governança](https://github.com/fabiojuniort-cyber/tribusca-control). O código aprovado futuramente e os contratos reais do backend devem ser validados na execução.
+## Escopo atual
+
+Site público estático em React + TypeScript + Vite com:
+
+- Home;
+- Portfólio;
+- página temática Reforma Tributária;
+- apresentação conceitual de Sonar, Revela, Decodifica e Acervo;
+- linguagem visual de proximidade do Sonar;
+- Brand Kit oficial do TriBusca.
+
+Os recursos do produto autenticado continuam **em desenvolvimento**. Este frontend não implementa API, autenticação, matching real, créditos reais, envio de e-mail ou conteúdo dinâmico do Acervo.
+
+## Desenvolvimento
+
+```bash
+npm install
+npm run dev
+npm run typecheck
+npm run build
+```
+
+## Governança
+
+- Issue: https://github.com/fabiojuniort-cyber/tribusca-control/issues/8
+- Produto: https://github.com/fabiojuniort-cyber/tribusca-control/issues/7
+- Manual de Marca: `tribusca-control/docs/BRAND_MANUAL_V1.md`
