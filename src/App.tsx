@@ -1,81 +1,133 @@
+import * as Dialog from '@radix-ui/react-dialog'
+import { useMutation } from '@tanstack/react-query'
 import {
+  ArrowLeft,
   ArrowRight,
   BellRing,
   BookOpen,
-  CalendarClock,
+  Building2,
   Check,
+  CircleHelp,
   FileSearch,
-  Landmark,
   Layers3,
+  MonitorCheck,
   RadioTower,
   Search,
   ShieldCheck,
   Sparkles,
+  X,
 } from 'lucide-react'
+import { FormEvent, useMemo, useState } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
-const productItems = [
+import {
+  DECODIFICA_EXAMPLES,
+  FEDERAL_COVERAGE,
+  STATE_COVERAGE,
+  selectFeaturedStates,
+} from './content'
+import { getPasswordChecks, isStrongPassword } from './password'
+
+type AuthView = 'login' | 'signup' | 'forgot' | 'reset'
+type SonarLevel = 'high' | 'medium' | 'low'
+
+const products = [
+  {
+    name: 'Acervo',
+    descriptor: 'Base oficial organizada',
+    icon: BookOpen,
+    status: 'Disponível',
+    description: 'Publicações, versões, fontes, marcadores e busca em uma experiência única.',
+  },
+  {
+    name: 'Central de Monitoramento',
+    descriptor: 'Saúde das fontes',
+    icon: MonitorCheck,
+    status: 'Disponível',
+    description: 'Acompanhe consultas, indisponibilidades, falhas, última atualização e cobertura.',
+  },
   {
     name: 'Sonar',
     descriptor: 'Afinidade Tributária',
     icon: RadioTower,
-    text: 'Cruza os sinais da publicação com o perfil tributário da empresa e dos estabelecimentos para indicar Alta, Média ou Baixa afinidade.',
+    status: 'Em desenvolvimento',
+    description: 'Aproxima cada publicação do perfil tributário da empresa e dos estabelecimentos.',
   },
   {
     name: 'Revela',
     descriptor: 'Boletim inteligente',
     icon: BellRing,
-    text: 'Entrega diariamente publicações de Alta afinidade do Sonar e menções diretas à empresa ou aos estabelecimentos.',
+    status: 'Em desenvolvimento',
+    description: 'Entrega diariamente sinais de Alta afinidade e menções diretas.',
   },
   {
     name: 'Decodifica',
-    descriptor: 'Linguagem clara',
+    descriptor: 'Leitura auxiliar',
     icon: Sparkles,
-    text: 'Explica a base legal em linguagem mais clara, sob demanda, mantendo o texto oficial como referência principal.',
+    status: 'Em desenvolvimento',
+    description: 'Apresenta uma leitura mais clara, sempre ao lado da referência oficial.',
   },
   {
-    name: 'Acervo',
-    descriptor: 'Base oficial organizada',
-    icon: BookOpen,
-    text: 'Centraliza publicações, versões, fontes e marcadores. A Busca faz parte da própria experiência do Acervo.',
+    name: 'Perfil Tributário',
+    descriptor: 'Contexto da empresa',
+    icon: Building2,
+    status: 'Em desenvolvimento',
+    description: 'Organiza os atributos usados para contextualizar empresas e estabelecimentos.',
   },
-]
+] as const
 
 function App() {
+  const [authView, setAuthView] = useState<AuthView | null>(null)
+
   return (
     <div className="app-shell">
-      <SiteHeader />
+      <SiteHeader onAuth={setAuthView} />
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomePage onAuth={setAuthView} />} />
+        <Route path="/cobertura" element={<CoveragePage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
+        <Route path="/como-funciona" element={<HowItWorksPage />} />
         <Route path="/reforma-tributaria" element={<TaxReformPage />} />
       </Routes>
       <SiteFooter />
+      <AuthModal view={authView} onView={setAuthView} onClose={() => setAuthView(null)} />
     </div>
   )
 }
 
-function SiteHeader() {
+function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
   return (
     <header className="site-header">
       <div className="container nav-wrap">
         <Link to="/" className="brand-link" aria-label="TriBusca — página inicial">
-          <img src="/brand/tribusca-icon.png" alt="TriBusca" className="brand-icon" />
+          <img
+            src="/brand/tribusca-logo-horizontal-light.png"
+            alt="TriBusca"
+            className="brand-horizontal"
+          />
         </Link>
+
         <nav aria-label="Navegação principal" className="nav-links">
-          <NavLink to="/">Início</NavLink>
+          <NavLink to="/cobertura">Cobertura</NavLink>
           <NavLink to="/portfolio">Portfólio</NavLink>
+          <NavLink to="/como-funciona">Como funciona</NavLink>
           <NavLink to="/reforma-tributaria">Reforma Tributária</NavLink>
         </nav>
-        <a className="btn btn-small" href="#experimentar">
-          Experimentar grátis
-        </a>
+
+        <div className="nav-actions">
+          <button className="btn btn-secondary btn-small" type="button" onClick={() => onAuth('login')}>
+            Entrar
+          </button>
+          <button className="btn btn-small" type="button" onClick={() => onAuth('signup')}>
+            Criar conta
+          </button>
+        </div>
       </div>
     </header>
   )
 }
 
-function HomePage() {
+function HomePage({ onAuth }: { onAuth: (view: AuthView) => void }) {
   return (
     <main>
       <section className="hero">
@@ -84,49 +136,50 @@ function HomePage() {
             <span className="eyebrow">Monitoramento e Inteligência Tributária</span>
             <h1>Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.</h1>
             <p className="hero-copy">
-              O TriBusca organiza publicações oficiais, preserva rastreabilidade e prepara uma camada de
-              inteligência para aproximar cada mudança tributária do contexto real da sua empresa.
+              O TriBusca acompanha fontes oficiais e organiza mudanças tributárias para sua empresa
+              chegar mais rápido ao que merece atenção.
             </p>
             <div className="hero-actions">
-              <Link className="btn" to="/portfolio">
-                Conhecer o portfólio <ArrowRight size={18} />
-              </Link>
-              <Link className="btn btn-secondary" to="/reforma-tributaria">
-                Acompanhar Reforma Tributária
+              <button className="btn" type="button" onClick={() => onAuth('signup')}>
+                Criar conta <ArrowRight size={18} />
+              </button>
+              <Link className="btn btn-secondary" to="/portfolio">
+                Conhecer o portfólio
               </Link>
             </div>
-            <p className="availability-note">
-              Recursos apresentados nesta página estão em desenvolvimento e serão liberados conforme o
-              roadmap do produto.
-            </p>
+            <p className="availability-note">7 dias para conhecer a TriBusca.</p>
           </div>
-          <SonarPreview />
+          <SonarHero />
         </div>
       </section>
+
+      <StateCarousel />
 
       <section className="section">
         <div className="container">
           <SectionHeading
-            eyebrow="Encontre o que importa no meio do ruído"
-            title="Uma base oficial. Diferentes formas de chegar ao que merece atenção."
-            copy="O produto foi desenhado para separar coleta, afinidade, compreensão e entrega — sem misturar fato oficial com inteligência ou IA."
+            eyebrow="Portfólio"
+            title="Uma base oficial. Seis formas de transformar informação em contexto."
+            copy="Cada recurso resolve uma etapa diferente da jornada, sem misturar fato oficial, inteligência TriBusca e conteúdo gerado por IA."
           />
-          <div className="feature-grid">
-            {productItems.map((item) => (
-              <article className="feature-card" key={item.name}>
-                <div className="icon-box"><item.icon size={24} /></div>
-                <div className="feature-title-row">
-                  <h3>{item.name}</h3>
-                  <span className="status-chip">Em desenvolvimento</span>
+          <div className="feature-grid feature-grid-six">
+            {products.map((product) => (
+              <article className="feature-card" key={product.name}>
+                <div className="icon-box">
+                  <product.icon size={24} />
                 </div>
-                <p className="feature-descriptor">{item.descriptor}</p>
-                <p>{item.text}</p>
+                <div className="feature-title-row">
+                  <h3>{product.name}</h3>
+                  <StatusChip status={product.status} />
+                </div>
+                <p className="feature-descriptor">{product.descriptor}</p>
+                <p>{product.description}</p>
               </article>
             ))}
           </div>
           <div className="section-cta">
             <Link to="/portfolio" className="text-link">
-              Ver como cada recurso funciona <ArrowRight size={17} />
+              Ver portfólio completo <ArrowRight size={17} />
             </Link>
           </div>
         </div>
@@ -138,56 +191,142 @@ function HomePage() {
             <span className="eyebrow">Rastreabilidade</span>
             <h2>A fonte oficial continua no centro.</h2>
             <p>
-              O TriBusca não substitui a publicação oficial. Cada camada de inteligência deve permanecer
-              ligada à origem, à versão e ao histórico correspondente.
+              A TriBusca organiza o caminho até a evidência: origem, versão, histórico e contexto
+              permanecem distinguíveis das camadas de inteligência.
             </p>
           </div>
           <div className="trust-list">
-            <TrustItem icon={Landmark} title="Origem oficial" text="Referência e URL preservadas." />
-            <TrustItem icon={Layers3} title="Histórico" text="Versões e mudanças sem apagar o passado." />
-            <TrustItem icon={ShieldCheck} title="Separação clara" text="Fato oficial, inteligência TriBusca e IA identificados." />
+            <TrustItem icon={FileSearch} title="Fonte oficial" text="Origem e referência preservadas." />
+            <TrustItem icon={Layers3} title="Histórico" text="Versões sem apagar o passado." />
+            <TrustItem icon={ShieldCheck} title="Transparência" text="Fato, inteligência e IA identificados." />
           </div>
-        </div>
-      </section>
-
-      <section className="section reform-home">
-        <div className="container split-card">
-          <div>
-            <span className="eyebrow">Página temática</span>
-            <h2>Reforma Tributária em uma visão organizada e cronológica.</h2>
-            <p>
-              Legislação, regulamentação, notas técnicas, publicações, vigências e faseamento reunidos em
-              uma página dedicada — como recorte do Acervo, não como um produto separado.
-            </p>
-            <Link to="/reforma-tributaria" className="btn btn-secondary">
-              Ver página da Reforma <ArrowRight size={18} />
-            </Link>
-          </div>
-          <div className="timeline-mini" aria-hidden="true">
-            <span className="timeline-line" />
-            {['Publicação', 'Regulamentação', 'Vigência', 'Faseamento'].map((label, index) => (
-              <div className="timeline-mini-item" key={label}>
-                <span className="timeline-dot">{index + 1}</span>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="experimentar" className="section cta-section">
-        <div className="container cta-box">
-          <div>
-            <span className="eyebrow eyebrow-light">TriBusca</span>
-            <h2>7 dias para conhecer o TriBusca.</h2>
-            <p>O trial de 7 dias está definido para o lançamento. A disponibilidade será anunciada quando a experiência estiver pronta.</p>
-          </div>
-          <button className="btn btn-light" type="button" disabled title="Disponível no lançamento">
-            Experimentar grátis
-          </button>
         </div>
       </section>
     </main>
+  )
+}
+
+function StateCarousel() {
+  const states = useMemo(() => selectFeaturedStates(), [])
+  const [index, setIndex] = useState(0)
+  const current = states[index]
+
+  const previous = () => setIndex((value) => (value - 1 + states.length) % states.length)
+  const next = () => setIndex((value) => (value + 1) % states.length)
+
+  return (
+    <section className="section state-section">
+      <div className="container">
+        <SectionHeading
+          eyebrow="Cobertura estadual"
+          title="Monitoramento tributário nos estados"
+          copy="São Paulo abre a seleção. Outros quatro estados são sorteados a cada carregamento."
+        />
+        <div className="state-carousel" data-testid="state-carousel">
+          <img src={current.img} alt={current.place} className="state-photo" />
+          <div className="state-overlay" />
+          <div className="state-copy">
+            <span className="state-position">{index + 1} / {states.length}</span>
+            <p className="micro-label">UF em destaque</p>
+            <h3>{current.name} / {current.uf}</h3>
+            <p>{current.capital} · {current.place}</p>
+            <div className="state-publications">
+              <strong>Últimas / principais publicações</strong>
+              <span>—</span>
+              <span>—</span>
+              <span>—</span>
+            </div>
+            <a href={current.page} target="_blank" rel="noreferrer" className="photo-credit">
+              Foto: {current.author} · {current.license} · Wikimedia Commons
+            </a>
+          </div>
+          <div className="carousel-controls">
+            <button type="button" onClick={previous} aria-label="Estado anterior"><ArrowLeft /></button>
+            <button type="button" onClick={next} aria-label="Próximo estado"><ArrowRight /></button>
+          </div>
+        </div>
+        <div className="carousel-dots" aria-label="Estados em destaque">
+          {states.map((state, stateIndex) => (
+            <button
+              key={state.uf}
+              type="button"
+              aria-label={`Exibir ${state.name}`}
+              aria-current={stateIndex === index}
+              className={stateIndex === index ? 'active' : ''}
+              onClick={() => setIndex(stateIndex)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function CoveragePage() {
+  const states = [...STATE_COVERAGE].sort((a, b) => {
+    if (a.uf === 'SP') return -1
+    if (b.uf === 'SP') return 1
+    return a.name.localeCompare(b.name, 'pt-BR')
+  })
+
+  return (
+    <main>
+      <PageHero
+        eyebrow="Cobertura"
+        title="Fontes oficiais acompanhadas pela TriBusca."
+        copy="O status operacional é separado das métricas. Onde não existe contrato de API público para esta interface, os números permanecem como “—”."
+      />
+      <section className="section">
+        <div className="container coverage-stack">
+          <div>
+            <h2>Serviços federais</h2>
+            <p className="muted">Primeiro bloco da cobertura.</p>
+          </div>
+          {FEDERAL_COVERAGE.map((source) => (
+            <CoverageCard key={source.name} name={source.name} status={source.status} />
+          ))}
+
+          <div className="coverage-separator">
+            <h2>27 UFs</h2>
+            <p className="muted">São Paulo primeiro; demais unidades em ordem alfabética.</p>
+          </div>
+          {states.map((state) => (
+            <CoverageCard
+              key={state.uf}
+              name={`${state.name} / ${state.uf}`}
+              status={state.status}
+              testId="state-coverage-card"
+            />
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function CoverageCard({
+  name,
+  status,
+  testId,
+}: {
+  name: string
+  status: string
+  testId?: string
+}) {
+  return (
+    <article className="coverage-card" data-testid={testId}>
+      <div className="coverage-identity">
+        <strong>{name}</strong>
+        <span className={`collection-status collection-${status.toLowerCase().replaceAll(' ', '-')}`}>
+          {status}
+        </span>
+      </div>
+      <dl className="coverage-metrics">
+        <div><dt>Última atualização</dt><dd>—</dd></div>
+        <div><dt>Importadas hoje</dt><dd>—</dd></div>
+        <div><dt>Total no Acervo</dt><dd>—</dd></div>
+      </dl>
+    </article>
   )
 }
 
@@ -197,101 +336,140 @@ function PortfolioPage() {
       <PageHero
         eyebrow="Portfólio"
         title="Ferramentas diferentes para perguntas diferentes."
-        copy="O TriBusca mantém o Acervo como base e adiciona inteligência onde ela realmente gera valor — sem criar nomes para funções que já são autoexplicativas."
+        copy="Do Acervo à afinidade tributária, cada camada tem uma função clara e preserva a fonte oficial."
       />
+
       <section className="section">
+        <div className="container feature-grid feature-grid-six">
+          {products.map((product) => (
+            <article className="feature-card" key={product.name}>
+              <div className="icon-box"><product.icon size={24} /></div>
+              <div className="feature-title-row">
+                <h3>{product.name}</h3>
+                <StatusChip status={product.status} />
+              </div>
+              <p className="feature-descriptor">{product.descriptor}</p>
+              <p>{product.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section section-soft">
         <div className="container portfolio-stack">
           <ProductDetail
             icon={RadioTower}
             name="Sonar"
             descriptor="Afinidade Tributária"
-            statement="Descubra quão próxima uma publicação está do perfil tributário da sua empresa."
+            statement="Quanto mais próximo do centro, maior a afinidade com o Perfil Tributário."
           >
-            <div className="product-demo">
-              <SonarVisual compact level="high" />
-              <div>
-                <span className="affinity affinity-high">Alta afinidade</span>
-                <p className="muted">Sinal próximo ao seu perfil tributário.</p>
-                <strong>5 sinais encontrados</strong>
-                <div className="signal-list">
-                  {['Goiás', 'ICMS', 'Fertilizantes', 'NCM 3105', 'Produtor rural'].map((signal) => (
-                    <span key={signal}>{signal}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="sonar-scale" aria-label="Escala visual de afinidade do Sonar">
+            <div className="sonar-scale">
               <SonarState level="high" label="Alta afinidade" description="Sinal próximo" />
               <SonarState level="medium" label="Média afinidade" description="Distância intermediária" />
               <SonarState level="low" label="Baixa afinidade" description="Sinal distante" />
             </div>
-            <p className="fine-print">Alta, Média e Baixa continuam sendo os níveis funcionais. A proximidade é linguagem visual e nunca substitui o rótulo textual.</p>
+            <div className="signal-list">
+              {['Goiás', 'ICMS', 'Fertilizantes', 'NCM 3105', 'Produtor rural'].map((signal) => (
+                <span key={signal}>{signal}</span>
+              ))}
+            </div>
+            <p className="fine-print">Os rótulos textuais permanecem visíveis; cor e distância nunca são a única informação.</p>
           </ProductDetail>
 
           <ProductDetail
             icon={BellRing}
             name="Revela"
             descriptor="Boletim inteligente"
-            statement="Todos os dias, o que merece atenção para a sua empresa."
+            statement="Uma seleção diária do que merece sua atenção."
           >
-            <div className="revela-demo">
-              <div className="bullet-card">
-                <span className="reason-badge reason-mention">Menção direta</span>
-                <strong>Empresa ou estabelecimento citado na publicação</strong>
-                <p>Citação objetiva identificada, com destaque próprio no boletim.</p>
+            <div className="daily-bulletin">
+              <div className="bulletin-header">
+                <span>Revela · Boletim diário</span>
+                <strong>Hoje</strong>
               </div>
-              <div className="bullet-card">
+              <div className="bulletin-item">
                 <span className="reason-badge reason-affinity">Alta afinidade</span>
-                <strong>Publicação próxima ao seu perfil tributário</strong>
-                <p>Selecionada pelo Sonar a partir dos sinais encontrados.</p>
+                <div><strong>Publicação próxima ao seu perfil tributário</strong><p>ICMS · Goiás · Fertilizantes</p></div>
               </div>
-              <CheckLine text="O Revela reúne diariamente os itens prioritários desde o boletim anterior." />
-              <CheckLine text="O motivo de inclusão fica visível e cada item leva à publicação no TriBusca." />
+              <div className="bulletin-item">
+                <span className="reason-badge reason-mention">Menção direta</span>
+                <div><strong>Empresa ou estabelecimento citado</strong><p>Menção identificada diretamente na publicação oficial.</p></div>
+              </div>
             </div>
           </ProductDetail>
 
-          <ProductDetail
-            icon={Sparkles}
-            name="Decodifica"
-            descriptor="Linguagem clara"
-            statement="Entenda textos normativos complexos sem perder a referência oficial."
-          >
-            <div className="decodifica-demo">
-              <div>
-                <span className="micro-label">Estados do acionamento</span>
-                <div className="decodifica-states">
-                  <button className="demo-button" type="button">Decodificar (4 créditos)</button>
-                  <button className="demo-button demo-button-muted" type="button" disabled>Traduzido</button>
-                  <div className="obsolete-state">
-                    <span>Tradução desatualizada</span>
-                    <button className="demo-button" type="button">Decodificar (4 créditos)</button>
-                  </div>
-                </div>
-              </div>
-              <div className="credit-box">
-                <div className="credit-heading">
-                  <strong>1 crédito = até 25 mil caracteres</strong>
-                  <span className="help-dot" title="Mínimo de 1 crédito. Cada nova faixa de até 25 mil caracteres adiciona 1 crédito." aria-label="Ajuda sobre cálculo de créditos">?</span>
-                </div>
-                <p>Mínimo de 1 crédito e arredondamento para cima por faixa adicional.</p>
-                <p>Se a norma mudar, a nova tradução considera o conteúdo completo da versão vigente.</p>
-              </div>
-            </div>
-            <p className="fine-print">O resultado é gerado sob demanda. O texto oficial permanece como referência e uma tradução anterior continua disponível, marcada como desatualizada quando a norma muda.</p>
-          </ProductDetail>
+          <DecodificaShowcase />
+        </div>
+      </section>
+    </main>
+  )
+}
 
-          <ProductDetail
-            icon={BookOpen}
-            name="Acervo"
-            descriptor="Base oficial organizada"
-            statement="O lugar para consultar, pesquisar e navegar pelo histórico capturado pelo TriBusca."
-          >
-            <div className="bullet-panel">
-              <CheckLine text="Busca é função do próprio Acervo." />
-              <CheckLine text="Filtros por marcadores e metadados disponíveis." />
-              <CheckLine text="Origem oficial, versões e histórico preservados." />
-            </div>
-          </ProductDetail>
+function DecodificaShowcase() {
+  const [index, setIndex] = useState(0)
+  const example = DECODIFICA_EXAMPLES[index]
+
+  return (
+    <ProductDetail
+      icon={Sparkles}
+      name="Decodifica"
+      descriptor="Leitura auxiliar"
+      statement="Texto oficial e leitura clara lado a lado, sem substituir a fonte."
+    >
+      <div className="decodifica-carousel">
+        <div className="decodifica-topline">
+          <div>
+            <span className="micro-label">Exemplo {index + 1} de {DECODIFICA_EXAMPLES.length}</span>
+            <h3>{example.title}</h3>
+            <p>{example.source}</p>
+          </div>
+          <div className="carousel-controls inline-controls">
+            <button type="button" aria-label="Exemplo anterior" onClick={() => setIndex((index - 1 + DECODIFICA_EXAMPLES.length) % DECODIFICA_EXAMPLES.length)}><ArrowLeft /></button>
+            <button type="button" aria-label="Próximo exemplo" onClick={() => setIndex((index + 1) % DECODIFICA_EXAMPLES.length)}><ArrowRight /></button>
+          </div>
+        </div>
+        <div className="legal-pair">
+          <article>
+            <span className="micro-label">Texto oficial</span>
+            <p>“{example.official}”</p>
+            <strong>{example.source}</strong>
+          </article>
+          <article className="auxiliary-reading">
+            <span className="micro-label">Leitura auxiliar</span>
+            <p>{example.auxiliary}</p>
+            <small>Gerada por IA. Não substitui o texto oficial.</small>
+          </article>
+        </div>
+      </div>
+    </ProductDetail>
+  )
+}
+
+function HowItWorksPage() {
+  const steps = [
+    ['1', 'Fonte oficial', 'Conectores consultam as fontes previstas e preservam a origem.'],
+    ['2', 'Captura e organização', 'Conteúdo é normalizado, deduplicado e versionado no Acervo.'],
+    ['3', 'Marcadores', 'A publicação recebe sinais tributários úteis para busca e contexto.'],
+    ['4', 'Sonar', 'Os sinais são comparados ao Perfil Tributário para calcular afinidade.'],
+    ['5', 'Revela e Decodifica', 'O usuário recebe o que merece atenção e pode pedir leitura auxiliar.'],
+    ['6', 'Evidência', 'A fonte oficial continua acessível para conferência.'],
+  ]
+
+  return (
+    <main>
+      <PageHero
+        eyebrow="Como funciona"
+        title="Da fonte oficial ao contexto da empresa."
+        copy="A TriBusca separa coleta, organização, afinidade, entrega e compreensão para manter cada etapa explicável."
+      />
+      <section className="section">
+        <div className="container process-list">
+          {steps.map(([number, title, description]) => (
+            <article className="process-step" key={number}>
+              <span>{number}</span>
+              <div><h3>{title}</h3><p>{description}</p></div>
+            </article>
+          ))}
         </div>
       </section>
     </main>
@@ -304,38 +482,31 @@ function TaxReformPage() {
       <PageHero
         eyebrow="Reforma Tributária"
         title="Um ponto único para acompanhar a transformação do sistema tributário."
-        copy="Esta página será uma visão temática do Acervo: legislação, regulamentação, notas técnicas, publicações, vigências e faseamento — sempre ligados à fonte oficial."
+        copy="Legislação, regulamentação, notas técnicas e marcos reunidos como um recorte temático do Acervo."
       />
-
       <section className="section">
-        <div className="container">
-          <div className="data-card-grid">
-            <DataCard icon={Landmark} title="Legislação" text="Leis, emendas e atos normativos relacionados à Reforma Tributária." />
-            <DataCard icon={BookOpen} title="Regulamentação" text="Regulamentos e atos complementares organizados por tema." />
-            <DataCard icon={FileSearch} title="Notas técnicas" text="Notas técnicas e documentos operacionais capturados nas fontes oficiais." />
-            <DataCard icon={Search} title="Acervo da Reforma" text="Pesquisa e filtros dentro do recorte temático, sem duplicar o Acervo geral." />
-          </div>
+        <div className="container data-card-grid">
+          {[
+            ['Legislação', 'Atos oficiais relacionados à reforma.'],
+            ['Regulamentação', 'Regulamentos e atos complementares.'],
+            ['Notas técnicas', 'Documentos técnicos publicados pelas fontes oficiais.'],
+            ['Acervo da Reforma', 'Busca e histórico do recorte temático.'],
+          ].map(([title, text]) => (
+            <article className="data-card" key={title}><h3>{title}</h3><p>{text}</p></article>
+          ))}
         </div>
       </section>
-
       <section className="section section-soft">
         <div className="container">
           <SectionHeading
             eyebrow="Linha do tempo"
-            title="Publicação, vigência e faseamento não são a mesma coisa."
-            copy="A timeline foi desenhada para deixar claro o que foi publicado, quando começa a produzir efeitos e como cada fase se encaixa no cronograma oficial."
+            title="Publicação, vigência e marcos previstos em lei não são a mesma coisa."
+            copy="A timeline só receberá datas quando houver evidência oficial correspondente no Acervo."
           />
           <div className="timeline-card">
-            <TimelineRow icon={FileSearch} type="Publicação" text="Entrada de uma nova norma, regulamentação ou nota técnica no Acervo." />
-            <TimelineRow icon={CalendarClock} type="Vigência" text="Data em que uma regra começa a produzir efeitos, quando informada pela fonte oficial." />
-            <TimelineRow icon={Layers3} type="Marco" text="Etapas de implementação e faseamento sustentadas por base normativa ou oficial." />
-          </div>
-          <div className="source-note">
-            <ShieldCheck size={20} />
-            <p>
-              A estrutura visual já está preparada. Os eventos e datas reais só devem aparecer quando
-              estiverem sustentados por publicação oficial integrada ao Acervo.
-            </p>
+            <TimelineRow type="Publicação" description="Data em que o ato oficial foi publicado." />
+            <TimelineRow type="Vigência" description="Data em que a regra passa a produzir efeitos, quando informada oficialmente." />
+            <TimelineRow type="Marco previsto em lei" description="Etapa futura do faseamento expressamente prevista em fonte oficial." />
           </div>
         </div>
       </section>
@@ -343,15 +514,182 @@ function TaxReformPage() {
   )
 }
 
-function PageHero({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+function TimelineRow({ type, description }: { type: string; description: string }) {
   return (
-    <section className="page-hero">
-      <div className="container narrow">
-        <span className="eyebrow">{eyebrow}</span>
-        <h1>{title}</h1>
-        <p>{copy}</p>
+    <div className="timeline-row">
+      <div className="timeline-icon"><Check size={18} /></div>
+      <div>
+        <span className="timeline-type">{type}</span>
+        <strong>—</strong>
+        <p>{description}</p>
       </div>
-    </section>
+    </div>
+  )
+}
+
+function AuthModal({
+  view,
+  onView,
+  onClose,
+}: {
+  view: AuthView | null
+  onView: (view: AuthView) => void
+  onClose: () => void
+}) {
+  return (
+    <Dialog.Root open={view !== null} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="dialog-content" aria-describedby={undefined}>
+          <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
+          <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
+          {view === 'login' && <LoginForm onView={onView} />}
+          {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
+          {view === 'forgot' && <ForgotPassword onView={onView} />}
+          {view === 'reset' && <PasswordFlow mode="reset" onView={onView} />}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
+function LoginForm({ onView }: { onView: (view: AuthView) => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const apiBase = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
+
+  const login = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${apiBase}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error ?? 'login_failed')
+      return data
+    },
+  })
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    login.mutate()
+  }
+
+  return (
+    <>
+      <Dialog.Title>Entrar na TriBusca</Dialog.Title>
+      <p className="dialog-intro">Acesse sua área autenticada com o contrato oficial do backend.</p>
+      <form className="auth-form" onSubmit={submit}>
+        <label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+        <label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <button className="text-button" type="button" onClick={() => onView('forgot')}>Esqueci minha senha</button>
+        {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e a conexão com a API.</p>}
+        {login.isSuccess && <p className="auth-success" role="status">Credenciais validadas. Integração da área autenticada é o próximo passo.</p>}
+        <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
+      </form>
+      <p className="auth-switch">Ainda não tem conta? <button type="button" onClick={() => onView('signup')}>Criar conta</button></p>
+    </>
+  )
+}
+
+function ForgotPassword({ onView }: { onView: (view: AuthView) => void }) {
+  return (
+    <>
+      <Dialog.Title>Recuperar senha</Dialog.Title>
+      <p className="dialog-intro">O fluxo visual está definido; o endpoint de recuperação ainda não será inventado.</p>
+      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+        <label>E-mail<input type="email" required /></label>
+        <button className="btn full" type="submit" disabled>Enviar instruções</button>
+      </form>
+      <button className="text-button standalone" type="button" onClick={() => onView('reset')}>Visualizar etapa “Nova senha”</button>
+      <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
+    </>
+  )
+}
+
+function PasswordFlow({
+  mode,
+  onView,
+}: {
+  mode: 'signup' | 'reset'
+  onView: (view: AuthView) => void
+}) {
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const checks = getPasswordChecks(password)
+  const match = password.length > 0 && password === confirm
+  const valid = isStrongPassword(password) && match
+
+  return (
+    <>
+      <Dialog.Title>{mode === 'signup' ? 'Criar conta' : 'Nova senha'}</Dialog.Title>
+      <p className="dialog-intro">
+        {mode === 'signup'
+          ? 'Prepare seu acesso. O cadastro só será ativado quando houver contrato backend.'
+          : 'Defina a nova senha. O envio só será ativado quando houver contrato backend.'}
+      </p>
+      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+        {mode === 'signup' && (
+          <>
+            <label>Nome<input type="text" required /></label>
+            <label>E-mail<input type="email" required /></label>
+          </>
+        )}
+        <label>Senha<input aria-label="Senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label>Confirmar senha<input aria-label="Confirmar senha" type="password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /></label>
+        <div className="password-rules" aria-label="Requisitos da senha">
+          <PasswordRule ok={checks.minLength} text="Mínimo de 8 caracteres" />
+          <PasswordRule ok={checks.uppercase} text="Uma letra maiúscula" />
+          <PasswordRule ok={checks.lowercase} text="Uma letra minúscula" />
+          <PasswordRule ok={checks.number} text="Um número" />
+          <PasswordRule ok={checks.special} text="Um caractere especial" />
+          <PasswordRule ok={match} text="As senhas coincidem" />
+        </div>
+        <button className="btn full" type="submit" disabled={!valid || true}>
+          {mode === 'signup' ? 'Criar conta' : 'Salvar nova senha'}
+        </button>
+        <p className="integration-note">Integração aguardando contrato de API. Nenhum endpoint fictício é chamado.</p>
+      </form>
+      <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
+    </>
+  )
+}
+
+function PasswordRule({ ok, text }: { ok: boolean; text: string }) {
+  return <span className={ok ? 'rule-ok' : ''} aria-label={`${text}: ${ok ? 'atendido' : 'pendente'}`}><Check size={14} /> {text}</span>
+}
+
+function SonarHero() {
+  return (
+    <div className="sonar-hero-card">
+      <span className="micro-label">Sonar · Afinidade Tributária</span>
+      <SonarVisual level="high" />
+      <div><strong>Alta afinidade</strong><p>Sinal próximo ao Perfil Tributário.</p></div>
+    </div>
+  )
+}
+
+function SonarVisual({ level }: { level: SonarLevel }) {
+  return (
+    <div className={`sonar sonar-${level}`} role="img" aria-label={`${level === 'high' ? 'Alta' : level === 'medium' ? 'Média' : 'Baixa'} afinidade no Sonar`}>
+      <span className="sonar-ring ring-1" />
+      <span className="sonar-ring ring-2" />
+      <span className="sonar-ring ring-3" />
+      <span className="sonar-sweep" />
+      <span className="sonar-center" />
+      <span className="sonar-ping" />
+    </div>
+  )
+}
+
+function SonarState({ level, label, description }: { level: SonarLevel; label: string; description: string }) {
+  return (
+    <div className={`sonar-state sonar-state-${level}`}>
+      <SonarVisual level={level} />
+      <div><strong>{label}</strong><span>{description}</span></div>
+    </div>
   )
 }
 
@@ -362,7 +700,7 @@ function ProductDetail({
   statement,
   children,
 }: {
-  icon: typeof RadioTower
+  icon: typeof Search
   name: string
   descriptor: string
   statement: string
@@ -372,7 +710,6 @@ function ProductDetail({
     <article className="product-detail">
       <div className="product-copy">
         <div className="icon-box"><Icon size={24} /></div>
-        <span className="status-chip">Em desenvolvimento</span>
         <h2>{name}</h2>
         <p className="feature-descriptor">{descriptor}</p>
         <p className="product-statement">{statement}</p>
@@ -382,124 +719,31 @@ function ProductDetail({
   )
 }
 
-function SonarPreview() {
-  return (
-    <div className="sonar-preview-card">
-      <div className="sonar-heading">
-        <div>
-          <span className="micro-label">Sonar</span>
-          <strong>Afinidade Tributária</strong>
-        </div>
-        <span className="affinity affinity-high">Alta afinidade</span>
-      </div>
-      <SonarVisual level="high" />
-      <div className="sonar-copy">
-        <strong>Sinal próximo ao seu perfil tributário</strong>
-        <p>Os marcadores explicam por que uma publicação foi aproximada do centro.</p>
-      </div>
-      <div className="signal-list">
-        {['GO', 'ICMS', 'Fertilizantes', 'NCM'].map((signal) => <span key={signal}>{signal}</span>)}
-      </div>
-    </div>
-  )
+function StatusChip({ status }: { status: string }) {
+  return <span className={`status-chip ${status === 'Disponível' ? 'status-available' : ''}`}>{status}</span>
 }
 
-type SonarLevel = 'high' | 'medium' | 'low'
-
-const sonarLevelText: Record<SonarLevel, string> = {
-  high: 'Alta afinidade: sinal próximo ao centro',
-  medium: 'Média afinidade: sinal em distância intermediária',
-  low: 'Baixa afinidade: sinal distante do centro',
-}
-
-function SonarVisual({ compact = false, level = 'high' }: { compact?: boolean; level?: SonarLevel }) {
+function TrustItem({ icon: Icon, title, text }: { icon: typeof Search; title: string; text: string }) {
   return (
-    <div
-      className={`sonar sonar-${level}${compact ? ' sonar-compact' : ''}`}
-      role="img"
-      aria-label={`Representação visual de ${sonarLevelText[level]}`}
-    >
-      <div className="sonar-ring ring-1" />
-      <div className="sonar-ring ring-2" />
-      <div className="sonar-ring ring-3" />
-      <div className="sonar-cross sonar-cross-x" />
-      <div className="sonar-cross sonar-cross-y" />
-      <div className="sonar-sweep" />
-      <div className="sonar-center" />
-      <div className="sonar-ping" />
-    </div>
-  )
-}
-
-function SonarState({
-  level,
-  label,
-  description,
-}: {
-  level: SonarLevel
-  label: string
-  description: string
-}) {
-  return (
-    <div className="sonar-state">
-      <SonarVisual compact level={level} />
-      <div>
-        <strong>{label}</strong>
-        <span>{description}</span>
-      </div>
-    </div>
-  )
-}
-
-function TrustItem({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
-  return (
-    <div className="trust-item">
-      <Icon size={22} />
-      <div><strong>{title}</strong><span>{text}</span></div>
-    </div>
+    <div className="trust-item"><Icon size={22} /><div><strong>{title}</strong><span>{text}</span></div></div>
   )
 }
 
 function SectionHeading({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
-  return (
-    <div className="section-heading">
-      <span className="eyebrow">{eyebrow}</span>
-      <h2>{title}</h2>
-      <p>{copy}</p>
-    </div>
-  )
+  return <div className="section-heading"><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{copy}</p></div>
 }
 
-function CheckLine({ text }: { text: string }) {
-  return <div className="check-line"><span><Check size={16} /></span><p>{text}</p></div>
-}
-
-function DataCard({ icon: Icon, title, text }: { icon: typeof BookOpen; title: string; text: string }) {
-  return (
-    <article className="data-card">
-      <div className="icon-box"><Icon size={23} /></div>
-      <h3>{title}</h3>
-      <p>{text}</p>
-    </article>
-  )
-}
-
-function TimelineRow({ icon: Icon, type, text }: { icon: typeof CalendarClock; type: string; text: string }) {
-  return (
-    <div className="timeline-row">
-      <div className="timeline-icon"><Icon size={20} /></div>
-      <div><strong>{type}</strong><p>{text}</p></div>
-    </div>
-  )
+function PageHero({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+  return <section className="page-hero"><div className="container"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{copy}</p></div></section>
 }
 
 function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-wrap">
-        <img src="/brand/tribusca-icon.png" alt="TriBusca" className="footer-icon" />
-        <p>Monitoramento e Inteligência Tributária · Brasil</p>
-        <p className="footer-note">Produto em desenvolvimento.</p>
+        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="footer-logo" />
+        <p>Monitoramento e Inteligência Tributária.</p>
+        <p className="footer-note">Fonte oficial no centro.</p>
       </div>
     </footer>
   )
