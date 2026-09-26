@@ -744,7 +744,7 @@ function ProductDetail({
 }
 
 function StatusChip({ status }: { status: string }) {
-  return <span className={`status-chip ${status === 'Disponível' ? 'status-available' : ''}`}>{status}</span>
+  return <span className="status-chip">{status}</span>
 }
 
 function TrustItem({ icon: Icon, title, text }: { icon: typeof Search; title: string; text: string }) {
