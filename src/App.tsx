@@ -11,6 +11,7 @@ import {
   FileSearch,
   Layers3,
   MonitorCheck,
+  Menu,
   RadioTower,
   Search,
   ShieldCheck,
@@ -96,10 +97,13 @@ function App() {
 }
 
 function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const closeMobile = () => setMobileOpen(false)
+
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link to="/" className="brand-link" aria-label="TriBusca — página inicial">
+        <Link to="/" className="brand-link" aria-label="TriBusca — página inicial" onClick={closeMobile}>
           <img
             src="/brand/tribusca-logo-horizontal-light.png"
             alt="TriBusca"
@@ -121,8 +125,28 @@ function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
           <button className="btn btn-small" type="button" onClick={() => onAuth('signup')}>
             Criar conta
           </button>
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((value) => !value)}
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+      {mobileOpen && (
+        <nav className="mobile-nav" aria-label="Navegação móvel">
+          <div className="container mobile-nav-inner">
+            <NavLink to="/cobertura" onClick={closeMobile}>Cobertura</NavLink>
+            <NavLink to="/portfolio" onClick={closeMobile}>Portfólio</NavLink>
+            <NavLink to="/como-funciona" onClick={closeMobile}>Como funciona</NavLink>
+            <NavLink to="/reforma-tributaria" onClick={closeMobile}>Reforma Tributária</NavLink>
+            <button type="button" onClick={() => { closeMobile(); onAuth('login') }}>Entrar</button>
+          </div>
+        </nav>
+      )}
     </header>
   )
 }
@@ -317,7 +341,7 @@ function CoverageCard({
     <article className="coverage-card" data-testid={testId}>
       <div className="coverage-identity">
         <strong>{name}</strong>
-        <span className={`collection-status collection-${status.toLowerCase().replaceAll(' ', '-')}`}>
+        <span className={`collection-status ${status === '—' ? 'collection-pending-data' : `collection-${status.toLowerCase().replaceAll(' ', '-')}`}`}>
           {status}
         </span>
       </div>
