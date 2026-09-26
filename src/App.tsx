@@ -101,7 +101,7 @@ function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
       <div className="container nav-wrap">
         <Link to="/" className="brand-link" aria-label="TriBusca — página inicial">
           <img
-            src="/brand/tribusca-logo-horizontal-light.png"
+            src="/brand/tribusca-logo-horizontal-light.webp"
             alt="TriBusca"
             className="brand-horizontal"
           />
@@ -542,7 +542,7 @@ function AuthModal({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content" aria-describedby={undefined}>
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
-          <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
+          <img src="/brand/tribusca-logo-horizontal-light.webp" alt="TriBusca" className="dialog-logo" />
           {view === 'login' && <LoginForm onView={onView} />}
           {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
           {view === 'forgot' && <ForgotPassword onView={onView} />}
@@ -741,7 +741,7 @@ function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-wrap">
-        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="footer-logo" />
+        <img src="/brand/tribusca-logo-horizontal-light.webp" alt="TriBusca" className="footer-logo" />
         <p>Monitoramento e Inteligência Tributária.</p>
         <p className="footer-note">Fonte oficial no centro.</p>
       </div>
