@@ -45,7 +45,7 @@ describe('TriBusca WEB-02', () => {
   it('validates password requirements in real time', () => {
     renderApp()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Criar conta' })[0])
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Abcdef1!' } })
     fireEvent.change(screen.getByLabelText('Confirmar senha'), { target: { value: 'Abcdef1!' } })
 
