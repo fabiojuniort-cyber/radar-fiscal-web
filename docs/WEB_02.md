@@ -74,8 +74,28 @@ O header usa a assinatura horizontal oficial `tribusca-logo-horizontal-light.png
 
 ## Pendências
 
-- gate do Gerente para claims “Disponível”;
+- WEB-03 corrigiu o draft: Acervo, Central de Monitoramento, Sonar, Revela, Decodifica e Perfil Tributário ficam todos como **Em desenvolvimento**;
 - gate Branding para cores do Sonar;
 - contratos backend de cadastro/reset/cobertura;
 - revisão visual contra Design Components;
 - CI final do head.
+
+
+## WEB-03 — correção de disponibilidade
+
+**Data:** 26/09/2026  
+**Origem:** decisão do Gerente.
+
+A WEB-02 havia levado ao draft o claim **Disponível** para Acervo e Central de Monitoramento, condicionado a confirmação antes do merge. Esse gate foi resolvido na WEB-03 com decisão de **não publicar o claim**.
+
+Estado vigente no site público:
+- Acervo — **Em desenvolvimento**;
+- Central de Monitoramento — **Em desenvolvimento**;
+- Sonar — **Em desenvolvimento**;
+- Revela — **Em desenvolvimento**;
+- Decodifica — **Em desenvolvimento**;
+- Perfil Tributário — **Em desenvolvimento**.
+
+A D-043 permanece no histórico como proposta aplicada ao draft e não confirmada para publicação. Páginas e demonstrações com placeholders não equivalem a funcionalidade disponível.
+
+**Impacto:** somente claims/status do site público e documentação. As cores do Sonar continuam no draft, sujeitas à Issue #10. Sem merge/deploy.
