@@ -51,7 +51,12 @@ p { color: var(--muted); line-height: 1.65; }
 .nav-links { display: flex; gap: 26px; align-items: center; margin-left: auto; }
 .nav-links a { color: #30445f; font-size: .9rem; font-weight: 750; }
 .nav-links a.active { color: var(--blue); }
-.nav-actions { display: flex; gap: 10px; }
+.nav-actions { display: flex; gap: 10px; align-items: center; }
+.mobile-menu-button { display: none; width: 40px; height: 40px; border-radius: 11px; border: 1px solid #cddceb; background: white; color: var(--navy); place-items: center; }
+.mobile-nav { display: none; border-top: 1px solid var(--line); background: rgba(255,255,255,.98); }
+.mobile-nav-inner { display: grid; gap: 2px; padding: 10px 0 16px; }
+.mobile-nav a, .mobile-nav button { text-align: left; padding: 12px 4px; border: 0; background: none; color: #30445f; font-weight: 800; }
+.mobile-nav a + a, .mobile-nav a + button { border-top: 1px solid #edf2f6; }
 
 .btn { border: 0; border-radius: 12px; padding: 12px 18px; background: var(--blue); color: white; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform .18s ease, box-shadow .18s ease; }
 .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,87,255,.18); }
@@ -139,6 +144,7 @@ p { color: var(--muted); line-height: 1.65; }
 .collection-status { display: inline-flex; border-radius: 99px; padding: 5px 9px; font-size: .67rem; font-weight: 900; background: #eef2f6; color: #55667b; border: 1px solid #dbe4ec; }
 .collection-em-validação { color: #875d00; background: #fff7dd; border-color: #f2d98b; }
 .collection-online { color: #176b33; background: #eef9f1; border-color: #cdebd5; }
+.collection-pending-data { color: #596a7e; background: #f4f6f8; border-color: #dde4ea; }
 .coverage-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 0; }
 .coverage-metrics div { padding: 10px 12px; border-left: 1px solid var(--line); }
 .coverage-metrics dt { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
@@ -227,6 +233,8 @@ p { color: var(--muted); line-height: 1.65; }
 
 @media (max-width: 980px) {
   .nav-links { display: none; }
+  .mobile-menu-button { display: grid; }
+  .mobile-nav { display: block; }
   .hero-grid, .trust-grid, .product-detail { grid-template-columns: 1fr; }
   .feature-grid, .data-card-grid { grid-template-columns: repeat(2,1fr); }
   .coverage-card { grid-template-columns: 1fr; }
