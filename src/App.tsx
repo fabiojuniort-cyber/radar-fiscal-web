@@ -208,7 +208,7 @@ function PortfolioPage() {
             statement="Descubra quão próxima uma publicação está do perfil tributário da sua empresa."
           >
             <div className="product-demo">
-              <SonarVisual compact />
+              <SonarVisual compact level="high" />
               <div>
                 <span className="affinity affinity-high">Alta afinidade</span>
                 <p className="muted">Sinal próximo ao seu perfil tributário.</p>
@@ -220,6 +220,11 @@ function PortfolioPage() {
                 </div>
               </div>
             </div>
+            <div className="sonar-scale" aria-label="Escala visual de afinidade do Sonar">
+              <SonarState level="high" label="Alta afinidade" description="Sinal próximo" />
+              <SonarState level="medium" label="Média afinidade" description="Distância intermediária" />
+              <SonarState level="low" label="Baixa afinidade" description="Sinal distante" />
+            </div>
             <p className="fine-print">Alta, Média e Baixa continuam sendo os níveis funcionais. A proximidade é linguagem visual e nunca substitui o rótulo textual.</p>
           </ProductDetail>
 
@@ -229,10 +234,19 @@ function PortfolioPage() {
             descriptor="Boletim inteligente"
             statement="Todos os dias, o que merece atenção para a sua empresa."
           >
-            <div className="bullet-panel">
-              <CheckLine text="Publicações de Alta afinidade identificadas pelo Sonar." />
-              <CheckLine text="Menções diretas à empresa ou aos estabelecimentos, mesmo sem Alta afinidade." />
-              <CheckLine text="Motivo de inclusão visível e acesso direto à publicação no TriBusca." />
+            <div className="revela-demo">
+              <div className="bullet-card">
+                <span className="reason-badge reason-mention">Menção direta</span>
+                <strong>Empresa ou estabelecimento citado na publicação</strong>
+                <p>Citação objetiva identificada, com destaque próprio no boletim.</p>
+              </div>
+              <div className="bullet-card">
+                <span className="reason-badge reason-affinity">Alta afinidade</span>
+                <strong>Publicação próxima ao seu perfil tributário</strong>
+                <p>Selecionada pelo Sonar a partir dos sinais encontrados.</p>
+              </div>
+              <CheckLine text="O Revela reúne diariamente os itens prioritários desde o boletim anterior." />
+              <CheckLine text="O motivo de inclusão fica visível e cada item leva à publicação no TriBusca." />
             </div>
           </ProductDetail>
 
@@ -244,15 +258,26 @@ function PortfolioPage() {
           >
             <div className="decodifica-demo">
               <div>
-                <span className="micro-label">Exemplo de acionamento</span>
-                <button className="demo-button" type="button">Decodificar (4 créditos)</button>
+                <span className="micro-label">Estados do acionamento</span>
+                <div className="decodifica-states">
+                  <button className="demo-button" type="button">Decodificar (4 créditos)</button>
+                  <button className="demo-button demo-button-muted" type="button" disabled>Traduzido</button>
+                  <div className="obsolete-state">
+                    <span>Tradução desatualizada</span>
+                    <button className="demo-button" type="button">Decodificar (4 créditos)</button>
+                  </div>
+                </div>
               </div>
               <div className="credit-box">
-                <strong>1 crédito = até 25 mil caracteres</strong>
+                <div className="credit-heading">
+                  <strong>1 crédito = até 25 mil caracteres</strong>
+                  <span className="help-dot" title="Mínimo de 1 crédito. Cada nova faixa de até 25 mil caracteres adiciona 1 crédito." aria-label="Ajuda sobre cálculo de créditos">?</span>
+                </div>
                 <p>Mínimo de 1 crédito e arredondamento para cima por faixa adicional.</p>
+                <p>Se a norma mudar, a nova tradução considera o conteúdo completo da versão vigente.</p>
               </div>
             </div>
-            <p className="fine-print">O resultado é gerado sob demanda. O texto oficial permanece como referência e uma tradução antiga fica marcada como desatualizada quando a norma muda.</p>
+            <p className="fine-print">O resultado é gerado sob demanda. O texto oficial permanece como referência e uma tradução anterior continua disponível, marcada como desatualizada quando a norma muda.</p>
           </ProductDetail>
 
           <ProductDetail
@@ -367,7 +392,7 @@ function SonarPreview() {
         </div>
         <span className="affinity affinity-high">Alta afinidade</span>
       </div>
-      <SonarVisual />
+      <SonarVisual level="high" />
       <div className="sonar-copy">
         <strong>Sinal próximo ao seu perfil tributário</strong>
         <p>Os marcadores explicam por que uma publicação foi aproximada do centro.</p>
@@ -379,9 +404,21 @@ function SonarPreview() {
   )
 }
 
-function SonarVisual({ compact = false }: { compact?: boolean }) {
+type SonarLevel = 'high' | 'medium' | 'low'
+
+const sonarLevelText: Record<SonarLevel, string> = {
+  high: 'Alta afinidade: sinal próximo ao centro',
+  medium: 'Média afinidade: sinal em distância intermediária',
+  low: 'Baixa afinidade: sinal distante do centro',
+}
+
+function SonarVisual({ compact = false, level = 'high' }: { compact?: boolean; level?: SonarLevel }) {
   return (
-    <div className={compact ? 'sonar sonar-compact' : 'sonar'} role="img" aria-label="Representação visual de Alta afinidade: sinal próximo ao centro do sonar">
+    <div
+      className={`sonar sonar-${level}${compact ? ' sonar-compact' : ''}`}
+      role="img"
+      aria-label={`Representação visual de ${sonarLevelText[level]}`}
+    >
       <div className="sonar-ring ring-1" />
       <div className="sonar-ring ring-2" />
       <div className="sonar-ring ring-3" />
@@ -390,6 +427,26 @@ function SonarVisual({ compact = false }: { compact?: boolean }) {
       <div className="sonar-sweep" />
       <div className="sonar-center" />
       <div className="sonar-ping" />
+    </div>
+  )
+}
+
+function SonarState({
+  level,
+  label,
+  description,
+}: {
+  level: SonarLevel
+  label: string
+  description: string
+}) {
+  return (
+    <div className="sonar-state">
+      <SonarVisual compact level={level} />
+      <div>
+        <strong>{label}</strong>
+        <span>{description}</span>
+      </div>
     </div>
   )
 }
