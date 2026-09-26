@@ -37,14 +37,14 @@ const products = [
     name: 'Acervo',
     descriptor: 'Base oficial organizada',
     icon: BookOpen,
-    status: 'Disponível',
+    status: 'Em desenvolvimento',
     description: 'Publicações, versões, fontes, marcadores e busca em uma experiência única.',
   },
   {
     name: 'Central de Monitoramento',
     descriptor: 'Saúde das fontes',
     icon: MonitorCheck,
-    status: 'Disponível',
+    status: 'Em desenvolvimento',
     description: 'Acompanhe consultas, indisponibilidades, falhas, última atualização e cobertura.',
   },
   {
