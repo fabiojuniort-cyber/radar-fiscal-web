@@ -20,7 +20,7 @@ O menu público expõe **Cobertura · Portfólio · Como funciona · Reforma Tri
 - cadastro, recuperação e nova senha têm UX definida, porém **não chamam endpoint fictício**;
 - validação de senha em tempo real;
 - Home com carrossel de 5 UFs, SP fixo em primeiro e 4 sorteadas por carregamento;
-- portfólio com Acervo, Central de Monitoramento, Sonar, Revela, Decodifica e Perfil Tributário;
+- portfólio com Acervo, Central de Monitoramento, Sonar, Revela, Decodifica e Perfil Tributário, **todos marcados como Em desenvolvimento** até comprovação operacional e autorização de publicação;
 - Sonar com proximidade + rótulo textual; cores semânticas do draft: Alta vermelho, Média amarelo, Baixa verde;
 - Revela com exemplo de boletim diário distinguindo Alta afinidade e Menção direta;
 - Decodifica com carrossel de cinco exemplos Texto oficial × Leitura auxiliar;
@@ -69,9 +69,8 @@ npm run build
 
 ### Gates antes de merge
 
-1. confirmação do Gerente sobre **Acervo e Central de Monitoramento = Disponível**;
-2. ratificação de Branding para **Sonar: Alta vermelho / Média amarelo / Baixa verde**;
-3. CI verde;
-4. revisão visual/funcional.
+1. ratificação de Branding para **Sonar: Alta vermelho / Média amarelo / Baixa verde**;
+2. CI verde;
+3. revisão visual/funcional.
 
 Sem merge e sem deploy nesta frente.
