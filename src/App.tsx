@@ -60,7 +60,7 @@ function SiteHeader() {
     <header className="site-header">
       <div className="container nav-wrap">
         <Link to="/" className="brand-link" aria-label="TriBusca — página inicial">
-          <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="brand-logo" />
+          <img src="/brand/tribusca-icon.png" alt="TriBusca" className="brand-icon" />
         </Link>
         <nav aria-label="Navegação principal" className="nav-links">
           <NavLink to="/">Início</NavLink>
@@ -440,7 +440,7 @@ function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-wrap">
-        <img src="/brand/tribusca-logo-horizontal-dark.png" alt="TriBusca" className="footer-logo" />
+        <img src="/brand/tribusca-icon.png" alt="TriBusca" className="footer-icon" />
         <p>Monitoramento e Inteligência Tributária · Brasil</p>
         <p className="footer-note">Produto em desenvolvimento.</p>
       </div>
