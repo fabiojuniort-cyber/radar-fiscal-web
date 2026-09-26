@@ -24,7 +24,7 @@ O menu público expõe **Cobertura · Portfólio · Como funciona · Reforma Tri
 - Sonar com proximidade + rótulo textual; cores semânticas do draft: Alta vermelho, Média amarelo, Baixa verde;
 - Revela com exemplo de boletim diário distinguindo Alta afinidade e Menção direta;
 - Decodifica com carrossel de cinco exemplos Texto oficial × Leitura auxiliar;
-- Cobertura com serviços federais + 27 UFs; métricas ficam em `—` até existir contrato real de API;
+- Cobertura com serviços federais + 27 UFs; **status e métricas** ficam em `—` até a API pública estar integrada;
 - Reforma Tributária separa Publicação / Vigência / Marco previsto em lei sem inventar datas;
 - `prefers-reduced-motion` respeitado.
 
