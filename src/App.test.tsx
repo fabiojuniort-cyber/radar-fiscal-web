@@ -18,6 +18,20 @@ describe('TriBusca public site', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the portfolio concepts approved in PROD-01', () => {
+    render(
+      <MemoryRouter initialEntries={['/portfolio']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Média afinidade')).toBeInTheDocument()
+    expect(screen.getByText('Baixa afinidade')).toBeInTheDocument()
+    expect(screen.getByText('Menção direta')).toBeInTheDocument()
+    expect(screen.getByText('Traduzido')).toBeInTheDocument()
+    expect(screen.getByText('Tradução desatualizada')).toBeInTheDocument()
+  })
+
   it('renders the Reforma Tributária thematic page', () => {
     render(
       <MemoryRouter initialEntries={['/reforma-tributaria']}>
