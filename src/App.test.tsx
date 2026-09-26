@@ -75,6 +75,20 @@ describe('TriBusca WEB-02', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(20)
   })
 
+  it('does not claim portfolio resources as available before release', () => {
+    renderApp()
+
+    expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(6)
+  })
+
+  it('keeps the same development status on the portfolio page', () => {
+    renderApp('/portfolio')
+
+    expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(6)
+  })
+
   it('renders the five approved Decodifica examples as a carousel', () => {
     renderApp('/portfolio')
 
