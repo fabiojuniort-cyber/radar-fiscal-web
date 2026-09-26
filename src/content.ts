@@ -52,17 +52,17 @@ export function selectFeaturedStates(random: () => number = Math.random): StateV
 }
 
 export const FEDERAL_COVERAGE = [
-  { name: 'DOU / INLABS', status: 'Em validação' },
-  { name: 'CONFAZ', status: 'Em validação' },
-  { name: 'NF-e / ENCAT', status: 'Em validação' },
-  { name: 'SPED', status: 'Em validação' },
-  { name: 'CGIBS', status: 'Em validação' },
-  { name: 'Receita Federal', status: 'Em validação' },
+  { name: 'DOU / INLABS', status: '—' },
+  { name: 'CONFAZ', status: '—' },
+  { name: 'NF-e / ENCAT', status: '—' },
+  { name: 'SPED', status: '—' },
+  { name: 'CGIBS', status: '—' },
+  { name: 'Receita Federal', status: '—' },
 ] as const
 
 export const STATE_COVERAGE = STATE_VISUALS.map((state) => ({
   ...state,
-  status: state.uf === 'SP' ? 'Em validação' : 'Em implantação',
+  status: '—',
 }))
 
 export const DECODIFICA_EXAMPLES = [
