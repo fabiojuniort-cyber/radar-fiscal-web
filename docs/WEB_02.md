@@ -61,7 +61,7 @@ A exceção cromática ainda depende de gate de Branding antes do merge.
 
 ## Assets
 
-O header usa a assinatura horizontal oficial. No branch WEB-02 foi reaproveitado o asset horizontal já usado pelo protótipo oficial anterior, sem redesenho do símbolo/wordmark. A fonte canônica de marca continua sendo o Brand Kit registrado no `tribusca-control`.
+O header usa a assinatura horizontal oficial `tribusca-logo-horizontal-light.png`, derivada diretamente do arquivo canônico do Brand Kit para uso web sem redesenho do símbolo/wordmark. A fonte canônica de marca continua sendo o Brand Kit registrado no `tribusca-control`.
 
 ## Testes mínimos WEB-02
 
