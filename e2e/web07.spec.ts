@@ -320,7 +320,7 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('teste@example.com')
   await dialog.getByLabel('Senha').fill('Senha123!')
-  await dialog.getByRole('button', { name: 'Entrar' }).click()
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
   expect(capturedMethod).toBe('POST')

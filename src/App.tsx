@@ -178,8 +178,8 @@ function DemoPage() {
       </header>
 
       <div className="demo-workspace">
-        <aside className="demo-sidebar" aria-label="Navegação do painel demonstrativo">
-          <nav className="demo-nav">
+        <aside className="demo-sidebar">
+          <nav className="demo-nav" aria-label="Navegação do painel demonstrativo">
             {demoSections.map((section) => (
               <button
                 key={section}
