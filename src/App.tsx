@@ -682,7 +682,12 @@ function PasswordFlow({
 }
 
 function PasswordRule({ ok, text }: { ok: boolean; text: string }) {
-  return <span className={ok ? 'rule-ok' : ''} aria-label={`${text}: ${ok ? 'atendido' : 'pendente'}`}><Check size={14} /> {text}</span>
+  return (
+    <span className={ok ? 'rule-ok' : 'rule-pending'} aria-label={`${text}: ${ok ? 'atendido' : 'pendente'}`}>
+      {ok ? <Check size={14} aria-hidden="true" /> : <CircleHelp size={14} aria-hidden="true" />}
+      {text}
+    </span>
+  )
 }
 
 function SonarHero() {
@@ -765,7 +770,7 @@ function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-wrap">
-        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="footer-logo" />
+        <img src="/brand/tribusca-logo-horizontal-dark.png" alt="TriBusca" className="footer-logo" />
         <p>Monitoramento e Inteligência Tributária.</p>
         <p className="footer-note">Fonte oficial no centro.</p>
       </div>
