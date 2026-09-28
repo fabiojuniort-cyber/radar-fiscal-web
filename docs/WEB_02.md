@@ -67,7 +67,7 @@ A escala funcional continua **Alta / Média / Baixa afinidade**. A WEB-02 acresc
 - rótulo textual obrigatório;
 - `prefers-reduced-motion`.
 
-A exceção cromática ainda depende de gate de Branding antes do merge.
+A exceção cromática foi ratificada pela D-053 e a Issue #10 está CLOSED/COMPLETED. WEB-11 não altera esse gate.
 
 ## Assets
 
