@@ -50,11 +50,11 @@ async function screenshot(page: Page, project: string, name: string) {
 async function openLogin(page: Page) {
   const viewport = page.viewportSize()
   if (viewport && viewport.width <= 680) {
-    await page.getByRole('button', { name: 'Abrir menu' }).click()
+    const returnTarget = page.getByRole('button', { name: 'Abrir menu' })
+    await returnTarget.click()
     const mobileNav = page.getByRole('navigation', { name: 'Navegação móvel' })
-    const trigger = mobileNav.getByRole('button', { name: 'Entrar' })
-    await trigger.click()
-    return trigger
+    await mobileNav.getByRole('button', { name: 'Entrar' }).click()
+    return returnTarget
   }
 
   const trigger = page.locator('.nav-actions').getByRole('button', { name: 'Entrar' })
@@ -197,12 +197,13 @@ test('WEB-07 — cadastro visual não dispara persistência e estados são acess
   await createAccount.click()
   await expect(page.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
 
-  const password = page.getByLabel('Senha')
-  const confirm = page.getByLabel('Confirmar senha')
+  const dialog = page.getByRole('dialog')
+  const password = dialog.getByLabel('Senha', { exact: true })
+  const confirm = dialog.getByLabel('Confirmar senha', { exact: true })
   await password.fill('Abcdef1!')
   await confirm.fill('Abcdef1!')
 
-  const submit = page.getByRole('dialog').getByRole('button', { name: 'Criar conta' })
+  const submit = dialog.getByRole('button', { name: 'Criar conta' })
   await expect(submit).toBeDisabled()
   await expect(page.getByText('Integração aguardando contrato de API. Nenhum endpoint fictício é chamado.')).toBeVisible()
 
