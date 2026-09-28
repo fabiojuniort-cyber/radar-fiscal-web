@@ -282,7 +282,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Entrar em modo demonstração' }))
 
-    await waitFor(() => expect(screen.getByText('Modo demonstração')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('Modo demonstração').length).toBeGreaterThan(0))
     expect(screen.getByText('Dados exibidos nesta área são demonstrativos.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()

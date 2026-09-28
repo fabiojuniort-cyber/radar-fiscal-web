@@ -488,7 +488,7 @@ test('WEB-14 — modo demonstração navega sem autenticação ou chamadas priva
   await expect(page.getByText('Modo demonstração').first()).toBeVisible()
   await expect(page.getByText('Dados exibidos nesta área são demonstrativos.')).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Navegação do painel demonstrativo' })).toBeVisible()
-  await expect(page.getByText('Demonstração')).toHaveCount(6)
+  await expect(page.getByText('Demonstração', { exact: true })).toHaveCount(6)
   expect(appRequests).toEqual([])
 
   await page.reload({ waitUntil: 'domcontentloaded' })
