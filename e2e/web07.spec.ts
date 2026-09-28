@@ -301,6 +301,38 @@ test('WEB-11 — login modal, contenção de foco, Escape e D-054', async ({ pag
   await expect(trigger).toBeFocused()
 })
 
+test('WEB-11 — login uses only the real auth contract and no localStorage token', async ({ page }) => {
+  let capturedMethod = ''
+  let capturedBody = ''
+  await page.route('**/auth/login', async (route) => {
+    capturedMethod = route.request().method()
+    capturedBody = route.request().postData() ?? ''
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'invalid_credentials' }),
+    })
+  })
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await openLogin(page)
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('E-mail').fill('teste@example.com')
+  await dialog.getByLabel('Senha').fill('Senha123!')
+  await dialog.getByRole('button', { name: 'Entrar' }).click()
+
+  await expect(dialog.getByRole('alert')).toBeVisible()
+  expect(capturedMethod).toBe('POST')
+  expect(JSON.parse(capturedBody)).toEqual({
+    email: 'teste@example.com',
+    password: 'Senha123!',
+  })
+
+  const storedKeys = await page.evaluate(() => Object.keys(localStorage))
+  expect(storedKeys).toEqual([])
+})
+
 test('WEB-11 — D-054 removes active signup/trial surfaces', async ({ page }) => {
   const apiRequests: string[] = []
   page.on('request', (request) => {
