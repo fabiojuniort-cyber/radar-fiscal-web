@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import App from './App'
+import mainSource from './main.tsx?raw'
+import styles from './styles.css?raw'
 import { selectFeaturedStates } from './content'
 
 afterEach(() => cleanup())
@@ -63,6 +65,39 @@ describe('TriBusca WEB-02', () => {
     expect(selected).toHaveLength(5)
     expect(selected[0].uf).toBe('SP')
     expect(new Set(selected.map((state) => state.uf)).size).toBe(5)
+  })
+
+  it('exposes individually named carousel controls', () => {
+    renderApp()
+
+    const stateButtons = screen.getAllByRole('button', { name: /^Exibir / })
+    expect(stateButtons).toHaveLength(5)
+    expect(new Set(stateButtons.map((button) => button.getAttribute('aria-label'))).size).toBe(5)
+    expect(screen.getByRole('button', { name: 'Estado anterior' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Próximo estado' })).toBeInTheDocument()
+  })
+
+  it('uses the official dark footer signature without CSS recoloring', () => {
+    renderApp()
+
+    const footerLogo = screen.getAllByRole('img', { name: 'TriBusca' }).at(-1)
+    expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-dark.png')
+    expect(styles).not.toMatch(/\.footer-logo\s*\{[^}]*filter:/s)
+  })
+
+  it('locks WEB-05 accessibility and Sonar contrast tokens', () => {
+    expect(styles).toMatch(/\.carousel-dots button\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;/s)
+    expect(styles).toMatch(/\.carousel-dots button::before\s*\{[^}]*background:\s*#607086;/s)
+    expect(styles).toContain('border: 1px solid #74859a;')
+    expect(styles).toMatch(/\.password-rules span\s*\{[^}]*color:\s*#607086;/s)
+    expect(styles).toContain('.sonar-medium { --signal-color: #9a6900; }')
+    expect(styles).toContain('.sonar-state-low strong { color: #237032; }')
+  })
+
+  it('self-hosts only the approved Inter weights used by the interface', () => {
+    for (const weight of [400, 700, 800, 900]) {
+      expect(mainSource).toContain(`@fontsource/inter/${weight}.css`)
+    }
   })
 
   it('renders federal coverage and all 27 UFs with placeholders', () => {
