@@ -47,6 +47,96 @@ async function screenshot(page: Page, project: string, name: string) {
   })
 }
 
+async function mockPublicSources(page: Page, status = 200, delayMs = 0) {
+  await page.route('**/public/v1/sources', async (route) => {
+    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs))
+
+    if (status !== 200) {
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'public_sources_unavailable' }),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-09-28T14:00:00.000Z',
+        items: [
+          {
+            code: 'dou',
+            name: 'DOU — Diário Oficial da União (INLABS)',
+            jurisdictionLevel: 'FEDERAL',
+            uf: null,
+            isActive: true,
+            status: 'ONLINE',
+            lastRunStatus: 'SUCCESS',
+            lastSuccessAt: '2026-09-28T13:30:00.000Z',
+            lastAttemptAt: '2026-09-28T13:30:00.000Z',
+            importedToday: 3,
+            totalPublications: 517,
+          },
+          {
+            code: 'confaz',
+            name: 'CONFAZ — Conselho Nacional de Política Fazendária',
+            jurisdictionLevel: 'FEDERAL',
+            uf: null,
+            isActive: true,
+            status: 'UNSTABLE',
+            lastRunStatus: 'PARTIAL_SUCCESS',
+            lastSuccessAt: '2026-09-28T12:00:00.000Z',
+            lastAttemptAt: '2026-09-28T13:00:00.000Z',
+            importedToday: 1,
+            totalPublications: 88,
+          },
+          {
+            code: 'nfe-encat',
+            name: 'Portal Nacional NF-e/ENCAT',
+            jurisdictionLevel: 'FEDERAL',
+            uf: null,
+            isActive: true,
+            status: 'UNAVAILABLE',
+            lastRunStatus: 'FETCH_FAILED',
+            lastSuccessAt: null,
+            lastAttemptAt: '2026-09-28T13:00:00.000Z',
+            importedToday: 0,
+            totalPublications: 42,
+          },
+          {
+            code: 'sped',
+            name: 'Portal SPED — gov.br',
+            jurisdictionLevel: 'FEDERAL',
+            uf: null,
+            isActive: false,
+            status: 'NOT_CONSULTED',
+            lastRunStatus: null,
+            lastSuccessAt: null,
+            lastAttemptAt: null,
+            importedToday: 0,
+            totalPublications: 0,
+          },
+          {
+            code: 'doe-sp',
+            name: 'Diário Oficial do Estado de São Paulo',
+            jurisdictionLevel: 'STATE',
+            uf: 'SP',
+            isActive: true,
+            status: 'ONLINE',
+            lastRunStatus: 'SUCCESS_NO_RESULTS',
+            lastSuccessAt: '2026-09-28T11:15:00.000Z',
+            lastAttemptAt: '2026-09-28T11:15:00.000Z',
+            importedToday: 0,
+            totalPublications: 91,
+          },
+        ],
+      }),
+    })
+  })
+}
+
 async function openLogin(page: Page) {
   const viewport = page.viewportSize()
   if (viewport && viewport.width <= 680) {
@@ -182,13 +272,17 @@ test('WEB-07 — menu, carrossel e foco por teclado', async ({ page }, testInfo)
   await screenshot(page, testInfo.project.name, 'carousel-interaction')
 })
 
-test('WEB-07 — modais, contenção de foco, Escape e retorno', async ({ page }, testInfo) => {
+test('WEB-11 — login modal, contenção de foco, Escape e D-054', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   const trigger = await openLogin(page)
 
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
+  await expect(dialog.getByText('Recuperação de senha em breve.')).toBeVisible()
+  await expect(dialog.getByText('Cadastro em breve.')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Esqueci minha senha' })).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Criar conta' })).toHaveCount(0)
 
   const focusInside = await dialog.evaluate((element) => element.contains(document.activeElement))
   expect(focusInside).toBe(true)
@@ -202,18 +296,12 @@ test('WEB-07 — modais, contenção de foco, Escape e retorno', async ({ page }
     expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true)
   }
 
-  await page.getByRole('button', { name: 'Esqueci minha senha' }).click()
-  await expect(page.getByRole('heading', { name: 'Recuperar senha' })).toBeVisible()
-  await page.getByRole('button', { name: 'Visualizar etapa “Nova senha”' }).click()
-  await expect(page.getByRole('heading', { name: 'Nova senha' })).toBeVisible()
-
-  await screenshot(page, testInfo.project.name, 'modal-nova-senha')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
 })
 
-test('WEB-07 — cadastro visual não dispara persistência e estados são acessíveis', async ({ page }) => {
+test('WEB-11 — D-054 removes active signup/trial surfaces', async ({ page }) => {
   const apiRequests: string[] = []
   page.on('request', (request) => {
     if (['fetch', 'xhr'].includes(request.resourceType())) apiRequests.push(request.url())
@@ -221,41 +309,18 @@ test('WEB-07 — cadastro visual não dispara persistência e estados são acess
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
+  await expect(page.getByText(/7 dias para conhecer/i)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Criar conta' })).toHaveCount(0)
+  expect(await page.getByLabel('Cadastro em breve').count()).toBeGreaterThanOrEqual(2)
+
   const viewport = page.viewportSize()
-  const createAccount = viewport && viewport.width <= 680
-    ? page.locator('.nav-actions').getByRole('button', { name: 'Criar conta' })
-    : page.locator('.nav-actions').getByRole('button', { name: 'Criar conta' })
+  if (viewport && viewport.width <= 680) {
+    await page.getByRole('button', { name: 'Abrir menu' }).click()
+    const mobileNav = page.getByRole('navigation', { name: 'Navegação móvel' })
+    await expect(mobileNav.getByText('Cadastro em breve')).toBeVisible()
+  }
 
-  await createAccount.click()
-  await expect(page.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
-
-  const dialog = page.getByRole('dialog')
-  const password = dialog.getByLabel('Senha', { exact: true })
-  const confirm = dialog.getByLabel('Confirmar senha', { exact: true })
-  await password.fill('Abcdef1!')
-  await confirm.fill('Abcdef1!')
-
-  const submit = dialog.getByRole('button', { name: 'Criar conta' })
-  await expect(submit).toBeDisabled()
-  await expect(page.getByText('Integração aguardando contrato de API. Nenhum endpoint fictício é chamado.')).toBeVisible()
-
-  const rule = page.getByLabel('Mínimo de 8 caracteres: atendido')
-  const ruleColor = await rule.evaluate((element) => getComputedStyle(element).color)
-  expect(contrastRatio(ruleColor, 'rgb(255, 255, 255)')).toBeGreaterThanOrEqual(4.5)
-  expect(ruleColor).not.toBe('rgb(35, 112, 50)')
-
-  const borderColor = await password.evaluate((element) => getComputedStyle(element).borderTopColor)
-  expect(contrastRatio(borderColor, 'rgb(255, 255, 255)')).toBeGreaterThanOrEqual(3)
-
-  await password.focus()
-  const focus = await password.evaluate((element) => ({
-    outlineWidth: getComputedStyle(element).outlineWidth,
-    boxShadow: getComputedStyle(element).boxShadow,
-  }))
-  expect(Number.parseFloat(focus.outlineWidth)).toBeGreaterThanOrEqual(3)
-  expect(focus.boxShadow).not.toBe('none')
-
-  expect(apiRequests).toEqual([])
+  expect(apiRequests.filter((url) => /signup|register|password|reset/i.test(url))).toEqual([])
 })
 
 test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({ page }) => {
@@ -314,20 +379,57 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   }
 })
 
-test('WEB-07 — claims públicos e Cobertura sem API', async ({ page }) => {
+test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page }) => {
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Em desenvolvimento')).toHaveCount(6)
   await expect(page.getByText('Disponível')).toHaveCount(0)
 
+  await mockPublicSources(page, 200, 350)
   await page.goto('/cobertura', { waitUntil: 'domcontentloaded' })
-  const coverageCards = page.locator('.coverage-card')
-  expect(await coverageCards.count()).toBeGreaterThan(27)
+
+  const stateCards = page.locator('[data-testid="state-coverage-card"]')
+  await expect(stateCards).toHaveCount(27)
+  await expect(stateCards.first()).toContainText('São Paulo / SP')
+
+  const douCard = page.getByText('DOU / INLABS').locator('..').locator('..')
+  await expect(douCard.locator('.collection-status')).toHaveText('—')
+  await expect(douCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
+
+  await expect(douCard.locator('.collection-status')).toHaveText('Online')
+  await expect(douCard).toContainText('3')
+  await expect(douCard).toContainText('517')
+  await expect(douCard).toContainText('10:30')
+
+  const confazCard = page.getByText('CONFAZ').locator('..').locator('..')
+  await expect(confazCard.locator('.collection-status')).toHaveText('Em validação')
+
+  const nfeCard = page.getByText('NF-e / ENCAT').locator('..').locator('..')
+  await expect(nfeCard.locator('.collection-status')).toHaveText('Em validação')
+  await expect(nfeCard.locator('.coverage-metrics dd').first()).toHaveText('—')
+
+  const spedCard = page.getByText('SPED').locator('..').locator('..')
+  await expect(spedCard.locator('.collection-status')).toHaveText('Em implantação')
+
+  const goCard = page.getByText('Goiás / GO').locator('..').locator('..')
+  await expect(goCard.locator('.collection-status')).toHaveText('Em implantação')
+  await expect(goCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
+})
+
+test('WEB-11 — Coverage failure never invents current data', async ({ page }) => {
+  await mockPublicSources(page, 503)
+
+  const responsePromise = page.waitForResponse('**/public/v1/sources')
+  await page.goto('/cobertura', { waitUntil: 'domcontentloaded' })
+  await responsePromise
+
   const statuses = page.locator('.collection-status')
+  expect(await statuses.count()).toBeGreaterThan(27)
   for (let index = 0; index < await statuses.count(); index += 1) {
     await expect(statuses.nth(index)).toHaveText('—')
   }
-  expect(await page.locator('.coverage-metrics dd').count()).toBeGreaterThan(20)
-  for (const metric of await page.locator('.coverage-metrics dd').all()) {
-    await expect(metric).toHaveText('—')
+
+  const metrics = page.locator('.coverage-metrics dd')
+  for (let index = 0; index < await metrics.count(); index += 1) {
+    await expect(metrics.nth(index)).toHaveText('—')
   }
 })
