@@ -61,11 +61,11 @@ jobs:
           printf '%s\n' "Chromium / local Vite preview from the CI build" > playwright-artifacts/RUNTIME.txt
           printf '%s\n' "1440x900, 1920x1080, 390x844, 360x800" > playwright-artifacts/VIEWPORTS.txt
 
-      - name: Upload WEB-09 browser evidence
+      - name: Upload WEB-11 browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: web09-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: web11-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             playwright-report
             test-results
