@@ -74,3 +74,17 @@ npm run build
 3. revisão visual/funcional.
 
 Sem merge e sem deploy nesta frente.
+
+
+## WEB-05
+
+Correções aplicadas após a revisão independente WEB-04:
+
+- alvos do carrossel ≥24px, foco visível e indicadores com contraste suficiente;
+- regras de senha e limites de input corrigidos para WCAG;
+- Sonar: Alta `#C92A2A`, Média `#9A6900`, Baixa texto `#237032` e ping `#2B8A3E`; exceção restrita ao Sonar;
+- footer usa a assinatura oficial para fundo escuro, sem filtros CSS;
+- Inter é self-hosted via `@fontsource/inter@5.3.0`, pesos 400/700/800/900;
+- licença: `docs/THIRD_PARTY_NOTICES.md`.
+
+O ambiente WEB-05, quando ativo, é apenas um **preview temporário de revisão do draft**. Não representa publicação definitiva. A Issue #9 continua sendo gate para ativar cadastro, recuperação e nova senha.
