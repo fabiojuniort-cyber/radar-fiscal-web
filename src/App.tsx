@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import {
@@ -31,6 +31,7 @@ import { getPasswordChecks, isStrongPassword } from './password'
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset'
 type SonarLevel = 'high' | 'medium' | 'low'
+type OpenAuth = (view: AuthView, returnFocus: HTMLElement) => void
 
 const products = [
   {
@@ -79,25 +80,36 @@ const products = [
 
 function App() {
   const [authView, setAuthView] = useState<AuthView | null>(null)
+  const authReturnFocus = useRef<HTMLElement | null>(null)
+  const openAuth: OpenAuth = (view, returnFocus) => {
+    authReturnFocus.current = returnFocus
+    setAuthView(view)
+  }
 
   return (
     <div className="app-shell">
-      <SiteHeader onAuth={setAuthView} />
+      <SiteHeader onAuth={openAuth} />
       <Routes>
-        <Route path="/" element={<HomePage onAuth={setAuthView} />} />
+        <Route path="/" element={<HomePage onAuth={openAuth} />} />
         <Route path="/cobertura" element={<CoveragePage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/como-funciona" element={<HowItWorksPage />} />
         <Route path="/reforma-tributaria" element={<TaxReformPage />} />
       </Routes>
       <SiteFooter />
-      <AuthModal view={authView} onView={setAuthView} onClose={() => setAuthView(null)} />
+      <AuthModal
+        view={authView}
+        onView={setAuthView}
+        onClose={() => setAuthView(null)}
+        getReturnFocus={() => authReturnFocus.current}
+      />
     </div>
   )
 }
 
-function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
+function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const closeMobile = () => setMobileOpen(false)
 
   return (
@@ -119,13 +131,14 @@ function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
         </nav>
 
         <div className="nav-actions">
-          <button className="btn btn-secondary btn-small" type="button" onClick={() => onAuth('login')}>
+          <button className="btn btn-secondary btn-small" type="button" onClick={(event) => onAuth('login', event.currentTarget)}>
             Entrar
           </button>
-          <button className="btn btn-small" type="button" onClick={() => onAuth('signup')}>
+          <button className="btn btn-small" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>
             Criar conta
           </button>
           <button
+            ref={mobileMenuButtonRef}
             className="mobile-menu-button"
             type="button"
             aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
@@ -143,7 +156,16 @@ function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
             <NavLink to="/portfolio" onClick={closeMobile}>Portfólio</NavLink>
             <NavLink to="/como-funciona" onClick={closeMobile}>Como funciona</NavLink>
             <NavLink to="/reforma-tributaria" onClick={closeMobile}>Reforma Tributária</NavLink>
-            <button type="button" onClick={() => { closeMobile(); onAuth('login') }}>Entrar</button>
+            <button
+              type="button"
+              onClick={(event) => {
+                const returnFocus = mobileMenuButtonRef.current ?? event.currentTarget
+                closeMobile()
+                onAuth('login', returnFocus)
+              }}
+            >
+              Entrar
+            </button>
           </div>
         </nav>
       )}
@@ -151,7 +173,7 @@ function SiteHeader({ onAuth }: { onAuth: (view: AuthView) => void }) {
   )
 }
 
-function HomePage({ onAuth }: { onAuth: (view: AuthView) => void }) {
+function HomePage({ onAuth }: { onAuth: OpenAuth }) {
   return (
     <main>
       <section className="hero">
@@ -164,7 +186,7 @@ function HomePage({ onAuth }: { onAuth: (view: AuthView) => void }) {
               chegar mais rápido ao que merece atenção.
             </p>
             <div className="hero-actions">
-              <button className="btn" type="button" onClick={() => onAuth('signup')}>
+              <button className="btn" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>
                 Criar conta <ArrowRight size={18} />
               </button>
               <Link className="btn btn-secondary" to="/portfolio">
@@ -555,16 +577,28 @@ function AuthModal({
   view,
   onView,
   onClose,
+  getReturnFocus,
 }: {
   view: AuthView | null
   onView: (view: AuthView) => void
   onClose: () => void
+  getReturnFocus: () => HTMLElement | null
 }) {
   return (
     <Dialog.Root open={view !== null} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content" aria-describedby={undefined}>
+        <Dialog.Content
+          className="dialog-content"
+          aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            const target = getReturnFocus()
+            if (target?.isConnected) {
+              event.preventDefault()
+              target.focus()
+            }
+          }}
+        >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
           <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
           {view === 'login' && <LoginForm onView={onView} />}
