@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +28,12 @@ import {
   selectFeaturedStates,
 } from './content'
 import { getPasswordChecks, isStrongPassword } from './password'
+import {
+  fetchPublicSources,
+  findFederalSource,
+  findStateSource,
+  toCoveragePresentation,
+} from './public-api'
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset'
 type SonarLevel = 'high' | 'medium' | 'low'
@@ -141,9 +147,9 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
           <button className="btn btn-secondary btn-small" type="button" onClick={(event) => onAuth('login', event.currentTarget)}>
             Entrar
           </button>
-          <button className="btn btn-small" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>
-            Criar conta
-          </button>
+          <span className="btn btn-small coming-soon-action" aria-label="Cadastro em breve">
+            Em breve
+          </span>
           <button
             ref={mobileMenuButtonRef}
             className="mobile-menu-button"
@@ -173,6 +179,7 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
             >
               Entrar
             </button>
+            <span className="mobile-coming-soon">Cadastro em breve</span>
           </div>
         </nav>
       )}
@@ -193,14 +200,14 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
               chegar mais rápido ao que merece atenção.
             </p>
             <div className="hero-actions">
-              <button className="btn" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>
-                Criar conta <ArrowRight size={18} />
-              </button>
+              <span className="btn coming-soon-action hero-coming-soon" aria-label="Cadastro em breve">
+                Cadastro em breve
+              </span>
               <Link className="btn btn-secondary" to="/portfolio">
                 Conhecer o portfólio
               </Link>
             </div>
-            <p className="availability-note">7 dias para conhecer a TriBusca.</p>
+            <p className="availability-note">Cadastro em breve.</p>
           </div>
           <SonarHero />
         </div>
@@ -321,13 +328,23 @@ function CoveragePage() {
     if (b.uf === 'SP') return 1
     return a.name.localeCompare(b.name, 'pt-BR')
   })
+  const sourcesQuery = useQuery({
+    queryKey: ['public-sources'],
+    queryFn: () => fetchPublicSources(),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  })
+  const sourceItems = sourcesQuery.isSuccess ? sourcesQuery.data.items : []
+  const dataAvailable = sourcesQuery.isSuccess
 
   return (
     <main>
       <PageHero
         eyebrow="Cobertura"
         title="Fontes oficiais acompanhadas pela TriBusca."
-        copy="O status operacional é separado das métricas. Onde não existe contrato de API público para esta interface, os números permanecem como “—”."
+        copy="O status operacional vem da API pública oficial. Enquanto uma fonte não tiver dado público disponível, a interface mantém “—” sem inventar sucesso ou métricas."
       />
       <section className="section">
         <div className="container coverage-stack">
@@ -335,22 +352,39 @@ function CoveragePage() {
             <h2>Serviços federais</h2>
             <p className="muted">Primeiro bloco da cobertura.</p>
           </div>
-          {FEDERAL_COVERAGE.map((source) => (
-            <CoverageCard key={source.name} name={source.name} status={source.status} />
-          ))}
+          {FEDERAL_COVERAGE.map((source) => {
+            const presentation = toCoveragePresentation(
+              findFederalSource(sourceItems, source.code),
+              dataAvailable,
+            )
+            return (
+              <CoverageCard
+                key={source.code}
+                name={source.name}
+                {...presentation}
+                testId="federal-coverage-card"
+              />
+            )
+          })}
 
           <div className="coverage-separator">
             <h2>27 UFs</h2>
             <p className="muted">São Paulo primeiro; demais unidades em ordem alfabética.</p>
           </div>
-          {states.map((state) => (
-            <CoverageCard
-              key={state.uf}
-              name={`${state.name} / ${state.uf}`}
-              status={state.status}
-              testId="state-coverage-card"
-            />
-          ))}
+          {states.map((state) => {
+            const presentation = toCoveragePresentation(
+              findStateSource(sourceItems, state.uf),
+              dataAvailable,
+            )
+            return (
+              <CoverageCard
+                key={state.uf}
+                name={`${state.name} / ${state.uf}`}
+                {...presentation}
+                testId="state-coverage-card"
+              />
+            )
+          })}
         </div>
       </section>
     </main>
@@ -360,10 +394,16 @@ function CoveragePage() {
 function CoverageCard({
   name,
   status,
+  lastSuccessAt,
+  importedToday,
+  totalPublications,
   testId,
 }: {
   name: string
   status: string
+  lastSuccessAt: string
+  importedToday: string
+  totalPublications: string
   testId?: string
 }) {
   return (
@@ -375,9 +415,9 @@ function CoverageCard({
         </span>
       </div>
       <dl className="coverage-metrics">
-        <div><dt>Última atualização</dt><dd>—</dd></div>
-        <div><dt>Importadas hoje</dt><dd>—</dd></div>
-        <div><dt>Total no Acervo</dt><dd>—</dd></div>
+        <div><dt>Última atualização</dt><dd>{lastSuccessAt}</dd></div>
+        <div><dt>Importadas hoje</dt><dd>{importedToday}</dd></div>
+        <div><dt>Total no Acervo</dt><dd>{totalPublications}</dd></div>
       </dl>
     </article>
   )
@@ -608,7 +648,7 @@ function AuthModal({
         >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
           <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
-          {view === 'login' && <LoginForm onView={onView} />}
+          {view === 'login' && <LoginForm />}
           {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
           {view === 'forgot' && <ForgotPassword onView={onView} />}
           {view === 'reset' && <PasswordFlow mode="reset" onView={onView} />}
@@ -618,7 +658,7 @@ function AuthModal({
   )
 }
 
-function LoginForm({ onView }: { onView: (view: AuthView) => void }) {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const apiBase = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
@@ -649,12 +689,12 @@ function LoginForm({ onView }: { onView: (view: AuthView) => void }) {
       <form className="auth-form" onSubmit={submit}>
         <label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
         <label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-        <button className="text-button" type="button" onClick={() => onView('forgot')}>Esqueci minha senha</button>
+        <p className="auth-unavailable-note">Recuperação de senha em breve.</p>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e a conexão com a API.</p>}
         {login.isSuccess && <p className="auth-success" role="status">Credenciais validadas. Integração da área autenticada é o próximo passo.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
-      <p className="auth-switch">Ainda não tem conta? <button type="button" onClick={() => onView('signup')}>Criar conta</button></p>
+      <p className="auth-switch">Cadastro em breve.</p>
     </>
   )
 }
