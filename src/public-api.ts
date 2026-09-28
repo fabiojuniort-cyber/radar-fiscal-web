@@ -47,10 +47,14 @@ export function publicApiUrl(path: string, apiBase = publicApiBase()): string {
   return `${apiBase}${path}`
 }
 
-export async function fetchPublicSources(apiBase = publicApiBase()): Promise<PublicSourcesResponse> {
+export async function fetchPublicSources(
+  apiBase = publicApiBase(),
+  signal?: AbortSignal,
+): Promise<PublicSourcesResponse> {
   const response = await fetch(publicApiUrl('/public/v1/sources', apiBase), {
     method: 'GET',
     headers: { Accept: 'application/json' },
+    signal,
   })
 
   if (!response.ok) {
@@ -92,12 +96,12 @@ export function findStateSource(
   const preferredCode = `doe-${normalizedUf.toLowerCase()}`
 
   return (
-    items.find((source) => source.code === preferredCode) ??
     items.find(
       (source) =>
         source.jurisdictionLevel === 'STATE' &&
         source.uf?.toUpperCase() === normalizedUf,
-    )
+    ) ??
+    items.find((source) => source.code === preferredCode)
   )
 }
 
