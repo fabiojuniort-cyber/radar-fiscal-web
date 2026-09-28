@@ -85,6 +85,13 @@ function App() {
     authReturnFocus.current = returnFocus
     setAuthView(view)
   }
+  const closeAuth = () => {
+    const target = authReturnFocus.current
+    setAuthView(null)
+    window.requestAnimationFrame(() => {
+      if (target?.isConnected) target.focus()
+    })
+  }
 
   return (
     <div className="app-shell">
@@ -100,7 +107,7 @@ function App() {
       <AuthModal
         view={authView}
         onView={setAuthView}
-        onClose={() => setAuthView(null)}
+        onClose={closeAuth}
         getReturnFocus={() => authReturnFocus.current}
       />
     </div>
