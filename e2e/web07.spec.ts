@@ -320,7 +320,7 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('teste@example.com')
   await dialog.getByLabel('Senha').fill('Senha123!')
-  await dialog.getByRole('button', { name: 'Entrar' }).click()
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
   expect(capturedMethod).toBe('POST')
@@ -464,4 +464,48 @@ test('WEB-11 — Coverage failure never invents current data', async ({ page }) 
   for (let index = 0; index < await metrics.count(); index += 1) {
     await expect(metrics.nth(index)).toHaveText('—')
   }
+})
+
+
+test('WEB-14 — modo demonstração navega sem autenticação ou chamadas privadas', async ({ page }, testInfo) => {
+  const appRequests: string[] = []
+  page.on('request', (request) => {
+    if (['fetch', 'xhr'].includes(request.resourceType())) {
+      appRequests.push(request.url())
+    }
+  })
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await waitForFonts(page)
+  await openLogin(page)
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('button', { name: 'Entrar em modo demonstração' })).toBeVisible()
+  await expect(dialog.getByText('Acesso temporário para navegação e validação da interface.')).toBeVisible()
+
+  await dialog.getByRole('button', { name: 'Entrar em modo demonstração' }).click()
+  await expect(page).toHaveURL(/\/painel-demo$/)
+  await expect(page.getByText('Modo demonstração').first()).toBeVisible()
+  await expect(page.getByText('Dados exibidos nesta área são demonstrativos.')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Navegação do painel demonstrativo' })).toBeVisible()
+  await expect(page.getByText('Demonstração', { exact: true })).toHaveCount(6)
+  expect(appRequests).toEqual([])
+
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page).toHaveURL(/\/painel-demo$/)
+  await expect(page.getByText('Modo demonstração').first()).toBeVisible()
+  expect(appRequests).toEqual([])
+
+  await page.getByRole('button', { name: 'Publicações' }).click()
+  await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
+  expect(appRequests).toEqual([])
+
+  await screenshot(page, testInfo.project.name, 'painel-demo')
+
+  await page.getByRole('button', { name: 'Sair da demonstração' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('heading', {
+    name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
+  })).toBeVisible()
+  expect(appRequests).toEqual([])
 })

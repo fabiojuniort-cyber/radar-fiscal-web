@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { FormEvent, useMemo, useRef, useState } from 'react'
-import { Link, NavLink, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import {
   DECODIFICA_EXAMPLES,
@@ -27,6 +27,7 @@ import {
   STATE_COVERAGE,
   selectFeaturedStates,
 } from './content'
+import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
   fetchPublicSources,
@@ -84,7 +85,31 @@ const products = [
   },
 ] as const
 
+const demoSections = [
+  'Início',
+  'Publicações',
+  'Busca',
+  'Monitoramento',
+  'Empresas',
+  'Estabelecimentos',
+  'Perfil Tributário',
+  'Configurações',
+] as const
+
+type DemoSection = (typeof demoSections)[number]
+
+const demoDashboardCards = [
+  'Fontes previstas',
+  'Fontes consultadas',
+  'Fontes com erro',
+  'Publicações capturadas',
+  'Publicações potencialmente relevantes',
+  'Pendentes de análise',
+] as const
+
 function App() {
+  const location = useLocation()
+  const demoAccessEnabled = isDemoAccessEnabled()
   const [authView, setAuthView] = useState<AuthView | null>(null)
   const authReturnFocus = useRef<HTMLElement | null>(null)
   const openAuth: OpenAuth = (view, returnFocus) => {
@@ -97,6 +122,10 @@ function App() {
     window.requestAnimationFrame(() => {
       if (target?.isConnected) target.focus()
     })
+  }
+
+  if (location.pathname === DEMO_PATH) {
+    return demoAccessEnabled ? <DemoPage /> : <Navigate to="/" replace />
   }
 
   return (
@@ -116,6 +145,101 @@ function App() {
         onClose={closeAuth}
         getReturnFocus={() => authReturnFocus.current}
       />
+    </div>
+  )
+}
+
+
+function DemoPage() {
+  const [activeSection, setActiveSection] = useState<DemoSection>('Início')
+  const navigate = useNavigate()
+
+  return (
+    <div className="demo-app">
+      <header className="demo-topbar">
+        <div className="demo-branding">
+          <img
+            src="/brand/tribusca-logo-horizontal-light.png"
+            alt="TriBusca"
+            className="demo-logo"
+          />
+          <div>
+            <span className="demo-mode-badge">Modo demonstração</span>
+            <p>Dados exibidos nesta área são demonstrativos.</p>
+          </div>
+        </div>
+        <button
+          className="btn btn-secondary demo-exit"
+          type="button"
+          onClick={() => navigate('/')}
+        >
+          Sair da demonstração
+        </button>
+      </header>
+
+      <div className="demo-workspace">
+        <aside className="demo-sidebar">
+          <nav className="demo-nav" aria-label="Navegação do painel demonstrativo">
+            {demoSections.map((section) => (
+              <button
+                key={section}
+                type="button"
+                aria-current={activeSection === section ? 'page' : undefined}
+                onClick={() => setActiveSection(section)}
+              >
+                {section}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <main className="demo-main">
+          {activeSection === 'Início' ? (
+            <>
+              <div className="demo-page-heading">
+                <span className="micro-label">Painel demonstrativo</span>
+                <h1>Visão geral</h1>
+                <p>
+                  Estrutura inicial do produto autenticado, sem sessão real e sem acesso a dados
+                  privados.
+                </p>
+              </div>
+
+              <div className="demo-metric-grid" aria-label="Indicadores demonstrativos">
+                {demoDashboardCards.map((card) => (
+                  <article className="demo-metric-card" key={card}>
+                    <span>{card}</span>
+                    <strong>—</strong>
+                    <small>Demonstração</small>
+                  </article>
+                ))}
+              </div>
+
+              <section className="demo-placeholder-panel">
+                <span className="demo-mode-badge">Modo demonstração</span>
+                <h2>Ambiente visual isolado</h2>
+                <p>
+                  Esta experiência usa somente conteúdo mock local. Nenhum endpoint autenticado,
+                  tenant, empresa, usuário, CNPJ privado ou configuração real é consultado.
+                </p>
+              </section>
+            </>
+          ) : (
+            <section className="demo-placeholder-panel demo-section-placeholder">
+              <span className="demo-mode-badge">Modo demonstração</span>
+              <h1>{activeSection}</h1>
+              <p>
+                Área preparada para evolução futura. Nesta atividade, a navegação é apenas visual e
+                permanece isolada de dados e sessões reais.
+              </p>
+              <div className="demo-placeholder-value">
+                <strong>—</strong>
+                <span>Demonstração</span>
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   )
 }
@@ -648,7 +772,7 @@ function AuthModal({
         >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
           <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
-          {view === 'login' && <LoginForm />}
+          {view === 'login' && <LoginForm onClose={onClose} />}
           {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
           {view === 'forgot' && <ForgotPassword onView={onView} />}
           {view === 'reset' && <PasswordFlow mode="reset" onView={onView} />}
@@ -658,9 +782,11 @@ function AuthModal({
   )
 }
 
-function LoginForm() {
+function LoginForm({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const navigate = useNavigate()
+  const demoAccessEnabled = isDemoAccessEnabled()
   const apiBase = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
 
   const login = useMutation({
@@ -682,6 +808,11 @@ function LoginForm() {
     login.mutate()
   }
 
+  const openDemo = () => {
+    onClose()
+    navigate(DEMO_PATH)
+  }
+
   return (
     <>
       <Dialog.Title>Entrar na TriBusca</Dialog.Title>
@@ -694,6 +825,15 @@ function LoginForm() {
         {login.isSuccess && <p className="auth-success" role="status">Credenciais validadas. Integração da área autenticada é o próximo passo.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
+      {demoAccessEnabled && (
+        <div className="demo-login-option">
+          <div className="demo-login-separator" aria-hidden="true"><span>ou</span></div>
+          <button className="btn btn-secondary full" type="button" onClick={openDemo}>
+            Entrar em modo demonstração
+          </button>
+          <p>Acesso temporário para navegação e validação da interface.</p>
+        </div>
+      )}
       <p className="auth-switch">Cadastro em breve.</p>
     </>
   )

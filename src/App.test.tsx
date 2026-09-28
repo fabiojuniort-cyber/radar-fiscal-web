@@ -7,6 +7,7 @@ import App from './App'
 import appSource from './App.tsx?raw'
 import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
+import { parseDemoAccessFlag } from './demo-access'
 import type { PublicSource } from './public-api'
 
 function sourcesResponse(items: PublicSource[] = []) {
@@ -27,6 +28,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 function renderApp(route = '/') {
@@ -230,5 +232,99 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getByText('Split payment')).toBeInTheDocument()
     expect(screen.getByText('Exemplo 1 de 5')).toBeInTheDocument()
     expect(screen.getByText('Gerada por IA. Não substitui o texto oficial.')).toBeInTheDocument()
+  })
+})
+
+
+describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
+  it('aceita somente o valor literal true na feature flag', () => {
+    expect(parseDemoAccessFlag('true')).toBe(true)
+    expect(parseDemoAccessFlag(undefined)).toBe(false)
+    expect(parseDemoAccessFlag(null)).toBe(false)
+    expect(parseDemoAccessFlag(false)).toBe(false)
+    expect(parseDemoAccessFlag('false')).toBe(false)
+    expect(parseDemoAccessFlag('TRUE')).toBe(false)
+    expect(parseDemoAccessFlag('1')).toBe(false)
+    expect(parseDemoAccessFlag(' true ')).toBe(false)
+  })
+
+  it('não renderiza o acesso demo quando a flag está desligada', () => {
+    vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'false')
+    renderApp()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    expect(screen.queryByRole('button', { name: 'Entrar em modo demonstração' })).not.toBeInTheDocument()
+  })
+
+  it('redireciona /painel-demo quando a flag está desligada', async () => {
+    vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'false')
+    renderApp('/painel-demo')
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', {
+        name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
+      })).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Modo demonstração')).not.toBeInTheDocument()
+  })
+
+  it('entra no painel demo sem chamar login ou qualquer endpoint', async () => {
+    vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'true')
+    const fetchMock = vi.fn(async () => sourcesResponse())
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderApp()
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: 'Entrar em modo demonstração' })).toBeInTheDocument()
+    expect(within(dialog).getByText('Acesso temporário para navegação e validação da interface.')).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Entrar em modo demonstração' }))
+
+    await waitFor(() => expect(screen.getAllByText('Modo demonstração').length).toBeGreaterThan(0))
+    expect(screen.getByText('Dados exibidos nesta área são demonstrativos.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('mantém o shell demonstrativo em estado React local e sem dados privados', () => {
+    vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'true')
+    renderApp('/painel-demo')
+
+    for (const section of [
+      'Início',
+      'Publicações',
+      'Busca',
+      'Monitoramento',
+      'Empresas',
+      'Estabelecimentos',
+      'Perfil Tributário',
+      'Configurações',
+    ]) {
+      expect(screen.getByRole('button', { name: section })).toBeInTheDocument()
+    }
+
+    expect(screen.getAllByText('Demonstração').length).toBeGreaterThanOrEqual(6)
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Publicações' }))
+    expect(screen.getByRole('heading', { name: 'Publicações' })).toBeInTheDocument()
+  })
+
+  it('sai da demonstração voltando ao site público sem chamar logout', async () => {
+    vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'true')
+    const fetchMock = vi.fn(async () => sourcesResponse())
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderApp('/painel-demo')
+    fireEvent.click(screen.getByRole('button', { name: 'Sair da demonstração' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', {
+        name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
+      })).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
