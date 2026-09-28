@@ -97,7 +97,7 @@ describe('TriBusca WEB-02', () => {
   it('keeps text labels for every Sonar level', () => {
     renderApp('/portfolio')
 
-    expect(screen.getByText('Alta afinidade')).toBeInTheDocument()
+    expect(screen.getAllByText('Alta afinidade').length).toBeGreaterThan(0)
     expect(screen.getByText('Média afinidade')).toBeInTheDocument()
     expect(screen.getByText('Baixa afinidade')).toBeInTheDocument()
   })
