@@ -47,6 +47,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build demo-enabled browser target
+        run: VITE_ENABLE_DEMO_ACCESS=true npm run build
+
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
@@ -61,11 +64,11 @@ jobs:
           printf '%s\n' "Chromium / local Vite preview from the CI build" > playwright-artifacts/RUNTIME.txt
           printf '%s\n' "1440x900, 1920x1080, 390x844, 360x800" > playwright-artifacts/VIEWPORTS.txt
 
-      - name: Upload WEB-11 browser evidence
+      - name: Upload WEB-14 browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: web11-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: web14-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             playwright-report
             test-results
