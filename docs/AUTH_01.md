@@ -14,4 +14,4 @@ Antes de habilitar produção, verificar por requisição real que `/auth/login`
 
 ## Dependência de branches e gate
 
-Esta mudança frontend foi preparada sobre `feat/web-14-demo-access` (PR #3), pois a `main` consultada em 28/09/2026 ainda estava no commit `978a1a9b` e não continha o site, embora o PR #1 aparecesse como merged. O PR de AUTH-01 deve ser tratado como **stacked** até a base do site/demo estar incorporada e verificada na `main`; revalidar os refs antes de qualquer merge. Revisão independente R2, CI e confirmação do proxy são obrigatórios. O deploy e o provisionamento produtivo são um gate R3 separado.
+O PR #3 de demonstração foi incorporado na `main` como `e0513ea25441e09c06ac757a9004b75b8712d0de`. A branch AUTH-01 foi alinhada a esse commit; seu diff contém somente a autenticação real. Revalidar os refs e o CI no head antes do merge. O responsável dispensou expressamente a revisão independente nesta sessão; a confirmação do proxy e o provisionamento produtivo continuam gates operacionais separados.
