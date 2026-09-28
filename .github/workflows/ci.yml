@@ -27,5 +27,10 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Verify brand asset
+        run: |
+          test -s public/brand/tribusca-logo-horizontal-dark.png
+          sha256sum public/brand/tribusca-logo-horizontal-dark.png
+
       - name: Build
         run: npm run build
