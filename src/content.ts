@@ -52,17 +52,16 @@ export function selectFeaturedStates(random: () => number = Math.random): StateV
 }
 
 export const FEDERAL_COVERAGE = [
-  { name: 'DOU / INLABS', status: '—' },
-  { name: 'CONFAZ', status: '—' },
-  { name: 'NF-e / ENCAT', status: '—' },
-  { name: 'SPED', status: '—' },
-  { name: 'CGIBS', status: '—' },
-  { name: 'Receita Federal', status: '—' },
+  { name: 'DOU / INLABS', code: 'dou' },
+  { name: 'CONFAZ', code: 'confaz' },
+  { name: 'NF-e / ENCAT', code: 'nfe-encat' },
+  { name: 'SPED', code: 'sped' },
+  { name: 'CGIBS', code: 'cgibs' },
+  { name: 'Receita Federal', code: 'rfb-normas' },
 ] as const
 
 export const STATE_COVERAGE = STATE_VISUALS.map((state) => ({
   ...state,
-  status: '—',
 }))
 
 export const DECODIFICA_EXAMPLES = [
