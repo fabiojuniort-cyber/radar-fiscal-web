@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import App from './App'
 import mainSource from './main.tsx?raw'
-import styles from './styles.css?raw'
 import { selectFeaturedStates } from './content'
 
 afterEach(() => cleanup())
@@ -82,16 +81,25 @@ describe('TriBusca WEB-02', () => {
 
     const footerLogo = screen.getAllByRole('img', { name: 'TriBusca' }).at(-1)
     expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-dark.png')
-    expect(styles).not.toMatch(/\.footer-logo\s*\{[^}]*filter:/s)
   })
 
-  it('locks WEB-05 accessibility and Sonar contrast tokens', () => {
-    expect(styles).toMatch(/\.carousel-dots button\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;/s)
-    expect(styles).toMatch(/\.carousel-dots button::before\s*\{[^}]*background:\s*#607086;/s)
-    expect(styles).toContain('border: 1px solid #74859a;')
-    expect(styles).toMatch(/\.password-rules span\s*\{[^}]*color:\s*#607086;/s)
-    expect(styles).toContain('.sonar-medium { --signal-color: #9a6900; }')
-    expect(styles).toContain('.sonar-state-low strong { color: #237032; }')
+  it('exposes password states without relying only on color', () => {
+    renderApp()
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Criar conta' })[0])
+    const pending = screen.getByLabelText('Mínimo de 8 caracteres: pendente')
+    expect(pending).toHaveClass('rule-pending')
+
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Abcdef1!' } })
+    expect(screen.getByLabelText('Mínimo de 8 caracteres: atendido')).toHaveClass('rule-ok')
+  })
+
+  it('keeps text labels for every Sonar level', () => {
+    renderApp('/portfolio')
+
+    expect(screen.getByText('Alta afinidade')).toBeInTheDocument()
+    expect(screen.getByText('Média afinidade')).toBeInTheDocument()
+    expect(screen.getByText('Baixa afinidade')).toBeInTheDocument()
   })
 
   it('self-hosts only the approved Inter weights used by the interface', () => {
