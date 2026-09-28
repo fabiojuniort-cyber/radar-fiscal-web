@@ -29,10 +29,20 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Verify brand asset
+      - name: Validate official PNG assets
         run: |
-          test -s public/brand/tribusca-logo-horizontal-dark.png
-          sha256sum public/brand/tribusca-logo-horizontal-dark.png
+          mkdir -p playwright-artifacts
+          node scripts/validate-png.mjs \
+            public/brand/tribusca-logo-horizontal-dark.png \
+            public/brand/tribusca-icon.png | tee playwright-artifacts/PNG_INTEGRITY.txt
+          node --test scripts/validate-png.test.mjs | tee playwright-artifacts/PNG_NEGATIVE_TESTS.txt
+          printf '%s  %s\n' \
+            'c541566c88a53d4dac0e473f430c4d9a26bb40c9ecaa47d96ae8a8998e37da99' \
+            'public/brand/tribusca-logo-horizontal-dark.png' \
+            '7f289e7e09eb914464f14bd86178d7d73a6066daae8d3ee269f7a34f4acc6268' \
+            'public/brand/tribusca-icon.png' \
+            | tee playwright-artifacts/BRAND_ASSETS.sha256 \
+            | sha256sum --check --strict
 
       - name: Build
         run: npm run build
@@ -51,11 +61,11 @@ jobs:
           printf '%s\n' "Chromium / local Vite preview from the CI build" > playwright-artifacts/RUNTIME.txt
           printf '%s\n' "1440x900, 1920x1080, 390x844, 360x800" > playwright-artifacts/VIEWPORTS.txt
 
-      - name: Upload WEB-07 browser evidence
+      - name: Upload WEB-09 browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: web07-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: web09-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             playwright-report
             test-results

@@ -62,7 +62,7 @@ async function openLogin(page: Page) {
   return trigger
 }
 
-test.describe('WEB-07 — rotas e responsividade', () => {
+test.describe('WEB-09 — rotas, responsividade e rodapé', () => {
   for (const route of routes) {
     test(`${route.slug}: render, overflow e screenshot`, async ({ page }, testInfo) => {
       await page.goto(route.path, { waitUntil: 'domcontentloaded' })
@@ -79,6 +79,38 @@ test.describe('WEB-07 — rotas e responsividade', () => {
         `horizontal overflow on ${route.path}: ${JSON.stringify(overflow)}`,
       ).toBeLessThanOrEqual(overflow.clientWidth + 1)
 
+      const footer = page.locator('.site-footer')
+      await footer.scrollIntoViewIfNeeded()
+      await expect(footer).toBeVisible()
+
+      const footerLogo = footer.locator('.footer-logo')
+      await expect(footerLogo).toBeVisible()
+      await expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-dark.png')
+      await expect(footerLogo).toHaveAttribute('alt', 'TriBusca')
+      const footerLogoState = await footerLogo.evaluate((element) => {
+        const image = element as HTMLImageElement
+        const box = image.getBoundingClientRect()
+        return {
+          complete: image.complete,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          renderedWidth: box.width,
+          renderedHeight: box.height,
+          filter: getComputedStyle(image).filter,
+        }
+      })
+      expect(footerLogoState.complete).toBe(true)
+      expect(footerLogoState.naturalWidth).toBe(2172)
+      expect(footerLogoState.naturalHeight).toBe(724)
+      expect(footerLogoState.renderedWidth).toBeGreaterThanOrEqual(118)
+      expect(footerLogoState.renderedHeight).toBeGreaterThan(30)
+      expect(footerLogoState.filter).toBe('none')
+
+      const evidenceDir = path.join('playwright-artifacts', 'screenshots')
+      await mkdir(evidenceDir, { recursive: true })
+      await footer.screenshot({
+        path: path.join(evidenceDir, `${testInfo.project.name}-footer-${route.slug}.png`),
+      })
       await screenshot(page, testInfo.project.name, route.slug)
     })
   }
