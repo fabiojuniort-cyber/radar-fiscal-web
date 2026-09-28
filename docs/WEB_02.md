@@ -75,7 +75,7 @@ O header usa a assinatura horizontal oficial `tribusca-logo-horizontal-light.png
 ## Pendências
 
 - WEB-03 corrigiu o draft: Acervo, Central de Monitoramento, Sonar, Revela, Decodifica e Perfil Tributário ficam todos como **Em desenvolvimento**;
-- gate Branding para cores do Sonar;
+- D-053 ratificou conceitualmente as cores do Sonar; WEB-07 verifica no browser que a exceção não vaza para outros componentes;
 - contratos backend de cadastro/reset/cobertura;
 - revisão visual contra Design Components;
 - CI final do head.
@@ -112,7 +112,7 @@ A D-043 permanece no histórico como proposta aplicada ao draft e não confirmad
 - indicador inativo: `#607086` em branco, contraste aproximado **5.05:1**;
 - indicador ativo: `#0057FF` em branco, contraste aproximado **5.52:1**;
 - regras de senha pendentes: `#607086`, contraste aproximado **5.05:1** e ícone próprio de estado pendente;
-- regras atendidas: `#237032`, contraste aproximado **6.11:1**;
+- regras atendidas: azul institucional escuro `var(--navy)` / `#08306B`, contraste aproximado **12,76:1**; o verde `#237032` fica restrito ao Sonar;
 - borda normal dos inputs: `#74859A`, contraste aproximado **3.77:1** em branco;
 - foco de botões, links e inputs recebe outline azul institucional de 3px;
 - `prefers-reduced-motion` permanece ativo.
@@ -144,3 +144,50 @@ Inter é empacotada no build por `@fontsource/inter@5.3.0`, importando somente 4
 - Issue #9 continua gate para cadastro/recuperação/nova senha;
 - preview WEB-05 é temporário e exclusivo de revisão;
 - PR permanece draft, sem merge e sem publicação definitiva.
+
+
+## WEB-07 — validação reproduzível em Chromium
+
+**Data:** 27/09/2026  
+**Origem:** bloqueio BRAND-SONAR-01 e gap de navegador identificados na WEB-06.
+
+### Correção de marca
+
+`.password-rules .rule-ok` deixou de usar `#237032` e passou a usar `var(--navy)` / `#08306B`, mantendo contraste de texto muito acima de 4,5:1. Os valores ratificados pela D-053 permanecem exclusivos do Sonar:
+
+- Alta `#C92A2A`;
+- Média `#9A6900`;
+- Baixa texto `#237032`;
+- Baixa ping `#2B8A3E`.
+
+### Browser real no CI
+
+Playwright/Chromium executa contra `npm run preview` do build produzido pelo próprio runner e do **mesmo head do PR**.
+
+Viewports:
+- 1440×900;
+- 1920×1080;
+- 390×844;
+- 360×800.
+
+Cobertura:
+- `/`, `/cobertura`, `/portfolio`, `/como-funciona`, `/reforma-tributaria`;
+- ausência de overflow horizontal;
+- menu mobile;
+- carrossel e targets;
+- Tab/Shift+Tab e foco visível;
+- modal: foco inicial, contenção, Escape e retorno de foco;
+- cadastro visual sem persistência;
+- contraste de regras de senha e inputs;
+- carregamento da Inter;
+- footer/logo escuro sem filtro;
+- Sonar e isolamento dos quatro hexes;
+- `prefers-reduced-motion: reduce`;
+- seis recursos `Em desenvolvimento`;
+- Cobertura com `—` sem API.
+
+Evidence artifact inclui relatório Playwright, screenshots e traces quando houver falha, além de `HEAD.txt`, `RUNTIME.txt` e `VIEWPORTS.txt`.
+
+**Diferença importante:** essa validação automatizada usa o build local no runner. O preview Railway é atualizado para o mesmo head, mas permanece separado e destinado à revisão independente humana.
+
+Sem merge/publicação definitiva. Issue #10 permanece aberta até o parecer independente.
