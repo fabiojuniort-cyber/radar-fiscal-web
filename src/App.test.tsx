@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App'
+import appSource from './App.tsx?raw'
 import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
 import type { PublicSource } from './public-api'
@@ -95,6 +96,10 @@ describe('TriBusca release candidate WEB-11', () => {
       method: 'POST',
       credentials: 'include',
     }))
+  })
+
+  it('does not store auth tokens in localStorage', () => {
+    expect(appSource).not.toContain('localStorage')
   })
 
   it('keeps São Paulo first and returns five carousel states', () => {
