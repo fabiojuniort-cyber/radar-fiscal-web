@@ -41,14 +41,19 @@ describe('public Coverage API mapping', () => {
     expect(findFederalSource(items, 'confaz')?.code).toBe('confaz')
   })
 
-  it('prefers the explicit DOE code and otherwise falls back to UF', () => {
+  it('prefers an explicit STATE/UF match and falls back to DOE code', () => {
     const items = [
-      source({ code: 'generic-sp', uf: 'SP' }),
-      source({ code: 'doe-sp', uf: 'SP' }),
+      source({ code: 'state-sp', jurisdictionLevel: 'STATE', uf: 'SP' }),
+      source({ code: 'doe-sp', jurisdictionLevel: 'FEDERAL', uf: null }),
     ]
 
-    expect(findStateSource(items, 'SP')?.code).toBe('doe-sp')
-    expect(findStateSource([source({ code: 'state-go', uf: 'GO' })], 'GO')?.code).toBe('state-go')
+    expect(findStateSource(items, 'SP')?.code).toBe('state-sp')
+    expect(
+      findStateSource(
+        [source({ code: 'doe-go', jurisdictionLevel: 'FEDERAL', uf: null })],
+        'GO',
+      )?.code,
+    ).toBe('doe-go')
   })
 
   it('uses lastSuccessAt and preserves real zero counts', () => {
