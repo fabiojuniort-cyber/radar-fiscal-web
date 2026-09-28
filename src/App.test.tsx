@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App'
 import appSource from './App.tsx?raw'
+import authSource from './auth-session.tsx?raw'
 import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
 import { parseDemoAccessFlag } from './demo-access'
@@ -102,6 +103,47 @@ describe('TriBusca release candidate WEB-11', () => {
 
   it('does not store auth tokens in localStorage', () => {
     expect(appSource).not.toContain('localStorage')
+    expect(authSource).not.toContain('localStorage')
+  })
+
+  it('opens a real authenticated panel and logs out through the backend', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/auth/login') return { ok: true, json: async () => ({ accessToken: 'test-access-token' }) } as Response
+      if (url === '/auth/me') return { ok: true, json: async () => ({
+        user: { id: 'user-test', email: 'owner@example.test', name: null },
+        memberships: [{ tenantId: 'tenant-test', tenantName: 'TriBusca Internal', tenantSlug: 'tribusca-internal', role: 'OWNER' }],
+      }) } as Response
+      if (url === '/auth/logout') return { ok: true, status: 204 } as Response
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderApp()
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'owner@example.test' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
+    fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
+
+    await screen.findByRole('heading', { name: 'Painel TriBusca' })
+    expect(screen.getByText('TriBusca Internal · OWNER')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
+      method: 'POST', credentials: 'include',
+      headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
+    })))
+    await screen.findByRole('button', { name: 'Entrar' })
+  })
+
+  it('requires a valid refresh cookie before showing the panel on a direct visit', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 401, json: async () => ({ error: 'invalid_refresh_token' }) } as Response))
+    vi.stubGlobal('fetch', fetchMock)
+    renderApp('/painel')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/refresh', expect.objectContaining({
+      method: 'POST', credentials: 'include',
+      headers: { 'x-csrf-protection': '1' },
+    })))
+    await screen.findByRole('button', { name: 'Entrar' })
+    expect(screen.queryByRole('heading', { name: 'Painel TriBusca' })).not.toBeInTheDocument()
   })
 
   it('keeps São Paulo first and returns five carousel states', () => {

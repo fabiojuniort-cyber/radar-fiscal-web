@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { FormEvent, useMemo, useRef, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import {
@@ -27,6 +27,7 @@ import {
   STATE_COVERAGE,
   selectFeaturedStates,
 } from './content'
+import { AuthSessionProvider, useAuthSession } from './auth-session'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
@@ -108,6 +109,10 @@ const demoDashboardCards = [
 ] as const
 
 function App() {
+  return <AuthSessionProvider><AppContent /></AuthSessionProvider>
+}
+
+function AppContent() {
   const location = useLocation()
   const demoAccessEnabled = isDemoAccessEnabled()
   const [authView, setAuthView] = useState<AuthView | null>(null)
@@ -128,6 +133,10 @@ function App() {
     return demoAccessEnabled ? <DemoPage /> : <Navigate to="/" replace />
   }
 
+  if (location.pathname === '/painel') {
+    return <AuthenticatedPanel />
+  }
+
   return (
     <div className="app-shell">
       <SiteHeader onAuth={openAuth} />
@@ -145,6 +154,50 @@ function App() {
         onClose={closeAuth}
         getReturnFocus={() => authReturnFocus.current}
       />
+    </div>
+  )
+}
+
+function AuthenticatedPanel() {
+  const { me, checked, ensureSession, logout } = useAuthSession()
+  const [logoutError, setLogoutError] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return (
+    <div className="auth-panel">
+      <header className="auth-panel-header">
+        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" />
+        <button className="btn btn-secondary" type="button" onClick={async () => {
+          try {
+            await logout()
+            navigate('/')
+          } catch {
+            setLogoutError(true)
+          }
+        }}>Sair</button>
+      </header>
+      <main className="auth-panel-main">
+        <span className="micro-label">Área autenticada</span>
+        <h1>Painel TriBusca</h1>
+        <p>Você está conectado como <strong>{me.user.name ?? me.user.email}</strong>.</p>
+        <h2>Seus acessos</h2>
+        <ul>
+          {me.memberships.map((membership) => (
+            <li key={membership.tenantId}>{membership.tenantName} · {membership.role}</li>
+          ))}
+        </ul>
+        {me.memberships.length === 0 && <p>Nenhuma conta ativa vinculada a este usuário.</p>}
+        <p>As demais áreas do produto serão liberadas conforme seus próprios gates.</p>
+        {logoutError && <p role="alert">Não foi possível encerrar a sessão. Tente novamente.</p>}
+      </main>
     </div>
   )
 }
@@ -787,19 +840,16 @@ function LoginForm({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const demoAccessEnabled = isDemoAccessEnabled()
-  const apiBase = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
+  const { login: loginSession } = useAuthSession()
 
   const login = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error ?? 'login_failed')
-      return data
+      await loginSession(email, password)
+    },
+    onSuccess: () => {
+      setPassword('')
+      onClose()
+      navigate('/painel')
     },
   })
 
@@ -822,7 +872,6 @@ function LoginForm({ onClose }: { onClose: () => void }) {
         <label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
         <p className="auth-unavailable-note">Recuperação de senha em breve.</p>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e a conexão com a API.</p>}
-        {login.isSuccess && <p className="auth-success" role="status">Credenciais validadas. Integração da área autenticada é o próximo passo.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
       {demoAccessEnabled && (
