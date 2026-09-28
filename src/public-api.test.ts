@@ -41,19 +41,40 @@ describe('public Coverage API mapping', () => {
     expect(findFederalSource(items, 'confaz')?.code).toBe('confaz')
   })
 
-  it('prefers an explicit STATE/UF match and falls back to DOE code', () => {
+  it('prioritizes an explicit STATE/UF match over the DOE code fallback', () => {
     const items = [
       source({ code: 'state-sp', jurisdictionLevel: 'STATE', uf: 'SP' }),
-      source({ code: 'doe-sp', jurisdictionLevel: 'FEDERAL', uf: null }),
+      source({ code: 'doe-sp', jurisdictionLevel: 'STATE', uf: null }),
     ]
 
     expect(findStateSource(items, 'SP')?.code).toBe('state-sp')
+  })
+
+  it('allows a DOE code fallback only for a STATE source', () => {
+    expect(
+      findStateSource(
+        [source({ code: 'doe-go', jurisdictionLevel: 'STATE', uf: null })],
+        'GO',
+      )?.code,
+    ).toBe('doe-go')
+  })
+
+  it('does not associate a FEDERAL DOE code with a state card', () => {
     expect(
       findStateSource(
         [source({ code: 'doe-go', jurisdictionLevel: 'FEDERAL', uf: null })],
         'GO',
-      )?.code,
-    ).toBe('doe-go')
+      ),
+    ).toBeUndefined()
+  })
+
+  it('does not associate another jurisdiction with a state card by DOE code', () => {
+    expect(
+      findStateSource(
+        [source({ code: 'doe-go', jurisdictionLevel: 'MUNICIPAL', uf: 'GO' })],
+        'GO',
+      ),
+    ).toBeUndefined()
   })
 
   it('uses lastSuccessAt and preserves real zero counts', () => {

@@ -95,13 +95,15 @@ export function findStateSource(
   const normalizedUf = uf.toUpperCase()
   const preferredCode = `doe-${normalizedUf.toLowerCase()}`
 
+  const stateSources = items.filter(
+    (source) => source.jurisdictionLevel === 'STATE',
+  )
+
   return (
-    items.find(
-      (source) =>
-        source.jurisdictionLevel === 'STATE' &&
-        source.uf?.toUpperCase() === normalizedUf,
+    stateSources.find(
+      (source) => source.uf?.toUpperCase() === normalizedUf,
     ) ??
-    items.find((source) => source.code === preferredCode)
+    stateSources.find((source) => source.code === preferredCode)
   )
 }
 
