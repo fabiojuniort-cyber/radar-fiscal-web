@@ -103,7 +103,7 @@ function App() {
     <div className="app-shell">
       <SiteHeader onAuth={openAuth} />
       <Routes>
-        <Route path="/" element={<HomePage onAuth={openAuth} />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/cobertura" element={<CoveragePage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/como-funciona" element={<HowItWorksPage />} />
@@ -147,7 +147,7 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
           <button className="btn btn-secondary btn-small" type="button" onClick={(event) => onAuth('login', event.currentTarget)}>
             Entrar
           </button>
-          <span className="btn btn-small coming-soon-action" aria-label="Cadastro em breve">
+          <span className="btn btn-small coming-soon-action" aria-label="Cadastro em breve" aria-disabled="true">
             Em breve
           </span>
           <button
@@ -179,7 +179,7 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
             >
               Entrar
             </button>
-            <span className="mobile-coming-soon">Cadastro em breve</span>
+            <span className="mobile-coming-soon" aria-disabled="true">Cadastro em breve</span>
           </div>
         </nav>
       )}
@@ -187,7 +187,7 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
   )
 }
 
-function HomePage({ onAuth }: { onAuth: OpenAuth }) {
+function HomePage() {
   return (
     <main>
       <section className="hero">
@@ -200,7 +200,7 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
               chegar mais rápido ao que merece atenção.
             </p>
             <div className="hero-actions">
-              <span className="btn coming-soon-action hero-coming-soon" aria-label="Cadastro em breve">
+              <span className="btn coming-soon-action hero-coming-soon" aria-label="Cadastro em breve" aria-disabled="true">
                 Cadastro em breve
               </span>
               <Link className="btn btn-secondary" to="/portfolio">
@@ -330,14 +330,14 @@ function CoveragePage() {
   })
   const sourcesQuery = useQuery({
     queryKey: ['public-sources'],
-    queryFn: () => fetchPublicSources(),
+    queryFn: ({ signal }) => fetchPublicSources(undefined, signal),
     retry: false,
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: false,
   })
-  const sourceItems = sourcesQuery.isSuccess ? sourcesQuery.data.items : []
-  const dataAvailable = sourcesQuery.isSuccess
+  const dataAvailable = sourcesQuery.isSuccess && !sourcesQuery.isFetching
+  const sourceItems = dataAvailable ? sourcesQuery.data.items : []
 
   return (
     <main>
