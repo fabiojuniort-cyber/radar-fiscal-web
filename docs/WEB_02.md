@@ -30,12 +30,12 @@ O frontend:
 
 ## Fluxos sem contrato comprovado
 
-Os seguintes fluxos aparecem no design, porém não executam escrita remota:
+Issue #9 continua aberta para:
 - Criar conta;
 - Recuperar senha;
 - Nova senha.
 
-A UX e a validação client-side podem ser demonstradas. Os botões de submissão permanecem inativos até existir contrato backend.
+**Estado vigente do release candidate WEB-11:** D-054 está aplicada. Esses fluxos não são apresentados como ações públicas funcionais; signup e recuperação aparecem como **Em breve** e nenhum endpoint fictício é chamado. O código interno pode permanecer preparado para implementação futura.
 
 ## Cobertura
 
@@ -45,7 +45,17 @@ A página reserva os campos:
 - importadas hoje;
 - total no Acervo.
 
-Nenhum endpoint foi inventado. Sem contrato público ativo no frontend, **status operacional e métricas exibem `—`**. Os rótulos permitidos quando a API estiver disponível são **Online / Em validação / Em implantação**.
+WEB-11 integra o contrato D-050 existente `GET /public/v1/sources` via TanStack Query e `VITE_API_BASE`.
+
+Regras vigentes:
+- `ONLINE → Online`;
+- `UNSTABLE/UNAVAILABLE → Em validação`;
+- `NOT_CONSULTED → Em implantação`;
+- fonte/UF prevista e ausente de resposta válida → `Em implantação`;
+- loading, refetch ou erro → status/métricas `—`;
+- “Última atualização” usa somente `lastSuccessAt`;
+- `lastAttemptAt` nunca substitui sucesso;
+- `importedToday` e `totalPublications` são exibidos apenas quando recebidos da API.
 
 ## Sonar
 
@@ -76,7 +86,7 @@ O header usa a assinatura horizontal oficial `tribusca-logo-horizontal-light.png
 
 - WEB-03 corrigiu o draft: Acervo, Central de Monitoramento, Sonar, Revela, Decodifica e Perfil Tributário ficam todos como **Em desenvolvimento**;
 - D-053 ratificou conceitualmente as cores do Sonar; WEB-07 verifica no browser que a exceção não vaza para outros componentes;
-- contratos backend de cadastro/reset/cobertura;
+- contratos backend de cadastro/reset; a Cobertura já usa D-050, faltando CORS real da origem pública;
 - revisão visual contra Design Components;
 - CI final do head.
 
@@ -191,3 +201,61 @@ Evidence artifact inclui relatório Playwright, screenshots e traces quando houv
 **Diferença importante:** essa validação automatizada usa o build local no runner. O preview Railway é atualizado para o mesmo head, mas permanece separado e destinado à revisão independente humana.
 
 Sem merge/publicação definitiva. Issue #10 permanece aberta até o parecer independente.
+
+
+## WEB-11 — release candidate público
+
+**Data:** 28/09/2026  
+**Origem:** D-054 + D-050; Issue #8; Issue #9 OPEN; Issue #10 CLOSED; Issue #11 OPEN.
+
+### D-054
+
+Enquanto Issue #9 estiver aberta:
+- desktop header: cadastro = `Em breve`, não acionável;
+- menu mobile: `Cadastro em breve`, não acionável;
+- hero: `Cadastro em breve`, não acionável;
+- modal Entrar: `Cadastro em breve.`;
+- recuperação: `Recuperação de senha em breve.`;
+- removido o claim `7 dias para conhecer a TriBusca.`;
+- nenhuma superfície pública abre signup/reset.
+
+### Login
+
+Permanece exclusivamente:
+`POST /auth/login`
+
+- `VITE_API_BASE` quando configurado;
+- same-origin quando vazio;
+- `credentials: include`;
+- nenhum token em `localStorage`.
+
+### Cobertura D-050
+
+Consumidor implementado somente para:
+`GET /public/v1/sources`
+
+Não foram adicionados consumidores de `/publications` ou `/stats`.
+
+Mapeamento federal por code:
+- DOU / INLABS → `dou`;
+- CONFAZ → `confaz`;
+- NF-e / ENCAT → `nfe-encat`;
+- SPED → `sped`;
+- CGIBS → `cgibs`;
+- Receita Federal → `rfb-normas`.
+
+Estaduais priorizam `jurisdictionLevel=STATE` + `uf`, com fallback para code `doe-<uf>`.
+
+### CORS conhecido
+
+Preview:
+`https://web05-preview-production.up.railway.app`
+
+Backend:
+`https://radar-fiscal-backend-production.up.railway.app`
+
+Inspeção read-only WEB-11: `PUBLIC_API_ALLOWED_ORIGINS` ausente no backend produtivo. Nenhuma variável backend foi alterada. A origem acima precisa ser adicionada em gate separado para que o preview receba dados reais via browser.
+
+### Segurança
+
+WEB-11 não usa `GET /public/v1/publications` e não amplia D-050/D-057. Nenhum `content_text`, tenant, company, user, CNPJ privado, matching ou dado autenticado é consumido pela Cobertura.
