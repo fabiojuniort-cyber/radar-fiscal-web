@@ -69,9 +69,9 @@ npm run build
 
 ### Gates antes de merge
 
-1. ratificação de Branding para **Sonar: Alta vermelho / Média amarelo / Baixa verde**;
-2. CI verde;
-3. revisão visual/funcional.
+1. revisão independente final sobre as evidências WEB-07;
+2. Issue #10 permanece aberta até esse parecer;
+3. Issue #9 continua gate de lançamento do cadastro.
 
 Sem merge e sem deploy nesta frente.
 
@@ -88,3 +88,22 @@ Correções aplicadas após a revisão independente WEB-04:
 - licença: `docs/THIRD_PARTY_NOTICES.md`.
 
 O ambiente WEB-05, quando ativo, é apenas um **preview temporário de revisão do draft**. Não representa publicação definitiva. A Issue #9 continua sendo gate para ativar cadastro, recuperação e nova senha.
+
+
+## WEB-07
+
+A WEB-07 corrige o bloqueio BRAND-SONAR-01 e adiciona validação reproduzível em Chromium no CI.
+
+- `.password-rules .rule-ok` usa o azul institucional escuro `var(--navy)` / `#08306B`, contraste aproximado **12,76:1** em branco;
+- os quatro valores ratificados do Sonar permanecem inalterados e são verificados para não vazar a outros componentes;
+- Playwright executa o build local do mesmo commit do PR nos viewports:
+  - 1440×900;
+  - 1920×1080;
+  - 390×844;
+  - 360×800;
+- cobre as cinco rotas públicas, overflow horizontal, menu mobile, carrossel, Tab/Shift+Tab, foco visível, abertura/contenção/Escape/retorno de foco dos modais, estados de senha/input, Inter, footer, Sonar, claims públicos, Cobertura e `prefers-reduced-motion`;
+- screenshots, traces de falha, relatório HTML e metadados de head/runtime/viewports são publicados como artifact do GitHub Actions por 14 dias.
+
+O teste browser usa **Chromium + Vite preview local do build do próprio runner**, não o domínio Railway. O preview Railway é atualizado separadamente para o mesmo head e continua sendo o alvo de inspeção independente humana.
+
+Sem merge e sem publicação definitiva.
