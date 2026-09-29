@@ -272,7 +272,7 @@ test('WEB-07 — menu, carrossel e foco por teclado', async ({ page }, testInfo)
   await screenshot(page, testInfo.project.name, 'carousel-interaction')
 })
 
-test('WEB-11 — login modal, contenção de foco, Escape e D-054', async ({ page }) => {
+test('WEB-16 — login modal, signup ativo, contenção de foco e Escape', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   const trigger = await openLogin(page)
 
@@ -280,9 +280,8 @@ test('WEB-11 — login modal, contenção de foco, Escape e D-054', async ({ pag
   await expect(dialog).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
   await expect(dialog.getByText('Recuperação de senha em breve.')).toBeVisible()
-  await expect(dialog.getByText('Cadastro em breve.')).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Esqueci minha senha' })).toHaveCount(0)
-  await expect(dialog.getByRole('button', { name: 'Criar conta' })).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Criar conta' })).toBeVisible()
 
   const focusInside = await dialog.evaluate((element) => element.contains(document.activeElement))
   expect(focusInside).toBe(true)
@@ -333,24 +332,31 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
   expect(storedKeys).toEqual([])
 })
 
-test('WEB-11 — D-054 removes active signup/trial surfaces', async ({ page }) => {
+test('WEB-16 — signup ativo abre formulário sem endpoint fictício', async ({ page }) => {
   const apiRequests: string[] = []
   page.on('request', (request) => {
     if (['fetch', 'xhr'].includes(request.resourceType())) apiRequests.push(request.url())
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-
-  await expect(page.getByText(/7 dias para conhecer/i)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Criar conta' })).toHaveCount(0)
-  expect(await page.getByLabel('Cadastro em breve').count()).toBeGreaterThanOrEqual(2)
+  expect(await page.getByText(/7 dias para conhecer/i).count()).toBeGreaterThan(0)
 
   const viewport = page.viewportSize()
   if (viewport && viewport.width <= 680) {
     await page.getByRole('button', { name: 'Abrir menu' }).click()
     const mobileNav = page.getByRole('navigation', { name: 'Navegação móvel' })
-    await expect(mobileNav.getByText('Cadastro em breve')).toBeVisible()
+    await mobileNav.getByRole('button', { name: 'Criar conta' }).click()
+  } else {
+    await page.locator('.nav-actions').getByRole('button', { name: 'Criar conta' }).click()
   }
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
+  await expect(dialog.getByLabel('Nome completo')).toBeVisible()
+  await expect(dialog.getByLabel('E-mail corporativo')).toBeVisible()
+  await expect(dialog.getByLabel('Empresa')).toBeVisible()
+  await expect(dialog.getByLabel('CNPJ')).toBeVisible()
+  await expect(dialog.getByText(/O formulário está ativo no pré-login/)).toBeVisible()
 
   expect(apiRequests.filter((url) => /signup|register|password|reset/i.test(url))).toEqual([])
 })
