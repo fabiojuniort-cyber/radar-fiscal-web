@@ -502,6 +502,7 @@ test('WEB-14 — modo demonstração navega sem autenticação ou chamadas priva
 
   await screenshot(page, testInfo.project.name, 'painel-demo')
 
+  await page.getByRole('button', { name: 'Menu do usuário' }).click()
   await page.getByRole('button', { name: 'Sair da demonstração' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', {

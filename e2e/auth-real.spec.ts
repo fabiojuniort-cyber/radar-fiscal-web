@@ -48,18 +48,19 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/painel$/)
-  await expect(page.getByRole('heading', { name: 'Painel TriBusca' })).toBeVisible()
-  await expect(page.getByText('TriBusca Internal · OWNER')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toBeVisible()
+  await expect(page.getByText('TriBusca Internal')).toBeVisible()
 
   const cookies = await page.context().cookies()
   expect(cookies.find((cookie) => cookie.name === 'radar_refresh_token')?.httpOnly).toBe(true)
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Painel TriBusca' })).toBeVisible()
-  await page.getByRole('button', { name: 'Sair' }).click()
+  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toBeVisible()
+  await page.getByRole('button', { name: 'Menu do usuário' }).click()
+  await page.getByRole('button', { name: 'Sair', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Painel TriBusca' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toHaveCount(0)
 })
 
 test('unauthenticated direct access never renders account data', async ({ page }) => {
@@ -68,5 +69,5 @@ test('unauthenticated direct access never renders account data', async ({ page }
   }))
   await page.goto('/painel')
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Painel TriBusca' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toHaveCount(0)
 })

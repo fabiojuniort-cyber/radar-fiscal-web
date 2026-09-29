@@ -123,10 +123,12 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
     fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
 
-    await screen.findByRole('heading', { name: 'Painel TriBusca' })
-    expect(screen.getByText('TriBusca Internal · OWNER')).toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Bom dia, owner.' })
+    expect(screen.getByText('TriBusca Internal')).toBeInTheDocument()
+    expect(screen.getByText('Conta autenticada')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/ }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
       method: 'POST', credentials: 'include',
       headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
@@ -143,7 +145,7 @@ describe('TriBusca release candidate WEB-11', () => {
       headers: { 'x-csrf-protection': '1' },
     })))
     await screen.findByRole('button', { name: 'Entrar' })
-    expect(screen.queryByRole('heading', { name: 'Painel TriBusca' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Bom dia,/ })).not.toBeInTheDocument()
   })
 
   it('keeps São Paulo first and returns five carousel states', () => {
@@ -337,12 +339,11 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
     for (const section of [
       'Início',
       'Publicações',
-      'Busca',
-      'Monitoramento',
+      'Acervo',
+      'Reforma Tributária',
+      'Central de Monitoramento',
+      'Fontes Oficiais',
       'Empresas',
-      'Estabelecimentos',
-      'Perfil Tributário',
-      'Configurações',
     ]) {
       expect(screen.getByRole('button', { name: section })).toBeInTheDocument()
     }
@@ -352,6 +353,14 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Publicações' }))
     expect(screen.getByRole('heading', { name: 'Publicações' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Empresas' }))
+    expect(screen.getByRole('tab', { name: 'Estabelecimentos' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Perfil Tributário' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
+    expect(screen.getByRole('button', { name: 'Configurações' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Assinatura e pagamento' })).toBeInTheDocument()
   })
 
   it('sai da demonstração voltando ao site público sem chamar logout', async () => {
@@ -360,6 +369,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     renderApp('/painel-demo')
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
     fireEvent.click(screen.getByRole('button', { name: 'Sair da demonstração' }))
 
     await waitFor(() => {

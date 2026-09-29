@@ -29,6 +29,7 @@ import {
 } from './content'
 import { AuthSessionProvider, useAuthSession } from './auth-session'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
+import { PanelExperience } from './panel-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
   fetchPublicSources,
@@ -84,28 +85,6 @@ const products = [
     status: 'Em desenvolvimento',
     description: 'Organiza os atributos usados para contextualizar empresas e estabelecimentos.',
   },
-] as const
-
-const demoSections = [
-  'Início',
-  'Publicações',
-  'Busca',
-  'Monitoramento',
-  'Empresas',
-  'Estabelecimentos',
-  'Perfil Tributário',
-  'Configurações',
-] as const
-
-type DemoSection = (typeof demoSections)[number]
-
-const demoDashboardCards = [
-  'Fontes previstas',
-  'Fontes consultadas',
-  'Fontes com erro',
-  'Publicações capturadas',
-  'Publicações potencialmente relevantes',
-  'Pendentes de análise',
 ] as const
 
 function App() {
@@ -172,128 +151,40 @@ function AuthenticatedPanel() {
   }
 
   return (
-    <div className="auth-panel">
-      <header className="auth-panel-header">
-        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" />
-        <button className="btn btn-secondary" type="button" onClick={async () => {
-          try {
-            await logout()
-            navigate('/')
-          } catch {
-            setLogoutError(true)
-          }
-        }}>Sair</button>
-      </header>
-      <main className="auth-panel-main">
-        <span className="micro-label">Área autenticada</span>
-        <h1>Painel TriBusca</h1>
-        <p>Você está conectado como <strong>{me.user.name ?? me.user.email}</strong>.</p>
-        <h2>Seus acessos</h2>
-        <ul>
-          {me.memberships.map((membership) => (
-            <li key={membership.tenantId}>{membership.tenantName} · {membership.role}</li>
-          ))}
-        </ul>
-        {me.memberships.length === 0 && <p>Nenhuma conta ativa vinculada a este usuário.</p>}
-        <p>As demais áreas do produto serão liberadas conforme seus próprios gates.</p>
-        {logoutError && <p role="alert">Não foi possível encerrar a sessão. Tente novamente.</p>}
-      </main>
-    </div>
+    <PanelExperience
+      mode="authenticated"
+      identity={{
+        name: me.user.name ?? me.user.email,
+        email: me.user.email,
+        memberships: me.memberships,
+      }}
+      exitError={logoutError ? 'Não foi possível encerrar a sessão. Tente novamente.' : null}
+      onExit={async () => {
+        setLogoutError(false)
+        try {
+          await logout()
+          navigate('/')
+        } catch {
+          setLogoutError(true)
+        }
+      }}
+    />
   )
 }
 
-
 function DemoPage() {
-  const [activeSection, setActiveSection] = useState<DemoSection>('Início')
   const navigate = useNavigate()
 
   return (
-    <div className="demo-app">
-      <header className="demo-topbar">
-        <div className="demo-branding">
-          <img
-            src="/brand/tribusca-logo-horizontal-light.png"
-            alt="TriBusca"
-            className="demo-logo"
-          />
-          <div>
-            <span className="demo-mode-badge">Modo demonstração</span>
-            <p>Dados exibidos nesta área são demonstrativos.</p>
-          </div>
-        </div>
-        <button
-          className="btn btn-secondary demo-exit"
-          type="button"
-          onClick={() => navigate('/')}
-        >
-          Sair da demonstração
-        </button>
-      </header>
-
-      <div className="demo-workspace">
-        <aside className="demo-sidebar">
-          <nav className="demo-nav" aria-label="Navegação do painel demonstrativo">
-            {demoSections.map((section) => (
-              <button
-                key={section}
-                type="button"
-                aria-current={activeSection === section ? 'page' : undefined}
-                onClick={() => setActiveSection(section)}
-              >
-                {section}
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <main className="demo-main">
-          {activeSection === 'Início' ? (
-            <>
-              <div className="demo-page-heading">
-                <span className="micro-label">Painel demonstrativo</span>
-                <h1>Visão geral</h1>
-                <p>
-                  Estrutura inicial do produto autenticado, sem sessão real e sem acesso a dados
-                  privados.
-                </p>
-              </div>
-
-              <div className="demo-metric-grid" aria-label="Indicadores demonstrativos">
-                {demoDashboardCards.map((card) => (
-                  <article className="demo-metric-card" key={card}>
-                    <span>{card}</span>
-                    <strong>—</strong>
-                    <small>Demonstração</small>
-                  </article>
-                ))}
-              </div>
-
-              <section className="demo-placeholder-panel">
-                <span className="demo-mode-badge">Modo demonstração</span>
-                <h2>Ambiente visual isolado</h2>
-                <p>
-                  Esta experiência usa somente conteúdo mock local. Nenhum endpoint autenticado,
-                  tenant, empresa, usuário, CNPJ privado ou configuração real é consultado.
-                </p>
-              </section>
-            </>
-          ) : (
-            <section className="demo-placeholder-panel demo-section-placeholder">
-              <span className="demo-mode-badge">Modo demonstração</span>
-              <h1>{activeSection}</h1>
-              <p>
-                Área preparada para evolução futura. Nesta atividade, a navegação é apenas visual e
-                permanece isolada de dados e sessões reais.
-              </p>
-              <div className="demo-placeholder-value">
-                <strong>—</strong>
-                <span>Demonstração</span>
-              </div>
-            </section>
-          )}
-        </main>
-      </div>
-    </div>
+    <PanelExperience
+      mode="demo"
+      identity={{
+        name: 'Ana Ribeiro',
+        email: 'ana.ribeiro@empresa.com.br',
+        memberships: [],
+      }}
+      onExit={() => navigate('/')}
+    />
   )
 }
 
