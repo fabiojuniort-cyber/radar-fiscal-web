@@ -875,6 +875,8 @@ function PasswordFlow({
       switch (error.code) {
         case 'email_already_registered':
           return 'Este e-mail já está cadastrado. Use Entrar para acessar a conta.'
+        case 'company_already_registered':
+          return 'Este CNPJ já está associado a uma conta TriBusca. Não foi criado um segundo tenant.'
         case 'invalid_password':
           return 'A senha não atende aos requisitos ou a confirmação não coincide.'
         case 'invalid_signup_data':
@@ -929,7 +931,9 @@ function PasswordFlow({
         {mode === 'signup' && (
           <label className="terms-check">
             <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />
-            <span>Li e aceito os Termos de uso e a Política de privacidade.</span>
+            <span>
+              Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de uso</a> e a <a href="/privacidade" target="_blank" rel="noreferrer">Política de privacidade</a>.
+            </span>
           </label>
         )}
         {mode === 'signup' && signupError && (
