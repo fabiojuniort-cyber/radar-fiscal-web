@@ -366,7 +366,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
 
   it('sai da demonstração voltando ao site público sem chamar logout', async () => {
     vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'true')
-    const fetchMock = vi.fn(async () => sourcesResponse())
+    const fetchMock = vi.fn(async (_url: string) => sourcesResponse())
     vi.stubGlobal('fetch', fetchMock)
 
     renderApp('/painel-demo')
