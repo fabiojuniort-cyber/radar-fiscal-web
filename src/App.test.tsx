@@ -109,7 +109,7 @@ describe('TriBusca release candidate WEB-11', () => {
       target: { value: 'Empresa Nova' },
     })
     fireEvent.change(within(dialog).getByLabelText('CNPJ'), {
-      target: { value: '12.345.678/0001-99' },
+      target: { value: '12.345.678/0001-95' },
     })
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
       target: { value: 'Senha-Segura-2026!' },
