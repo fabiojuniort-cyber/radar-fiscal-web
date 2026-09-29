@@ -66,8 +66,31 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.queryByLabelText('Cadastro em breve')).not.toBeInTheDocument()
   })
 
-  it('keeps login real and exposes the signup form without inventing a signup endpoint', () => {
-    const fetchMock = vi.fn(async () => sourcesResponse())
+  it('creates a real account only after backend confirmation and routes to login with the email filled', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/auth/register') {
+        return {
+          status: 201,
+          json: async () => ({
+            user: {
+              id: 'user-signup',
+              email: 'nova.pessoa@example.com',
+              name: 'Nova Pessoa',
+            },
+            tenant: {
+              id: 'tenant-signup',
+              name: 'Empresa Nova',
+              slug: 'empresa-nova-abc',
+            },
+            membership: { role: 'OWNER' },
+            next: 'LOGIN',
+          }),
+        } as Response
+      }
+
+      return sourcesResponse()
+    })
+
     vi.stubGlobal('fetch', fetchMock)
     renderApp('/como-funciona')
 
@@ -75,12 +98,84 @@ describe('TriBusca release candidate WEB-11', () => {
 
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Nome completo')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('E-mail corporativo')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Empresa')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('CNPJ')).toBeInTheDocument()
-    expect(within(dialog).getByText(/O formulário está ativo no pré-login/)).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(within(dialog).getByLabelText('Nome completo'), {
+      target: { value: 'Nova Pessoa' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
+      target: { value: 'nova.pessoa@example.com' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
+      target: { value: 'Empresa Nova' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('CNPJ'), {
+      target: { value: '12.345.678/0001-99' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Senha'), {
+      target: { value: 'Senha-Segura-2026!' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
+      target: { value: 'Senha-Segura-2026!' },
+    })
+    fireEvent.click(within(dialog).getByLabelText(/Li e aceito os Termos/))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/auth/register',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    ))
+
+    await screen.findByRole('heading', { name: 'Entrar na TriBusca' })
+    expect(screen.getByRole('status')).toHaveTextContent('Conta criada com sucesso')
+    expect(screen.getByLabelText('E-mail')).toHaveValue('nova.pessoa@example.com')
+  })
+
+  it('shows a duplicate-email state and does not claim signup success', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/auth/register') {
+        return {
+          status: 409,
+          json: async () => ({
+            error: 'email_already_registered',
+          }),
+        } as Response
+      }
+
+      return sourcesResponse()
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+    renderApp('/como-funciona')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    const dialog = screen.getByRole('dialog')
+
+    fireEvent.change(within(dialog).getByLabelText('Nome completo'), {
+      target: { value: 'Pessoa Existente' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
+      target: { value: 'existente@example.com' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
+      target: { value: 'Empresa Existente' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Senha'), {
+      target: { value: 'Senha-Segura-2026!' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
+      target: { value: 'Senha-Segura-2026!' },
+    })
+    fireEvent.click(within(dialog).getByLabelText(/Li e aceito os Termos/))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Este e-mail já está cadastrado',
+    )
+    expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(within(dialog).queryByText(/Conta criada com sucesso/)).not.toBeInTheDocument()
   })
 
   it('preserves the real login contract without browser token storage', async () => {
