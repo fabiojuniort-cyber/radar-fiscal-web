@@ -56,28 +56,29 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getByRole('link', { name: 'Reforma Tributária' })).toHaveAttribute('href', '/reforma-tributaria')
   })
 
-  it('applies D-054 to public signup and trial surfaces', () => {
+  it('WEB-16 activates public signup surfaces by product-owner decision', () => {
     renderApp()
 
-    expect(screen.queryByRole('button', { name: 'Criar conta' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/7 dias para conhecer/i)).not.toBeInTheDocument()
-    expect(screen.getAllByLabelText('Cadastro em breve').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('Cadastro em breve.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(screen.getAllByText(/7 dias para conhecer/i).length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('Cadastro em breve')).not.toBeInTheDocument()
   })
 
-  it('keeps login available while signup and password recovery remain unavailable', () => {
-    renderApp()
+  it('keeps login real and exposes the signup form without inventing a signup endpoint', () => {
+    const fetchMock = vi.fn(async () => sourcesResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    renderApp('/como-funciona')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Esqueci minha senha' })).not.toBeInTheDocument()
     const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByText('Recuperação de senha em breve.')).toBeInTheDocument()
-    expect(within(dialog).getByText('Cadastro em breve.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Criar conta' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Nova senha' })).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Nome completo')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('E-mail corporativo')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Empresa')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('CNPJ')).toBeInTheDocument()
+    expect(within(dialog).getByText(/O formulário está ativo no pré-login/)).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('preserves the real login contract without browser token storage', async () => {
@@ -88,7 +89,7 @@ describe('TriBusca release candidate WEB-11', () => {
     } as Response))
     vi.stubGlobal('fetch', fetchMock)
 
-    renderApp()
+    renderApp('/como-funciona')
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'teste@example.com' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Senha123!' } })
@@ -117,7 +118,7 @@ describe('TriBusca release candidate WEB-11', () => {
       throw new Error(`Unexpected request: ${url}`)
     })
     vi.stubGlobal('fetch', fetchMock)
-    renderApp()
+    renderApp('/como-funciona')
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'owner@example.test' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
