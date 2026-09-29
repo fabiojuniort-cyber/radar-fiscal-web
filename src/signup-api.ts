@@ -27,6 +27,7 @@ export type SignupResponse = {
 
 export type SignupErrorCode =
   | 'email_already_registered'
+  | 'company_already_registered'
   | 'invalid_password'
   | 'invalid_signup_data'
   | 'too_many_requests'
@@ -59,6 +60,7 @@ async function responseError(response: Response): Promise<SignupErrorCode> {
 
   if (
     error === 'email_already_registered' ||
+    error === 'company_already_registered' ||
     error === 'invalid_password' ||
     error === 'invalid_signup_data' ||
     error === 'too_many_requests'
