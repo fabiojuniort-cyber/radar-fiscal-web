@@ -21,7 +21,12 @@ const input = {
 
 describe('signup API', () => {
   it('accepts only a confirmed 201 account creation response', async () => {
-    const fetchMock = vi.fn(async () => ({
+    let capturedInit: RequestInit | undefined
+
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      capturedInit = init
+
+      return ({
       status: 201,
       json: async () => ({
         user: {
@@ -37,7 +42,8 @@ describe('signup API', () => {
         membership: { role: 'OWNER' },
         next: 'LOGIN',
       }),
-    } as Response))
+    } as Response)
+    })
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -53,9 +59,8 @@ describe('signup API', () => {
       }),
     )
 
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
-    expect(String(request.body)).toContain(input.email)
-    expect(String(request.body)).toContain(input.password)
+    expect(String(capturedInit?.body)).toContain(input.email)
+    expect(String(capturedInit?.body)).toContain(input.password)
   })
 
   it.each([
