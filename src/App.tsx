@@ -929,12 +929,18 @@ function PasswordFlow({
           <PasswordRule ok={match} text="As senhas coincidem" />
         </div>
         {mode === 'signup' && (
-          <label className="terms-check">
-            <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />
+          <div className="terms-check">
+            <input
+              type="checkbox"
+              aria-label="Aceite dos Termos de uso e da Política de privacidade"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              required
+            />
             <span>
               Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de uso</a> e a <a href="/privacidade" target="_blank" rel="noreferrer">Política de privacidade</a>.
             </span>
-          </label>
+          </div>
         )}
         {mode === 'signup' && signupError && (
           <p className="auth-error" role="alert">{signupError}</p>
