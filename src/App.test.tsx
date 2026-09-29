@@ -128,7 +128,7 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getByText('Conta autenticada')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
     fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Sair', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: /^Sair$/ }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
       method: 'POST', credentials: 'include',
       headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
