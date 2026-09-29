@@ -383,7 +383,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await dialog.getByLabel('Nome completo').fill('Nova Pessoa')
   await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
   await dialog.getByLabel('Empresa').fill('Empresa Nova')
-  await dialog.getByLabel('CNPJ').fill('12.345.678/0001-99')
+  await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
   await dialog.getByLabel('Senha').fill('Senha-Segura-2026!')
   await dialog.getByLabel('Confirmar senha').fill('Senha-Segura-2026!')
   await dialog.getByLabel(/Li e aceito os Termos/).check()
@@ -399,7 +399,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
     name: 'Nova Pessoa',
     email: 'nova.pessoa@example.com',
     company: 'Empresa Nova',
-    cnpj: '12.345.678/0001-99',
+    cnpj: '12.345.678/0001-95',
     password: 'Senha-Segura-2026!',
     confirmPassword: 'Senha-Segura-2026!',
     acceptedTerms: true,
