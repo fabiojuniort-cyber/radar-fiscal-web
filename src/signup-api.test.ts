@@ -65,6 +65,7 @@ describe('signup API', () => {
 
   it.each([
     [409, 'email_already_registered'],
+    [409, 'company_already_registered'],
     [400, 'invalid_password'],
     [429, 'too_many_requests'],
   ] as const)('maps HTTP %s application errors', async (status, code) => {
