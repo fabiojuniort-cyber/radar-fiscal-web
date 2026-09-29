@@ -200,6 +200,7 @@ describe('TriBusca release candidate WEB-11', () => {
     })))
 
     renderApp()
+    const carousel = screen.getByTestId('state-carousel')
     const position = within(carousel).getByText('1 / 5')
 
     act(() => {
