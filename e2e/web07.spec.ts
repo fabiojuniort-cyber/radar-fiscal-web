@@ -8,6 +8,8 @@ const routes = [
   { path: '/portfolio', slug: 'portfolio' },
   { path: '/como-funciona', slug: 'como-funciona' },
   { path: '/reforma-tributaria', slug: 'reforma-tributaria' },
+  { path: '/termos', slug: 'termos' },
+  { path: '/privacidade', slug: 'privacidade' },
 ] as const
 
 function parseRgb(value: string) {
