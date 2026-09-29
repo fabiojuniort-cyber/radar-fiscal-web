@@ -170,7 +170,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     renderApp()
     const carousel = screen.getByTestId('state-carousel')
-    const position = screen.getByText('1 / 5')
+    const position = within(carousel).getByText('1 / 5')
 
     act(() => {
       vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS)
@@ -200,7 +200,7 @@ describe('TriBusca release candidate WEB-11', () => {
     })))
 
     renderApp()
-    const position = screen.getByText('1 / 5')
+    const position = within(carousel).getByText('1 / 5')
 
     act(() => {
       vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS * 3)
@@ -221,7 +221,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     renderApp()
     const carousel = screen.getByTestId('state-carousel')
-    const position = screen.getByText('1 / 5')
+    const position = within(carousel).getByText('1 / 5')
 
     expect(within(carousel).getByText('SP')).toBeInTheDocument()
 
