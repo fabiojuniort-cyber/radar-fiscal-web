@@ -318,7 +318,7 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('teste@example.com')
-  await dialog.getByLabel('Senha').fill('Senha123!')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha123!')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
@@ -384,8 +384,8 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
   await dialog.getByLabel('Empresa').fill('Empresa Nova')
   await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
-  await dialog.getByLabel('Senha').fill('Senha-Segura-2026!')
-  await dialog.getByLabel('Confirmar senha').fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
   await dialog.getByLabel(/Li e aceito os Termos/).check()
 
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
@@ -433,8 +433,8 @@ test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', 
   await dialog.getByLabel('Nome completo').fill('Pessoa Existente')
   await dialog.getByLabel('E-mail corporativo').fill('existente@example.com')
   await dialog.getByLabel('Empresa').fill('Empresa Existente')
-  await dialog.getByLabel('Senha').fill('Senha-Segura-2026!')
-  await dialog.getByLabel('Confirmar senha').fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
   await dialog.getByLabel(/Li e aceito os Termos/).check()
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
 
