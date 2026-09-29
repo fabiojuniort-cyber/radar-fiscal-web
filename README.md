@@ -46,6 +46,21 @@ Contratos ainda necessários:
 
 A Cobertura usa o contrato público D-050 já existente.
 
+## AUTH-02 — cadastro público real (branch)
+
+A branch `feat/auth-02-public-signup` conecta a experiência de **Criar conta** ao contrato backend real `POST /auth/register`.
+
+- envia nome, e-mail, empresa, CNPJ opcional, senha/confirmação e aceite;
+- mantém a política de senha já exibida na UI;
+- só mostra sucesso após HTTP 201 confirmado;
+- em sucesso, abre o login com o e-mail recém-criado preenchido;
+- trata e-mail já cadastrado, senha/dados inválidos, rate limit, falha de rede e erro inesperado;
+- não persiste JWT em `localStorage`;
+- não altera `/painel`, `/painel-demo`, refresh HttpOnly ou o contrato atual de login/logout;
+- confirmação de e-mail permanece evolução futura; nenhum endpoint fictício foi criado.
+
+Este trabalho é R3 / Issue `tribusca-control#37` e **não pode ser mergeado ou publicado antes de revisão independente**.
+
 ## Stack
 
 React + TypeScript + Vite + React Router + TanStack Query + Tailwind CSS + Radix UI, com componentes compatíveis com a direção shadcn/ui e ícones Lucide.

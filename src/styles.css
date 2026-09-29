@@ -249,6 +249,9 @@ p { color: var(--muted); line-height: 1.65; }
 .auth-error { color: #9b2020; background: #fff0f0; }
 .auth-success { color: #176b33; background: #eef9f1; }
 .integration-note { color: #53647a; background: #f2f5f8; }
+.terms-check { display: grid; grid-template-columns: auto 1fr; gap: 9px; align-items: start; font-size: .78rem; color: #42566f; font-weight: 600; }
+.terms-check input { width: auto; margin-top: 3px; }
+.terms-check a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
 .password-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .password-rules span { display: flex; gap: 6px; align-items: center; font-size: .72rem; color: #607086; }
 .password-rules .rule-pending svg { stroke-width: 2; }

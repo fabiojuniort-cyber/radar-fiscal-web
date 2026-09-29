@@ -8,6 +8,8 @@ const routes = [
   { path: '/portfolio', slug: 'portfolio' },
   { path: '/como-funciona', slug: 'como-funciona' },
   { path: '/reforma-tributaria', slug: 'reforma-tributaria' },
+  { path: '/termos', slug: 'termos' },
+  { path: '/privacidade', slug: 'privacidade' },
 ] as const
 
 function parseRgb(value: string) {
@@ -318,7 +320,7 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('teste@example.com')
-  await dialog.getByLabel('Senha').fill('Senha123!')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha123!')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
@@ -332,10 +334,38 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
   expect(storedKeys).toEqual([])
 })
 
-test('WEB-16 — signup ativo abre formulário sem endpoint fictício', async ({ page }) => {
-  const apiRequests: string[] = []
-  page.on('request', (request) => {
-    if (['fetch', 'xhr'].includes(request.resourceType())) apiRequests.push(request.url())
+test('AUTH-02 — signup real exige confirmação da API antes do sucesso', async ({ page }) => {
+  let capturedMethod = ''
+  let capturedBody = ''
+
+  await page.route('**/auth/register', async (route) => {
+    capturedMethod = route.request().method()
+    capturedBody = route.request().postData() ?? ''
+
+    const request = JSON.parse(capturedBody) as {
+      email: string
+      name: string
+      company: string
+    }
+
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: 'user-auth-02',
+          email: request.email.toLowerCase(),
+          name: request.name,
+        },
+        tenant: {
+          id: 'tenant-auth-02',
+          name: request.company,
+          slug: 'empresa-auth-02-abc',
+        },
+        membership: { role: 'OWNER' },
+        next: 'LOGIN',
+      }),
+    })
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -352,13 +382,67 @@ test('WEB-16 — signup ativo abre formulário sem endpoint fictício', async ({
 
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
-  await expect(dialog.getByLabel('Nome completo')).toBeVisible()
-  await expect(dialog.getByLabel('E-mail corporativo')).toBeVisible()
-  await expect(dialog.getByLabel('Empresa')).toBeVisible()
-  await expect(dialog.getByLabel('CNPJ')).toBeVisible()
-  await expect(dialog.getByText(/O formulário está ativo no pré-login/)).toBeVisible()
+  await dialog.getByLabel('Nome completo').fill('Nova Pessoa')
+  await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
+  await dialog.getByLabel('Empresa').fill('Empresa Nova')
+  await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel(/Aceite dos Termos/).check()
 
-  expect(apiRequests.filter((url) => /signup|register|password|reset/i.test(url))).toEqual([])
+  await dialog.getByRole('button', { name: 'Criar conta' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Conta criada com sucesso')
+  await expect(page.getByLabel('E-mail')).toHaveValue('nova.pessoa@example.com')
+
+  expect(capturedMethod).toBe('POST')
+  expect(JSON.parse(capturedBody)).toEqual({
+    name: 'Nova Pessoa',
+    email: 'nova.pessoa@example.com',
+    company: 'Empresa Nova',
+    cnpj: '12.345.678/0001-95',
+    password: 'Senha-Segura-2026!',
+    confirmPassword: 'Senha-Segura-2026!',
+    acceptedTerms: true,
+  })
+
+  const storedKeys = await page.evaluate(() => Object.keys(localStorage))
+  expect(storedKeys).toEqual([])
+})
+
+test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', async ({ page }) => {
+  await page.route('**/auth/register', async (route) => {
+    await route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'email_already_registered' }),
+    })
+  })
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  const viewport = page.viewportSize()
+  if (viewport && viewport.width <= 680) {
+    await page.getByRole('button', { name: 'Abrir menu' }).click()
+    const mobileNav = page.getByRole('navigation', { name: 'Navegação móvel' })
+    await mobileNav.getByRole('button', { name: 'Criar conta' }).click()
+  } else {
+    await page.locator('.nav-actions').getByRole('button', { name: 'Criar conta' }).click()
+  }
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Nome completo').fill('Pessoa Existente')
+  await dialog.getByLabel('E-mail corporativo').fill('existente@example.com')
+  await dialog.getByLabel('Empresa').fill('Empresa Existente')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel(/Aceite dos Termos/).check()
+  await dialog.getByRole('button', { name: 'Criar conta' }).click()
+
+  await expect(dialog.getByRole('alert')).toContainText('Este e-mail já está cadastrado')
+  await expect(dialog.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
+  await expect(dialog.getByText(/Conta criada com sucesso/)).toHaveCount(0)
 })
 
 test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({ page }) => {

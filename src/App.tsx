@@ -33,6 +33,10 @@ import { PanelExperience } from './panel-experience'
 import { PublicExperience } from './public-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
+  SignupApiError,
+  registerPublicAccount,
+} from './signup-api'
+import {
   fetchPublicSources,
   findFederalSource,
   findStateSource,
@@ -692,6 +696,17 @@ function AuthModal({
   onClose: () => void
   getReturnFocus: () => HTMLElement | null
 }) {
+  const [signupSuccessEmail, setSignupSuccessEmail] = useState('')
+
+  useEffect(() => {
+    if (view === 'signup') setSignupSuccessEmail('')
+  }, [view])
+
+  const signupCreated = (email: string) => {
+    setSignupSuccessEmail(email)
+    onView('login')
+  }
+
   return (
     <Dialog.Root open={view !== null} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
@@ -709,8 +724,21 @@ function AuthModal({
         >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
           <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
-          {view === 'login' && <LoginForm onClose={onClose} onView={onView} />}
-          {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
+          {view === 'login' && (
+            <LoginForm
+              onClose={onClose}
+              onView={onView}
+              initialEmail={signupSuccessEmail}
+              accountCreated={signupSuccessEmail.length > 0}
+            />
+          )}
+          {view === 'signup' && (
+            <PasswordFlow
+              mode="signup"
+              onView={onView}
+              onSignupCreated={signupCreated}
+            />
+          )}
           {view === 'forgot' && <ForgotPassword onView={onView} />}
           {view === 'reset' && <PasswordFlow mode="reset" onView={onView} />}
         </Dialog.Content>
@@ -719,8 +747,18 @@ function AuthModal({
   )
 }
 
-function LoginForm({ onClose, onView }: { onClose: () => void; onView: (view: AuthView) => void }) {
-  const [email, setEmail] = useState('')
+function LoginForm({
+  onClose,
+  onView,
+  initialEmail = '',
+  accountCreated = false,
+}: {
+  onClose: () => void
+  onView: (view: AuthView) => void
+  initialEmail?: string
+  accountCreated?: boolean
+}) {
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const demoAccessEnabled = isDemoAccessEnabled()
@@ -751,9 +789,14 @@ function LoginForm({ onClose, onView }: { onClose: () => void; onView: (view: Au
     <>
       <Dialog.Title>Entrar na TriBusca</Dialog.Title>
       <p className="dialog-intro">Acesse sua área autenticada com o contrato oficial do backend.</p>
+      {accountCreated && (
+        <p className="auth-success" role="status">
+          Conta criada com sucesso. Entre com a senha que você acabou de definir.
+        </p>
+      )}
       <form className="auth-form" onSubmit={submit}>
-        <label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-        <label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+        <label>Senha<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
         <p className="auth-unavailable-note">Recuperação de senha em breve.</p>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e a conexão com a API.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
@@ -790,37 +833,93 @@ function ForgotPassword({ onView }: { onView: (view: AuthView) => void }) {
 function PasswordFlow({
   mode,
   onView,
+  onSignupCreated,
 }: {
   mode: 'signup' | 'reset'
   onView: (view: AuthView) => void
+  onSignupCreated?: (email: string) => void
 }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
+  const [cnpj, setCnpj] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const checks = getPasswordChecks(password)
   const match = password.length > 0 && password === confirm
   const valid = isStrongPassword(password) && match && (mode === 'reset' || acceptedTerms)
+
+  const signup = useMutation({
+    mutationFn: async () => registerPublicAccount({
+      name,
+      email,
+      company,
+      cnpj: cnpj.trim() || undefined,
+      password,
+      confirmPassword: confirm,
+      acceptedTerms,
+    }),
+    onSuccess: (account) => {
+      setPassword('')
+      setConfirm('')
+      onSignupCreated?.(account.user.email)
+    },
+  })
+
+  const signupError = (() => {
+    if (!signup.isError) return null
+    const error = signup.error
+
+    if (error instanceof SignupApiError) {
+      switch (error.code) {
+        case 'email_already_registered':
+          return 'Este e-mail já está cadastrado. Use Entrar para acessar a conta.'
+        case 'company_already_registered':
+          return 'Este CNPJ já está associado a uma conta TriBusca. Não foi criado um segundo tenant.'
+        case 'invalid_password':
+          return 'A senha não atende aos requisitos ou a confirmação não coincide.'
+        case 'invalid_signup_data':
+          return 'Revise os dados informados e tente novamente.'
+        case 'too_many_requests':
+          return 'Muitas tentativas de cadastro para este e-mail. Aguarde e tente novamente.'
+        case 'network_error':
+          return 'Não foi possível conectar à API. Verifique sua conexão e tente novamente.'
+        case 'unexpected_error':
+          return 'Não foi possível criar a conta agora. Tente novamente.'
+      }
+    }
+
+    return 'Não foi possível criar a conta agora. Tente novamente.'
+  })()
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+
+    if (mode === 'signup' && valid && !signup.isPending) {
+      signup.mutate()
+    }
+  }
 
   return (
     <>
       <Dialog.Title>{mode === 'signup' ? 'Criar conta' : 'Nova senha'}</Dialog.Title>
       <p className="dialog-intro">
         {mode === 'signup'
-          ? '7 dias para conhecer a TriBusca. Preencha seus dados para preparar o acesso.'
+          ? '7 dias para conhecer a TriBusca. Crie sua conta com seus próprios dados de acesso.'
           : 'Defina a nova senha. O envio só será ativado quando houver contrato backend.'}
       </p>
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+      <form className="auth-form" onSubmit={submit}>
         {mode === 'signup' && (
           <>
-            <label>Nome completo<input type="text" required /></label>
-            <label>E-mail corporativo<input type="email" required /></label>
-            <label>Empresa<input type="text" required /></label>
-            <label>CNPJ<input type="text" inputMode="numeric" placeholder="Opcional" /></label>
+            <label>Nome completo<input type="text" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={160} required /></label>
+            <label>E-mail corporativo<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={320} required /></label>
+            <label>Empresa<input type="text" autoComplete="organization" value={company} onChange={(event) => setCompany(event.target.value)} minLength={2} maxLength={200} required /></label>
+            <label>CNPJ<input type="text" inputMode="numeric" value={cnpj} onChange={(event) => setCnpj(event.target.value)} maxLength={32} placeholder="Opcional" /></label>
           </>
         )}
-        <label>Senha<input aria-label="Senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-        <label>Confirmar senha<input aria-label="Confirmar senha" type="password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /></label>
+        <label>Senha<input aria-label="Senha" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label>Confirmar senha<input aria-label="Confirmar senha" type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /></label>
         <div className="password-rules" aria-label="Requisitos da senha">
           <PasswordRule ok={checks.minLength} text="Mínimo de 8 caracteres" />
           <PasswordRule ok={checks.uppercase} text="Uma letra maiúscula" />
@@ -830,28 +929,35 @@ function PasswordFlow({
           <PasswordRule ok={match} text="As senhas coincidem" />
         </div>
         {mode === 'signup' && (
-          <label className="terms-check">
-            <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} />
-            <span>Li e aceito os Termos de uso e a Política de privacidade.</span>
-          </label>
+          <div className="terms-check">
+            <input
+              type="checkbox"
+              aria-label="Aceite dos Termos de uso e da Política de privacidade"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              required
+            />
+            <span>
+              Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de uso</a> e a <a href="/privacidade" target="_blank" rel="noreferrer">Política de privacidade</a>.
+            </span>
+          </div>
+        )}
+        {mode === 'signup' && signupError && (
+          <p className="auth-error" role="alert">{signupError}</p>
         )}
         <button
           className="btn full"
           type="submit"
-          disabled={!valid}
-          onClick={(event) => {
-            if (mode === 'signup') {
-              event.preventDefault()
-              setSubmitted(true)
-            }
-          }}
+          disabled={!valid || (mode === 'signup' && signup.isPending)}
         >
-          {mode === 'signup' ? 'Criar conta' : 'Salvar nova senha'}
+          {mode === 'signup'
+            ? (signup.isPending ? 'Criando conta…' : 'Criar conta')
+            : 'Salvar nova senha'}
         </button>
-        {mode === 'signup' && submitted ? (
-          <p className="integration-note" role="status">Formulário validado. A criação efetiva da conta será conectada quando o backend disponibilizar o contrato de cadastro; nenhuma conta foi criada nesta etapa.</p>
-        ) : (
-          <p className="integration-note">O formulário está ativo no pré-login. Nenhum endpoint fictício é chamado.</p>
+        {mode === 'signup' && (
+          <p className="integration-note">
+            A conta só será considerada criada após confirmação da API. O cadastro não inicia sessão automaticamente.
+          </p>
         )}
       </form>
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
