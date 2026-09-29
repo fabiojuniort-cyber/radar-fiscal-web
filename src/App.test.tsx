@@ -117,7 +117,7 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
       target: { value: 'Senha-Segura-2026!' },
     })
-    fireEvent.click(within(dialog).getByLabelText(/Li e aceito os Termos/))
+    fireEvent.click(within(dialog).getByLabelText(/Aceite dos Termos/))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
@@ -179,7 +179,7 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
       target: { value: 'Senha-Segura-2026!' },
     })
-    fireEvent.click(within(dialog).getByLabelText(/Li e aceito os Termos/))
+    fireEvent.click(within(dialog).getByLabelText(/Aceite dos Termos/))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
