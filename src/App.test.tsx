@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,6 +9,7 @@ import authSource from './auth-session.tsx?raw'
 import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
 import { parseDemoAccessFlag } from './demo-access'
+import { STATE_CAROUSEL_AUTOPLAY_MS } from './public-experience'
 import type { PublicSource } from './public-api'
 
 function sourcesResponse(items: PublicSource[] = []) {
@@ -28,6 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
 })
@@ -155,6 +157,136 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(selected).toHaveLength(5)
     expect(selected[0].uf).toBe('SP')
     expect(new Set(selected.map((state) => state.uf)).size).toBe(5)
+  })
+
+  it('WEB-16-R1 autoplays after 15s, pauses on hover and resumes on mouse leave', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+
+    renderApp()
+    const carousel = screen.getByTestId('state-carousel')
+    const position = screen.getByText('1 / 5')
+
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS)
+    })
+    expect(position).toHaveTextContent('2 / 5')
+
+    fireEvent.mouseEnter(carousel)
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS * 2)
+    })
+    expect(position).toHaveTextContent('2 / 5')
+
+    fireEvent.mouseLeave(carousel)
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS)
+    })
+    expect(position).toHaveTextContent('3 / 5')
+  })
+
+  it('WEB-16-R1 disables autoplay when reduced motion is preferred', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: true,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+
+    renderApp()
+    const position = screen.getByText('1 / 5')
+
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS * 3)
+    })
+    expect(position).toHaveTextContent('1 / 5')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo estado' }))
+    expect(position).toHaveTextContent('2 / 5')
+  })
+
+  it('WEB-16-R1 supports swipe, arrows and dots while keeping São Paulo first', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: true,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+
+    renderApp()
+    const carousel = screen.getByTestId('state-carousel')
+    const position = screen.getByText('1 / 5')
+
+    expect(within(carousel).getByText('SP')).toBeInTheDocument()
+
+    fireEvent.touchStart(carousel, { touches: [{ clientX: 260, clientY: 200 }] })
+    fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 120, clientY: 205 }] })
+    expect(position).toHaveTextContent('2 / 5')
+
+    fireEvent.touchStart(carousel, { touches: [{ clientX: 120, clientY: 200 }] })
+    fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 270, clientY: 204 }] })
+    expect(position).toHaveTextContent('1 / 5')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo estado' }))
+    expect(position).toHaveTextContent('2 / 5')
+    fireEvent.click(screen.getByRole('button', { name: 'Estado anterior' }))
+    expect(position).toHaveTextContent('1 / 5')
+
+    const dots = screen.getAllByRole('button', { name: /^Exibir / })
+    fireEvent.click(dots[2])
+    expect(position).toHaveTextContent('3 / 5')
+  })
+
+  it('WEB-16-R1 shows ONLINE state coverage from /public/v1/sources', async () => {
+    const items: PublicSource[] = [{
+      code: 'doe-sp',
+      name: 'Diário Oficial do Estado de São Paulo',
+      jurisdictionLevel: 'STATE',
+      uf: 'SP',
+      isActive: true,
+      status: 'ONLINE',
+      lastRunStatus: 'SUCCESS',
+      lastSuccessAt: '2026-09-29T09:00:00.000Z',
+      lastAttemptAt: '2026-09-29T09:00:00.000Z',
+      importedToday: 4,
+      totalPublications: 123,
+    }]
+    vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse(items)))
+
+    renderApp()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('state-carousel-status')).toHaveTextContent('Online')
+    })
+  })
+
+  it('WEB-16-R1 keeps a state without an implemented source as Em implantação', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse([])))
+
+    renderApp()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('state-carousel-status')).toHaveTextContent('Em implantação')
+    })
+    expect(screen.getByTestId('state-carousel-status')).not.toHaveTextContent('Online')
+  })
+
+  it('WEB-16-R1 shows unknown state coverage when /public/v1/sources fails', async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new Error('public sources unavailable')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderApp()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(screen.getByTestId('state-carousel-status')).toHaveTextContent('—')
   })
 
   it('exposes individually named carousel controls', () => {
