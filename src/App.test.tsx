@@ -133,6 +133,17 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getByLabelText('E-mail')).toHaveValue('nova.pessoa@example.com')
   })
 
+  it('links the signup consent to published legal documents', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse()))
+    renderApp('/')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('link', { name: 'Termos de uso' })).toHaveAttribute('href', '/termos')
+    expect(within(dialog).getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade')
+  })
+
   it('shows a duplicate-email state and does not claim signup success', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url === '/auth/register') {
