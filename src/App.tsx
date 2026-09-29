@@ -30,6 +30,7 @@ import {
 import { AuthSessionProvider, useAuthSession } from './auth-session'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
+import { PublicExperience } from './public-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
   fetchPublicSources,
@@ -118,15 +119,7 @@ function AppContent() {
 
   return (
     <div className="app-shell">
-      <SiteHeader onAuth={openAuth} />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/cobertura" element={<CoveragePage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/como-funciona" element={<HowItWorksPage />} />
-        <Route path="/reforma-tributaria" element={<TaxReformPage />} />
-      </Routes>
-      <SiteFooter />
+      <PublicExperience onAuth={openAuth} />
       <AuthModal
         view={authView}
         onView={setAuthView}
@@ -716,7 +709,7 @@ function AuthModal({
         >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
           <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
-          {view === 'login' && <LoginForm onClose={onClose} />}
+          {view === 'login' && <LoginForm onClose={onClose} onView={onView} />}
           {view === 'signup' && <PasswordFlow mode="signup" onView={onView} />}
           {view === 'forgot' && <ForgotPassword onView={onView} />}
           {view === 'reset' && <PasswordFlow mode="reset" onView={onView} />}
@@ -726,7 +719,7 @@ function AuthModal({
   )
 }
 
-function LoginForm({ onClose }: { onClose: () => void }) {
+function LoginForm({ onClose, onView }: { onClose: () => void; onView: (view: AuthView) => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
@@ -774,7 +767,7 @@ function LoginForm({ onClose }: { onClose: () => void }) {
           <p>Acesso temporário para navegação e validação da interface.</p>
         </div>
       )}
-      <p className="auth-switch">Cadastro em breve.</p>
+      <p className="auth-switch">Ainda não tem conta? <button type="button" onClick={() => onView('signup')}>Criar conta</button></p>
     </>
   )
 }
@@ -803,23 +796,27 @@ function PasswordFlow({
 }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const checks = getPasswordChecks(password)
   const match = password.length > 0 && password === confirm
-  const valid = isStrongPassword(password) && match
+  const valid = isStrongPassword(password) && match && (mode === 'reset' || acceptedTerms)
 
   return (
     <>
       <Dialog.Title>{mode === 'signup' ? 'Criar conta' : 'Nova senha'}</Dialog.Title>
       <p className="dialog-intro">
         {mode === 'signup'
-          ? 'Prepare seu acesso. O cadastro só será ativado quando houver contrato backend.'
+          ? '7 dias para conhecer a TriBusca. Preencha seus dados para preparar o acesso.'
           : 'Defina a nova senha. O envio só será ativado quando houver contrato backend.'}
       </p>
       <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
         {mode === 'signup' && (
           <>
-            <label>Nome<input type="text" required /></label>
-            <label>E-mail<input type="email" required /></label>
+            <label>Nome completo<input type="text" required /></label>
+            <label>E-mail corporativo<input type="email" required /></label>
+            <label>Empresa<input type="text" required /></label>
+            <label>CNPJ<input type="text" inputMode="numeric" placeholder="Opcional" /></label>
           </>
         )}
         <label>Senha<input aria-label="Senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
@@ -832,10 +829,30 @@ function PasswordFlow({
           <PasswordRule ok={checks.special} text="Um caractere especial" />
           <PasswordRule ok={match} text="As senhas coincidem" />
         </div>
-        <button className="btn full" type="submit" disabled={!valid || true}>
+        {mode === 'signup' && (
+          <label className="terms-check">
+            <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} />
+            <span>Li e aceito os Termos de uso e a Política de privacidade.</span>
+          </label>
+        )}
+        <button
+          className="btn full"
+          type="submit"
+          disabled={!valid}
+          onClick={(event) => {
+            if (mode === 'signup') {
+              event.preventDefault()
+              setSubmitted(true)
+            }
+          }}
+        >
           {mode === 'signup' ? 'Criar conta' : 'Salvar nova senha'}
         </button>
-        <p className="integration-note">Integração aguardando contrato de API. Nenhum endpoint fictício é chamado.</p>
+        {mode === 'signup' && submitted ? (
+          <p className="integration-note" role="status">Formulário validado. A criação efetiva da conta será conectada quando o backend disponibilizar o contrato de cadastro; nenhuma conta foi criada nesta etapa.</p>
+        ) : (
+          <p className="integration-note">O formulário está ativo no pré-login. Nenhum endpoint fictício é chamado.</p>
+        )}
       </form>
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
     </>
