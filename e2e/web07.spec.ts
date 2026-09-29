@@ -388,7 +388,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
   await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
-  await dialog.getByLabel(/Li e aceito os Termos/).check()
+  await dialog.getByLabel(/Aceite dos Termos/).check()
 
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
 
@@ -437,7 +437,7 @@ test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', 
   await dialog.getByLabel('Empresa').fill('Empresa Existente')
   await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
-  await dialog.getByLabel(/Li e aceito os Termos/).check()
+  await dialog.getByLabel(/Aceite dos Termos/).check()
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
 
   await expect(dialog.getByRole('alert')).toContainText('Este e-mail já está cadastrado')
