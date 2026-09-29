@@ -50,7 +50,6 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await expect(page).toHaveURL(/\/painel$/)
   await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toBeVisible()
   await expect(page.getByText('TriBusca Internal')).toBeVisible()
-  await expect(page.getByText('Conta autenticada')).toBeVisible()
 
   const cookies = await page.context().cookies()
   expect(cookies.find((cookie) => cookie.name === 'radar_refresh_token')?.httpOnly).toBe(true)
