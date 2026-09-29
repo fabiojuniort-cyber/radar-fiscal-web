@@ -90,10 +90,10 @@ describe('TriBusca release candidate WEB-11', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     renderApp('/como-funciona')
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'teste@example.com' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Senha123!' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(fetchMock).toHaveBeenCalledWith('/auth/login', expect.objectContaining({
@@ -119,7 +119,7 @@ describe('TriBusca release candidate WEB-11', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     renderApp('/como-funciona')
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'owner@example.test' } })
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
     fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
@@ -134,7 +134,7 @@ describe('TriBusca release candidate WEB-11', () => {
       method: 'POST', credentials: 'include',
       headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
     })))
-    await screen.findByRole('button', { name: 'Entrar' })
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Entrar' }).length).toBeGreaterThan(0))
   })
 
   it('requires a valid refresh cookie before showing the panel on a direct visit', async () => {
@@ -145,7 +145,7 @@ describe('TriBusca release candidate WEB-11', () => {
       method: 'POST', credentials: 'include',
       headers: { 'x-csrf-protection': '1' },
     })))
-    await screen.findByRole('button', { name: 'Entrar' })
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Entrar' }).length).toBeGreaterThan(0))
     expect(screen.queryByRole('heading', { name: /Bom dia,/ })).not.toBeInTheDocument()
   })
 
@@ -297,7 +297,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
     vi.stubEnv('VITE_ENABLE_DEMO_ACCESS', 'false')
     renderApp()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
     expect(screen.queryByRole('button', { name: 'Entrar em modo demonstração' })).not.toBeInTheDocument()
   })
 
@@ -318,8 +318,8 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
     const fetchMock = vi.fn(async () => sourcesResponse())
     vi.stubGlobal('fetch', fetchMock)
 
-    renderApp()
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    renderApp('/como-funciona')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
 
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByRole('button', { name: 'Entrar em modo demonstração' })).toBeInTheDocument()
