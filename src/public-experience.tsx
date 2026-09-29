@@ -87,6 +87,8 @@ export function PublicExperience({ onAuth }: { onAuth: OpenAuth }) {
       <Route path="/portfolio" element={<PortfolioPage onAuth={onAuth} />} />
       <Route path="/como-funciona" element={<HowItWorksPage onAuth={onAuth} />} />
       <Route path="/reforma-tributaria" element={<TaxReformPage onAuth={onAuth} />} />
+      <Route path="/termos" element={<TermsPage />} />
+      <Route path="/privacidade" element={<PrivacyPage />} />
     </Routes>
     <PublicFooter />
   </div>
@@ -378,10 +380,155 @@ function HowItWorksPage({onAuth}:{onAuth:OpenAuth}) { return <main><PageHero eye
 
 function TaxReformPage({onAuth}:{onAuth:OpenAuth}) { const [filter,setFilter]=useState('Todos');return <main><PageHero eyebrow="Reforma Tributária" title="A Reforma Tributária, organizada a partir da fonte oficial." copy="Legislação, regulamentação, notas técnicas e demais publicações oficiais reunidas a partir do Acervo da TriBusca."/><section className="ref-section"><div className="ref-container"><SectionTitle eyebrow="Linha do tempo" title="Publicação e vigência são datas diferentes." copy="Datas futuras aparecem apenas quando previstas em fonte oficial."/><div className="ref-reform-legend"><span>Publicação</span><span>Vigência</span><span>Marco previsto em lei</span></div><div className="ref-reform-timeline">{reformTimeline.map((item,index)=><article key={`${item.date}-${item.title}`}><div className="ref-timeline-axis"><span/><i/></div><div className="ref-timeline-content"><small>{item.date}</small><em>{item.kind}</em><strong>{item.title}</strong><p>{item.text}</p></div>{index===reformTimeline.length-1?null:null}</article>)}</div><p className="ref-legal-note">Conferir cada item com a fonte oficial antes de publicação definitiva.</p></div></section><section className="ref-section ref-soft-section"><div className="ref-container"><SectionTitle eyebrow="No Acervo" title="Publicações relacionadas" copy="Lista ilustrativa; a integração com o Acervo real permanece sujeita aos gates de exposição pública."/><div className="ref-filter-row">{['Todos','Legislação','Regulamentação','Notas técnicas','IBS','CBS','Imposto Seletivo'].map(x=><button key={x} className={filter===x?'active':''} onClick={()=>setFilter(x)} type="button">{x}</button>)}</div><div className="ref-related-list">{[['CGIBS','Resolução CGIBS nº 18/2026','15/09/2026'],['CGIBS','Resolução CGIBS nº 6/2026 — Regulamento do IBS','30/04/2026'],['Planalto','Lei Complementar nº 214/2025','2025']].map(([org,title,date])=><article key={title}><span>{org}</span><strong>{title}</strong><small>{date}</small></article>)}</div></div></section><PublicCta onAuth={onAuth}/></main> }
 
+function TermsPage() {
+  return <LegalDocumentPage
+    eyebrow="Termos de uso"
+    title="Termos de Uso do TriBusca"
+    intro="Versão 2026-09-29-v1 · Vigente a partir de 29/09/2026."
+    sections={[
+      {
+        title: '1. Objeto',
+        paragraphs: [
+          'O TriBusca é uma plataforma de monitoramento e inteligência tributária que organiza publicações oficiais e oferece recursos de pesquisa, priorização e leitura auxiliar.',
+          'O serviço não substitui a consulta à fonte oficial, a análise profissional individualizada nem a decisão do usuário sobre obrigações tributárias, fiscais ou legais.',
+        ],
+      },
+      {
+        title: '2. Conta e responsabilidade do usuário',
+        paragraphs: [
+          'Você deve fornecer dados verdadeiros e manter suas credenciais sob controle. A senha é definida pelo próprio usuário e não deve ser compartilhada.',
+          'O primeiro cadastro válido de uma organização cria um ambiente próprio no TriBusca e recebe perfil OWNER. Quando um CNPJ é informado, o autosserviço não cria um segundo ambiente para o mesmo CNPJ.',
+        ],
+      },
+      {
+        title: '3. Uso permitido',
+        paragraphs: [
+          'A plataforma deve ser usada para finalidades legítimas relacionadas ao acompanhamento, organização e análise de informações tributárias.',
+          'Não é permitido tentar contornar controles de segurança, acessar dados de outros clientes, automatizar abuso do serviço ou utilizar a plataforma de forma ilícita.',
+        ],
+      },
+      {
+        title: '4. Fontes oficiais e conteúdo assistido',
+        paragraphs: [
+          'O TriBusca procura preservar a referência e a origem das publicações oficiais. Conteúdos de inteligência, classificação ou IA são apresentados como camadas auxiliares e podem exigir validação humana.',
+          'Em caso de divergência, prevalece a publicação disponível na fonte oficial competente.',
+        ],
+      },
+      {
+        title: '5. Disponibilidade e evolução',
+        paragraphs: [
+          'O produto está em evolução e pode receber ajustes de funcionalidades, integrações, limites e condições de acesso. Interrupções de fontes externas ou manutenções podem afetar temporariamente a disponibilidade de dados.',
+          'Condições comerciais, planos pagos ou cobranças futuras serão informados antes de produzirem efeitos para a conta.',
+        ],
+      },
+      {
+        title: '6. Encerramento e segurança',
+        paragraphs: [
+          'O acesso poderá ser restringido em caso de risco de segurança, uso abusivo, violação destes termos ou necessidade técnica justificada.',
+          'Solicitações relacionadas à conta deverão ser tratadas pelos canais de atendimento disponibilizados pelo TriBusca no produto ou no site.',
+        ],
+      },
+      {
+        title: '7. Atualizações destes termos',
+        paragraphs: [
+          'Novas versões poderão ser publicadas quando houver mudanças relevantes no serviço. Quando necessário, um novo aceite poderá ser solicitado.',
+          'Esta versão identifica o conjunto de termos aceito no cadastro e pode passar por revisão jurídica antes de expansão comercial ampla.',
+        ],
+      },
+    ]}
+  />
+}
+
+function PrivacyPage() {
+  return <LegalDocumentPage
+    eyebrow="Privacidade"
+    title="Política de Privacidade do TriBusca"
+    intro="Versão 2026-09-29-v1 · Vigente a partir de 29/09/2026."
+    sections={[
+      {
+        title: '1. Dados tratados',
+        paragraphs: [
+          'No cadastro podemos tratar nome, e-mail, empresa, CNPJ opcional, aceite dos documentos e informações técnicas necessárias à segurança da conta.',
+          'Durante autenticação e uso do serviço também podem ser tratados identificadores de sessão, endereço IP, navegador, horários de acesso e registros técnicos de segurança.',
+        ],
+      },
+      {
+        title: '2. Finalidades',
+        paragraphs: [
+          'Os dados são usados para criar e administrar a conta, autenticar usuários, proteger o ambiente, manter histórico operacional, prestar o serviço e prevenir fraude ou abuso.',
+          'Dados empresariais e parâmetros tributários cadastrados posteriormente serão utilizados para personalizar monitoramento, filtros e funcionalidades contratadas.',
+        ],
+      },
+      {
+        title: '3. Senhas e segurança',
+        paragraphs: [
+          'O TriBusca não armazena a senha em texto puro. A credencial é armazenada por meio de hash Argon2id e as sessões utilizam controles próprios de autenticação.',
+          'Nenhum mecanismo de segurança elimina todos os riscos; por isso mantemos controles de acesso, segregação por tenant, RLS e registros técnicos compatíveis com a arquitetura do produto.',
+        ],
+      },
+      {
+        title: '4. Compartilhamento',
+        paragraphs: [
+          'Os dados podem ser tratados por provedores de infraestrutura e serviços necessários à operação da plataforma, sempre de acordo com a finalidade do serviço.',
+          'Não vendemos dados pessoais. Compartilhamentos adicionais somente ocorrerão quando necessários à prestação do serviço, ao cumprimento de obrigação aplicável ou mediante base legítima apropriada.',
+        ],
+      },
+      {
+        title: '5. Retenção',
+        paragraphs: [
+          'Os dados são mantidos pelo período necessário à operação da conta, segurança, auditoria e cumprimento de obrigações aplicáveis. Prazos específicos poderão variar conforme o tipo de registro.',
+          'Quando a conta for encerrada, dados poderão ser eliminados, anonimizados ou mantidos pelo período necessário para finalidades legítimas e obrigações aplicáveis.',
+        ],
+      },
+      {
+        title: '6. Direitos e solicitações',
+        paragraphs: [
+          'O titular pode solicitar informações, correção e demais direitos previstos na legislação aplicável, observados os limites legais e técnicos de cada solicitação.',
+          'As solicitações deverão ser encaminhadas pelos canais de atendimento disponibilizados pelo TriBusca no produto ou no site.',
+        ],
+      },
+      {
+        title: '7. Atualizações',
+        paragraphs: [
+          'Esta política poderá ser atualizada para refletir mudanças do produto, dos fornecedores ou das práticas de tratamento. A versão vigente permanecerá identificada nesta página.',
+          'Esta versão inicial pode passar por revisão jurídica antes da expansão comercial ampla do serviço.',
+        ],
+      },
+    ]}
+  />
+}
+
+function LegalDocumentPage({
+  eyebrow,
+  title,
+  intro,
+  sections,
+}: {
+  eyebrow: string
+  title: string
+  intro: string
+  sections: Array<{ title: string; paragraphs: string[] }>
+}) {
+  return <main className="ref-legal-page">
+    <PageHero eyebrow={eyebrow} title={title} copy={intro} />
+    <section className="ref-section">
+      <div className="ref-container ref-legal-document">
+        {sections.map((section) => <section key={section.title}>
+          <h2>{section.title}</h2>
+          {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        </section>)}
+        <p className="ref-legal-disclaimer">
+          Documento operacional inicial do TriBusca. Recomenda-se revisão jurídica antes de expansão comercial ampla.
+        </p>
+      </div>
+    </section>
+  </main>
+}
+
 function PageHero({eyebrow,title,copy}:{eyebrow:string;title:string;copy:string}) { return <section className="ref-page-hero"><div className="ref-container"><span className="ref-kicker">{eyebrow}</span><h1>{title}</h1><p>{copy}</p></div></section> }
 function SectionTitle({eyebrow,title,copy}:{eyebrow:string;title:string;copy:string}) { return <div className="ref-section-title"><span>{eyebrow}</span><h2>{title}</h2><p>{copy}</p></div> }
 function statusClass(status:string){return status==='—'?'collection-pending-data':`collection-${status.toLowerCase().replaceAll(' ','-')}`}
 
 function PublicCta({onAuth}:{onAuth:OpenAuth}) { return <section className="ref-public-cta"><div className="ref-container"><div><h2>Pare de procurar mudanças tributárias manualmente.</h2><p>7 dias para conhecer a TriBusca.</p></div><div><button className="ref-button ref-button-cyan" type="button" onClick={(event)=>onAuth('signup',event.currentTarget)}>Experimentar grátis</button><button className="ref-button ref-button-light" type="button" onClick={(event)=>onAuth('login',event.currentTarget)}>Entrar</button></div></div></section> }
 
-function PublicFooter(){return <footer className="site-footer ref-footer"><div className="ref-container footer-wrap ref-footer-wrap"><img src="/brand/tribusca-logo-horizontal-dark.png" alt="TriBusca" className="footer-logo"/><p>Monitoramento e Inteligência Tributária</p><p className="footer-note">Termos de uso e Política de privacidade em elaboração · © 2026 TriBusca</p></div></footer>}
+function PublicFooter(){return <footer className="site-footer ref-footer"><div className="ref-container footer-wrap ref-footer-wrap"><img src="/brand/tribusca-logo-horizontal-dark.png" alt="TriBusca" className="footer-logo"/><p>Monitoramento e Inteligência Tributária</p><p className="footer-note"><Link to="/termos">Termos de uso</Link> · <Link to="/privacidade">Política de privacidade</Link> · © 2026 TriBusca</p></div></footer>}
