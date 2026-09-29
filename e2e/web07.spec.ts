@@ -429,7 +429,8 @@ test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page })
   await expect(stateCards).toHaveCount(27)
   await expect(stateCards.first()).toContainText('São Paulo / SP')
 
-  const douCard = page.getByText('DOU / INLABS').locator('..').locator('..')
+  const federalCards = page.locator('[data-testid="federal-coverage-card"]')
+  const douCard = federalCards.filter({ hasText: 'DOU / INLABS' }).first()
   await expect(douCard.locator('.collection-status')).toHaveText('—')
   await expect(douCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
 
@@ -438,17 +439,17 @@ test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page })
   await expect(douCard).toContainText('517')
   await expect(douCard).toContainText('10:30')
 
-  const confazCard = page.getByText('CONFAZ').locator('..').locator('..')
+  const confazCard = federalCards.filter({ hasText: 'CONFAZ' }).first()
   await expect(confazCard.locator('.collection-status')).toHaveText('Em validação')
 
-  const nfeCard = page.getByText('NF-e / ENCAT').locator('..').locator('..')
+  const nfeCard = federalCards.filter({ hasText: 'NF-e / ENCAT' }).first()
   await expect(nfeCard.locator('.collection-status')).toHaveText('Em validação')
   await expect(nfeCard.locator('.coverage-metrics dd').first()).toHaveText('—')
 
-  const spedCard = page.getByText('SPED').locator('..').locator('..')
+  const spedCard = federalCards.filter({ hasText: 'SPED' }).first()
   await expect(spedCard.locator('.collection-status')).toHaveText('Em implantação')
 
-  const goCard = page.getByText('Goiás / GO').locator('..').locator('..')
+  const goCard = stateCards.filter({ hasText: 'Goiás / GO' }).first()
   await expect(goCard.locator('.collection-status')).toHaveText('Em implantação')
   await expect(goCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
 })
