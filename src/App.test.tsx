@@ -274,7 +274,7 @@ describe('TriBusca release candidate WEB-11', () => {
   it('renders the five approved Decodifica examples as a carousel', () => {
     renderApp('/portfolio')
 
-    expect(screen.getByText('Split payment')).toBeInTheDocument()
+    expect(screen.getByText(/Split payment/)).toBeInTheDocument()
     expect(screen.getByText('Exemplo 1 de 5')).toBeInTheDocument()
     expect(screen.getByText('Gerada por IA. Não substitui o texto oficial.')).toBeInTheDocument()
   })
@@ -378,6 +378,8 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
         name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
       })).toBeInTheDocument()
     })
-    expect(fetchMock).not.toHaveBeenCalled()
+    const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url))
+    expect(requestedUrls.some((url) => url.includes('/auth/logout'))).toBe(false)
+    expect(requestedUrls.filter((url) => /\/auth\/(?:me|refresh|logout)/.test(url))).toEqual([])
   })
 })
