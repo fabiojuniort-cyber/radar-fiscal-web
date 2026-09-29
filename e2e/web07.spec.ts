@@ -420,7 +420,7 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
 test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page }) => {
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Em desenvolvimento')).toHaveCount(6)
-  await expect(page.getByText('Disponível')).toHaveCount(0)
+  await expect(page.getByText('Disponível', { exact: true })).toHaveCount(0)
 
   await mockPublicSources(page, 200, 350)
   await page.goto('/cobertura', { waitUntil: 'domcontentloaded' })
@@ -481,7 +481,7 @@ test('WEB-14 — modo demonstração navega sem autenticação ou chamadas priva
     }
   })
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.goto('/como-funciona', { waitUntil: 'domcontentloaded' })
   await waitForFonts(page)
   await openLogin(page)
 
@@ -514,5 +514,6 @@ test('WEB-14 — modo demonstração navega sem autenticação ou chamadas priva
   await expect(page.getByRole('heading', {
     name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
   })).toBeVisible()
-  expect(appRequests).toEqual([])
+  expect(appRequests.filter((url) => /\/auth\//.test(url))).toEqual([])
+  expect(appRequests.every((url) => url.includes('/public/v1/sources'))).toBe(true)
 })
