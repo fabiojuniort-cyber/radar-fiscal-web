@@ -17,7 +17,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import {
@@ -91,6 +91,7 @@ export function PublicExperience({ onAuth }: { onAuth: OpenAuth }) {
 
 function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const close = () => setMobileOpen(false)
   return <header className="site-header ref-header">
     <nav className="ref-container ref-nav-wrap">
@@ -106,7 +107,7 @@ function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
       <div className="nav-actions ref-nav-actions">
         <button className="ref-button ref-button-ghost" type="button" onClick={(event) => onAuth('login', event.currentTarget)}>Entrar</button>
         <button className="ref-button ref-button-primary" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>Criar conta</button>
-        <button className="mobile-menu-button" type="button" aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'} aria-expanded={mobileOpen} onClick={() => setMobileOpen((value) => !value)}>{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button>
+        <button ref={mobileMenuButtonRef} className="mobile-menu-button" type="button" aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'} aria-expanded={mobileOpen} onClick={() => setMobileOpen((value) => !value)}>{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button>
       </div>
     </nav>
     {mobileOpen && <nav className="mobile-nav" aria-label="Navegação móvel">
@@ -115,8 +116,8 @@ function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
         <NavLink to="/portfolio" onClick={close}>Portfólio</NavLink>
         <NavLink to="/como-funciona" onClick={close}>Como funciona</NavLink>
         <NavLink to="/reforma-tributaria" onClick={close}>Reforma Tributária</NavLink>
-        <button type="button" onClick={(event) => { close(); onAuth('login', event.currentTarget) }}>Entrar</button>
-        <button className="mobile-signup" type="button" onClick={(event) => { close(); onAuth('signup', event.currentTarget) }}>Criar conta</button>
+        <button type="button" onClick={(event) => { const returnFocus = mobileMenuButtonRef.current ?? event.currentTarget; close(); onAuth('login', returnFocus) }}>Entrar</button>
+        <button className="mobile-signup" type="button" onClick={(event) => { const returnFocus = mobileMenuButtonRef.current ?? event.currentTarget; close(); onAuth('signup', returnFocus) }}>Criar conta</button>
       </div>
     </nav>}
   </header>
