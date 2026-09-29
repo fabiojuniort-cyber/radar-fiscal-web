@@ -17,7 +17,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import {
@@ -36,6 +36,9 @@ import './public-experience.css'
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset'
 type OpenAuth = (view: AuthView, returnFocus: HTMLElement) => void
+
+export const STATE_CAROUSEL_AUTOPLAY_MS = 15_000
+const STATE_CAROUSEL_SWIPE_THRESHOLD_PX = 48
 
 const products = [
   { name: 'Acervo', descriptor: 'Base oficial organizada', icon: BookOpen, description: 'Publicações, versões, fontes, marcadores e busca em uma experiência única.' },
@@ -177,18 +180,91 @@ function RadarNow() {
 function StateCarousel() {
   const states = useMemo(() => selectFeaturedStates(), [])
   const [index, setIndex] = useState(0)
+  const [hoverPaused, setHoverPaused] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const current = states[index]
   const previous = () => setIndex((value) => (value - 1 + states.length) % states.length)
   const next = () => setIndex((value) => (value + 1) % states.length)
 
+  const query = useQuery({
+    queryKey: ['public-sources-home'],
+    queryFn: ({ signal }) => fetchPublicSources(undefined, signal),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  })
+  const dataAvailable = query.isSuccess && !query.isFetching
+  const sourceItems = dataAvailable ? query.data.items : []
+  const stateStatus = toCoveragePresentation(
+    findStateSource(sourceItems, current.uf),
+    dataAvailable,
+  ).status
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReducedMotion(media.matches)
+    sync()
+    media.addEventListener?.('change', sync)
+    return () => media.removeEventListener?.('change', sync)
+  }, [])
+
+  useEffect(() => {
+    if (reducedMotion || hoverPaused || states.length < 2) return
+    const timer = window.setInterval(() => {
+      setIndex((value) => (value + 1) % states.length)
+    }, STATE_CAROUSEL_AUTOPLAY_MS)
+    return () => window.clearInterval(timer)
+  }, [hoverPaused, reducedMotion, states.length])
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0]
+    if (!touch) return
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current
+    const touch = event.changedTouches[0]
+    touchStartRef.current = null
+    if (!start || !touch) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (
+      Math.abs(deltaX) < STATE_CAROUSEL_SWIPE_THRESHOLD_PX ||
+      Math.abs(deltaX) <= Math.abs(deltaY)
+    ) return
+
+    if (deltaX < 0) next()
+    else previous()
+  }
+
   return <section className="ref-section ref-state-section">
     <div className="ref-container">
       <SectionTitle eyebrow="Cobertura estadual" title="Monitoramento tributário nos estados" copy="São Paulo abre a seleção; os demais estados seguem a cobertura configurada pela TriBusca." />
-      <div className="state-carousel ref-state-carousel" data-testid="state-carousel">
+      <div
+        className="state-carousel ref-state-carousel"
+        data-testid="state-carousel"
+        onMouseEnter={() => setHoverPaused(true)}
+        onMouseLeave={() => setHoverPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => { touchStartRef.current = null }}
+      >
         <img src={current.img} alt={current.place} className="state-photo" />
         <div className="state-overlay" />
         <div className="state-copy ref-state-copy">
           <span className="ref-state-uf">{current.uf}</span>
+          <span
+            className={`collection-status ref-status ref-state-status ${statusClass(stateStatus)}`}
+            data-testid="state-carousel-status"
+            aria-live="polite"
+          >
+            {stateStatus}
+          </span>
           <h3>{current.name} · {current.capital}</h3>
           <p>{current.place}</p>
           <div className="state-publications ref-state-publications"><strong>Últimas publicações · {current.uf}</strong><span>—</span><span>—</span><span>—</span></div>
