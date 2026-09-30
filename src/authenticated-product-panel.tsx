@@ -5,7 +5,6 @@ import {
 } from '@tanstack/react-query'
 import {
   Building2,
-  CalendarDays,
   ChevronDown,
   ExternalLink,
   Landmark,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react'
 import {
   FormEvent,
-  useMemo,
   useState,
 } from 'react'
 
@@ -1050,7 +1048,7 @@ export function AuthenticatedProductPanel({
             <SectionHeading
               eyebrow="Base oficial organizada"
               title="Acervo"
-              description="Filtre o acervo real por esfera, UF e fonte. A busca textual nesta etapa atua sobre os registros carregados pelo contrato público atual."
+              description="Filtre e pesquise o Acervo autenticado completo por esfera, UF, fonte e conteúdo oficial, com navegação paginada."
             />
 
             <form
