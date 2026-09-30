@@ -598,30 +598,52 @@ function CentralMock(){
 }
 
 type RadarLevel = 'near' | 'medium' | 'far'
-type RadarBlip = { level: RadarLevel; left: number; top: number; delay: number }
+type RadarBlip = {
+  level: RadarLevel
+  left: number
+  top: number
+  detectionDelay: number
+}
 
-function randomRadarBlip(index:number): RadarBlip {
+const RADAR_SWEEP_SECONDS = 4.8
+
+function randomRadarBlip(): RadarBlip {
   const levels: RadarLevel[] = ['near','medium','far']
   const level = levels[Math.floor(Math.random()*levels.length)] ?? 'medium'
-  const ranges: Record<RadarLevel,[number,number]> = { near:[8,22], medium:[25,34], far:[36,44] }
+  const ranges: Record<RadarLevel,[number,number]> = {
+    near:[8,20],
+    medium:[24,34],
+    far:[38,45],
+  }
   const [min,max]=ranges[level]
   const radius=min+Math.random()*(max-min)
   const angle=Math.random()*Math.PI*2
-  return { level, left:50+Math.cos(angle)*radius, top:50+Math.sin(angle)*radius, delay:2.7+index*3.1 }
+  const angleFraction=(angle%(Math.PI*2))/(Math.PI*2)
+
+  return {
+    level,
+    left:50+Math.cos(angle)*radius,
+    top:50+Math.sin(angle)*radius,
+    detectionDelay:angleFraction*RADAR_SWEEP_SECONDS,
+  }
 }
 
 function SonarDemo(){
-  const blips=useMemo(()=>[0,1,2].map(randomRadarBlip),[])
+  const blips=useMemo(()=>[0,1,2].map(()=>randomRadarBlip()),[])
   return <div className="ref-sonar-model">
     <div className="ref-live-radar" aria-label="Radar de afinidade ilustrativo">
       <span className="ref-radar-zone zone-far"/><span className="ref-radar-zone zone-medium"/><span className="ref-radar-zone zone-near"/>
       <span className="ref-live-radar-center"/>
-      <span className="ref-live-radar-sweep"/>
+      <span
+        className="ref-live-radar-sweep"
+        style={{ '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties}
+      />
       {blips.map((blip,index)=>{
         const style={
           '--blip-left': blip.left + '%',
           '--blip-top': blip.top + '%',
-          '--blip-delay': blip.delay + 's',
+          '--blip-delay': blip.detectionDelay + 's',
+          '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
         } as CSSProperties
         return <span key={index} className={'ref-live-radar-blip is-'+blip.level} style={style}/>
       })}

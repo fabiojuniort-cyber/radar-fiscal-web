@@ -102,3 +102,14 @@ Use confirmação própria da interface, com:
 - comportamento consistente em Safari/iPhone e desktop.
 
 A exclusão de empresa continua sendo soft-delete no backend; a confirmação deve informar que o histórico é preservado.
+
+## Sonar visual
+
+O componente demonstrativo de Sonar deve se comportar como uma varredura real:
+- estrutura do radar monocromática, usando a cor de interface aprovada;
+- somente os alvos detectados usam cores de severidade/afinidade;
+- o feixe gira continuamente a partir do centro;
+- cada alvo permanece oculto até o feixe cruzar seu ângulo;
+- a animação do alvo deve usar a mesma duração da varredura e um delay derivado do ângulo do alvo;
+- posições dos alvos podem variar por carregamento, preservando níveis perto/médio/longe;
+- `prefers-reduced-motion` deve continuar desabilitando a rotação para acessibilidade.

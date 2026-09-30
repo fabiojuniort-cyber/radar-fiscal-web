@@ -522,23 +522,56 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   }
 })
 
-test('WEB-19 — live Sonar radar rotates and schedules three randomized blips', async ({ page }) => {
+test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detection', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
 
+  const radar = page.locator('.ref-live-radar')
   const sweep = page.locator('.ref-live-radar-sweep')
+  await expect(radar).toBeVisible()
   await expect(sweep).toBeVisible()
-  expect(await sweep.evaluate((element) => getComputedStyle(element).animationName)).toBe('tribuscaRadarSweep')
+
+  const sweepAnimation = await sweep.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      name: style.animationName,
+      duration: style.animationDuration,
+      background: style.backgroundImage,
+    }
+  })
+
+  expect(sweepAnimation.name).toBe('tribuscaRadarSweep')
+  expect(sweepAnimation.duration).toBe('4.8s')
+  expect(sweepAnimation.background).toContain('38, 215, 200')
+
+  const zones = page.locator('.ref-radar-zone')
+  await expect(zones).toHaveCount(3)
+  const zoneBorders = await zones.evaluateAll((items) =>
+    items.map((item) => getComputedStyle(item).borderTopColor),
+  )
+  expect(new Set(zoneBorders).size).toBe(1)
 
   const blips = page.locator('.ref-live-radar-blip')
   await expect(blips).toHaveCount(3)
-  const positions = await blips.evaluateAll((items) => items.map((item) => ({
-    left: getComputedStyle(item).left,
-    top: getComputedStyle(item).top,
-    className: item.className,
-  })))
-  expect(new Set(positions.map((item) => item.left + '|' + item.top)).size).toBeGreaterThanOrEqual(2)
-  expect(positions.every((item) => /is-(near|medium|far)/.test(item.className))).toBe(true)
+  const targets = await blips.evaluateAll((items) =>
+    items.map((item) => {
+      const style = getComputedStyle(item)
+      return {
+        left: style.left,
+        top: style.top,
+        className: item.className,
+        animationName: style.animationName,
+        animationDuration: style.animationDuration,
+        animationDelay: Number.parseFloat(style.animationDelay),
+      }
+    }),
+  )
+
+  expect(new Set(targets.map((item) => item.left + '|' + item.top)).size).toBeGreaterThanOrEqual(2)
+  expect(targets.every((item) => /is-(near|medium|far)/.test(item.className))).toBe(true)
+  expect(targets.every((item) => item.animationName === 'tribuscaRadarBlip')).toBe(true)
+  expect(targets.every((item) => item.animationDuration === '4.8s')).toBe(true)
+  expect(targets.every((item) => item.animationDelay >= 0 && item.animationDelay < 4.8)).toBe(true)
 })
 
 test('WEB-20 — Home e carrossel usam publicações reais e não inventam itens', async ({ page }) => {
