@@ -121,3 +121,15 @@ O componente demonstrativo de Sonar deve se comportar como uma varredura real:
 - a primeira combinação inicia com 1 alvo; as seguintes são escolhidas aleatoriamente, evitando repetição imediata da mesma combinação;
 - a combinação anterior pode permanecer somente como rastro residual até concluir o fade de meia volta;
 - `prefers-reduced-motion` deve continuar desabilitando a rotação para acessibilidade.
+
+
+### Local Negócio
+
+- Exibir `Local Negócio` como campo manual no cadastro/edição da empresa e dos estabelecimentos.
+- No cadastro de empresa, o campo representa o código interno da matriz.
+- No cadastro de estabelecimento, representa o código interno daquela filial/unidade.
+- Não preencher esse campo a partir da RFB, CNAE, SEFAZ ou qualquer outra fonte automática.
+- Reconsultas de CNPJ/RFB/IE não devem sobrescrever o valor manual.
+- Exibir o código no resumo da empresa e na tabela de estabelecimentos quando informado.
+- O campo `Nome fantasia` não faz parte da edição da empresa na experiência atual; a razão social permanece o identificador textual principal exibido.
+- Erros técnicos de integração como `cnpj_provider_unavailable` não devem ser apresentados crus ao usuário; mapear para mensagens compreensíveis.

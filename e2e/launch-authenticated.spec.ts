@@ -15,6 +15,7 @@ async function openLogin(page: import('@playwright/test').Page) {
 test('LAUNCH-01 authenticated release candidate screens and account setup work end-to-end', async ({ page }) => {
   let companyCreated = false
   let establishmentCreated = false
+  let branchCreated = false
   let profileSaved = false
 
   await page.route('**/auth/login', (route) => route.fulfill({
@@ -80,6 +81,36 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
       }],
     }),
   }))
+
+  await page.route('**/api/v1/monitoring/runs', async (route) => {
+    expect(route.request().headers()['x-tenant-id'])
+      .toBe('11111111-1111-4111-8111-111111111111')
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-09-30T00:00:00.000Z',
+        windowHours: 24,
+        items: [{
+          id: '88888888-8888-4888-8888-888888888888',
+          sourceCode: 'dou',
+          sourceName: 'DOU',
+          jurisdictionLevel: 'FEDERAL',
+          uf: null,
+          status: 'SUCCESS',
+          triggerType: 'SCHEDULED',
+          scheduledFor: '2026-09-30T00:00:00.000Z',
+          startedAt: '2026-09-30T00:00:00.000Z',
+          finishedAt: '2026-09-30T00:00:03.000Z',
+          durationMs: 3000,
+          attemptCount: 1,
+          foundItems: 7,
+          importedDocuments: 7,
+        }],
+      }),
+    })
+  })
 
   await page.route('**/api/v1/archive?*', (route) => route.fulfill({
     status: 200,
@@ -174,7 +205,10 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           tradeName: 'Empresa Launch',
           cnpj: '11222333000181',
           isActive: true,
-          establishmentCount: establishmentCreated ? 1 : 0,
+          establishmentCount:
+            (establishmentCreated ? 1 : 0) +
+            (branchCreated ? 1 : 0),
+          businessLocationCode: 'MATRIZ-01',
         }] : [],
       }),
     })
@@ -182,6 +216,11 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
 
   await page.route('**/api/v1/companies/from-cnpj', async (route) => {
     expect(route.request().method()).toBe('POST')
+    const payload = route.request().postDataJSON() as {
+      cnpj: string
+      businessLocationCode?: string
+    }
+    expect(payload.businessLocationCode).toBe('MATRIZ-01')
     companyCreated = true
     establishmentCreated = true
     await route.fulfill({
@@ -193,6 +232,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           legalName: 'Empresa Launch Ltda',
           tradeName: 'Empresa Launch',
           cnpj: '11222333000181',
+          businessLocationCode: 'MATRIZ-01',
         },
         establishment: {
           id: '33333333-3333-4333-8333-333333333333',
@@ -209,6 +249,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           streetNumber: '100',
           complement: null,
           district: 'Centro',
+          businessLocationCode: 'MATRIZ-01',
           stateRegistration: '10.123.456-2',
           stateRegistrationStatus: 'ATIVO - HABILITADO',
           stateRegistrationLookupStatus: 'SUCCESS',
@@ -240,6 +281,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
 
       companyCreated = false
       establishmentCreated = false
+      branchCreated = false
       await route.fulfill({
         status: 204,
         body: '',
@@ -526,8 +568,10 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await page.getByRole('button', { name: 'Empresas' }).click()
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
+  await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
   await page.getByRole('button', { name: 'Consultar e cadastrar' }).click()
   await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
+  await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
 
   await page.getByRole('tab', { name: /Estabelecimentos/ }).click()
   await expect(page.getByText('4683400')).toBeVisible()

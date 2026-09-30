@@ -141,15 +141,44 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getByLabelText('E-mail')).toHaveValue('nova.pessoa@example.com')
   })
 
-  it('links the signup consent to published legal documents', () => {
+  it('opens the published legal documents from signup consent', () => {
     vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse()))
     renderApp('/')
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
 
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByRole('link', { name: 'Termos de uso' })).toHaveAttribute('href', '/termos')
-    expect(within(dialog).getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade')
+    const signupDialog = screen.getByRole('dialog', {
+      name: 'Criar conta',
+    })
+    fireEvent.click(
+      within(signupDialog).getByRole('button', {
+        name: 'Termos de uso',
+      }),
+    )
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Termos de Uso da TriBusca',
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Fechar',
+      }),
+    )
+
+    fireEvent.click(
+      within(signupDialog).getByRole('button', {
+        name: 'Política de privacidade',
+      }),
+    )
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Política de Privacidade da TriBusca',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('shows a duplicate-email state and does not claim signup success', async () => {
@@ -240,7 +269,22 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
     fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
 
-    await screen.findByRole('heading', { name: 'Olá, owner.' })
+    await waitFor(
+      () => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/auth/me',
+          expect.objectContaining({
+            credentials: 'include',
+          }),
+        )
+      },
+      { timeout: 3000 },
+    )
+    await screen.findByRole(
+      'heading',
+      { name: 'Olá, owner.' },
+      { timeout: 3000 },
+    )
     expect(screen.getByText('TriBusca Internal')).toBeInTheDocument()
     expect(screen.getByText('Conta autenticada')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
@@ -607,18 +651,18 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(20)
   })
 
-  it('shows the released Acervo and Central resources on the Home portfolio', () => {
+  it('shows only released availability badges on the Home portfolio', () => {
     renderApp()
 
     expect(screen.getAllByText('Disponível')).toHaveLength(2)
-    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(4)
+    expect(screen.queryByText('Em desenvolvimento')).not.toBeInTheDocument()
   })
 
   it('shows the same factual availability on the portfolio page', () => {
     renderApp('/portfolio')
 
     expect(screen.getAllByText('Disponível')).toHaveLength(2)
-    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(4)
+    expect(screen.queryByText('Em desenvolvimento')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Acervo' })).toHaveAttribute('href', '#acervo')
     expect(screen.getByRole('link', { name: 'Central de Monitoramento' })).toHaveAttribute('href', '#monitoramento')
     expect(screen.getByRole('link', { name: 'Sonar' })).toHaveAttribute('href', '#sonar')

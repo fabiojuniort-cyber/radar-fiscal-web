@@ -37,6 +37,7 @@ import {
   deleteCompany,
   deleteEstablishment,
   fetchAccountSummary,
+  fetchMonitoringRuns,
   fetchEstablishmentTypes,
   fetchEstablishments,
   fetchTaxProfile,
@@ -49,6 +50,7 @@ import {
   type AccountCompany,
   type Establishment,
   type EstablishmentCnae,
+  type MonitoringRun,
   type ProductApiFetch,
   type ProductArchiveItem,
   type TaxonomyProfileDimension,
@@ -157,7 +159,7 @@ function initials(value: string) {
 }
 
 function LoadingState({
-  text = 'Carregando dados reais…',
+  text = 'Carregando…',
 }: {
   text?: string
 }) {
@@ -381,8 +383,7 @@ function SourceHealth({
   if (items.length === 0) {
     return (
       <EmptyState title="Nenhuma fonte retornada">
-        A API respondeu sem fontes
-        cadastradas.
+        Nenhuma fonte cadastrada.
       </EmptyState>
     )
   }
@@ -472,6 +473,10 @@ export function AuthenticatedProductPanel({
     useState(false)
   const [selectedCompanyId, setSelectedCompanyId] =
     useState('')
+  const [
+    runHistorySource,
+    setRunHistorySource,
+  ] = useState<string | null>(null)
 
   useEffect(() => {
     setSelectedCompanyId('')
@@ -490,6 +495,22 @@ export function AuthenticatedProductPanel({
     queryFn: ({ signal }) =>
       fetchPublicStats(undefined, signal),
     retry: false,
+  })
+
+  const monitoringRunsQuery = useQuery({
+    queryKey: [
+      'launch',
+      'monitoring-runs',
+      tenantId,
+    ],
+    queryFn: () =>
+      fetchMonitoringRuns(
+        apiFetch,
+        tenantId!,
+      ),
+    enabled: Boolean(tenantId),
+    retry: false,
+    refetchInterval: 60_000,
   })
 
   const latestArchiveQuery = useQuery({
@@ -760,10 +781,6 @@ export function AuthenticatedProductPanel({
               aria-label="Buscar no Acervo"
             />
           </form>
-
-          <span className="tp-account-pill">
-            Dados reais
-          </span>
 
           <div className="tp-pop-wrap tp-user-wrap">
             <button
@@ -1313,54 +1330,38 @@ export function AuthenticatedProductPanel({
         {screen === 'central' && (
           <>
             <SectionHeading
-              eyebrow="Saúde operacional global"
+              eyebrow="Saúde operacional"
               title="Central de Monitoramento"
-              description="Distingue fonte consultada, instabilidade, indisponibilidade e ausência de execução."
+              description="Acompanhe a situação das fontes, a última execução e os documentos importados nas últimas 24 horas."
             />
-            {sourcesQuery.isPending ? (
+            {sourcesQuery.isPending ||
+            monitoringRunsQuery.isPending ? (
               <LoadingState />
-            ) : sourcesQuery.isError ? (
+            ) : sourcesQuery.isError ||
+              monitoringRunsQuery.isError ? (
               <ErrorState />
             ) : (
-              <div className="tp-monitor-grid">
-                <div className="tp-monitor-summary">
-                  <article>
-                    <span>
-                      Fontes monitoradas
-                    </span>
-                    <strong>
-                      {sources.length}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>
-                      Consultadas
-                    </span>
-                    <strong>
-                      {consulted}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>
-                      Indisponíveis
-                    </span>
-                    <strong>
-                      {unavailable}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>
-                      Instáveis
-                    </span>
-                    <strong>
-                      {unstable}
-                    </strong>
-                  </article>
-                </div>
-                <SourceHealth
-                  items={sources}
-                />
-              </div>
+              <MonitoringCenter
+                sources={sources}
+                runs={
+                  monitoringRunsQuery.data?.items ??
+                  []
+                }
+                consulted={consulted}
+                unavailable={unavailable}
+                unstable={unstable}
+                expandedSource={
+                  runHistorySource
+                }
+                onToggleSource={(code) =>
+                  setRunHistorySource(
+                    (current) =>
+                      current === code
+                        ? null
+                        : code,
+                  )
+                }
+              />
             )}
           </>
         )}
@@ -1370,7 +1371,7 @@ export function AuthenticatedProductPanel({
             <SectionHeading
               eyebrow="Cobertura legislativa"
               title="Fontes Oficiais"
-              description="Catálogo real das fontes cadastradas e do volume já associado ao Acervo."
+              description="Fontes cadastradas e volume associado ao Acervo."
             />
 
             {sourcesQuery.isPending ? (
@@ -1561,7 +1562,7 @@ export function AuthenticatedProductPanel({
             <SectionHeading
               eyebrow="Conta"
               title="Configurações"
-              description="Identidade autenticada e contexto do tenant atual."
+              description="Dados da sua conta e do acesso atual."
             />
             <div className="tp-settings-grid">
               <section className="tp-panel-card">
@@ -1569,7 +1570,7 @@ export function AuthenticatedProductPanel({
                   <span>
                     <b>Usuário</b>
                     <small>
-                      Sessão real
+                      Conta e acesso
                     </small>
                   </span>
                 </div>
@@ -1603,36 +1604,329 @@ export function AuthenticatedProductPanel({
                 </div>
               </section>
 
-              <section className="tp-panel-card">
-                <div className="tp-card-head">
-                  <span>
-                    <b>
-                      Estado do produto
-                    </b>
-                    <small>
-                      Release candidate
-                    </small>
-                  </span>
-                </div>
-                <div className="tp-settings-body">
-                  <p>
-                    Acervo, fontes e
-                    estrutura da conta
-                    usam dados reais.
-                  </p>
-                  <p>
-                    Sonar/Revela só serão
-                    apresentados como
-                    resultados quando o
-                    matching real tiver
-                    sido executado.
-                  </p>
-                </div>
-              </section>
             </div>
           </>
         )}
       </main>
+    </div>
+  )
+}
+
+function monitoringStatusLabel(
+  status: string,
+) {
+  switch (status) {
+    case 'SUCCESS':
+      return 'Concluída'
+    case 'SUCCESS_NO_RESULTS':
+      return 'Concluída sem novidades'
+    case 'PARTIAL_SUCCESS':
+      return 'Concluída com atenção'
+    case 'SOURCE_UNAVAILABLE':
+      return 'Fonte indisponível'
+    case 'FETCH_FAILED':
+      return 'Falha de consulta'
+    case 'PROCESSING_FAILED':
+      return 'Falha de processamento'
+    case 'RUNNING':
+      return 'Em execução'
+    case 'PENDING':
+      return 'Agendada'
+    case 'CANCELLED':
+      return 'Cancelada'
+    default:
+      return status
+        .toLowerCase()
+        .replaceAll('_', ' ')
+  }
+}
+
+function monitoringStatusClass(
+  status: string,
+) {
+  if (
+    status === 'SUCCESS' ||
+    status === 'SUCCESS_NO_RESULTS'
+  ) {
+    return 'is-success'
+  }
+  if (
+    status === 'RUNNING' ||
+    status === 'PENDING' ||
+    status === 'PARTIAL_SUCCESS'
+  ) {
+    return 'is-attention'
+  }
+  return 'is-error'
+}
+
+function formatRunTimestamp(
+  value: string | null,
+) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  ).format(new Date(value))
+}
+
+function formatDuration(
+  durationMs: number | null,
+) {
+  if (
+    durationMs === null ||
+    !Number.isFinite(durationMs)
+  ) {
+    return '—'
+  }
+
+  if (durationMs < 1000) {
+    return durationMs + ' ms'
+  }
+
+  const seconds =
+    durationMs / 1000
+  return seconds < 60
+    ? seconds.toFixed(
+        seconds < 10 ? 1 : 0,
+      ) + ' s'
+    : Math.floor(seconds / 60) +
+        ' min ' +
+        Math.round(seconds % 60) +
+        ' s'
+}
+
+function MonitoringCenter({
+  sources,
+  runs,
+  consulted,
+  unavailable,
+  unstable,
+  expandedSource,
+  onToggleSource,
+}: {
+  sources: PublicSource[]
+  runs: MonitoringRun[]
+  consulted: number
+  unavailable: number
+  unstable: number
+  expandedSource: string | null
+  onToggleSource: (code: string) => void
+}) {
+  const imported24h = runs.reduce(
+    (total, run) =>
+      total + run.importedDocuments,
+    0,
+  )
+  const federal = sources.filter(
+    (source) =>
+      source.jurisdictionLevel ===
+      'FEDERAL',
+  )
+  const states = sources.filter(
+    (source) =>
+      source.jurisdictionLevel ===
+      'STATE',
+  )
+
+  const renderGroup = (
+    title: string,
+    items: PublicSource[],
+  ) => (
+    <section className="tp-monitor-group">
+      <div className="tp-monitor-group-title">
+        <h2>{title}</h2>
+        <span>
+          {items.length} fonte
+          {items.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <div className="tp-monitor-sources">
+        {items.map((source) => {
+          const sourceRuns = runs.filter(
+            (run) =>
+              run.sourceCode ===
+              source.code,
+          )
+          const lastRun =
+            sourceRuns[0] ?? null
+
+          return (
+            <article
+              className="tp-monitor-source-card"
+              key={source.code}
+            >
+              <div className="tp-monitor-source-main">
+                <span
+                  className={
+                    'tp-source-dot is-' +
+                    sourceState(source)
+                  }
+                />
+                <div className="tp-monitor-source-name">
+                  <strong>
+                    {source.name}
+                  </strong>
+                  <small>
+                    {source.uf ??
+                      'Federal'}
+                  </small>
+                </div>
+                <div>
+                  <span>Estado</span>
+                  <b>
+                    {sourceLabel(source)}
+                  </b>
+                </div>
+                <div>
+                  <span>
+                    Última execução
+                  </span>
+                  <b>
+                    {formatRunTimestamp(
+                      lastRun?.startedAt ??
+                        source.lastAttemptAt,
+                    )}
+                  </b>
+                </div>
+                <div>
+                  <span>
+                    Importados 24h
+                  </span>
+                  <b>
+                    {sourceRuns.reduce(
+                      (total, run) =>
+                        total +
+                        run.importedDocuments,
+                      0,
+                    )}
+                  </b>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onToggleSource(
+                      source.code,
+                    )
+                  }
+                >
+                  {expandedSource ===
+                  source.code
+                    ? 'Ocultar execuções'
+                    : 'Ver últimas execuções'}
+                </button>
+              </div>
+
+              {expandedSource ===
+                source.code && (
+                <div className="tp-run-history">
+                  <div className="tp-run-history-head">
+                    <span>Data/hora</span>
+                    <span>Status</span>
+                    <span>Tentativas</span>
+                    <span>Encontrados</span>
+                    <span>Importados</span>
+                    <span>Duração</span>
+                  </div>
+                  {sourceRuns.length ===
+                  0 ? (
+                    <p>
+                      Nenhuma execução
+                      registrada nas últimas
+                      24 horas.
+                    </p>
+                  ) : (
+                    sourceRuns.map((run) => (
+                      <div
+                        className="tp-run-history-row"
+                        key={run.id}
+                      >
+                        <span>
+                          {formatRunTimestamp(
+                            run.startedAt ??
+                              run.scheduledFor,
+                          )}
+                        </span>
+                        <span>
+                          <em
+                            className={
+                              'tp-run-status ' +
+                              monitoringStatusClass(
+                                run.status,
+                              )
+                            }
+                          >
+                            {monitoringStatusLabel(
+                              run.status,
+                            )}
+                          </em>
+                        </span>
+                        <span>
+                          {run.attemptCount}
+                        </span>
+                        <span>
+                          {run.foundItems}
+                        </span>
+                        <span>
+                          <b>
+                            {
+                              run.importedDocuments
+                            }
+                          </b>
+                        </span>
+                        <span>
+                          {formatDuration(
+                            run.durationMs,
+                          )}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+
+  return (
+    <div className="tp-monitor-grid">
+      <div className="tp-monitor-summary">
+        <article>
+          <span>Fontes monitoradas</span>
+          <strong>{sources.length}</strong>
+        </article>
+        <article>
+          <span>Consultadas</span>
+          <strong>{consulted}</strong>
+        </article>
+        <article>
+          <span>Com atenção</span>
+          <strong>
+            {unavailable + unstable}
+          </strong>
+        </article>
+        <article>
+          <span>Importados 24h</span>
+          <strong>{imported24h}</strong>
+        </article>
+      </div>
+
+      {renderGroup(
+        'Cobertura Federal',
+        federal,
+      )}
+      {renderGroup(
+        'Diários Oficiais Estaduais',
+        states,
+      )}
     </div>
   )
 }
@@ -1644,6 +1938,33 @@ function formatCnpj(value: string) {
     .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
     .replace(/\.(\d{3})(\d)/, '.$1/$2')
     .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+function registrationErrorMessage(
+  error: Error,
+  subject: 'empresa' | 'estabelecimento',
+) {
+  const prefix =
+    subject === 'empresa'
+      ? 'Não foi possível cadastrar a empresa.'
+      : 'Não foi possível adicionar o estabelecimento.'
+
+  switch (error.message) {
+    case 'cnpj_not_found':
+      return prefix + ' CNPJ não encontrado na base cadastral.'
+    case 'cnpj_provider_unavailable':
+      return prefix + ' A consulta cadastral está temporariamente indisponível. Tente novamente em instantes.'
+    case 'cnpj_provider_invalid_response':
+      return prefix + ' A fonte cadastral respondeu com dados inválidos. Tente novamente.'
+    case 'establishment_conflict':
+      return prefix + ' Este CNPJ já está cadastrado nesta empresa.'
+    case 'business_location_code_exists':
+      return prefix + ' Este Local Negócio já está sendo usado por outro estabelecimento.'
+    case 'invalid_cnpj':
+      return prefix + ' Informe um CNPJ válido.'
+    default:
+      return prefix
+  }
 }
 
 function registrationAddress(item: Establishment) {
@@ -1760,6 +2081,10 @@ function CompanySection({
   const [cnpj, setCnpj] = useState(
     account.onboarding?.cnpj ?? '',
   )
+  const [
+    businessLocationCode,
+    setBusinessLocationCode,
+  ] = useState('')
   const [creating, setCreating] = useState(
     account.companies.length === 0,
   )
@@ -1767,8 +2092,10 @@ function CompanySection({
     useState<AccountCompany | null>(null)
   const [editLegalName, setEditLegalName] =
     useState('')
-  const [editTradeName, setEditTradeName] =
-    useState('')
+  const [
+    editBusinessLocationCode,
+    setEditBusinessLocationCode,
+  ] = useState('')
   const [deleteCandidate, setDeleteCandidate] =
     useState<AccountCompany | null>(null)
 
@@ -1778,11 +2105,13 @@ function CompanySection({
         apiFetch,
         tenantId,
         cnpj,
+        businessLocationCode,
       ),
     onSuccess: (result) => {
       onSelect(result.company.id)
       setCreating(false)
       setCnpj('')
+      setBusinessLocationCode('')
       onChanged()
     },
   })
@@ -1798,8 +2127,8 @@ function CompanySection({
         editing.id,
         {
           legalName: editLegalName,
-          tradeName:
-            editTradeName.trim() || null,
+          businessLocationCode:
+            editBusinessLocationCode.trim() || null,
         },
       )
     },
@@ -1834,7 +2163,9 @@ function CompanySection({
   const beginEdit = (company: AccountCompany) => {
     setEditing(company)
     setEditLegalName(company.legalName)
-    setEditTradeName(company.tradeName ?? '')
+    setEditBusinessLocationCode(
+      company.businessLocationCode ?? '',
+    )
   }
 
   return (
@@ -1843,9 +2174,9 @@ function CompanySection({
         <div>
           <h2>Empresas da conta</h2>
           <p>
-            Informe somente o CNPJ da matriz. A TriBusca consulta o cadastro CNPJ/RFB,
-            cria a matriz, registra todos os CNAEs e tenta consultar a Inscrição Estadual
-            na fonte estadual oficial suportada para a UF.
+            Informe o CNPJ da matriz e, se desejar, o Local Negócio usado internamente.
+            A TriBusca consulta o cadastro CNPJ/RFB, cria a matriz, registra todos os CNAEs
+            e tenta consultar a Inscrição Estadual na fonte estadual oficial suportada para a UF.
           </p>
         </div>
         {!creating && (
@@ -1880,6 +2211,19 @@ function CompanySection({
               required
             />
           </label>
+          <label>
+            Local Negócio
+            <input
+              value={businessLocationCode}
+              onChange={(event) =>
+                setBusinessLocationCode(
+                  event.target.value,
+                )
+              }
+              placeholder="Código interno da matriz"
+              maxLength={80}
+            />
+          </label>
           <button
             className="btn"
             type="submit"
@@ -1900,7 +2244,10 @@ function CompanySection({
           )}
           {createMutation.isError && (
             <p className="auth-error" role="alert">
-              Não foi possível consultar/cadastrar o CNPJ: {createMutation.error.message}
+              {registrationErrorMessage(
+                createMutation.error,
+                'empresa',
+              )}
             </p>
           )}
         </form>
@@ -1918,10 +2265,12 @@ function CompanySection({
           >
             <div className="tp-company-identity">
               <strong>{company.legalName}</strong>
-              {company.tradeName && (
-                <span>{company.tradeName}</span>
-              )}
               <small>{formatCnpj(company.cnpj)}</small>
+              {company.businessLocationCode && (
+                <span>
+                  Local Negócio · {company.businessLocationCode}
+                </span>
+              )}
             </div>
 
             <span className="tp-company-active">
@@ -1934,6 +2283,12 @@ function CompanySection({
               <div>
                 <dt>Estabelecimentos</dt>
                 <dd>{company.establishmentCount}</dd>
+              </div>
+              <div>
+                <dt>Local Negócio</dt>
+                <dd>
+                  {company.businessLocationCode || '—'}
+                </dd>
               </div>
               <div>
                 <dt>Cadastro</dt>
@@ -2040,12 +2395,16 @@ function CompanySection({
             />
           </label>
           <label>
-            Nome fantasia
+            Local Negócio
             <input
-              value={editTradeName}
+              value={editBusinessLocationCode}
               onChange={(event) =>
-                setEditTradeName(event.target.value)
+                setEditBusinessLocationCode(
+                  event.target.value,
+                )
               }
+              placeholder="Código interno da matriz"
+              maxLength={80}
             />
           </label>
           <div className="launch-form-actions">
@@ -2099,6 +2458,10 @@ function EstablishmentSection({
     useState(false)
   const [cnpj, setCnpj] =
     useState('')
+  const [
+    businessLocationCode,
+    setBusinessLocationCode,
+  ] = useState('')
   const [typeCode, setTypeCode] =
     useState('OTHER')
   const [editing, setEditing] =
@@ -2114,11 +2477,17 @@ function EstablishmentSection({
         apiFetch,
         tenantId,
         companyId,
-        { cnpj, typeCode },
+        {
+          cnpj,
+          typeCode,
+          businessLocationCode:
+            businessLocationCode.trim() || undefined,
+        },
       ),
     onSuccess: () => {
       setCreating(false)
       setCnpj('')
+      setBusinessLocationCode('')
       onChanged()
     },
   })
@@ -2171,6 +2540,8 @@ function EstablishmentSection({
           district: draft.district,
           stateRegistration:
             draft.stateRegistration,
+          businessLocationCode:
+            draft.businessLocationCode,
           cnaes: draft.cnaes,
         },
       )
@@ -2240,6 +2611,7 @@ function EstablishmentSection({
             type="button"
             onClick={() => {
               setCnpj('')
+              setBusinessLocationCode('')
               setTypeCode('OTHER')
               setCreating(true)
             }}
@@ -2267,6 +2639,19 @@ function EstablishmentSection({
               placeholder="00.000.000/0000-00"
               required
               autoFocus
+            />
+          </label>
+          <label>
+            Local Negócio
+            <input
+              value={businessLocationCode}
+              onChange={(event) =>
+                setBusinessLocationCode(
+                  event.target.value,
+                )
+              }
+              placeholder="Código interno da filial"
+              maxLength={80}
             />
           </label>
           <label>
@@ -2310,7 +2695,10 @@ function EstablishmentSection({
 
       {createMutation.isError && (
         <p className="auth-error" role="alert">
-          Não foi possível adicionar o estabelecimento: {createMutation.error.message}
+          {registrationErrorMessage(
+            createMutation.error,
+            'estabelecimento',
+          )}
         </p>
       )}
 
@@ -2318,6 +2706,7 @@ function EstablishmentSection({
         <div className="tp-establishment-head">
           <span>Nome da unidade</span>
           <span>CNPJ</span>
+          <span>Local Negócio</span>
           <span>Tipo</span>
           <span>Município/UF</span>
           <span>Endereço</span>
@@ -2342,6 +2731,9 @@ function EstablishmentSection({
                 )}
               </div>
               <span>{formatCnpj(item.cnpj)}</span>
+              <span>
+                {item.businessLocationCode || '—'}
+              </span>
               <span>
                 {types.find(
                   (type) =>
@@ -2458,9 +2850,11 @@ function EstablishmentSection({
       <p className="tp-registry-note">
         Dados cadastrais e CNAEs são consultados a partir do CNPJ/RFB. A
         Inscrição Estadual é buscada na fonte estadual oficial quando a UF já
-        possui consulta automática. Use <b>Atualizar cadastro</b> para consultar
-        novamente ou <b>Editar dados</b> para ajustar manualmente. O CNPJ
-        permanece como identidade do estabelecimento.
+        possui consulta automática. <b>Local Negócio</b> é um código interno
+        informado manualmente e não é substituído pela consulta cadastral.
+        Use <b>Atualizar RFB + IE</b> para consultar novamente ou
+        <b>Editar dados</b> para ajustar manualmente. O CNPJ permanece como
+        identidade do estabelecimento.
       </p>
 
       {editing && draft && (
@@ -2621,6 +3015,22 @@ function EstablishmentSection({
                       event.target.value || null,
                   })
                 }
+              />
+            </label>
+            <label>
+              Local Negócio
+              <input
+                value={
+                  draft.businessLocationCode ?? ''
+                }
+                onChange={(event) =>
+                  updateDraft({
+                    businessLocationCode:
+                      event.target.value || null,
+                  })
+                }
+                placeholder="Código interno da filial"
+                maxLength={80}
               />
             </label>
             <label>
