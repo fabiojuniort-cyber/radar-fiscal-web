@@ -519,3 +519,43 @@
 .ref-sonar-legend>span.is-near{color:#fff}
 .ref-sonar-legend>span.is-medium{color:#fff}
 .ref-sonar-legend>span.is-far{color:#fff}
+
+
+/* WEB-20 — real public capture feed */
+.ref-home-feed-row a,
+.ref-state-publication-row a{
+  color:var(--ref-navy);
+  text-decoration:none;
+  font-size:14px;
+  line-height:1.35;
+  font-weight:500;
+}
+.ref-home-feed-row a:hover,
+.ref-state-publication-row a:hover{
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.ref-home-feed-state{
+  min-height:132px;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  color:var(--ref-muted);
+  font-size:14px;
+  text-align:center;
+}
+.ref-state-publications-state{
+  min-height:154px;
+  display:grid;
+  place-items:center;
+  padding:24px 18px;
+  color:var(--ref-muted);
+  font-size:14px;
+  font-weight:600;
+  text-align:center;
+}
+.ref-state-publication-row strong{
+  font-size:14px;
+  font-weight:500;
+  line-height:1.35;
+}
