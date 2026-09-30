@@ -510,6 +510,7 @@
 @media(prefers-reduced-motion:reduce){
   .ref-live-radar-sweep{animation:none!important;transform:rotate(45deg)}
   .ref-live-radar-blip{animation:none!important;opacity:1}
+  .ref-live-radar-blip.is-residual{display:none}
 }
 
 
