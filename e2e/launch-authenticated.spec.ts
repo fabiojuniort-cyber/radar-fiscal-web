@@ -89,7 +89,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
       limit: 25,
       hasMore: false,
       items: [{
-        id: 'publication-launch',
+        id: '55555555-5555-4555-8555-555555555555',
         title: 'Ato oficial real do Acervo',
         actType: 'IN',
         actNumber: '99/2026',
@@ -102,6 +102,48 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
         sourceCode: 'dou',
         sourceName: 'DOU',
         excerpt: 'Conteúdo oficial de teste.',
+      }],
+    }),
+  }))
+
+  await page.route('**/api/v1/publications/55555555-5555-4555-8555-555555555555', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      publication: {
+        id: '55555555-5555-4555-8555-555555555555',
+        title: 'Ato oficial real do Acervo',
+        actType: 'IN',
+        actNumber: '99/2026',
+        agency: 'Receita Federal',
+        jurisdictionLevel: 'FEDERAL',
+        uf: null,
+        publishedOn: '2026-09-30',
+        effectiveOn: '2026-10-01',
+        officialUrl: 'https://example.test/oficial',
+        firstCollectedAt: '2026-09-30T00:00:00.000Z',
+        lastSeenAt: '2026-09-30T00:00:00.000Z',
+      },
+      version: {
+        id: '66666666-6666-4666-8666-666666666666',
+        versionNo: 1,
+        versionCount: 1,
+        contentText: 'CAPÍTULO I\n\nArt. 1º  Texto oficial.\n    I - primeiro item;\n    II - segundo item.',
+        excerpt: null,
+        capturedAt: '2026-09-30T00:00:00.000Z',
+        presentation: {
+          version: 1,
+          format: 'PRESERVED_TEXT',
+          preservesWhitespace: true,
+        },
+      },
+      origins: [{
+        sourceCode: 'dou',
+        sourceName: 'DOU',
+        officialUrl: 'https://example.test/oficial',
+        externalId: 'ato-99',
+        firstSeenAt: '2026-09-30T00:00:00.000Z',
+        lastSeenAt: '2026-09-30T00:00:00.000Z',
       }],
     }),
   }))
@@ -286,6 +328,50 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await page.getByRole('button', { name: 'Publicações' }).click()
   await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
   await expect(page.getByText('Ato oficial real do Acervo')).toBeVisible()
+
+  await page
+    .getByRole('link', {
+      name: 'Abrir legislação no TriBusca: IN 99/2026',
+    })
+    .click()
+
+  await expect(page).toHaveURL(
+    /\/painel\/publicacoes\/55555555-5555-4555-8555-555555555555$/,
+  )
+  await expect(
+    page.getByRole('heading', {
+      name: 'Ato oficial real do Acervo',
+    }),
+  ).toBeVisible()
+
+  const preservedText = page.locator(
+    '.publication-preserved-text',
+  )
+  await expect(preservedText).toContainText(
+    'CAPÍTULO I',
+  )
+  await expect(preservedText).toContainText(
+    'I - primeiro item;',
+  )
+
+  const officialLink = page.getByRole('link', {
+    name: 'Abrir fonte oficial',
+  })
+  await expect(officialLink).toHaveAttribute(
+    'href',
+    'https://example.test/oficial',
+  )
+  await expect(officialLink).toHaveAttribute(
+    'target',
+    '_blank',
+  )
+
+  await page
+    .getByRole('link', {
+      name: 'Voltar ao Acervo',
+    })
+    .click()
+  await expect(page).toHaveURL(/\/painel$/)
 
   await page.getByRole('button', { name: 'Acervo' }).click()
   await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
