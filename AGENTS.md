@@ -51,3 +51,14 @@ Para o Sonar, a referência aprovada inclui radar animado:
 - distância é sorteada no carregamento entre perto, média e longe, podendo repetir categoria;
 - perto usa vermelho, média usa amarelo e longe usa verde;
 - prefers-reduced-motion deve desativar a rotação e manter os sinais legíveis.
+
+## Dados reais no site público
+
+Cards e carrosséis que representam publicações oficiais não podem usar exemplos fictícios quando houver contrato público aprovado para a informação.
+
+Para a Home e o carrossel estadual:
+- consumir `GET /public/v1/publications` para listar publicações reais;
+- no site público, exibir somente campos aprovados para exposição pública: título, data, órgão e link oficial;
+- quando a consulta retornar com sucesso e sem publicações para a UF, exibir `Em implementação`;
+- quando a API falhar ou ficar indisponível, exibir `Dados indisponíveis`, sem confundir falha de fonte/API com ausência de publicações;
+- nunca preencher lacunas com títulos, datas, atos ou capturas inventadas.
