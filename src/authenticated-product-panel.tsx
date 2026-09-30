@@ -1637,6 +1637,23 @@ export function AuthenticatedProductPanel({
   )
 }
 
+function companyCreateErrorMessage(error: Error): string {
+  switch (error.message) {
+    case 'company_cnpj_exists':
+      return 'Este CNPJ já está cadastrado nesta conta. Atualize a página e selecione a empresa existente.'
+    case 'cnpj_not_found':
+      return 'CNPJ não encontrado na consulta cadastral.'
+    case 'cnpj_provider_unavailable':
+      return 'A consulta cadastral está indisponível no momento. Tente novamente em instantes.'
+    case 'cnpj_provider_invalid_response':
+      return 'A fonte cadastral respondeu com dados inválidos. Tente novamente mais tarde.'
+    case 'invalid_cnpj':
+      return 'Informe um CNPJ válido.'
+    default:
+      return 'Não foi possível consultar e cadastrar o CNPJ.'
+  }
+}
+
 function formatCnpj(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 14)
   return digits
@@ -1819,7 +1836,7 @@ function CompanySection({
           )}
           {createMutation.isError && (
             <p className="auth-error" role="alert">
-              Não foi possível consultar/cadastrar o CNPJ: {createMutation.error.message}
+              {companyCreateErrorMessage(createMutation.error)}
             </p>
           )}
         </form>
