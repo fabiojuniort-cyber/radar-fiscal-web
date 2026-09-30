@@ -2883,6 +2883,16 @@ function TaxProfileSection({
         ),
     ),
   ].sort()
+  const stateRegistrations = [
+    ...new Set(
+      establishments
+        .map((item) => item.stateRegistration)
+        .filter(
+          (value): value is string =>
+            Boolean(value),
+        ),
+    ),
+  ].sort()
   const cnaes = [
     ...new Map(
       establishments
@@ -2958,6 +2968,12 @@ function TaxProfileSection({
             <span>Municípios</span>
             <strong>
               {municipalities.join(', ') || '—'}
+            </strong>
+          </article>
+          <article>
+            <span>Inscrições estaduais</span>
+            <strong>
+              {stateRegistrations.join(', ') || '—'}
             </strong>
           </article>
         </div>
