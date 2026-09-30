@@ -1375,11 +1375,22 @@ export function AuthenticatedProductPanel({
 
         {screen === 'empresas' && (
           <>
-            <SectionHeading
-              eyebrow="Organização"
-              title="Empresas"
-              description="Cadastre a empresa operacional, seus estabelecimentos e o Perfil Tributário usados pelo produto."
-            />
+            <div className="tp-company-context-head">
+              <span>
+                Empresa ativa
+                {selectedCompany
+                  ? ' · ' +
+                    selectedCompany.establishmentCount +
+                    ' estabelecimento' +
+                    (selectedCompany.establishmentCount === 1 ? '' : 's')
+                  : ''}
+              </span>
+              <h1>
+                {selectedCompany?.legalName ??
+                  'Empresas da conta'}
+              </h1>
+            </div>
+
             <div
               className="tp-org-tabs"
               role="tablist"
@@ -1388,63 +1399,28 @@ export function AuthenticatedProductPanel({
               <button
                 type="button"
                 role="tab"
-                aria-selected={
-                  orgTab === 'empresa'
-                }
-                onClick={() =>
-                  setOrgTab('empresa')
-                }
+                aria-selected={orgTab === 'empresa'}
+                onClick={() => setOrgTab('empresa')}
               >
-                Empresa
+                <b>1</b> Empresas
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={
-                  orgTab ===
-                  'estabelecimentos'
-                }
-                onClick={() =>
-                  setOrgTab(
-                    'estabelecimentos',
-                  )
-                }
+                aria-selected={orgTab === 'estabelecimentos'}
+                onClick={() => setOrgTab('estabelecimentos')}
               >
-                Estabelecimentos
+                <b>2</b> Estabelecimentos
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={
-                  orgTab === 'perfil'
-                }
-                onClick={() =>
-                  setOrgTab('perfil')
-                }
+                aria-selected={orgTab === 'perfil'}
+                onClick={() => setOrgTab('perfil')}
               >
-                Perfil Tributário
+                <b>3</b> Perfil tributário
               </button>
             </div>
-
-            {account?.companies.length ? (
-              <label className="launch-company-selector">
-                <span>Empresa ativa</span>
-                <select
-                  aria-label="Empresa ativa"
-                  value={selectedCompany?.id ?? ''}
-                  onChange={(event) => {
-                    setSelectedCompanyId(event.target.value)
-                    setOrgTab('empresa')
-                  }}
-                >
-                  {account.companies.map((company) => (
-                    <option value={company.id} key={company.id}>
-                      {company.tradeName || company.legalName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
 
             {!tenantId ? (
               <ErrorState title="Conta sem tenant ativo" />
@@ -1459,42 +1435,29 @@ export function AuthenticatedProductPanel({
                 account={account!}
                 selectedCompanyId={selectedCompany?.id ?? ''}
                 onSelect={setSelectedCompanyId}
-                onChanged={() =>
-                  void queryClient.invalidateQueries(
-                    {
-                      queryKey: [
-                        'launch',
-                        'account',
-                        tenantId,
-                      ],
-                    },
-                  )
-                }
+                onOpenEstablishments={() => setOrgTab('estabelecimentos')}
+                onOpenProfile={() => setOrgTab('perfil')}
+                onChanged={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ['launch', 'account', tenantId],
+                  })
+                  void queryClient.invalidateQueries({
+                    queryKey: ['launch', 'establishments'],
+                  })
+                }}
               />
             ) : !selectedCompany ? (
               <EmptyState title="Cadastre a empresa primeiro">
-                O Perfil Tributário e os
-                estabelecimentos dependem
-                da empresa operacional.
+                O Perfil Tributário e os estabelecimentos dependem da empresa operacional.
               </EmptyState>
-            ) : orgTab ===
-              'estabelecimentos' ? (
+            ) : orgTab === 'estabelecimentos' ? (
               <EstablishmentSection
                 apiFetch={apiFetch}
                 tenantId={tenantId}
-                companyId={
-                  selectedCompany.id
-                }
-                companyCnpj={
-                  selectedCompany.cnpj
-                }
-                items={
-                  establishmentsQuery
-                    .data ?? []
-                }
-                types={
-                  typesQuery.data ?? []
-                }
+                companyId={selectedCompany.id}
+                companyCnpj={selectedCompany.cnpj}
+                items={establishmentsQuery.data ?? []}
+                types={typesQuery.data ?? []}
                 loading={
                   establishmentsQuery.isPending ||
                   typesQuery.isPending
@@ -1504,50 +1467,41 @@ export function AuthenticatedProductPanel({
                   typesQuery.isError
                 }
                 onChanged={() => {
-                  void queryClient.invalidateQueries(
-                    {
-                      queryKey: [
-                        'launch',
-                        'establishments',
-                      ],
-                    },
-                  )
-                  void queryClient.invalidateQueries(
-                    {
-                      queryKey: [
-                        'launch',
-                        'account',
-                      ],
-                    },
-                  )
+                  void queryClient.invalidateQueries({
+                    queryKey: ['launch', 'establishments'],
+                  })
+                  void queryClient.invalidateQueries({
+                    queryKey: ['launch', 'account'],
+                  })
                 }}
               />
             ) : (
               <TaxProfileSection
                 apiFetch={apiFetch}
                 tenantId={tenantId}
-                companyId={
-                  selectedCompany.id
-                }
-                profile={
-                  profileQuery.data ??
-                  null
+                company={selectedCompany}
+                establishments={establishmentsQuery.data ?? []}
+                profile={profileQuery.data ?? null}
+                taxonomyOptions={
+                  taxonomyOptionsQuery.data ?? {
+                    release: null,
+                    dimensions: [],
+                  }
                 }
                 loading={
-                  profileQuery.isPending
+                  profileQuery.isPending ||
+                  establishmentsQuery.isPending ||
+                  taxonomyOptionsQuery.isPending
                 }
                 error={
-                  profileQuery.isError
+                  profileQuery.isError ||
+                  establishmentsQuery.isError ||
+                  taxonomyOptionsQuery.isError
                 }
                 onChanged={() =>
-                  void queryClient.invalidateQueries(
-                    {
-                      queryKey: [
-                        'launch',
-                        'tax-profile',
-                      ],
-                    },
-                  )
+                  void queryClient.invalidateQueries({
+                    queryKey: ['launch', 'tax-profile'],
+                  })
                 }
               />
             )}
