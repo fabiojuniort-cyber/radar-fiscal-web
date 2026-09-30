@@ -674,7 +674,7 @@ export function AuthenticatedProductPanel({
             <button
               className="tp-company-button"
               type="button"
-              aria-label="Selecionar conta"
+              aria-label="Selecionar empresa ativa"
               aria-expanded={tenantMenu}
               onClick={() => {
                 setTenantMenu((value) => !value)
@@ -682,34 +682,61 @@ export function AuthenticatedProductPanel({
               }}
             >
               <span className="tp-company-copy">
-                <small>Conta autenticada</small>
-                <strong>{tenantName}</strong>
-                <span>{membership?.role ?? 'Usuário'}</span>
+                <small>Empresa ativa</small>
+                <strong>
+                  {selectedCompany?.tradeName ||
+                    selectedCompany?.legalName ||
+                    'Nenhuma empresa cadastrada'}
+                </strong>
+                <span>
+                  {selectedCompany
+                    ? selectedCompany.establishmentCount +
+                      ' estabelecimento' +
+                      (selectedCompany.establishmentCount === 1 ? '' : 's')
+                    : 'Cadastre um CNPJ'}
+                </span>
               </span>
               <ChevronDown size={15} aria-hidden="true" />
             </button>
 
             {tenantMenu && (
               <div className="tp-popover tp-company-popover">
-                <span className="tp-pop-label">Conta ativa</span>
-                {(identity.memberships ?? []).map((item) => (
+                <span className="tp-pop-label">Empresa ativa</span>
+                {(account?.companies ?? []).length > 0 ? (
+                  (account?.companies ?? []).map((company) => (
+                    <button
+                      type="button"
+                      className={
+                        company.id === selectedCompany?.id
+                          ? 'is-selected'
+                          : undefined
+                      }
+                      key={company.id}
+                      onClick={() => {
+                        setSelectedCompanyId(company.id)
+                        setTenantMenu(false)
+                      }}
+                    >
+                      <b>{company.tradeName || company.legalName}</b>
+                      <span>
+                        {formatCnpj(company.cnpj)} · {company.establishmentCount} estabelecimento
+                        {company.establishmentCount === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  ))
+                ) : (
                   <button
                     type="button"
-                    className={
-                      item.tenantId === tenantId
-                        ? 'is-selected'
-                        : undefined
-                    }
-                    key={item.tenantId}
                     onClick={() => {
-                      setSelectedTenantId(item.tenantId)
+                      setScreen('empresas')
+                      setOrgTab('empresa')
                       setTenantMenu(false)
                     }}
                   >
-                    <b>{item.tenantName}</b>
-                    <span>{item.role}</span>
+                    <b>Cadastrar empresa</b>
+                    <span>Informe o CNPJ da matriz</span>
                   </button>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -770,10 +797,28 @@ export function AuthenticatedProductPanel({
                     {identity.email ?? '—'}
                   </span>
                   <small>
-                    {membership?.role ??
-                      'Usuário'}
+                    Conta: {tenantName} · {membership?.role ?? 'Usuário'}
                   </small>
                 </div>
+                {(identity.memberships ?? []).length > 1 && (
+                  <div className="tp-tenant-switch">
+                    <span className="tp-pop-label">Trocar conta</span>
+                    {(identity.memberships ?? []).map((item) => (
+                      <button
+                        type="button"
+                        className={item.tenantId === tenantId ? 'is-selected' : undefined}
+                        key={item.tenantId}
+                        onClick={() => {
+                          setSelectedTenantId(item.tenantId)
+                          setUserMenu(false)
+                        }}
+                      >
+                        <b>{item.tenantName}</b>
+                        <span>{item.role}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="tp-user-actions">
                   <button
                     type="button"
