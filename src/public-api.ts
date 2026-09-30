@@ -40,7 +40,7 @@ export const FEDERAL_SOURCE_CODES = {
 } as const
 
 export function publicApiBase(): string {
-  return (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
+  return ''
 }
 
 export function publicApiUrl(path: string, apiBase = publicApiBase()): string {

@@ -5,6 +5,7 @@ const apiTarget = process.env.AUTH_PROXY_TARGET ?? process.env.VITE_API_BASE
 const appProxy = apiTarget ? {
   '/auth': { target: apiTarget, changeOrigin: true, secure: true },
   '/api': { target: apiTarget, changeOrigin: true, secure: true },
+  '/public': { target: apiTarget, changeOrigin: true, secure: true },
 } : undefined
 
 export default defineConfig({
