@@ -254,7 +254,7 @@ test('WEB-07 — menu, carrossel e foco por teclado', async ({ page }, testInfo)
   expect(returnedFocus.text).toBe(firstFocus.text)
   expect(returnedFocus.aria).toBe(firstFocus.aria)
 
-  const statePills = page.getByRole('button', { name: /^Exibir / })
+  const statePills = page.getByRole('tab', { name: /^Exibir / })
   await expect(statePills).toHaveCount(5)
   const names = await statePills.evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))
   expect(new Set(names).size).toBe(5)
@@ -512,7 +512,7 @@ test('WEB-18 — Home mostra Verificando durante loading da cobertura federal', 
 
   await expect(page.getByText('Verificando…')).toHaveCount(6)
   await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^Exibir São Paulo$/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^Exibir São Paulo$/ })).toBeVisible()
 })
 
 test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page }) => {
