@@ -276,7 +276,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     renderApp()
     const carousel = screen.getByTestId('state-carousel')
-    const position = within(carousel).getByText('1 / 5')
+    const position = screen.getByTestId('state-carousel-position')
 
     act(() => {
       vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS)
@@ -307,7 +307,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     renderApp()
     const carousel = screen.getByTestId('state-carousel')
-    const position = within(carousel).getByText('1 / 5')
+    const position = screen.getByTestId('state-carousel-position')
 
     act(() => {
       vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS * 3)
@@ -318,7 +318,7 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(position).toHaveTextContent('2 / 5')
   })
 
-  it('WEB-16-R1 supports swipe, arrows and dots while keeping São Paulo first', () => {
+  it('WEB-18 supports swipe, arrows and UF pills while keeping São Paulo first', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: true,
       media: '(prefers-reduced-motion: reduce)',
@@ -328,7 +328,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     renderApp()
     const carousel = screen.getByTestId('state-carousel')
-    const position = within(carousel).getByText('1 / 5')
+    const position = screen.getByTestId('state-carousel-position')
 
     expect(within(carousel).getByText('SP')).toBeInTheDocument()
 
@@ -345,9 +345,16 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Estado anterior' }))
     expect(position).toHaveTextContent('1 / 5')
 
-    const dots = screen.getAllByRole('button', { name: /^Exibir / })
-    fireEvent.click(dots[2])
+    const ufPills = screen.getAllByRole('button', { name: /^Exibir / })
+    fireEvent.click(ufPills[2])
     expect(position).toHaveTextContent('3 / 5')
+  })
+
+  it('WEB-18 shows Verificando… while federal coverage is loading', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => undefined)))
+    renderApp()
+
+    expect(screen.getAllByText('Verificando…')).toHaveLength(6)
   })
 
   it('WEB-16-R1 shows ONLINE state coverage from /public/v1/sources', async () => {
@@ -404,6 +411,33 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(new Set(stateButtons.map((button) => button.getAttribute('aria-label'))).size).toBe(5)
     expect(screen.getByRole('button', { name: 'Estado anterior' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Próximo estado' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeInTheDocument()
+  })
+
+  it('WEB-18 pauses and resumes the state carousel on explicit control', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+
+    renderApp()
+    const position = screen.getByTestId('state-carousel-position')
+    fireEvent.click(screen.getByRole('button', { name: 'Pausar' }))
+    expect(screen.getByRole('button', { name: 'Reproduzir' })).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS * 2)
+    })
+    expect(position).toHaveTextContent('1 / 5')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reproduzir' }))
+    act(() => {
+      vi.advanceTimersByTime(STATE_CAROUSEL_AUTOPLAY_MS)
+    })
+    expect(position).toHaveTextContent('2 / 5')
   })
 
   it('uses the official dark footer signature without CSS recoloring', () => {
@@ -462,13 +496,13 @@ describe('TriBusca release candidate WEB-11', () => {
 
     const douCard = screen.getByText('DOU / INLABS').closest('.coverage-card')
     expect(douCard).not.toBeNull()
-    await waitFor(() => expect(within(douCard as HTMLElement).getByText('Online')).toBeInTheDocument())
+    await waitFor(() => expect(within(douCard as HTMLElement).getByText('Coleta Online')).toBeInTheDocument())
     expect(within(douCard as HTMLElement).getByText('3')).toBeInTheDocument()
     expect(within(douCard as HTMLElement).getByText('517')).toBeInTheDocument()
 
     const spCard = screen.getByText('São Paulo / SP').closest('.coverage-card')
     expect(spCard).not.toBeNull()
-    await waitFor(() => expect(within(spCard as HTMLElement).getByText('Em validação')).toBeInTheDocument())
+    await waitFor(() => expect(within(spCard as HTMLElement).getByText('Coleta Em validação')).toBeInTheDocument())
     expect(within(spCard as HTMLElement).getByText('0')).toBeInTheDocument()
     expect(within(spCard as HTMLElement).getByText('91')).toBeInTheDocument()
   })
@@ -476,7 +510,7 @@ describe('TriBusca release candidate WEB-11', () => {
   it('keeps planned-but-absent Coverage sources as Em implantação after a successful response', async () => {
     renderApp('/cobertura')
 
-    await waitFor(() => expect(screen.getAllByText('Em implantação').length).toBeGreaterThan(20))
+    await waitFor(() => expect(screen.getAllByText('Coleta Em implantação').length).toBeGreaterThan(20))
     const stateCards = screen.getAllByTestId('state-coverage-card')
     expect(stateCards).toHaveLength(27)
     expect(stateCards[0]).toHaveTextContent('São Paulo / SP')
@@ -508,6 +542,12 @@ describe('TriBusca release candidate WEB-11', () => {
 
     expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
     expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(6)
+    expect(screen.getByRole('link', { name: 'Acervo' })).toHaveAttribute('href', '#acervo')
+    expect(screen.getByRole('link', { name: 'Central de Monitoramento' })).toHaveAttribute('href', '#central')
+    expect(screen.getByRole('link', { name: 'Sonar' })).toHaveAttribute('href', '#sonar')
+    expect(screen.getByRole('link', { name: 'Revela' })).toHaveAttribute('href', '#revela')
+    expect(screen.getByRole('link', { name: 'Decodifica' })).toHaveAttribute('href', '#decodifica')
+    expect(screen.getByRole('link', { name: 'Perfil Tributário' })).toHaveAttribute('href', '#perfil')
   })
 
   it('renders the five approved Decodifica examples as a carousel', () => {
