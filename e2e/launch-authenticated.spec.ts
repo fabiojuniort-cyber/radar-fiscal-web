@@ -209,6 +209,11 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           streetNumber: '100',
           complement: null,
           district: 'Centro',
+          stateRegistration: '10.123.456-2',
+          stateRegistrationStatus: 'ATIVO - HABILITADO',
+          stateRegistrationLookupStatus: 'SUCCESS',
+          stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
+          stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
           cnaes: [{
             code: '4683400',
             description: 'Comércio atacadista de defensivos agrícolas',
@@ -255,6 +260,11 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
         streetNumber: null,
         complement: null,
         district: 'Centro',
+        stateRegistration: '10.123.456-2',
+        stateRegistrationStatus: 'ATIVO - HABILITADO',
+        stateRegistrationLookupStatus: 'SUCCESS',
+        stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
+        stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
         isActive: true,
         cnaes: [{
           code: '4683400',
@@ -500,11 +510,13 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByRole('button', { name: 'Consultar e cadastrar' }).click()
-  await expect(page.getByText('Empresa Launch Ltda')).toBeVisible()
+  await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
 
   await page.getByRole('tab', { name: /Estabelecimentos/ }).click()
   await expect(page.getByText('4683400')).toBeVisible()
   await expect(page.getByText('Goiânia/GO')).toBeVisible()
+  await expect(page.getByText('10.123.456-2')).toBeVisible()
+  await expect(page.getByText(/Consulta estadual confirmada/)).toBeVisible()
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
