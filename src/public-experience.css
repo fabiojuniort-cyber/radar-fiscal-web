@@ -343,7 +343,7 @@
 .ref-live-radar-blip.is-medium{background:#f4bf3a;box-shadow:0 0 0 6px rgba(244,191,58,.18),0 0 15px rgba(244,191,58,.9)}
 .ref-live-radar-blip.is-far{background:#45d483;box-shadow:0 0 0 6px rgba(69,212,131,.18),0 0 15px rgba(69,212,131,.9)}
 @keyframes tribuscaRadarSweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes tribuscaRadarBlip{0%{opacity:0;transform:translate(-50%,-50%) scale(.42)}1.5%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}4.5%{opacity:.95;transform:translate(-50%,-50%) scale(1)}8%{opacity:.18;transform:translate(-50%,-50%) scale(.82)}11%,100%{opacity:0;transform:translate(-50%,-50%) scale(.55)}}
+@keyframes tribuscaRadarBlip{0%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}6%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}22%{opacity:.72;transform:translate(-50%,-50%) scale(1)}38%{opacity:.34;transform:translate(-50%,-50%) scale(.9)}50%{opacity:0;transform:translate(-50%,-50%) scale(.82)}50.01%,100%{opacity:0;transform:translate(-50%,-50%) scale(.82)}}
 .ref-sonar-legend{display:flex;flex-direction:column;gap:8px;font-size:14px}
 .ref-sonar-legend b{padding:1px 8px;border-radius:6px}
 .ref-sonar-legend b.is-near{background:#E5484D;color:#fff}
