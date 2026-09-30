@@ -1589,167 +1589,304 @@ export function AuthenticatedProductPanel({
   )
 }
 
+function formatCnpj(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14)
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+function registrationAddress(item: Establishment) {
+  const first = [
+    item.street,
+    item.streetNumber,
+    item.complement,
+  ].filter(Boolean).join(', ')
+  const second = [
+    item.district,
+    item.municipalityName && item.uf
+      ? item.municipalityName + '/' + item.uf
+      : item.municipalityName ?? item.uf,
+    item.postalCode
+      ? 'CEP ' + item.postalCode
+      : null,
+  ].filter(Boolean).join(' · ')
+
+  return [first, second].filter(Boolean).join(' — ') || 'Endereço não informado'
+}
+
 function CompanySection({
   apiFetch,
   tenantId,
   account,
   selectedCompanyId,
   onSelect,
+  onOpenEstablishments,
+  onOpenProfile,
   onChanged,
 }: {
   apiFetch: ProductApiFetch
   tenantId: string
   account: Awaited<
-    ReturnType<
-      typeof fetchAccountSummary
-    >
+    ReturnType<typeof fetchAccountSummary>
   >
   selectedCompanyId: string
   onSelect: (companyId: string) => void
+  onOpenEstablishments: () => void
+  onOpenProfile: () => void
   onChanged: () => void
 }) {
-  const [legalName, setLegalName] =
-    useState(
-      account.onboarding
-        ?.companyName ?? '',
-    )
-  const [tradeName, setTradeName] =
-    useState('')
   const [cnpj, setCnpj] = useState(
     account.onboarding?.cnpj ?? '',
   )
-  const [creating, setCreating] =
-    useState(
-      account.companies.length === 0,
-    )
+  const [creating, setCreating] = useState(
+    account.companies.length === 0,
+  )
+  const [editing, setEditing] =
+    useState<AccountCompany | null>(null)
+  const [editLegalName, setEditLegalName] =
+    useState('')
+  const [editTradeName, setEditTradeName] =
+    useState('')
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: () =>
-      createCompany(
+      createCompanyFromCnpj(
         apiFetch,
         tenantId,
-        {
-          legalName,
-          tradeName:
-            tradeName || undefined,
-          cnpj,
-        },
+        cnpj,
       ),
-    onSuccess: (company) => {
-      onSelect(company.id)
+    onSuccess: (result) => {
+      onSelect(result.company.id)
       setCreating(false)
-      setLegalName('')
-      setTradeName('')
       setCnpj('')
       onChanged()
     },
   })
 
-  return (
-    <div className="launch-stack">
-      {account.companies.length > 0 && (
-        <>
-          <div className="tp-company-cards">
-            {account.companies.map(
-              (company) => (
-                <article
-                  className={
-                    company.id ===
-                    selectedCompanyId
-                      ? 'is-primary'
-                      : ''
-                  }
-                  key={company.id}
-                >
-                  <div>
-                    <Building2 size={22} />
-                    <span>
-                      <strong>
-                        {company.legalName}
-                      </strong>
-                      <small>
-                        {company.cnpj}
-                      </small>
-                    </span>
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>
-                        Estabelecimentos
-                      </dt>
-                      <dd>
-                        {
-                          company.establishmentCount
-                        }
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Status</dt>
-                      <dd>
-                        {company.isActive
-                          ? 'Ativa'
-                          : 'Inativa'}
-                      </dd>
-                    </div>
-                  </dl>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onSelect(company.id)
-                    }
-                  >
-                    {company.id ===
-                    selectedCompanyId
-                      ? 'Empresa ativa'
-                      : 'Selecionar empresa'}
-                  </button>
-                </article>
-              ),
-            )}
-          </div>
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!editing) {
+        throw new Error('company_required')
+      }
+      return updateCompany(
+        apiFetch,
+        tenantId,
+        editing.id,
+        {
+          legalName: editLegalName,
+          tradeName:
+            editTradeName.trim() || null,
+        },
+      )
+    },
+    onSuccess: () => {
+      setEditing(null)
+      onChanged()
+    },
+  })
 
-          {!creating && (
-            <button
-              className="launch-secondary-button launch-add-company"
-              type="button"
-              onClick={() => {
-                setLegalName('')
-                setTradeName('')
-                setCnpj('')
-                setCreating(true)
-              }}
-            >
-              Adicionar empresa
-            </button>
-          )}
-        </>
-      )}
+  const deleteMutation = useMutation({
+    mutationFn: (companyId: string) =>
+      deleteCompany(
+        apiFetch,
+        tenantId,
+        companyId,
+      ),
+    onSuccess: () => {
+      setEditing(null)
+      onSelect('')
+      onChanged()
+    },
+  })
+
+  const beginEdit = (company: AccountCompany) => {
+    setEditing(company)
+    setEditLegalName(company.legalName)
+    setEditTradeName(company.tradeName ?? '')
+  }
+
+  return (
+    <div className="tp-company-management">
+      <div className="tp-company-section-head">
+        <div>
+          <h2>Empresas da conta</h2>
+          <p>
+            Informe somente o CNPJ da matriz. A TriBusca consulta os dados cadastrais,
+            cria a matriz e registra todos os CNAEs encontrados.
+          </p>
+        </div>
+        {!creating && (
+          <button
+            className="btn"
+            type="button"
+            onClick={() => setCreating(true)}
+          >
+            Adicionar empresa
+          </button>
+        )}
+      </div>
 
       {creating && (
         <form
-          className="launch-form-card"
+          className="tp-cnpj-create"
           onSubmit={(event) => {
             event.preventDefault()
-            mutation.mutate()
+            createMutation.mutate()
           }}
         >
-          <h2>
-            {account.companies.length === 0
-              ? 'Complete o cadastro da empresa'
-              : 'Adicionar empresa'}
-          </h2>
-          <p>
-            Informe os dados operacionais
-            usados pelo Perfil Tributário.
-          </p>
+          <label>
+            CNPJ da matriz
+            <input
+              value={cnpj}
+              onChange={(event) =>
+                setCnpj(event.target.value)
+              }
+              placeholder="00.000.000/0000-00"
+              inputMode="numeric"
+              autoFocus
+              required
+            />
+          </label>
+          <button
+            className="btn"
+            type="submit"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending
+              ? 'Consultando Receita Federal…'
+              : 'Consultar e cadastrar'}
+          </button>
+          {account.companies.length > 0 && (
+            <button
+              className="launch-secondary-button"
+              type="button"
+              onClick={() => setCreating(false)}
+            >
+              Cancelar
+            </button>
+          )}
+          {createMutation.isError && (
+            <p className="auth-error" role="alert">
+              Não foi possível consultar/cadastrar o CNPJ: {createMutation.error.message}
+            </p>
+          )}
+        </form>
+      )}
+
+      <div className="tp-company-list">
+        {account.companies.map((company) => (
+          <article
+            className={
+              company.id === selectedCompanyId
+                ? 'tp-company-row is-active'
+                : 'tp-company-row'
+            }
+            key={company.id}
+          >
+            <div className="tp-company-identity">
+              <strong>{company.legalName}</strong>
+              {company.tradeName && (
+                <span>{company.tradeName}</span>
+              )}
+              <small>{formatCnpj(company.cnpj)}</small>
+            </div>
+
+            <span className="tp-company-active">
+              {company.id === selectedCompanyId
+                ? 'Ativa'
+                : 'Disponível'}
+            </span>
+
+            <dl>
+              <div>
+                <dt>Estabelecimentos</dt>
+                <dd>{company.establishmentCount}</dd>
+              </div>
+              <div>
+                <dt>Cadastro</dt>
+                <dd>RFB / CNPJ</dd>
+              </div>
+            </dl>
+
+            <div className="tp-company-actions">
+              {company.id !== selectedCompanyId && (
+                <button
+                  type="button"
+                  onClick={() => onSelect(company.id)}
+                >
+                  Selecionar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onSelect(company.id)
+                  onOpenEstablishments()
+                }}
+              >
+                Estabelecimentos
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelect(company.id)
+                  onOpenProfile()
+                }}
+              >
+                Perfil tributário
+              </button>
+              <button
+                type="button"
+                onClick={() => beginEdit(company)}
+              >
+                <Pencil size={14} />
+                Editar
+              </button>
+              <button
+                className="is-danger"
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Excluir esta empresa e desativar seus estabelecimentos?',
+                    )
+                  ) {
+                    deleteMutation.mutate(company.id)
+                  }
+                }}
+              >
+                <Trash2 size={14} />
+                Excluir
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {editing && (
+        <form
+          className="tp-inline-editor"
+          onSubmit={(event) => {
+            event.preventDefault()
+            updateMutation.mutate()
+          }}
+        >
+          <div>
+            <strong>Editar empresa</strong>
+            <span>
+              CNPJ {formatCnpj(editing.cnpj)} — o CNPJ é a identidade cadastral e não é alterado manualmente.
+            </span>
+          </div>
           <label>
             Razão social
             <input
-              value={legalName}
+              value={editLegalName}
               onChange={(event) =>
-                setLegalName(
-                  event.target.value,
-                )
+                setEditLegalName(event.target.value)
               }
               required
             />
@@ -1757,60 +1894,27 @@ function CompanySection({
           <label>
             Nome fantasia
             <input
-              value={tradeName}
+              value={editTradeName}
               onChange={(event) =>
-                setTradeName(
-                  event.target.value,
-                )
+                setEditTradeName(event.target.value)
               }
             />
           </label>
-          <label>
-            CNPJ
-            <input
-              value={cnpj}
-              onChange={(event) =>
-                setCnpj(
-                  event.target.value,
-                )
-              }
-              required
-            />
-          </label>
-          {mutation.isError && (
-            <p
-              className="auth-error"
-              role="alert"
-            >
-              Não foi possível criar a
-              empresa: {
-                mutation.error.message
-              }
-            </p>
-          )}
           <div className="launch-form-actions">
             <button
               className="btn"
               type="submit"
-              disabled={
-                mutation.isPending
-              }
+              disabled={updateMutation.isPending}
             >
-              {mutation.isPending
-                ? 'Salvando…'
-                : 'Salvar empresa'}
+              Salvar alterações
             </button>
-            {account.companies.length > 0 && (
-              <button
-                className="launch-secondary-button"
-                type="button"
-                onClick={() =>
-                  setCreating(false)
-                }
-              >
-                Cancelar
-              </button>
-            )}
+            <button
+              className="launch-secondary-button"
+              type="button"
+              onClick={() => setEditing(null)}
+            >
+              Cancelar
+            </button>
           </div>
         </form>
       )}
@@ -1833,11 +1937,7 @@ function EstablishmentSection({
   tenantId: string
   companyId: string
   companyCnpj: string
-  items: Awaited<
-    ReturnType<
-      typeof fetchEstablishments
-    >
-  >
+  items: Establishment[]
   types: Awaited<
     ReturnType<
       typeof fetchEstablishmentTypes
@@ -1847,34 +1947,82 @@ function EstablishmentSection({
   error: boolean
   onChanged: () => void
 }) {
-  const [name, setName] = useState('')
+  const [creating, setCreating] =
+    useState(false)
   const [cnpj, setCnpj] =
-    useState(companyCnpj)
-  const [typeCode, setTypeCode] =
-    useState('HEAD_OFFICE')
-  const [uf, setUf] = useState('GO')
-  const [municipality, setMunicipality] =
     useState('')
+  const [typeCode, setTypeCode] =
+    useState('OTHER')
+  const [editing, setEditing] =
+    useState<Establishment | null>(null)
+  const [draft, setDraft] =
+    useState<Establishment | null>(null)
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: () =>
-      createEstablishment(
+      createEstablishmentFromCnpj(
         apiFetch,
         tenantId,
-        {
-          companyId,
-          cnpj,
-          name,
-          typeCode,
-          isHeadOffice:
-            typeCode === 'HEAD_OFFICE',
-          uf,
-          municipalityName:
-            municipality || undefined,
-        },
+        companyId,
+        { cnpj, typeCode },
       ),
     onSuccess: () => {
-      setName('')
+      setCreating(false)
+      setCnpj('')
+      onChanged()
+    },
+  })
+
+  const refreshMutation = useMutation({
+    mutationFn: (establishmentId: string) =>
+      refreshEstablishmentCnpj(
+        apiFetch,
+        tenantId,
+        establishmentId,
+      ),
+    onSuccess: onChanged,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (establishmentId: string) =>
+      deleteEstablishment(
+        apiFetch,
+        tenantId,
+        establishmentId,
+      ),
+    onSuccess: onChanged,
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!draft) {
+        throw new Error('establishment_required')
+      }
+      return updateEstablishment(
+        apiFetch,
+        tenantId,
+        draft.id,
+        {
+          name: draft.name,
+          typeCode: draft.typeCode,
+          uf: draft.uf,
+          municipalityName:
+            draft.municipalityName,
+          municipalityIbgeCode:
+            draft.municipalityIbgeCode,
+          postalCode: draft.postalCode,
+          street: draft.street,
+          streetNumber:
+            draft.streetNumber,
+          complement: draft.complement,
+          district: draft.district,
+          cnaes: draft.cnaes,
+        },
+      )
+    },
+    onSuccess: () => {
+      setEditing(null)
+      setDraft(null)
       onChanged()
     },
   })
@@ -1882,67 +2030,87 @@ function EstablishmentSection({
   if (loading) return <LoadingState />
   if (error) return <ErrorState />
 
-  return (
-    <div className="launch-stack">
-      {items.length > 0 ? (
-        <div className="tp-establishment-table">
-          <div className="tp-table-head">
-            <span>Unidade</span>
-            <span>CNPJ</span>
-            <span>UF</span>
-            <span>Tipo</span>
-          </div>
-          {items.map((item) => (
-            <div
-              className="tp-table-row"
-              key={item.id}
-            >
-              <span>{item.name}</span>
-              <span>{item.cnpj}</span>
-              <span>{item.uf}</span>
-              <span>{item.typeCode}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="Nenhum estabelecimento cadastrado">
-          Cadastre a matriz ou uma filial.
-        </EmptyState>
-      )}
+  const beginEdit = (item: Establishment) => {
+    setEditing(item)
+    setDraft({
+      ...item,
+      cnaes: item.cnaes.map(
+        (cnae) => ({ ...cnae }),
+      ),
+    })
+  }
 
-      <form
-        className="launch-form-card"
-        onSubmit={(event) => {
-          event.preventDefault()
-          mutation.mutate()
-        }}
-      >
-        <h2>
-          Adicionar estabelecimento
-        </h2>
-        <div className="launch-form-grid">
+  const updateDraft = (
+    patch: Partial<Establishment>,
+  ) => {
+    setDraft((current) =>
+      current
+        ? { ...current, ...patch }
+        : current,
+    )
+  }
+
+  const updateCnae = (
+    index: number,
+    patch: Partial<EstablishmentCnae>,
+  ) => {
+    setDraft((current) => {
+      if (!current) return current
+      const next = current.cnaes.map(
+        (item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, ...patch }
+            : patch.isPrimary
+              ? { ...item, isPrimary: false }
+              : item,
+      )
+      return { ...current, cnaes: next }
+    })
+  }
+
+  return (
+    <div className="tp-establishment-management">
+      <div className="tp-company-section-head">
+        <div>
+          <h2>Estabelecimentos</h2>
+          <p>
+            Matriz e filiais da empresa ativa. Ao informar um CNPJ, a TriBusca consulta
+            endereço e CNAEs e registra o contexto usado pelo Sonar.
+          </p>
+        </div>
+        {!creating && (
+          <button
+            className="btn"
+            type="button"
+            onClick={() => {
+              setCnpj('')
+              setTypeCode('OTHER')
+              setCreating(true)
+            }}
+          >
+            Adicionar estabelecimento
+          </button>
+        )}
+      </div>
+
+      {creating && (
+        <form
+          className="tp-cnpj-create"
+          onSubmit={(event) => {
+            event.preventDefault()
+            createMutation.mutate()
+          }}
+        >
           <label>
-            Nome
-            <input
-              value={name}
-              onChange={(event) =>
-                setName(
-                  event.target.value,
-                )
-              }
-              required
-            />
-          </label>
-          <label>
-            CNPJ
+            CNPJ do estabelecimento
             <input
               value={cnpj}
               onChange={(event) =>
-                setCnpj(
-                  event.target.value,
-                )
+                setCnpj(event.target.value)
               }
+              placeholder="00.000.000/0000-00"
               required
+              autoFocus
             />
           </label>
           <label>
@@ -1950,94 +2118,561 @@ function EstablishmentSection({
             <select
               value={typeCode}
               onChange={(event) =>
-                setTypeCode(
-                  event.target.value,
-                )
+                setTypeCode(event.target.value)
               }
             >
-              {types.map((item) => (
-                <option
-                  value={item.code}
-                  key={item.code}
-                >
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            UF
-            <select
-              value={uf}
-              onChange={(event) =>
-                setUf(
-                  event.target.value,
-                )
-              }
-            >
-              {UFS.filter(Boolean).map(
-                (item) => (
+              {types
+                .filter((type) => type.code !== 'HEAD_OFFICE')
+                .map((type) => (
                   <option
-                    value={item}
-                    key={item}
+                    value={type.code}
+                    key={type.code}
                   >
-                    {item}
+                    {type.name}
                   </option>
-                ),
-              )}
+                ))}
             </select>
           </label>
-          <label>
-            Município
+          <button
+            className="btn"
+            type="submit"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending
+              ? 'Consultando Receita Federal…'
+              : 'Consultar e cadastrar'}
+          </button>
+          <button
+            className="launch-secondary-button"
+            type="button"
+            onClick={() => setCreating(false)}
+          >
+            Cancelar
+          </button>
+        </form>
+      )}
+
+      {createMutation.isError && (
+        <p className="auth-error" role="alert">
+          Não foi possível adicionar o estabelecimento: {createMutation.error.message}
+        </p>
+      )}
+
+      <div className="tp-establishment-table-v2">
+        <div className="tp-establishment-head">
+          <span>Nome da unidade</span>
+          <span>CNPJ</span>
+          <span>Tipo</span>
+          <span>Município/UF</span>
+          <span>Endereço</span>
+          <span>CNAE principal</span>
+          <span>Ações</span>
+        </div>
+
+        {items.map((item) => {
+          const primary = item.cnaes.find(
+            (cnae) => cnae.isPrimary,
+          )
+          return (
+            <div
+              className="tp-establishment-row"
+              key={item.id}
+            >
+              <div>
+                <strong>{item.name}</strong>
+                {item.isHeadOffice && (
+                  <small>Matriz</small>
+                )}
+              </div>
+              <span>{formatCnpj(item.cnpj)}</span>
+              <span>
+                {types.find(
+                  (type) =>
+                    type.code === item.typeCode,
+                )?.name ?? item.typeCode}
+              </span>
+              <span>
+                {item.municipalityName
+                  ? item.municipalityName + '/' + item.uf
+                  : item.uf}
+              </span>
+              <span className="tp-address-cell">
+                {registrationAddress(item)}
+              </span>
+              <span className="tp-cnae-cell">
+                {primary ? (
+                  <>
+                    <b>{primary.code}</b>
+                    <small>{primary.description}</small>
+                    {item.cnaes.length > 1 && (
+                      <em>
+                        + {item.cnaes.length - 1} secundário
+                        {item.cnaes.length - 1 === 1 ? '' : 's'}
+                      </em>
+                    )}
+                  </>
+                ) : (
+                  '—'
+                )}
+              </span>
+              <div className="tp-row-actions">
+                <button
+                  type="button"
+                  disabled={refreshMutation.isPending}
+                  onClick={() =>
+                    refreshMutation.mutate(item.id)
+                  }
+                >
+                  Consulta API
+                </button>
+                <button
+                  type="button"
+                  onClick={() => beginEdit(item)}
+                >
+                  Editar dados
+                </button>
+                {!item.isHeadOffice && (
+                  <button
+                    className="is-danger"
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          'Excluir este estabelecimento?',
+                        )
+                      ) {
+                        deleteMutation.mutate(item.id)
+                      }
+                    }}
+                  >
+                    Excluir
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="tp-registry-note">
+        Dados cadastrais são consultados a partir do cadastro do CNPJ. Use
+        <b> Consulta API </b>
+        para atualizar novamente ou <b>Editar dados</b> para ajustar manualmente.
+        O CNPJ permanece como identidade do estabelecimento.
+      </p>
+
+      {editing && draft && (
+        <form
+          className="tp-establishment-editor"
+          onSubmit={(event) => {
+            event.preventDefault()
+            updateMutation.mutate()
+          }}
+        >
+          <div className="tp-editor-title">
+            <div>
+              <strong>Editar estabelecimento</strong>
+              <span>{formatCnpj(draft.cnpj)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null)
+                setDraft(null)
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div className="launch-form-grid">
+            <label>
+              Nome da unidade
+              <input
+                value={draft.name}
+                onChange={(event) =>
+                  updateDraft({
+                    name: event.target.value,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Tipo
+              <select
+                value={draft.typeCode}
+                onChange={(event) =>
+                  updateDraft({
+                    typeCode: event.target.value,
+                  })
+                }
+                disabled={draft.isHeadOffice}
+              >
+                {types.map((type) => (
+                  <option
+                    value={type.code}
+                    key={type.code}
+                  >
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              UF
+              <select
+                value={draft.uf}
+                onChange={(event) =>
+                  updateDraft({
+                    uf: event.target.value,
+                  })
+                }
+              >
+                {UFS.filter(Boolean).map(
+                  (uf) => (
+                    <option value={uf} key={uf}>
+                      {uf}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              Município
+              <input
+                value={draft.municipalityName ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    municipalityName:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Código IBGE
+              <input
+                value={draft.municipalityIbgeCode ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    municipalityIbgeCode:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              CEP
+              <input
+                value={draft.postalCode ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    postalCode:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Logradouro
+              <input
+                value={draft.street ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    street:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Número
+              <input
+                value={draft.streetNumber ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    streetNumber:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Complemento
+              <input
+                value={draft.complement ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    complement:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+            <label>
+              Bairro
+              <input
+                value={draft.district ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    district:
+                      event.target.value || null,
+                  })
+                }
+              />
+            </label>
+          </div>
+
+          <div className="tp-cnae-editor">
+            <div className="tp-cnae-editor-head">
+              <div>
+                <strong>CNAEs</strong>
+                <span>
+                  Um principal e todos os secundários usados no contexto cadastral.
+                </span>
+              </div>
+              <button
+                className="launch-secondary-button"
+                type="button"
+                onClick={() =>
+                  updateDraft({
+                    cnaes: [
+                      ...draft.cnaes,
+                      {
+                        code: '',
+                        description: '',
+                        isPrimary:
+                          draft.cnaes.length === 0,
+                      },
+                    ],
+                  })
+                }
+              >
+                Adicionar CNAE
+              </button>
+            </div>
+
+            {draft.cnaes.map(
+              (cnae, index) => (
+                <div
+                  className="tp-cnae-edit-row"
+                  key={index}
+                >
+                  <label>
+                    <input
+                      type="radio"
+                      name="primary-cnae"
+                      aria-label={
+                        'CNAE principal ' +
+                        (cnae.code || index + 1)
+                      }
+                      checked={cnae.isPrimary}
+                      onChange={() =>
+                        updateCnae(index, {
+                          isPrimary: true,
+                        })
+                      }
+                    />
+                    Principal
+                  </label>
+                  <input
+                    value={cnae.code}
+                    placeholder="0000000"
+                    onChange={(event) =>
+                      updateCnae(index, {
+                        code:
+                          event.target.value.replace(
+                            /\D/g,
+                            '',
+                          ),
+                      })
+                    }
+                  />
+                  <input
+                    value={cnae.description}
+                    placeholder="Descrição do CNAE"
+                    onChange={(event) =>
+                      updateCnae(index, {
+                        description:
+                          event.target.value,
+                      })
+                    }
+                  />
+                  <button
+                    className="is-danger"
+                    type="button"
+                    onClick={() =>
+                      updateDraft({
+                        cnaes: draft.cnaes.filter(
+                          (_, itemIndex) =>
+                            itemIndex !== index,
+                        ),
+                      })
+                    }
+                  >
+                    Remover
+                  </button>
+                </div>
+              ),
+            )}
+          </div>
+
+          {updateMutation.isError && (
+            <p className="auth-error" role="alert">
+              Não foi possível salvar: {updateMutation.error.message}
+            </p>
+          )}
+
+          <div className="launch-form-actions">
+            <button
+              className="btn"
+              type="submit"
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending
+                ? 'Salvando…'
+                : 'Salvar alterações'}
+            </button>
+            <button
+              className="launch-secondary-button"
+              type="button"
+              onClick={() => {
+                setEditing(null)
+                setDraft(null)
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
+      <span className="sr-only">
+        Matriz cadastrada: {formatCnpj(companyCnpj)}
+      </span>
+    </div>
+  )
+}
+
+function TaxonomyDimensionPicker({
+  dimension,
+  selected,
+  onToggle,
+}: {
+  dimension: TaxonomyProfileDimension
+  selected: Set<string>
+  onToggle: (code: string) => void
+}) {
+  const [query, setQuery] = useState('')
+
+  const normalized =
+    query.trim().toLocaleLowerCase('pt-BR')
+  const concepts = dimension.concepts.filter(
+    (concept) =>
+      !normalized ||
+      concept.label
+        .toLocaleLowerCase('pt-BR')
+        .includes(normalized) ||
+      concept.code
+        .toLocaleLowerCase('pt-BR')
+        .includes(normalized),
+  )
+
+  const shown = normalized
+    ? concepts.slice(0, 80)
+    : concepts
+        .filter((concept) =>
+          selected.has(concept.code),
+        )
+        .concat(
+          concepts
+            .filter(
+              (concept) =>
+                !selected.has(concept.code),
+            )
+            .slice(0, 14),
+        )
+
+  return (
+    <section className="tp-taxonomy-dimension">
+      <div>
+        <strong>{dimension.name}</strong>
+        <span>
+          {dimension.concepts.length} opções ·{' '}
+          {
+            dimension.concepts.filter(
+              (concept) =>
+                selected.has(concept.code),
+            ).length
+          } selecionadas
+        </span>
+      </div>
+      <input
+        value={query}
+        onChange={(event) =>
+          setQuery(event.target.value)
+        }
+        placeholder={
+          'Buscar em ' +
+          dimension.name.toLowerCase()
+        }
+        aria-label={
+          'Buscar ' + dimension.name
+        }
+      />
+      <div className="tp-taxonomy-options">
+        {shown.map((concept) => (
+          <label
+            className={
+              selected.has(concept.code)
+                ? 'is-selected'
+                : ''
+            }
+            key={concept.code}
+            title={concept.definition}
+          >
             <input
-              value={municipality}
-              onChange={(event) =>
-                setMunicipality(
-                  event.target.value,
-                )
+              type="checkbox"
+              checked={selected.has(
+                concept.code,
+              )}
+              onChange={() =>
+                onToggle(concept.code)
               }
             />
+            <span>
+              <b>{concept.label}</b>
+              <small>{concept.code}</small>
+            </span>
+            {selected.has(concept.code) && (
+              <Check size={15} />
+            )}
           </label>
-        </div>
-        {mutation.isError && (
-          <p
-            className="auth-error"
-            role="alert"
-          >
-            Não foi possível cadastrar:
-            {' '}
-            {mutation.error.message}
-          </p>
-        )}
-        <button
-          className="btn"
-          type="submit"
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending
-            ? 'Salvando…'
-            : 'Adicionar estabelecimento'}
-        </button>
-      </form>
-    </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
 function TaxProfileSection({
   apiFetch,
   tenantId,
-  companyId,
+  company,
+  establishments,
   profile,
+  taxonomyOptions,
   loading,
   error,
   onChanged,
 }: {
   apiFetch: ProductApiFetch
   tenantId: string
-  companyId: string
+  company: AccountCompany
+  establishments: Establishment[]
   profile: Awaited<
     ReturnType<typeof fetchTaxProfile>
   >
+  taxonomyOptions: TaxonomyProfileOptions
   loading: boolean
   error: boolean
   onChanged: () => void
@@ -2047,81 +2682,90 @@ function TaxProfileSection({
       profile?.taxRegime ??
         'NAO_INFORMADO',
     )
-  const [segments, setSegments] =
-    useState(
-      profile?.segments.join(', ') ??
-        '',
-    )
-  const [activities, setActivities] =
-    useState(
-      Array.isArray(
-        profile?.activities,
-      )
-        ? profile?.activities.join(
-            ', ',
-          )
-        : '',
-    )
-  const [taxes, setTaxes] = useState(
-    profile?.personalization.taxes?.join(
-      ', ',
-    ) ?? '',
-  )
-  const [products, setProducts] =
-    useState(
-      profile?.personalization.products?.join(
-        ', ',
-      ) ?? '',
-    )
-  const [operations, setOperations] =
-    useState(
-      profile?.personalization.operations?.join(
-        ', ',
-      ) ?? '',
-    )
-  const [documents, setDocuments] =
-    useState(
-      profile?.personalization.documents?.join(
-        ', ',
-      ) ?? '',
-    )
-  const [obligations, setObligations] =
-    useState(
-      profile?.personalization.obligations?.join(
-        ', ',
-      ) ?? '',
-    )
   const [keywords, setKeywords] =
     useState(
       profile?.personalization.keywords?.join(
         ', ',
       ) ?? '',
     )
+  const [selectedCodes, setSelectedCodes] =
+    useState<Set<string>>(
+      () =>
+        new Set(
+          profile?.personalization.taxonomy
+            ?.conceptCodes ?? [],
+        ),
+    )
+
+  useEffect(() => {
+    setTaxRegime(
+      profile?.taxRegime ??
+        'NAO_INFORMADO',
+    )
+    setKeywords(
+      profile?.personalization.keywords?.join(
+        ', ',
+      ) ?? '',
+    )
+    setSelectedCodes(
+      new Set(
+        profile?.personalization.taxonomy
+          ?.conceptCodes ?? [],
+      ),
+    )
+  }, [profile])
+
+  const selectedLabels = (
+    dimensionCode: string,
+  ) =>
+    taxonomyOptions.dimensions
+      .find(
+        (dimension) =>
+          dimension.code ===
+          dimensionCode,
+      )
+      ?.concepts.filter((concept) =>
+        selectedCodes.has(concept.code),
+      )
+      .map((concept) => concept.label) ??
+    []
 
   const mutation = useMutation({
     mutationFn: () =>
       saveTaxProfile(
         apiFetch,
         tenantId,
-        companyId,
+        company.id,
         {
           taxRegime,
           segments:
-            splitCsv(segments),
+            selectedLabels('sector'),
           activities:
-            splitCsv(activities),
+            selectedLabels('operation'),
           personalization: {
-            taxes: splitCsv(taxes),
+            taxes:
+              selectedLabels('tax'),
             products:
-              splitCsv(products),
+              selectedLabels('product'),
             operations:
-              splitCsv(operations),
+              selectedLabels('operation'),
             documents:
-              splitCsv(documents),
+              selectedLabels('document'),
             obligations:
-              splitCsv(obligations),
+              selectedLabels('obligation'),
             keywords:
               splitCsv(keywords),
+            taxonomy:
+              taxonomyOptions.release
+                ? {
+                    releaseId:
+                      taxonomyOptions.release.id,
+                    releaseVersion:
+                      taxonomyOptions.release.version,
+                    conceptCodes:
+                      [...selectedCodes].sort(),
+                  }
+                : null,
           },
         },
       ),
@@ -2131,180 +2775,256 @@ function TaxProfileSection({
   if (loading) return <LoadingState />
   if (error) return <ErrorState />
 
+  const ufs = [
+    ...new Set(
+      establishments.map(
+        (item) => item.uf,
+      ),
+    ),
+  ].sort()
+  const municipalities = [
+    ...new Set(
+      establishments
+        .map(
+          (item) =>
+            item.municipalityName,
+        )
+        .filter(
+          (value): value is string =>
+            Boolean(value),
+        ),
+    ),
+  ].sort()
+  const cnaes = [
+    ...new Map(
+      establishments
+        .flatMap((item) => item.cnaes)
+        .map((cnae) => [
+          cnae.code,
+          cnae,
+        ]),
+    ).values(),
+  ].sort((left, right) =>
+    left.code.localeCompare(right.code),
+  )
+
+  const toggleCode = (code: string) => {
+    setSelectedCodes((current) => {
+      const next = new Set(current)
+      if (next.has(code)) {
+        next.delete(code)
+      } else {
+        next.add(code)
+      }
+      return next
+    })
+  }
+
   return (
     <form
-      className="launch-form-card"
+      className="tp-tax-profile-editor"
       onSubmit={(event) => {
         event.preventDefault()
         mutation.mutate()
       }}
     >
-      <h2>Perfil Tributário</h2>
-      <p>
-        Use vírgulas para separar vários
-        valores. Estes dados serão a base
-        do matching do Sonar.
-      </p>
-
-      <div className="launch-form-grid">
-        <label>
-          Regime tributário
-          <select
-            value={taxRegime}
-            onChange={(event) =>
-              setTaxRegime(
-                event.target.value,
-              )
-            }
-          >
-            <option value="NAO_INFORMADO">
-              Não informado
-            </option>
-            <option value="LUCRO_REAL">
-              Lucro Real
-            </option>
-            <option value="LUCRO_PRESUMIDO">
-              Lucro Presumido
-            </option>
-            <option value="SIMPLES_NACIONAL">
-              Simples Nacional
-            </option>
-            <option value="IMUNE_ISENTA">
-              Imune/Isenta
-            </option>
-            <option value="OUTRO">
-              Outro
-            </option>
-          </select>
-        </label>
-        <label>
-          Segmentos
-          <input
-            value={segments}
-            onChange={(event) =>
-              setSegments(
-                event.target.value,
-              )
-            }
-            placeholder="Agronegócio, sementes"
-          />
-        </label>
-        <label>
-          Atividades
-          <input
-            value={activities}
-            onChange={(event) =>
-              setActivities(
-                event.target.value,
-              )
-            }
-            placeholder="Venda, armazenagem"
-          />
-        </label>
-        <label>
-          Tributos
-          <input
-            value={taxes}
-            onChange={(event) =>
-              setTaxes(
-                event.target.value,
-              )
-            }
-            placeholder="ICMS, IBS, CBS"
-          />
-        </label>
-        <label>
-          Produtos
-          <input
-            value={products}
-            onChange={(event) =>
-              setProducts(
-                event.target.value,
-              )
-            }
-            placeholder="Soja, fertilizantes"
-          />
-        </label>
-        <label>
-          Operações
-          <input
-            value={operations}
-            onChange={(event) =>
-              setOperations(
-                event.target.value,
-              )
-            }
-            placeholder="Venda interestadual"
-          />
-        </label>
-        <label>
-          Documentos
-          <input
-            value={documents}
-            onChange={(event) =>
-              setDocuments(
-                event.target.value,
-              )
-            }
-            placeholder="NF-e, CT-e"
-          />
-        </label>
-        <label>
-          Obrigações
-          <input
-            value={obligations}
-            onChange={(event) =>
-              setObligations(
-                event.target.value,
-              )
-            }
-            placeholder="EFD, SPED"
-          />
-        </label>
-        <label>
-          Palavras-chave
-          <input
-            value={keywords}
-            onChange={(event) =>
-              setKeywords(
-                event.target.value,
-              )
-            }
-            placeholder="crédito presumido, diferimento"
-          />
-        </label>
+      <div className="tp-company-section-head">
+        <div>
+          <h2>Perfil Tributário</h2>
+          <p>
+            Combina dados cadastrais automáticos com conceitos canônicos da Taxonomia
+            TriBusca. Este contexto será usado no matching das legislações.
+          </p>
+        </div>
+        {profile && (
+          <span className="tp-profile-version">
+            Perfil atual v{profile.versionNo}
+          </span>
+        )}
       </div>
 
+      <section className="tp-profile-context">
+        <div className="tp-profile-section-title">
+          <span>1 · Automático</span>
+          <h3>Contexto cadastral</h3>
+          <p>
+            Derivado da empresa e dos estabelecimentos. Não precisa ser digitado novamente.
+          </p>
+        </div>
+        <div className="tp-context-grid">
+          <article>
+            <span>CNPJ da matriz</span>
+            <strong>{formatCnpj(company.cnpj)}</strong>
+          </article>
+          <article>
+            <span>Estabelecimentos</span>
+            <strong>{establishments.length}</strong>
+          </article>
+          <article>
+            <span>UFs</span>
+            <strong>
+              {ufs.join(', ') || '—'}
+            </strong>
+          </article>
+          <article>
+            <span>Municípios</span>
+            <strong>
+              {municipalities.join(', ') || '—'}
+            </strong>
+          </article>
+        </div>
+        <div className="tp-profile-cnaes">
+          <strong>CNAEs capturados</strong>
+          {cnaes.length ? (
+            <div>
+              {cnaes.map((cnae) => (
+                <span key={cnae.code}>
+                  <b>{cnae.code}</b>
+                  {cnae.description}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p>
+              Nenhum CNAE cadastrado. Atualize os estabelecimentos pela Consulta API.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="tp-profile-declared">
+        <div className="tp-profile-section-title">
+          <span>2 · Declarado</span>
+          <h3>Contexto fiscal</h3>
+          <p>
+            Dados que dependem da realidade fiscal da empresa e não são inferidos pelo CNPJ.
+          </p>
+        </div>
+        <div className="launch-form-grid">
+          <label>
+            Regime tributário
+            <select
+              value={taxRegime}
+              onChange={(event) =>
+                setTaxRegime(
+                  event.target.value,
+                )
+              }
+            >
+              <option value="NAO_INFORMADO">
+                Não informado
+              </option>
+              <option value="LUCRO_REAL">
+                Lucro Real
+              </option>
+              <option value="LUCRO_PRESUMIDO">
+                Lucro Presumido
+              </option>
+              <option value="SIMPLES_NACIONAL">
+                Simples Nacional
+              </option>
+              <option value="IMUNE_ISENTA">
+                Imune/Isenta
+              </option>
+              <option value="OUTRO">
+                Outro
+              </option>
+            </select>
+          </label>
+          <label>
+            Palavras-chave adicionais
+            <input
+              value={keywords}
+              onChange={(event) =>
+                setKeywords(
+                  event.target.value,
+                )
+              }
+              placeholder="ex.: crédito presumido, barter"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="tp-profile-taxonomy">
+        <div className="tp-profile-section-title">
+          <span>3 · Taxonomia</span>
+          <h3>Marcadores para o Sonar</h3>
+          <p>
+            Selecione conceitos do vocabulário controlado. O perfil salva os códigos canônicos,
+            não tags livres.
+          </p>
+        </div>
+
+        {taxonomyOptions.release ? (
+          <>
+            <div className="tp-taxonomy-release">
+              <span>
+                Taxonomia publicada
+              </span>
+              <strong>
+                {taxonomyOptions.release.version}
+              </strong>
+              <em>
+                {selectedCodes.size} conceito
+                {selectedCodes.size === 1 ? '' : 's'} selecionado
+                {selectedCodes.size === 1 ? '' : 's'}
+              </em>
+            </div>
+            <div className="tp-taxonomy-grid">
+              {taxonomyOptions.dimensions.map(
+                (dimension) => (
+                  <TaxonomyDimensionPicker
+                    dimension={dimension}
+                    selected={selectedCodes}
+                    onToggle={toggleCode}
+                    key={dimension.code}
+                  />
+                ),
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="tp-taxonomy-unavailable">
+            <strong>Taxonomia publicada ainda não disponível</strong>
+            <p>
+              A tela já está preparada. As opções aparecerão automaticamente quando uma release
+              da Taxonomia TriBusca for publicada.
+            </p>
+          </div>
+        )}
+      </section>
+
       {mutation.isError && (
-        <p
-          className="auth-error"
-          role="alert"
+        <p className="auth-error" role="alert">
+          Não foi possível salvar o perfil: {mutation.error.message}
+        </p>
+      )}
+
+      <div className="tp-profile-save">
+        <div>
+          <strong>
+            {selectedCodes.size} marcador
+            {selectedCodes.size === 1 ? '' : 'es'} canônico
+            {selectedCodes.size === 1 ? '' : 's'}
+          </strong>
+          <span>
+            Uma nova versão do perfil preserva o histórico do contexto usado no matching.
+          </span>
+        </div>
+        <button
+          className="btn"
+          type="submit"
+          disabled={mutation.isPending}
         >
-          Não foi possível salvar o
-          perfil: {mutation.error.message}
-        </p>
-      )}
-
-      <button
-        className="btn"
-        type="submit"
-        disabled={mutation.isPending}
-      >
-        {mutation.isPending
-          ? 'Salvando…'
-          : profile
-            ? 'Salvar nova versão'
-            : 'Criar Perfil Tributário'}
-      </button>
-
-      {profile && (
-        <p className="launch-success-note">
-          Perfil atual v
-          {profile.versionNo} · válido
-          desde{' '}
-          {profile.validFrom ?? '—'}
-        </p>
-      )}
+          {mutation.isPending
+            ? 'Salvando…'
+            : profile
+              ? 'Salvar nova versão'
+              : 'Criar Perfil Tributário'}
+        </button>
+      </div>
     </form>
   )
 }
+
