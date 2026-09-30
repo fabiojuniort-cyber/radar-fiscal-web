@@ -1,3 +1,9 @@
+import {
+  requestManualRegistration,
+  type ManualCompanyForm,
+  type ManualEstablishmentForm,
+} from './manual-registration-bridge'
+
 export type ProductApiFetch = (
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -155,27 +161,35 @@ export type TaxProfile = {
   createdAt?: string
 }
 
+async function responseErrorCode(
+  response: Response,
+): Promise<string> {
+  let code = 'request_failed'
+
+  try {
+    const body = await response.clone().json()
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'error' in body &&
+      typeof body.error === 'string'
+    ) {
+      code = body.error
+    }
+  } catch {
+    // Keep generic code.
+  }
+
+  return code
+}
+
 async function requireJson<T>(
   response: Response,
 ): Promise<T> {
   if (!response.ok) {
-    let code = 'request_failed'
-
-    try {
-      const body = await response.clone().json()
-      if (
-        typeof body === 'object' &&
-        body !== null &&
-        'error' in body &&
-        typeof body.error === 'string'
-      ) {
-        code = body.error
-      }
-    } catch {
-      // Keep generic code.
-    }
-
-    throw new Error(code)
+    throw new Error(
+      await responseErrorCode(response),
+    )
   }
 
   return response.json() as Promise<T>
@@ -188,6 +202,15 @@ function tenantHeaders(
   const headers = new Headers(extra)
   headers.set('X-Tenant-Id', tenantId)
   return headers
+}
+
+function canUseManualCnpjFallback(
+  code: string,
+) {
+  return (
+    code === 'cnpj_provider_unavailable' ||
+    code === 'cnpj_provider_invalid_response'
+  )
 }
 
 export async function fetchMonitoringRuns(
@@ -227,6 +250,9 @@ export async function createCompanyFromCnpj(
   cnpj: string,
   businessLocationCode?: string,
 ): Promise<CnpjRegistryResult> {
+  const normalizedCnpj = cnpj.replace(/\D/g, '')
+  const normalizedBusinessLocation =
+    businessLocationCode?.trim() || null
   const response = await apiFetch('/api/v1/companies/from-cnpj', {
     method: 'POST',
     headers: tenantHeaders(tenantId, {
@@ -234,13 +260,49 @@ export async function createCompanyFromCnpj(
       Accept: 'application/json',
     }),
     body: JSON.stringify({
-      cnpj,
+      cnpj: normalizedCnpj,
       businessLocationCode:
-        businessLocationCode?.trim() || undefined,
+        normalizedBusinessLocation ?? undefined,
     }),
   })
 
-  return requireJson<CnpjRegistryResult>(response)
+  if (response.ok) {
+    return requireJson<CnpjRegistryResult>(response)
+  }
+
+  const code = await responseErrorCode(response)
+  if (!canUseManualCnpjFallback(code)) {
+    throw new Error(code)
+  }
+
+  return requestManualRegistration<CnpjRegistryResult>({
+    kind: 'company',
+    cnpj: normalizedCnpj,
+    businessLocationCode:
+      normalizedBusinessLocation,
+    submit: async (input: ManualCompanyForm) => {
+      const manualResponse = await apiFetch(
+        '/api/v1/companies/manual',
+        {
+          method: 'POST',
+          headers: tenantHeaders(tenantId, {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          }),
+          body: JSON.stringify({
+            cnpj: normalizedCnpj,
+            businessLocationCode:
+              normalizedBusinessLocation ?? undefined,
+            ...input,
+          }),
+        },
+      )
+
+      return requireJson<CnpjRegistryResult>(
+        manualResponse,
+      )
+    },
+  })
 }
 
 export async function updateCompany(
@@ -359,6 +421,7 @@ export async function createEstablishment(
     streetNumber?: string
     complement?: string
     district?: string
+    stateRegistration?: string
     businessLocationCode?: string | null
     cnaes?: EstablishmentCnae[]
   },
@@ -385,6 +448,9 @@ export async function createEstablishmentFromCnpj(
     businessLocationCode?: string | null
   },
 ): Promise<void> {
+  const normalizedCnpj = input.cnpj.replace(/\D/g, '')
+  const normalizedBusinessLocation =
+    input.businessLocationCode?.trim() || null
   const response = await apiFetch(
     '/api/v1/companies/' + companyId + '/establishments/from-cnpj',
     {
@@ -393,11 +459,65 @@ export async function createEstablishmentFromCnpj(
         'Content-Type': 'application/json',
         Accept: 'application/json',
       }),
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...input,
+        cnpj: normalizedCnpj,
+        businessLocationCode:
+          normalizedBusinessLocation ?? undefined,
+      }),
     },
   )
 
-  await requireJson(response)
+  if (response.ok) {
+    await requireJson(response)
+    return
+  }
+
+  const code = await responseErrorCode(response)
+  if (!canUseManualCnpjFallback(code)) {
+    throw new Error(code)
+  }
+
+  await requestManualRegistration<void>({
+    kind: 'establishment',
+    cnpj: normalizedCnpj,
+    typeCode: input.typeCode,
+    businessLocationCode:
+      normalizedBusinessLocation,
+    submit: async (
+      manual: ManualEstablishmentForm,
+    ) => {
+      const manualResponse = await apiFetch(
+        '/api/v1/establishments/manual',
+        {
+          method: 'POST',
+          headers: tenantHeaders(tenantId, {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          }),
+          body: JSON.stringify({
+            companyId,
+            cnpj: normalizedCnpj,
+            name: manual.name,
+            typeCode: input.typeCode,
+            uf: manual.uf,
+            municipalityName:
+              manual.municipalityName,
+            postalCode: manual.postalCode,
+            street: manual.street,
+            streetNumber: manual.streetNumber,
+            district: manual.district,
+            stateRegistration:
+              manual.stateRegistration,
+            businessLocationCode:
+              normalizedBusinessLocation ?? undefined,
+          }),
+        },
+      )
+
+      await requireJson(manualResponse)
+    },
+  })
 }
 
 export async function updateEstablishment(
@@ -544,7 +664,6 @@ export async function saveTaxProfile(
   return result.profile
 }
 
-
 export type ProductArchiveItem = {
   id: string
   title: string
@@ -594,7 +713,6 @@ export async function fetchProductArchive(
 
   return requireJson<ProductArchiveResponse>(response)
 }
-
 
 export type ProductPublicationDetail = {
   publication: {
