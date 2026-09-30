@@ -22,3 +22,19 @@ Ao sincronizar um modelo visual com o site publicado:
 - quando o protótipo divergir da produção, documente a divergência em vez de silenciosamente promover o protótipo a fonte de verdade.
 
 Procedimento detalhado: `docs/DESIGN_MODEL_SYNC.md`.
+
+
+## Publicação incremental para revisão visual
+
+Quando o Product Owner autorizar explicitamente revisão olhando o site publicado, mudanças desta frente podem ser entregues de forma incremental no ambiente publicado, sem esperar um pacote visual maior.
+
+Fluxo obrigatório para cada incremento:
+1. implementar em branch de trabalho;
+2. preservar contratos reais, autenticação, rotas, dados factuais e decisões congeladas;
+3. executar typecheck, testes, build e Playwright aplicável;
+4. corrigir regressões causadas pela mudança;
+5. abrir PR e registrar o handoff;
+6. após validação automatizada, incorporar à branch publicada e confirmar o deploy no Railway;
+7. informar ao Product Owner o SHA efetivamente implantado.
+
+A autorização para publicação incremental não autoriza inventar dados, contornar gates de segurança, alterar arquitetura congelada ou promover funcionalidades ainda não comprovadas como disponíveis. Status de produto continuam factuais.
