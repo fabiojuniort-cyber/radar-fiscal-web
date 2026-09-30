@@ -1646,6 +1646,33 @@ function formatCnpj(value: string) {
     .replace(/(\d{4})(\d)/, '$1-$2')
 }
 
+function registrationErrorMessage(
+  error: Error,
+  subject: 'empresa' | 'estabelecimento',
+) {
+  const prefix =
+    subject === 'empresa'
+      ? 'Não foi possível cadastrar a empresa.'
+      : 'Não foi possível adicionar o estabelecimento.'
+
+  switch (error.message) {
+    case 'cnpj_not_found':
+      return prefix + ' CNPJ não encontrado na base cadastral.'
+    case 'cnpj_provider_unavailable':
+      return prefix + ' A consulta cadastral está temporariamente indisponível. Tente novamente em instantes.'
+    case 'cnpj_provider_invalid_response':
+      return prefix + ' A fonte cadastral respondeu com dados inválidos. Tente novamente.'
+    case 'establishment_conflict':
+      return prefix + ' Este CNPJ já está cadastrado nesta empresa.'
+    case 'business_location_code_exists':
+      return prefix + ' Este Local Negócio já está sendo usado por outro estabelecimento.'
+    case 'invalid_cnpj':
+      return prefix + ' Informe um CNPJ válido.'
+    default:
+      return prefix
+  }
+}
+
 function registrationAddress(item: Establishment) {
   const first = [
     item.street,
@@ -1760,6 +1787,10 @@ function CompanySection({
   const [cnpj, setCnpj] = useState(
     account.onboarding?.cnpj ?? '',
   )
+  const [
+    businessLocationCode,
+    setBusinessLocationCode,
+  ] = useState('')
   const [creating, setCreating] = useState(
     account.companies.length === 0,
   )
@@ -1767,8 +1798,10 @@ function CompanySection({
     useState<AccountCompany | null>(null)
   const [editLegalName, setEditLegalName] =
     useState('')
-  const [editTradeName, setEditTradeName] =
-    useState('')
+  const [
+    editBusinessLocationCode,
+    setEditBusinessLocationCode,
+  ] = useState('')
   const [deleteCandidate, setDeleteCandidate] =
     useState<AccountCompany | null>(null)
 
@@ -1778,11 +1811,13 @@ function CompanySection({
         apiFetch,
         tenantId,
         cnpj,
+        businessLocationCode,
       ),
     onSuccess: (result) => {
       onSelect(result.company.id)
       setCreating(false)
       setCnpj('')
+      setBusinessLocationCode('')
       onChanged()
     },
   })
@@ -1798,8 +1833,8 @@ function CompanySection({
         editing.id,
         {
           legalName: editLegalName,
-          tradeName:
-            editTradeName.trim() || null,
+          businessLocationCode:
+            editBusinessLocationCode.trim() || null,
         },
       )
     },
@@ -1834,7 +1869,9 @@ function CompanySection({
   const beginEdit = (company: AccountCompany) => {
     setEditing(company)
     setEditLegalName(company.legalName)
-    setEditTradeName(company.tradeName ?? '')
+    setEditBusinessLocationCode(
+      company.businessLocationCode ?? '',
+    )
   }
 
   return (
@@ -1843,9 +1880,9 @@ function CompanySection({
         <div>
           <h2>Empresas da conta</h2>
           <p>
-            Informe somente o CNPJ da matriz. A TriBusca consulta o cadastro CNPJ/RFB,
-            cria a matriz, registra todos os CNAEs e tenta consultar a Inscrição Estadual
-            na fonte estadual oficial suportada para a UF.
+            Informe o CNPJ da matriz e, se desejar, o Local Negócio usado internamente.
+            A TriBusca consulta o cadastro CNPJ/RFB, cria a matriz, registra todos os CNAEs
+            e tenta consultar a Inscrição Estadual na fonte estadual oficial suportada para a UF.
           </p>
         </div>
         {!creating && (
@@ -1880,6 +1917,19 @@ function CompanySection({
               required
             />
           </label>
+          <label>
+            Local Negócio
+            <input
+              value={businessLocationCode}
+              onChange={(event) =>
+                setBusinessLocationCode(
+                  event.target.value,
+                )
+              }
+              placeholder="Código interno da matriz"
+              maxLength={80}
+            />
+          </label>
           <button
             className="btn"
             type="submit"
@@ -1900,7 +1950,10 @@ function CompanySection({
           )}
           {createMutation.isError && (
             <p className="auth-error" role="alert">
-              Não foi possível consultar/cadastrar o CNPJ: {createMutation.error.message}
+              {registrationErrorMessage(
+                createMutation.error,
+                'empresa',
+              )}
             </p>
           )}
         </form>
@@ -1918,10 +1971,12 @@ function CompanySection({
           >
             <div className="tp-company-identity">
               <strong>{company.legalName}</strong>
-              {company.tradeName && (
-                <span>{company.tradeName}</span>
-              )}
               <small>{formatCnpj(company.cnpj)}</small>
+              {company.businessLocationCode && (
+                <span>
+                  Local Negócio · {company.businessLocationCode}
+                </span>
+              )}
             </div>
 
             <span className="tp-company-active">
@@ -1934,6 +1989,12 @@ function CompanySection({
               <div>
                 <dt>Estabelecimentos</dt>
                 <dd>{company.establishmentCount}</dd>
+              </div>
+              <div>
+                <dt>Local Negócio</dt>
+                <dd>
+                  {company.businessLocationCode || '—'}
+                </dd>
               </div>
               <div>
                 <dt>Cadastro</dt>
@@ -2040,12 +2101,16 @@ function CompanySection({
             />
           </label>
           <label>
-            Nome fantasia
+            Local Negócio
             <input
-              value={editTradeName}
+              value={editBusinessLocationCode}
               onChange={(event) =>
-                setEditTradeName(event.target.value)
+                setEditBusinessLocationCode(
+                  event.target.value,
+                )
               }
+              placeholder="Código interno da matriz"
+              maxLength={80}
             />
           </label>
           <div className="launch-form-actions">
@@ -2099,6 +2164,10 @@ function EstablishmentSection({
     useState(false)
   const [cnpj, setCnpj] =
     useState('')
+  const [
+    businessLocationCode,
+    setBusinessLocationCode,
+  ] = useState('')
   const [typeCode, setTypeCode] =
     useState('OTHER')
   const [editing, setEditing] =
@@ -2114,11 +2183,17 @@ function EstablishmentSection({
         apiFetch,
         tenantId,
         companyId,
-        { cnpj, typeCode },
+        {
+          cnpj,
+          typeCode,
+          businessLocationCode:
+            businessLocationCode.trim() || null,
+        },
       ),
     onSuccess: () => {
       setCreating(false)
       setCnpj('')
+      setBusinessLocationCode('')
       onChanged()
     },
   })
@@ -2171,6 +2246,8 @@ function EstablishmentSection({
           district: draft.district,
           stateRegistration:
             draft.stateRegistration,
+          businessLocationCode:
+            draft.businessLocationCode,
           cnaes: draft.cnaes,
         },
       )
@@ -2240,6 +2317,7 @@ function EstablishmentSection({
             type="button"
             onClick={() => {
               setCnpj('')
+              setBusinessLocationCode('')
               setTypeCode('OTHER')
               setCreating(true)
             }}
@@ -2267,6 +2345,19 @@ function EstablishmentSection({
               placeholder="00.000.000/0000-00"
               required
               autoFocus
+            />
+          </label>
+          <label>
+            Local Negócio
+            <input
+              value={businessLocationCode}
+              onChange={(event) =>
+                setBusinessLocationCode(
+                  event.target.value,
+                )
+              }
+              placeholder="Código interno da filial"
+              maxLength={80}
             />
           </label>
           <label>
@@ -2310,7 +2401,10 @@ function EstablishmentSection({
 
       {createMutation.isError && (
         <p className="auth-error" role="alert">
-          Não foi possível adicionar o estabelecimento: {createMutation.error.message}
+          {registrationErrorMessage(
+            createMutation.error,
+            'estabelecimento',
+          )}
         </p>
       )}
 
@@ -2318,6 +2412,7 @@ function EstablishmentSection({
         <div className="tp-establishment-head">
           <span>Nome da unidade</span>
           <span>CNPJ</span>
+          <span>Local Negócio</span>
           <span>Tipo</span>
           <span>Município/UF</span>
           <span>Endereço</span>
@@ -2342,6 +2437,9 @@ function EstablishmentSection({
                 )}
               </div>
               <span>{formatCnpj(item.cnpj)}</span>
+              <span>
+                {item.businessLocationCode || '—'}
+              </span>
               <span>
                 {types.find(
                   (type) =>
@@ -2458,9 +2556,11 @@ function EstablishmentSection({
       <p className="tp-registry-note">
         Dados cadastrais e CNAEs são consultados a partir do CNPJ/RFB. A
         Inscrição Estadual é buscada na fonte estadual oficial quando a UF já
-        possui consulta automática. Use <b>Atualizar cadastro</b> para consultar
-        novamente ou <b>Editar dados</b> para ajustar manualmente. O CNPJ
-        permanece como identidade do estabelecimento.
+        possui consulta automática. <b>Local Negócio</b> é um código interno
+        informado manualmente e não é substituído pela consulta cadastral.
+        Use <b>Atualizar RFB + IE</b> para consultar novamente ou
+        <b>Editar dados</b> para ajustar manualmente. O CNPJ permanece como
+        identidade do estabelecimento.
       </p>
 
       {editing && draft && (
@@ -2621,6 +2721,22 @@ function EstablishmentSection({
                       event.target.value || null,
                   })
                 }
+              />
+            </label>
+            <label>
+              Local Negócio
+              <input
+                value={
+                  draft.businessLocationCode ?? ''
+                }
+                onChange={(event) =>
+                  updateDraft({
+                    businessLocationCode:
+                      event.target.value || null,
+                  })
+                }
+                placeholder="Código interno da filial"
+                maxLength={80}
               />
             </label>
             <label>
