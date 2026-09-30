@@ -139,6 +139,49 @@ async function mockPublicSources(page: Page, status = 200, delayMs = 0) {
   })
 }
 
+async function mockPublicPublications(page: Page) {
+  await page.route('**/public/v1/publications*', async (route) => {
+    const url = new URL(route.request().url())
+    const uf = url.searchParams.get('uf')
+
+    const federalItem = {
+      id: 'pub-fed-1',
+      title: 'Ato federal coletado de verdade',
+      actType: 'INSTRUÇÃO NORMATIVA',
+      actNumber: '123/2026',
+      agency: 'Receita Federal',
+      uf: null,
+      publishedOn: '2026-09-30',
+      effectiveOn: null,
+      officialUrl: 'https://example.test/federal',
+    }
+
+    const stateItem = {
+      ...federalItem,
+      id: 'pub-sp-1',
+      title: 'Publicação estadual real de São Paulo',
+      actType: 'PORTARIA',
+      actNumber: '45/2026',
+      agency: 'SEFAZ-SP',
+      uf: 'SP',
+      officialUrl: 'https://example.test/sp',
+    }
+
+    const items = uf === 'SP'
+      ? [stateItem]
+      : uf
+        ? []
+        : [federalItem]
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items }),
+    })
+  })
+}
+
+
 async function openLogin(page: Page) {
   const viewport = page.viewportSize()
   if (viewport && viewport.width <= 680) {
@@ -498,6 +541,22 @@ test('WEB-19 — live Sonar radar rotates and schedules three randomized blips',
   expect(positions.every((item) => /is-(near|medium|far)/.test(item.className))).toBe(true)
 })
 
+test('WEB-20 — Home e carrossel usam publicações reais e não inventam itens', async ({ page }) => {
+  await mockPublicSources(page)
+  await mockPublicPublications(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  await expect(page.getByText('Ato federal coletado de verdade')).toBeVisible()
+  await expect(page.getByText('Publicação estadual real de São Paulo')).toBeVisible()
+  await expect(page.getByText(/Exemplo de captura/)).toHaveCount(0)
+
+  const tabs = page.getByRole('tab', { name: /^Exibir / })
+  await tabs.nth(1).click()
+
+  const stateCard = page.locator('.ref-state-publications-card')
+  await expect(stateCard).toContainText('Em implementação')
+})
+
 test('WEB-18 — Home mostra Verificando durante loading da cobertura federal', async ({ page }) => {
   await mockPublicSources(page, 200, 700)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -608,5 +667,5 @@ test('WEB-14 — modo demonstração navega sem autenticação ou chamadas priva
     name: 'Saiba o que mudou. Entenda o que importa. Cheque à fonte oficial.',
   })).toBeVisible()
   expect(appRequests.filter((url) => /\/auth\//.test(url))).toEqual([])
-  expect(appRequests.every((url) => url.includes('/public/v1/sources'))).toBe(true)
+  expect(appRequests.every((url) => /\/public\/v1\/(?:sources|publications)/.test(url))).toBe(true)
 })
