@@ -5,13 +5,16 @@ import {
 } from '@tanstack/react-query'
 import {
   Building2,
+  Check,
   ChevronDown,
   FileText,
   Landmark,
   LogOut,
+  Pencil,
   RefreshCw,
   Search,
   Settings,
+  Trash2,
 } from 'lucide-react'
 import {
   FormEvent,
@@ -29,16 +32,27 @@ import {
   type PublicSource,
 } from './public-api'
 import {
-  createCompany,
-  createEstablishment,
+  createCompanyFromCnpj,
+  createEstablishmentFromCnpj,
+  deleteCompany,
+  deleteEstablishment,
   fetchAccountSummary,
   fetchEstablishmentTypes,
   fetchEstablishments,
   fetchTaxProfile,
+  fetchTaxonomyProfileOptions,
   fetchProductArchive,
+  refreshEstablishmentCnpj,
   saveTaxProfile,
+  updateCompany,
+  updateEstablishment,
+  type AccountCompany,
+  type Establishment,
+  type EstablishmentCnae,
   type ProductApiFetch,
   type ProductArchiveItem,
+  type TaxonomyProfileDimension,
+  type TaxonomyProfileOptions,
 } from './product-api'
 import './panel-experience.css'
 import './authenticated-product-panel.css'
@@ -591,6 +605,21 @@ export function AuthenticatedProductPanel({
     enabled: Boolean(
       tenantId && selectedCompany?.id,
     ),
+    retry: false,
+  })
+
+  const taxonomyOptionsQuery = useQuery({
+    queryKey: [
+      'launch',
+      'taxonomy-profile-options',
+      tenantId,
+    ],
+    queryFn: () =>
+      fetchTaxonomyProfileOptions(
+        apiFetch,
+        tenantId!,
+      ),
+    enabled: Boolean(tenantId),
     retry: false,
   })
 
