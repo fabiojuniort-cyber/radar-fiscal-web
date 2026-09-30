@@ -497,7 +497,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await expect(page.getByRole('heading', { name: 'Fontes Oficiais' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Empresas' }).click()
-  await expect(page.getByRole('heading', { name: 'Empresas da conta' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByRole('button', { name: 'Consultar e cadastrar' }).click()
   await expect(page.getByText('Empresa Launch Ltda')).toBeVisible()
