@@ -310,9 +310,11 @@ export function ManualRegistrationHost() {
           </div>
 
           <p className="tp-manual-note">
-            Dados informados manualmente ficam identificados como tal. O CNPJ
-            permanece bloqueado como identidade cadastral e o Local Negócio não
-            será sobrescrito por consultas futuras.
+            Estes dados foram informados manualmente porque a consulta cadastral
+            automática não estava disponível. Eles poderão ser atualizados por
+            uma nova consulta posteriormente. O CNPJ permanece bloqueado como
+            identidade cadastral e o Local Negócio não será sobrescrito por
+            consultas futuras.
           </p>
 
           {error && (
