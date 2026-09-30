@@ -6,7 +6,7 @@ import {
 import {
   Building2,
   ChevronDown,
-  ExternalLink,
+  FileText,
   Landmark,
   LogOut,
   RefreshCw,
@@ -18,6 +18,7 @@ import {
   useEffect,
   useState,
 } from 'react'
+import { Link } from 'react-router-dom'
 
 import type { PanelIdentity } from './panel-experience'
 import {
@@ -292,32 +293,25 @@ function PublicationList({
           </>
         )
 
-        if (item.officialUrl) {
-          return (
-            <a
-              className="tp-publication-row tp-publication-link"
-              href={item.officialUrl}
-              target="_blank"
-              rel="noreferrer"
-              key={item.id}
-            >
-              <ExternalLink
-                size={17}
-                aria-hidden="true"
-              />
-              {body}
-            </a>
-          )
-        }
-
         return (
-          <div
-            className="tp-publication-row"
+          <Link
+            className="tp-publication-row tp-publication-link"
+            to={
+              '/painel/publicacoes/' +
+              item.id
+            }
             key={item.id}
+            aria-label={
+              'Abrir legislação no TriBusca: ' +
+              reference
+            }
           >
-            <span aria-hidden="true">•</span>
+            <FileText
+              size={17}
+              aria-hidden="true"
+            />
             {body}
-          </div>
+          </Link>
         )
       })}
     </div>
