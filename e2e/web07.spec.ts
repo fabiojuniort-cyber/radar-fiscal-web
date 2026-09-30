@@ -522,7 +522,7 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   }
 })
 
-test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detection', async ({ page }) => {
+test('WEB-19 — Sonar reveals targets on detection and fades them over half a sweep', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
 
@@ -572,6 +572,36 @@ test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detec
   expect(targets.every((item) => item.animationName === 'tribuscaRadarBlip')).toBe(true)
   expect(targets.every((item) => item.animationDuration === '4.8s')).toBe(true)
   expect(targets.every((item) => item.animationDelay >= 0 && item.animationDelay < 4.8)).toBe(true)
+
+  const fadeProfile = await blips.first().evaluate((element) => {
+    const animation = element.getAnimations()[0]
+    if (
+      !animation ||
+      !(animation.effect instanceof KeyframeEffect)
+    ) {
+      return []
+    }
+
+    return animation.effect.getKeyframes().map((frame) => ({
+      offset: frame.offset,
+      opacity: String(frame.opacity ?? ''),
+    }))
+  })
+
+  expect(
+    fadeProfile.some(
+      (frame) =>
+        frame.offset === 0 &&
+        frame.opacity === '1',
+    ),
+  ).toBe(true)
+  expect(
+    fadeProfile.some(
+      (frame) =>
+        frame.offset === 0.5 &&
+        frame.opacity === '0',
+    ),
+  ).toBe(true)
 })
 
 test('WEB-20 — Home e carrossel usam publicações reais e não inventam itens', async ({ page }) => {
