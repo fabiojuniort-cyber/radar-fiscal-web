@@ -152,16 +152,97 @@
   text-align: right;
 }
 
-.publication-preserved-text {
+.publication-preserved-text,
+.publication-preserved-html {
   padding: clamp(24px, 5vw, 58px);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
-  tab-size: 4;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 16px;
   line-height: 1.72;
   color: #172436;
   background: #fff;
+}
+
+.publication-preserved-text {
+  white-space: pre-wrap;
+  tab-size: 4;
+}
+
+.publication-preserved-html h1,
+.publication-preserved-html h2,
+.publication-preserved-html h3,
+.publication-preserved-html h4,
+.publication-preserved-html h5,
+.publication-preserved-html h6 {
+  margin: 1.65em 0 .7em;
+  color: #10233f;
+  line-height: 1.25;
+}
+
+.publication-preserved-html h1:first-child,
+.publication-preserved-html h2:first-child,
+.publication-preserved-html h3:first-child {
+  margin-top: 0;
+}
+
+.publication-preserved-html p {
+  margin: .85em 0;
+}
+
+.publication-preserved-html ul,
+.publication-preserved-html ol {
+  margin: .85em 0;
+  padding-left: 2.1em;
+}
+
+.publication-preserved-html li + li {
+  margin-top: .35em;
+}
+
+.publication-preserved-html blockquote {
+  margin: 1em 0;
+  padding: .5em 0 .5em 1.2em;
+  border-left: 3px solid #adc3da;
+}
+
+.publication-preserved-html table {
+  width: 100%;
+  margin: 1.25em 0;
+  border-collapse: collapse;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+}
+
+.publication-preserved-html caption {
+  margin-bottom: .55em;
+  font-weight: 800;
+  text-align: left;
+}
+
+.publication-preserved-html th,
+.publication-preserved-html td {
+  padding: 9px 10px;
+  border: 1px solid #bccadd;
+  text-align: left;
+  vertical-align: top;
+}
+
+.publication-preserved-html th {
+  background: #edf4fb;
+  color: #173a61;
+  font-weight: 800;
+}
+
+.publication-preserved-html a {
+  color: #0f5f9a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.publication-preserved-html hr {
+  margin: 1.8em 0;
+  border: 0;
+  border-top: 1px solid #d8e1ec;
 }
 
 .publication-detail-empty,
@@ -259,8 +340,13 @@
     text-align: left;
   }
 
-  .publication-preserved-text {
+  .publication-preserved-text,
+  .publication-preserved-html {
     padding: 22px 18px;
     font-size: 15px;
+  }
+
+  .publication-preserved-html {
+    overflow-x: auto;
   }
 }
