@@ -1,0 +1,130 @@
+.tp-manual-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 18, 24, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.tp-manual-dialog {
+  width: min(760px, 100%);
+  max-height: min(860px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid var(--line, #d7dde2);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+  box-shadow: 0 24px 80px rgba(10, 18, 24, 0.22);
+  padding: 28px;
+}
+
+.tp-manual-heading span {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #66737d);
+}
+
+.tp-manual-heading h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
+}
+
+.tp-manual-heading p {
+  margin: 10px 0 22px;
+  color: var(--muted, #66737d);
+  line-height: 1.55;
+}
+
+.tp-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tp-manual-grid label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.tp-manual-grid input,
+.tp-manual-grid select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line, #d7dde2);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  color: inherit;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 500;
+}
+
+.tp-manual-grid input[readonly] {
+  background: var(--surface-muted, #f3f5f6);
+  color: var(--muted, #66737d);
+}
+
+.tp-manual-grid input:focus,
+.tp-manual-grid select:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.tp-manual-wide {
+  grid-column: 1 / -1;
+}
+
+.tp-manual-note {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-muted, #f3f5f6);
+  color: var(--muted, #66737d);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.tp-manual-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+@media (max-width: 680px) {
+  .tp-manual-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .tp-manual-dialog {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    padding: 22px 18px;
+  }
+
+  .tp-manual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-manual-wide {
+    grid-column: auto;
+  }
+
+  .tp-manual-actions {
+    flex-direction: column-reverse;
+  }
+
+  .tp-manual-actions button {
+    width: 100%;
+  }
+}
