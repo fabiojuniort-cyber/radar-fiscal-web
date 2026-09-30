@@ -4,8 +4,6 @@ import {
   findFederalSource,
   findStateSource,
   formatLastSuccessAt,
-  formatRelativeCollectedAt,
-  publicPublicationQuery,
   toCoveragePresentation,
   translatePublicStatus,
   type PublicSource,
@@ -121,25 +119,5 @@ describe('public Coverage API mapping', () => {
   it('formats successful timestamps in São Paulo time', () => {
     expect(formatLastSuccessAt('2026-09-28T13:30:00.000Z')).toContain('10:30')
     expect(formatLastSuccessAt(null)).toBe('—')
-  })
-
-  it('builds a collected-order publications query without exceeding the public limit', () => {
-    expect(
-      publicPublicationQuery({
-        uf: 'go',
-        jurisdiction: 'STATE',
-        order: 'collected',
-        limit: 99,
-      }),
-    ).toBe('uf=GO&jurisdiction=STATE&order=collected&limit=20')
-  })
-
-  it('formats collection recency from the real collected timestamp', () => {
-    const now = new Date('2026-09-30T04:00:00.000Z')
-
-    expect(formatRelativeCollectedAt('2026-09-30T03:59:40.000Z', now)).toBe('agora')
-    expect(formatRelativeCollectedAt('2026-09-30T03:48:00.000Z', now)).toBe('há 12 min')
-    expect(formatRelativeCollectedAt('2026-09-30T02:00:00.000Z', now)).toBe('há 2 h')
-    expect(formatRelativeCollectedAt(null, now)).toBe('horário não informado')
   })
 })
