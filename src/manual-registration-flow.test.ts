@@ -80,6 +80,7 @@ describe('manual CNPJ fallback', () => {
 
     const apiFetchMock = vi.fn(async (
       input: RequestInfo | URL,
+      _init?: RequestInit,
     ) => {
       const url = String(input)
       if (url === '/api/v1/companies/from-cnpj') {
@@ -128,7 +129,7 @@ describe('manual CNPJ fallback', () => {
 
     const manualCall = apiFetchMock.mock.calls[1]
     const manualBody = JSON.parse(
-      String((manualCall?.[1] as RequestInit)?.body),
+      String(manualCall?.[1]?.body),
     )
     expect(manualBody).toMatchObject({
       cnpj: '10515785000350',
@@ -142,6 +143,7 @@ describe('manual CNPJ fallback', () => {
   it('uses the existing manual establishment route when providers are unavailable', async () => {
     const apiFetchMock = vi.fn(async (
       input: RequestInfo | URL,
+      _init?: RequestInit,
     ) => {
       const url = String(input)
       if (url.includes('/establishments/from-cnpj')) {
@@ -196,7 +198,7 @@ describe('manual CNPJ fallback', () => {
 
     const manualCall = apiFetchMock.mock.calls[1]
     const manualBody = JSON.parse(
-      String((manualCall?.[1] as RequestInit)?.body),
+      String(manualCall?.[1]?.body),
     )
     expect(manualBody).toMatchObject({
       companyId: 'company-1',
