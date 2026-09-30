@@ -151,7 +151,7 @@ describe('manual CNPJ fallback', () => {
     })
   })
 
-  it('uses the existing manual establishment route when providers are unavailable', async () => {
+  it('uses the resilient manual establishment route when providers are unavailable', async () => {
     const apiFetchMock = vi.fn(async (
       input: RequestInfo | URL,
       _init?: RequestInit,
@@ -163,7 +163,7 @@ describe('manual CNPJ fallback', () => {
           503,
         )
       }
-      if (url === '/api/v1/establishments') {
+      if (url === '/api/v1/establishments/manual') {
         return response(
           { establishment: { id: 'establishment-2' } },
           201,
@@ -204,6 +204,9 @@ describe('manual CNPJ fallback', () => {
     expect(apiFetchMock).toHaveBeenCalledTimes(2)
 
     const manualCall = apiFetchMock.mock.calls[1]
+    expect(String(manualCall?.[0])).toBe(
+      '/api/v1/establishments/manual',
+    )
     const manualBody = JSON.parse(
       String(manualCall?.[1]?.body),
     )
@@ -212,11 +215,75 @@ describe('manual CNPJ fallback', () => {
       cnpj: '10515785000430',
       name: 'Filial Manual',
       typeCode: 'OTHER',
-      isHeadOffice: false,
       uf: 'GO',
       stateRegistration: '987654321',
       businessLocationCode: 'FILIAL-004',
     })
+    expect(manualBody).not.toHaveProperty('cnaes')
+    expect(manualBody).not.toHaveProperty('isHeadOffice')
+  })
+
+  it('omits an empty Local Negócio from the manual request so reactivation can preserve the stored value', async () => {
+    const manualResult = {
+      company: {
+        id: 'company-1',
+        legalName: 'Empresa Manual Ltda.',
+        tradeName: null,
+        cnpj: '10515785000350',
+        businessLocationCode: null,
+      },
+      establishment: {
+        id: 'establishment-1',
+      },
+      registry: {
+        source: 'MANUAL',
+      },
+    }
+
+    const apiFetchMock = vi.fn(async (
+      input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      const url = String(input)
+      if (url === '/api/v1/companies/from-cnpj') {
+        return response(
+          { error: 'cnpj_provider_unavailable' },
+          503,
+        )
+      }
+      if (url === '/api/v1/companies/manual') {
+        return response(manualResult, 201)
+      }
+      return response({ error: 'unexpected' }, 500)
+    })
+    const apiFetch = apiFetchMock as ProductApiFetch
+
+    const registration = createCompanyFromCnpj(
+      apiFetch,
+      'tenant-1',
+      '10.515.785/0003-50',
+      '',
+    )
+
+    const pending = await waitForPending('company')
+    if (pending.request.kind !== 'company') {
+      throw new Error('company_fallback_not_opened')
+    }
+
+    const submitted = await pending.request.submit({
+      legalName: 'Empresa Manual Ltda.',
+      uf: 'GO',
+    })
+    resolveManualRegistration(submitted)
+    await registration
+
+    const manualCall = apiFetchMock.mock.calls[1]
+    const manualBody = JSON.parse(
+      String(manualCall?.[1]?.body),
+    )
+    expect(manualBody).not.toHaveProperty(
+      'businessLocationCode',
+    )
   })
 
   it('does not offer manual fallback when both providers confirm CNPJ not found', async () => {
