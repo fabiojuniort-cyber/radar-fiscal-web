@@ -1127,3 +1127,231 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+.tp-monitor-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tp-monitor-group-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tp-monitor-group-title h2 {
+  margin: 0;
+  color: var(--tp-navy);
+  font-size: 21px;
+}
+
+.tp-monitor-group-title span {
+  color: var(--tp-muted);
+  font-size: 12px;
+}
+
+.tp-monitor-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tp-monitor-source-card {
+  overflow: hidden;
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.tp-monitor-source-main {
+  display: grid;
+  grid-template-columns:
+    12px minmax(170px, 1.25fr)
+    minmax(180px, 1.25fr)
+    minmax(130px, .85fr)
+    minmax(105px, .65fr)
+    auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.tp-monitor-source-main > div:not(.tp-monitor-source-name) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-monitor-source-main > div > span {
+  color: var(--tp-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.tp-monitor-source-main > div > b {
+  color: var(--tp-navy);
+  font-size: 13px;
+}
+
+.tp-monitor-source-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-monitor-source-name strong {
+  color: var(--tp-navy);
+  font-size: 15px;
+}
+
+.tp-monitor-source-name small {
+  color: var(--tp-muted);
+  font-size: 11px;
+}
+
+.tp-monitor-source-main button {
+  border: 1px solid var(--tp-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--tp-blue);
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tp-monitor-source-main .tp-source-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tp-teal);
+}
+
+.tp-monitor-source-main .tp-source-dot.is-partial {
+  background: #f2b600;
+}
+
+.tp-monitor-source-main .tp-source-dot.is-down {
+  background: var(--tp-red);
+}
+
+.tp-monitor-source-main .tp-source-dot.is-none {
+  background: #c7d6e6;
+}
+
+.tp-run-history {
+  border-top: 1px solid var(--tp-border);
+  background: #f8fbff;
+  padding: 0 18px 14px;
+}
+
+.tp-run-history-head,
+.tp-run-history-row {
+  min-width: 760px;
+  display: grid;
+  grid-template-columns:
+    minmax(130px, 1fr)
+    minmax(175px, 1.3fr)
+    90px 90px 90px 100px;
+  gap: 12px;
+  align-items: center;
+}
+
+.tp-run-history-head {
+  padding: 12px 0 8px;
+  color: var(--tp-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.tp-run-history-row {
+  min-height: 42px;
+  border-top: 1px solid #e8f0f8;
+  color: var(--tp-copy);
+  font-size: 12px;
+}
+
+.tp-run-history-row b {
+  color: var(--tp-navy);
+  font-size: 14px;
+}
+
+.tp-run-history > p {
+  margin: 12px 0 0;
+  color: var(--tp-muted);
+  font-size: 12px;
+}
+
+.tp-run-status {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.tp-run-status.is-success {
+  background: #e9f8ef;
+  color: #166238;
+}
+
+.tp-run-status.is-attention {
+  background: #fff5d9;
+  color: #7a5700;
+}
+
+.tp-run-status.is-error {
+  background: #fff0f0;
+  color: #a31515;
+}
+
+@media (max-width: 1120px) {
+  .tp-monitor-source-main {
+    grid-template-columns:
+      12px minmax(180px, 1.2fr)
+      minmax(180px, 1fr)
+      minmax(120px, .8fr);
+  }
+
+  .tp-monitor-source-main > div:nth-of-type(4),
+  .tp-monitor-source-main button {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .tp-monitor-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tp-monitor-source-main {
+    grid-template-columns: 12px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .tp-monitor-source-main > div,
+  .tp-monitor-source-main button {
+    grid-column: 2;
+  }
+
+  .tp-monitor-source-main .tp-source-dot {
+    grid-row: 1;
+  }
+
+  .tp-monitor-source-main button {
+    width: 100%;
+  }
+
+  .tp-run-history {
+    overflow-x: auto;
+  }
+}
