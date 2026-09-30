@@ -733,9 +733,17 @@ function SonarDemo(){
             '--blip-delay': blip.detectionDelay + 's',
             '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
           } as CSSProperties
+          const isResidual =
+            generation.iteration !==
+            activeGeneration.iteration
+
           return <span
             key={generation.iteration+'-'+index}
-            className={'ref-live-radar-blip is-'+blip.level}
+            className={
+              'ref-live-radar-blip is-' +
+              blip.level +
+              (isResidual ? ' is-residual' : '')
+            }
             data-generation={generation.iteration}
             style={style}
           />
