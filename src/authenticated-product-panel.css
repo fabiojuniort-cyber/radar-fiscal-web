@@ -108,3 +108,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.launch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0 4px;
+}
+
+.launch-pagination button {
+  border: 1px solid var(--tp-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--tp-navy);
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.launch-pagination button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.launch-pagination span {
+  color: var(--tp-copy);
+  font-size: 13px;
+  font-weight: 700;
+}
