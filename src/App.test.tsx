@@ -345,7 +345,7 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Estado anterior' }))
     expect(position).toHaveTextContent('1 / 5')
 
-    const ufPills = screen.getAllByRole('button', { name: /^Exibir / })
+    const ufPills = screen.getAllByRole('tab', { name: /^Exibir / })
     fireEvent.click(ufPills[2])
     expect(position).toHaveTextContent('3 / 5')
   })
@@ -406,7 +406,7 @@ describe('TriBusca release candidate WEB-11', () => {
   it('exposes individually named carousel controls', () => {
     renderApp()
 
-    const stateButtons = screen.getAllByRole('button', { name: /^Exibir / })
+    const stateButtons = screen.getAllByRole('tab', { name: /^Exibir / })
     expect(stateButtons).toHaveLength(5)
     expect(new Set(stateButtons.map((button) => button.getAttribute('aria-label'))).size).toBe(5)
     expect(screen.getByRole('button', { name: 'Estado anterior' })).toBeInTheDocument()
