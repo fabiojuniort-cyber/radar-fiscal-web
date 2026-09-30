@@ -515,14 +515,30 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   await expect(sweep).toBeVisible()
   expect(await sweep.evaluate((element) => getComputedStyle(element).animationName)).toBe('none')
 
-  const blips = page.locator('.ref-live-radar-blip')
-  await expect(blips).toHaveCount(3)
-  for (let index = 0; index < 3; index += 1) {
-    expect(await blips.nth(index).evaluate((element) => getComputedStyle(element).opacity)).toBe('1')
+  const radar = page.locator('.ref-live-radar')
+  const targetCount = Number(
+    await radar.getAttribute('data-target-count'),
+  )
+  expect(targetCount).toBeGreaterThanOrEqual(1)
+  expect(targetCount).toBeLessThanOrEqual(10)
+
+  const blips = page.locator(
+    '.ref-live-radar-blip:not(.is-residual)',
+  )
+  await expect(blips).toHaveCount(targetCount)
+  for (let index = 0; index < targetCount; index += 1) {
+    expect(
+      await blips
+        .nth(index)
+        .evaluate(
+          (element) =>
+            getComputedStyle(element).opacity,
+        ),
+    ).toBe('1')
   }
 })
 
-test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detection', async ({ page }) => {
+test('WEB-19 — Sonar cycles through 25 target combinations and keeps half-turn fade', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
 
@@ -530,6 +546,10 @@ test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detec
   const sweep = page.locator('.ref-live-radar-sweep')
   await expect(radar).toBeVisible()
   await expect(sweep).toBeVisible()
+
+  await expect(radar).toHaveAttribute('data-pattern-count', '25')
+  await expect(radar).toHaveAttribute('data-target-count', '1')
+  await expect(radar).toHaveAttribute('data-cycle', '0')
 
   const sweepAnimation = await sweep.evaluate((element) => {
     const style = getComputedStyle(element)
@@ -551,27 +571,97 @@ test('WEB-19 — Sonar uses a monochrome sweep and reveals targets only on detec
   )
   expect(new Set(zoneBorders).size).toBe(1)
 
-  const blips = page.locator('.ref-live-radar-blip')
-  await expect(blips).toHaveCount(3)
-  const targets = await blips.evaluateAll((items) =>
-    items.map((item) => {
-      const style = getComputedStyle(item)
-      return {
-        left: style.left,
-        top: style.top,
-        className: item.className,
-        animationName: style.animationName,
-        animationDuration: style.animationDuration,
-        animationDelay: Number.parseFloat(style.animationDelay),
-      }
-    }),
+  const firstGeneration = page.locator(
+    '.ref-live-radar-blip[data-generation="0"]',
+  )
+  await expect(firstGeneration).toHaveCount(1)
+
+  const firstTarget = await firstGeneration.first().evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      className: element.className,
+      animationName: style.animationName,
+      animationDuration: style.animationDuration,
+      animationIterationCount: style.animationIterationCount,
+      animationDelay: Number.parseFloat(style.animationDelay),
+    }
+  })
+
+  expect(firstTarget.className).toMatch(/is-(near|medium|far)/)
+  expect(firstTarget.animationName).toBe('tribuscaRadarBlip')
+  expect(firstTarget.animationDuration).toBe('4.8s')
+  expect(firstTarget.animationIterationCount).toBe('1')
+  expect(firstTarget.animationDelay).toBeGreaterThanOrEqual(0)
+  expect(firstTarget.animationDelay).toBeLessThan(4.8)
+
+  const fadeProfile = await firstGeneration.first().evaluate((element) => {
+    const animation = element.getAnimations()[0]
+    if (
+      !animation ||
+      !(animation.effect instanceof KeyframeEffect)
+    ) {
+      return []
+    }
+
+    return animation.effect.getKeyframes().map((frame) => ({
+      offset: frame.offset,
+      opacity: String(frame.opacity ?? ''),
+    }))
+  })
+
+  expect(
+    fadeProfile.some(
+      (frame) =>
+        frame.offset === 0 &&
+        frame.opacity === '1',
+    ),
+  ).toBe(true)
+  expect(
+    fadeProfile.some(
+      (frame) =>
+        frame.offset === 0.5 &&
+        frame.opacity === '0',
+    ),
+  ).toBe(true)
+
+  await expect
+    .poll(
+      async () =>
+        Number(
+          await radar.getAttribute('data-cycle'),
+        ),
+      { timeout: 6_500 },
+    )
+    .toBeGreaterThan(0)
+
+  const cycle = Number(
+    await radar.getAttribute('data-cycle'),
+  )
+  const targetCount = Number(
+    await radar.getAttribute('data-target-count'),
+  )
+  const patternIndex = Number(
+    await radar.getAttribute('data-pattern-index'),
   )
 
-  expect(new Set(targets.map((item) => item.left + '|' + item.top)).size).toBeGreaterThanOrEqual(2)
-  expect(targets.every((item) => /is-(near|medium|far)/.test(item.className))).toBe(true)
-  expect(targets.every((item) => item.animationName === 'tribuscaRadarBlip')).toBe(true)
-  expect(targets.every((item) => item.animationDuration === '4.8s')).toBe(true)
-  expect(targets.every((item) => item.animationDelay >= 0 && item.animationDelay < 4.8)).toBe(true)
+  expect(targetCount).toBeGreaterThanOrEqual(1)
+  expect(targetCount).toBeLessThanOrEqual(10)
+  expect(patternIndex).toBeGreaterThanOrEqual(0)
+  expect(patternIndex).toBeLessThan(25)
+
+  await expect(
+    page.locator(
+      '.ref-live-radar-blip[data-generation="' +
+        cycle +
+        '"]',
+    ),
+  ).toHaveCount(targetCount)
+
+  expect(
+    await page.locator(
+      '.ref-live-radar-blip[data-generation="0"]',
+    ).count(),
+  ).toBeGreaterThanOrEqual(1)
 })
 
 test('WEB-20 — Home e carrossel usam publicações reais e não inventam itens', async ({ page }) => {

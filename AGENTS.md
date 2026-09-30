@@ -47,9 +47,13 @@ Isso não substitui contratos reais, autenticação, dados factuais, segurança 
 
 Para o Sonar, a referência aprovada inclui radar animado:
 - raio parte do centro e gira continuamente;
-- três detecções são exibidas sequencialmente, uma por volta;
-- distância é sorteada no carregamento entre perto, média e longe, podendo repetir categoria;
+- existem 25 combinações possíveis por carregamento;
+- cada combinação contém de 1 a 10 alvos;
+- quantidade, posição e distância variam entre as combinações;
 - perto usa vermelho, média usa amarelo e longe usa verde;
+- o alvo só acende quando o feixe cruza seu ângulo;
+- após a detecção, o alvo perde intensidade gradualmente e desaparece ao completar 180° de afastamento do feixe;
+- a combinação seguinte entra a cada nova volta, mantendo apenas o rastro residual necessário da combinação anterior;
 - prefers-reduced-motion deve desativar a rotação e manter os sinais legíveis.
 
 ## Dados reais no site público
@@ -111,5 +115,9 @@ O componente demonstrativo de Sonar deve se comportar como uma varredura real:
 - o feixe gira continuamente a partir do centro;
 - cada alvo permanece oculto até o feixe cruzar seu ângulo;
 - a animação do alvo deve usar a mesma duração da varredura e um delay derivado do ângulo do alvo;
-- posições dos alvos podem variar por carregamento, preservando níveis perto/médio/longe;
+- o alvo acende forte na detecção e desaparece gradualmente até 180° depois;
+- gerar 25 combinações possíveis por carregamento, cada uma com 1 a 10 alvos;
+- quantidade, posições e distâncias são variadas aleatoriamente nas combinações;
+- a primeira combinação inicia com 1 alvo; as seguintes são escolhidas aleatoriamente, evitando repetição imediata da mesma combinação;
+- a combinação anterior pode permanecer somente como rastro residual até concluir o fade de meia volta;
 - `prefers-reduced-motion` deve continuar desabilitando a rotação para acessibilidade.

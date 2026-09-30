@@ -605,7 +605,15 @@ type RadarBlip = {
   detectionDelay: number
 }
 
+type RadarPattern = {
+  id: number
+  blips: RadarBlip[]
+}
+
 const RADAR_SWEEP_SECONDS = 4.8
+const RADAR_PATTERN_COUNT = 25
+const RADAR_MIN_TARGETS = 1
+const RADAR_MAX_TARGETS = 10
 
 function randomRadarBlip(): RadarBlip {
   const levels: RadarLevel[] = ['near','medium','far']
@@ -628,25 +636,119 @@ function randomRadarBlip(): RadarBlip {
   }
 }
 
+function randomRadarTargetCount(): number {
+  return (
+    RADAR_MIN_TARGETS +
+    Math.floor(
+      Math.random() *
+      (RADAR_MAX_TARGETS - RADAR_MIN_TARGETS + 1),
+    )
+  )
+}
+
+function buildRadarPatterns(): RadarPattern[] {
+  return Array.from(
+    { length: RADAR_PATTERN_COUNT },
+    (_, patternIndex) => {
+      const targetCount =
+        patternIndex === 0
+          ? 1
+          : randomRadarTargetCount()
+
+      return {
+        id: patternIndex,
+        blips: Array.from(
+          { length: targetCount },
+          () => randomRadarBlip(),
+        ),
+      }
+    },
+  )
+}
+
 function SonarDemo(){
-  const blips=useMemo(()=>[0,1,2].map(()=>randomRadarBlip()),[])
+  const patterns=useMemo(()=>buildRadarPatterns(),[])
+  const [generations,setGenerations]=useState(() => [{
+    iteration:0,
+    patternIndex:0,
+    blips:patterns[0]?.blips ?? [],
+  }])
+  const activeGeneration=
+    generations[generations.length-1] ??
+    {iteration:0,patternIndex:0,blips:[]}
+
+  useEffect(()=>{
+    const timer=window.setInterval(()=>{
+      setGenerations((current)=>{
+        const active=
+          current[current.length-1] ??
+          {iteration:0,patternIndex:0,blips:[]}
+        let nextIndex=active.patternIndex
+
+        while(
+          RADAR_PATTERN_COUNT>1 &&
+          nextIndex===active.patternIndex
+        ){
+          nextIndex=Math.floor(Math.random()*RADAR_PATTERN_COUNT)
+        }
+
+        const nextPattern=
+          patterns[nextIndex] ??
+          patterns[0]
+
+        return [
+          ...current.slice(-1),
+          {
+            iteration:active.iteration+1,
+            patternIndex:nextIndex,
+            blips:nextPattern?.blips ?? [],
+          },
+        ]
+      })
+    },RADAR_SWEEP_SECONDS*1000)
+
+    return ()=>window.clearInterval(timer)
+  },[patterns])
+
   return <div className="ref-sonar-model">
-    <div className="ref-live-radar" aria-label="Radar de afinidade ilustrativo">
+    <div
+      className="ref-live-radar"
+      aria-label="Radar de afinidade ilustrativo"
+      data-pattern-count={RADAR_PATTERN_COUNT}
+      data-pattern-index={activeGeneration.patternIndex}
+      data-target-count={activeGeneration.blips.length}
+      data-cycle={activeGeneration.iteration}
+    >
       <span className="ref-radar-zone zone-far"/><span className="ref-radar-zone zone-medium"/><span className="ref-radar-zone zone-near"/>
       <span className="ref-live-radar-center"/>
       <span
         className="ref-live-radar-sweep"
         style={{ '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties}
       />
-      {blips.map((blip,index)=>{
-        const style={
-          '--blip-left': blip.left + '%',
-          '--blip-top': blip.top + '%',
-          '--blip-delay': blip.detectionDelay + 's',
-          '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
-        } as CSSProperties
-        return <span key={index} className={'ref-live-radar-blip is-'+blip.level} style={style}/>
-      })}
+      {generations.flatMap((generation)=>
+        generation.blips.map((blip,index)=>{
+          const style={
+            '--blip-left': blip.left + '%',
+            '--blip-top': blip.top + '%',
+            '--blip-delay': blip.detectionDelay + 's',
+            '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
+          } as CSSProperties
+          const isResidual =
+            generation.iteration !==
+            activeGeneration.iteration
+
+          return <span
+            key={generation.iteration+'-'+index}
+            className={
+              'ref-live-radar-blip is-' +
+              blip.level +
+              (isResidual ? ' is-residual' : '')
+            }
+            data-generation={generation.iteration}
+            style={style}
+          />
+        }),
+      )}
     </div>
     <div className="ref-sonar-legend">
       <span className="is-near">Alta · sinal próximo ao centro</span>
