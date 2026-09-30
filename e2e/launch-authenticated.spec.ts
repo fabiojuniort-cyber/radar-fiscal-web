@@ -545,7 +545,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await expect(page.getByText(/Perfil atual v1/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Empresas' }).click()
-  await page.getByRole('tab', { name: /^Empresas/ }).click()
+  await page.getByRole('tab', { name: /Empresas$/ }).click()
   await page.getByRole('button', { name: 'Excluir' }).click()
 
   const deleteDialog = page.getByRole('dialog', { name: 'Excluir empresa?' })
