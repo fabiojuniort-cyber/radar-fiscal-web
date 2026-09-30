@@ -509,3 +509,13 @@
   .ref-live-radar-sweep{animation:none!important;transform:rotate(45deg)}
   .ref-live-radar-blip{animation:none!important;opacity:1}
 }
+
+
+/* Fidelity compatibility refinements */
+.ref-state-identity>strong::before{content:attr(data-uf)}
+.ref-coverage-cell>strong[data-value]::after,.ref-coverage-cell>b[data-value]::after{content:attr(data-value)}
+.ref-sonar-legend>span{display:block;padding-left:0}
+.ref-sonar-legend>span::first-letter{font-weight:800}
+.ref-sonar-legend>span.is-near{color:#fff}
+.ref-sonar-legend>span.is-medium{color:#fff}
+.ref-sonar-legend>span.is-far{color:#fff}
