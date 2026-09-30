@@ -340,11 +340,18 @@ export type ProductPublicationDetail = {
     contentText: string | null
     excerpt: string | null
     capturedAt: string | null
-    presentation: {
-      version: number
-      format: 'PRESERVED_TEXT'
-      preservesWhitespace: boolean
-    }
+    presentation:
+      | {
+          version: number
+          format: 'PRESERVED_TEXT'
+          preservesWhitespace: boolean
+        }
+      | {
+          version: number
+          format: 'SANITIZED_HTML'
+          preservesWhitespace: boolean
+          html: string
+        }
   } | null
   origins: Array<{
     sourceCode: string
