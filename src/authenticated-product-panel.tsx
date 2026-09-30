@@ -1587,6 +1587,8 @@ function CompanySection({
   apiFetch,
   tenantId,
   account,
+  selectedCompanyId,
+  onSelect,
   onChanged,
 }: {
   apiFetch: ProductApiFetch
@@ -1596,6 +1598,8 @@ function CompanySection({
       typeof fetchAccountSummary
     >
   >
+  selectedCompanyId: string
+  onSelect: (companyId: string) => void
   onChanged: () => void
 }) {
   const [legalName, setLegalName] =
@@ -1608,6 +1612,10 @@ function CompanySection({
   const [cnpj, setCnpj] = useState(
     account.onboarding?.cnpj ?? '',
   )
+  const [creating, setCreating] =
+    useState(
+      account.companies.length === 0,
+    )
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -1621,126 +1629,186 @@ function CompanySection({
           cnpj,
         },
       ),
-    onSuccess: onChanged,
+    onSuccess: (company) => {
+      onSelect(company.id)
+      setCreating(false)
+      setLegalName('')
+      setTradeName('')
+      setCnpj('')
+      onChanged()
+    },
   })
 
-  if (
-    account.companies.length > 0
-  ) {
-    return (
-      <div className="tp-company-cards">
-        {account.companies.map(
-          (company) => (
-            <article
-              className="is-primary"
-              key={company.id}
-            >
-              <div>
-                <Building2 size={22} />
-                <span>
-                  <strong>
-                    {company.legalName}
-                  </strong>
-                  <small>
-                    {company.cnpj}
-                  </small>
-                </span>
-              </div>
-              <dl>
-                <div>
-                  <dt>
-                    Estabelecimentos
-                  </dt>
-                  <dd>
-                    {
-                      company.establishmentCount
-                    }
-                  </dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>
-                    {company.isActive
-                      ? 'Ativa'
-                      : 'Inativa'}
-                  </dd>
-                </div>
-              </dl>
-            </article>
-          ),
-        )}
-      </div>
-    )
-  }
-
   return (
-    <form
-      className="launch-form-card"
-      onSubmit={(event) => {
-        event.preventDefault()
-        mutation.mutate()
-      }}
-    >
-      <h2>
-        Complete o cadastro da empresa
-      </h2>
-      <p>
-        O tenant já existe. Agora informe
-        os dados operacionais usados pelo
-        Perfil Tributário.
-      </p>
-      <label>
-        Razão social
-        <input
-          value={legalName}
-          onChange={(event) =>
-            setLegalName(
-              event.target.value,
-            )
-          }
-          required
-        />
-      </label>
-      <label>
-        Nome fantasia
-        <input
-          value={tradeName}
-          onChange={(event) =>
-            setTradeName(
-              event.target.value,
-            )
-          }
-        />
-      </label>
-      <label>
-        CNPJ
-        <input
-          value={cnpj}
-          onChange={(event) =>
-            setCnpj(event.target.value)
-          }
-          required
-        />
-      </label>
-      {mutation.isError && (
-        <p
-          className="auth-error"
-          role="alert"
-        >
-          Não foi possível criar a
-          empresa: {mutation.error.message}
-        </p>
+    <div className="launch-stack">
+      {account.companies.length > 0 && (
+        <>
+          <div className="tp-company-cards">
+            {account.companies.map(
+              (company) => (
+                <article
+                  className={
+                    company.id ===
+                    selectedCompanyId
+                      ? 'is-primary'
+                      : ''
+                  }
+                  key={company.id}
+                >
+                  <div>
+                    <Building2 size={22} />
+                    <span>
+                      <strong>
+                        {company.legalName}
+                      </strong>
+                      <small>
+                        {company.cnpj}
+                      </small>
+                    </span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>
+                        Estabelecimentos
+                      </dt>
+                      <dd>
+                        {
+                          company.establishmentCount
+                        }
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>
+                        {company.isActive
+                          ? 'Ativa'
+                          : 'Inativa'}
+                      </dd>
+                    </div>
+                  </dl>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelect(company.id)
+                    }
+                  >
+                    {company.id ===
+                    selectedCompanyId
+                      ? 'Empresa ativa'
+                      : 'Selecionar empresa'}
+                  </button>
+                </article>
+              ),
+            )}
+          </div>
+
+          {!creating && (
+            <button
+              className="launch-secondary-button launch-add-company"
+              type="button"
+              onClick={() => {
+                setLegalName('')
+                setTradeName('')
+                setCnpj('')
+                setCreating(true)
+              }}
+            >
+              Adicionar empresa
+            </button>
+          )}
+        </>
       )}
-      <button
-        className="btn"
-        type="submit"
-        disabled={mutation.isPending}
-      >
-        {mutation.isPending
-          ? 'Salvando…'
-          : 'Salvar empresa'}
-      </button>
-    </form>
+
+      {creating && (
+        <form
+          className="launch-form-card"
+          onSubmit={(event) => {
+            event.preventDefault()
+            mutation.mutate()
+          }}
+        >
+          <h2>
+            {account.companies.length === 0
+              ? 'Complete o cadastro da empresa'
+              : 'Adicionar empresa'}
+          </h2>
+          <p>
+            Informe os dados operacionais
+            usados pelo Perfil Tributário.
+          </p>
+          <label>
+            Razão social
+            <input
+              value={legalName}
+              onChange={(event) =>
+                setLegalName(
+                  event.target.value,
+                )
+              }
+              required
+            />
+          </label>
+          <label>
+            Nome fantasia
+            <input
+              value={tradeName}
+              onChange={(event) =>
+                setTradeName(
+                  event.target.value,
+                )
+              }
+            />
+          </label>
+          <label>
+            CNPJ
+            <input
+              value={cnpj}
+              onChange={(event) =>
+                setCnpj(
+                  event.target.value,
+                )
+              }
+              required
+            />
+          </label>
+          {mutation.isError && (
+            <p
+              className="auth-error"
+              role="alert"
+            >
+              Não foi possível criar a
+              empresa: {
+                mutation.error.message
+              }
+            </p>
+          )}
+          <div className="launch-form-actions">
+            <button
+              className="btn"
+              type="submit"
+              disabled={
+                mutation.isPending
+              }
+            >
+              {mutation.isPending
+                ? 'Salvando…'
+                : 'Salvar empresa'}
+            </button>
+            {account.companies.length > 0 && (
+              <button
+                className="launch-secondary-button"
+                type="button"
+                onClick={() =>
+                  setCreating(false)
+                }
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
   )
 }
 
