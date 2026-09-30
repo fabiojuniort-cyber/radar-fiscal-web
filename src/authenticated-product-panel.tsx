@@ -657,7 +657,7 @@ export function AuthenticatedProductPanel({
             >
               {(identity.memberships ?? []).map((item) => (
                 <option value={item.tenantId} key={item.tenantId}>
-                  {item.tenantName} · {item.role}
+                  {item.tenantName}
                 </option>
               ))}
             </select>
