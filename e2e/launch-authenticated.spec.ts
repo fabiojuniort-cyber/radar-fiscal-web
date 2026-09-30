@@ -1,0 +1,337 @@
+import { expect, test } from '@playwright/test'
+
+async function openLogin(page: import('@playwright/test').Page) {
+  if ((page.viewportSize()?.width ?? 0) <= 680) {
+    await page.getByRole('button', { name: 'Abrir menu' }).click()
+    await page.getByRole('navigation', { name: 'Navegação móvel' })
+      .getByRole('button', { name: 'Entrar' }).click()
+    return
+  }
+
+  await page.locator('.nav-actions')
+    .getByRole('button', { name: 'Entrar' }).click()
+}
+
+test('LAUNCH-01 authenticated release candidate screens and account setup work end-to-end', async ({ page }) => {
+  let companyCreated = false
+  let establishmentCreated = false
+  let profileSaved = false
+
+  await page.route('**/auth/login', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: {
+      'set-cookie': 'radar_refresh_token=launch-browser; HttpOnly; Path=/auth; SameSite=Strict',
+    },
+    body: JSON.stringify({
+      accessToken: 'launch-access',
+      tokenType: 'Bearer',
+      expiresIn: 900,
+    }),
+  }))
+
+  await page.route('**/auth/me', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      user: {
+        id: 'launch-user',
+        email: 'owner@example.test',
+        name: 'Owner Teste',
+      },
+      memberships: [{
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        tenantName: 'Empresa Launch',
+        tenantSlug: 'empresa-launch',
+        role: 'OWNER',
+      }],
+    }),
+  }))
+
+  await page.route('**/public/v1/stats', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      totalPublications: 321,
+      totalSources: 12,
+      activeSources: 10,
+      importedToday: 7,
+      generatedAt: '2026-09-30T00:00:00.000Z',
+    }),
+  }))
+
+  await page.route('**/public/v1/sources', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      generatedAt: '2026-09-30T00:00:00.000Z',
+      items: [{
+        code: 'dou',
+        name: 'DOU',
+        jurisdictionLevel: 'FEDERAL',
+        uf: null,
+        isActive: true,
+        status: 'ONLINE',
+        lastRunStatus: 'SUCCESS',
+        lastSuccessAt: '2026-09-30T00:00:00.000Z',
+        lastAttemptAt: '2026-09-30T00:00:00.000Z',
+        importedToday: 7,
+        totalPublications: 321,
+      }],
+    }),
+  }))
+
+  await page.route('**/api/v1/archive?*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      page: 1,
+      limit: 25,
+      hasMore: false,
+      items: [{
+        id: 'publication-launch',
+        title: 'Ato oficial real do Acervo',
+        actType: 'IN',
+        actNumber: '99/2026',
+        agency: 'Receita Federal',
+        jurisdictionLevel: 'FEDERAL',
+        uf: null,
+        publishedOn: '2026-09-30',
+        effectiveOn: '2026-10-01',
+        officialUrl: 'https://example.test/oficial',
+        sourceCode: 'dou',
+        sourceName: 'DOU',
+        excerpt: 'Conteúdo oficial de teste.',
+      }],
+    }),
+  }))
+
+  await page.route('**/api/v1/account', async (route) => {
+    expect(route.request().headers()['x-tenant-id'])
+      .toBe('11111111-1111-4111-8111-111111111111')
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenant: {
+          id: '11111111-1111-4111-8111-111111111111',
+          name: 'Empresa Launch',
+          slug: 'empresa-launch',
+          status: 'ACTIVE',
+        },
+        onboarding: {
+          companyName: 'Empresa Launch',
+          cnpj: null,
+          createdAt: '2026-09-30T00:00:00.000Z',
+        },
+        companies: companyCreated ? [{
+          id: '22222222-2222-4222-8222-222222222222',
+          legalName: 'Empresa Launch Ltda',
+          tradeName: 'Empresa Launch',
+          cnpj: '11222333000181',
+          isActive: true,
+          establishmentCount: establishmentCreated ? 1 : 0,
+        }] : [],
+      }),
+    })
+  })
+
+  await page.route('**/api/v1/companies', async (route) => {
+    expect(route.request().method()).toBe('POST')
+    companyCreated = true
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        company: {
+          id: '22222222-2222-4222-8222-222222222222',
+          legalName: 'Empresa Launch Ltda',
+          tradeName: 'Empresa Launch',
+          cnpj: '11222333000181',
+        },
+      }),
+    })
+  })
+
+  await page.route('**/api/v1/establishment-types', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      items: [
+        { code: 'HEAD_OFFICE', name: 'Matriz' },
+        { code: 'OFFICE', name: 'Escritório' },
+      ],
+    }),
+  }))
+
+  await page.route('**/api/v1/companies/22222222-2222-4222-8222-222222222222/establishments', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      items: establishmentCreated ? [{
+        id: '33333333-3333-4333-8333-333333333333',
+        companyId: '22222222-2222-4222-8222-222222222222',
+        cnpj: '11222333000181',
+        name: 'Matriz Goiânia',
+        typeCode: 'HEAD_OFFICE',
+        isHeadOffice: true,
+        uf: 'GO',
+        municipalityName: 'Goiânia',
+        municipalityIbgeCode: null,
+        postalCode: null,
+        street: null,
+        streetNumber: null,
+        complement: null,
+        district: null,
+        isActive: true,
+      }] : [],
+    }),
+  }))
+
+  await page.route('**/api/v1/establishments', async (route) => {
+    expect(route.request().method()).toBe('POST')
+    establishmentCreated = true
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        establishment: {
+          id: '33333333-3333-4333-8333-333333333333',
+          companyId: '22222222-2222-4222-8222-222222222222',
+          cnpj: '11222333000181',
+          name: 'Matriz Goiânia',
+          typeCode: 'HEAD_OFFICE',
+          isHeadOffice: true,
+          uf: 'GO',
+          municipalityName: 'Goiânia',
+        },
+      }),
+    })
+  })
+
+  await page.route('**/api/v1/companies/22222222-2222-4222-8222-222222222222/tax-profile', async (route) => {
+    if (route.request().method() === 'PUT') {
+      profileSaved = true
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          profile: {
+            id: '44444444-4444-4444-8444-444444444444',
+            companyId: '22222222-2222-4222-8222-222222222222',
+            versionNo: 1,
+            taxRegime: 'LUCRO_REAL',
+            segments: ['Agronegócio'],
+            activities: ['Venda de insumos'],
+            personalization: {
+              taxes: ['ICMS'],
+              products: ['Fertilizantes'],
+              operations: ['Venda interestadual'],
+              documents: ['NF-e'],
+              obligations: ['EFD'],
+              keywords: ['crédito presumido'],
+            },
+            validFrom: '2026-09-30',
+          },
+        }),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        profile: profileSaved ? {
+          id: '44444444-4444-4444-8444-444444444444',
+          companyId: '22222222-2222-4222-8222-222222222222',
+          versionNo: 1,
+          taxRegime: 'LUCRO_REAL',
+          segments: ['Agronegócio'],
+          activities: ['Venda de insumos'],
+          personalization: {
+            taxes: ['ICMS'],
+            products: ['Fertilizantes'],
+            operations: ['Venda interestadual'],
+            documents: ['NF-e'],
+            obligations: ['EFD'],
+            keywords: ['crédito presumido'],
+          },
+          validFrom: '2026-09-30',
+        } : null,
+      }),
+    })
+  })
+
+  await page.route('**/auth/logout', (route) => route.fulfill({
+    status: 204,
+    headers: {
+      'set-cookie': 'radar_refresh_token=; Max-Age=0; HttpOnly; Path=/auth; SameSite=Strict',
+    },
+  }))
+
+  await page.goto('/')
+  await openLogin(page)
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('E-mail').fill('owner@example.test')
+  await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/painel$/)
+  await expect(page.getByRole('heading', { name: 'Olá, Owner.' })).toBeVisible()
+  await expect(page.getByText('321')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Publicações' }).click()
+  await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
+  await expect(page.getByText('Ato oficial real do Acervo')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Acervo' }).click()
+  await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
+  await page.getByLabel('Pesquisar no Acervo').fill('ICMS')
+  await page.getByRole('button', { name: 'Buscar' }).click()
+
+  await page.getByRole('button', { name: 'Central de Monitoramento' }).click()
+  await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
+  await expect(page.getByText('DOU')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Fontes Oficiais' }).click()
+  await expect(page.getByRole('heading', { name: 'Fontes Oficiais' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Empresas' }).click()
+  await expect(page.getByRole('heading', { name: 'Empresas' })).toBeVisible()
+  await page.getByLabel('Razão social').fill('Empresa Launch Ltda')
+  await page.getByLabel('Nome fantasia').fill('Empresa Launch')
+  await page.getByLabel('CNPJ').fill('11222333000181')
+  await page.getByRole('button', { name: 'Salvar empresa' }).click()
+  await expect(page.getByText('Empresa Launch Ltda')).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Estabelecimentos' }).click()
+  await page.getByLabel('Nome').fill('Matriz Goiânia')
+  await page.getByLabel('CNPJ').fill('11222333000181')
+  await page.getByLabel('Município').fill('Goiânia')
+  await page.getByRole('button', { name: 'Adicionar estabelecimento' }).click()
+  await expect(page.getByText('Matriz Goiânia')).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Perfil Tributário' }).click()
+  await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
+  await page.getByLabel('Segmentos').fill('Agronegócio')
+  await page.getByLabel('Atividades').fill('Venda de insumos')
+  await page.getByLabel('Tributos').fill('ICMS')
+  await page.getByLabel('Produtos').fill('Fertilizantes')
+  await page.getByLabel('Operações').fill('Venda interestadual')
+  await page.getByLabel('Documentos').fill('NF-e')
+  await page.getByLabel('Obrigações').fill('EFD')
+  await page.getByLabel('Palavras-chave').fill('crédito presumido')
+  await page.getByRole('button', { name: 'Criar Perfil Tributário' }).click()
+  await expect(page.getByText(/Perfil atual v1/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Menu do usuário' }).click()
+  await page.getByRole('button', { name: 'Configurações' }).click()
+  await expect(page.getByRole('heading', { name: 'Configurações' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Menu do usuário' }).click()
+  await page.getByRole('button', { name: 'Sair', exact: true }).click()
+  await expect(page).toHaveURL(/\/$/)
+})
