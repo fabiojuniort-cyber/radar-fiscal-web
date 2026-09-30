@@ -10,7 +10,7 @@ import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
 import { parseDemoAccessFlag } from './demo-access'
 import { STATE_CAROUSEL_AUTOPLAY_MS } from './public-experience'
-import type { PublicSource } from './public-api'
+import type { PublicPublication, PublicSource } from './public-api'
 
 function sourcesResponse(items: PublicSource[] = []) {
   return {
@@ -20,6 +20,14 @@ function sourcesResponse(items: PublicSource[] = []) {
       generatedAt: '2026-09-28T14:00:00.000Z',
       items,
     }),
+  } as Response
+}
+
+function publicationsResponse(items: PublicPublication[] = []) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ items }),
   } as Response
 }
 
@@ -316,6 +324,80 @@ describe('TriBusca release candidate WEB-11', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Próximo estado' }))
     expect(position).toHaveTextContent('2 / 5')
+  })
+
+  it('WEB-20 renders real latest captures and marks states without publications as Em implementação', async () => {
+    const realFederal: PublicPublication = {
+      id: 'pub-fed-1',
+      title: 'Ato federal coletado de verdade',
+      actType: 'INSTRUÇÃO NORMATIVA',
+      actNumber: '123/2026',
+      agency: 'RFB',
+      uf: null,
+      publishedOn: '2026-09-30',
+      effectiveOn: null,
+      officialUrl: 'https://example.test/federal',
+      sourceCode: 'rfb-normas',
+      sourceName: 'Receita Federal',
+      collectedAt: new Date().toISOString(),
+    }
+    const realState: PublicPublication = {
+      ...realFederal,
+      id: 'pub-sp-1',
+      title: 'Publicação estadual real de São Paulo',
+      actType: 'PORTARIA',
+      actNumber: '45/2026',
+      uf: 'SP',
+      officialUrl: 'https://example.test/sp',
+      sourceCode: 'doe-sp',
+      sourceName: 'DOE-SP',
+    }
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/public/v1/sources')) {
+        return sourcesResponse([
+          {
+            code: 'doe-sp',
+            name: 'DOE-SP',
+            jurisdictionLevel: 'STATE',
+            uf: 'SP',
+            isActive: true,
+            status: 'ONLINE',
+            lastRunStatus: 'SUCCESS',
+            lastSuccessAt: new Date().toISOString(),
+            lastAttemptAt: new Date().toISOString(),
+            importedToday: 1,
+            totalPublications: 1,
+          },
+        ])
+      }
+
+      if (url.includes('/public/v1/publications')) {
+        const parsed = new URL(url, 'https://tribusca.test')
+        const uf = parsed.searchParams.get('uf')
+        if (uf === 'SP') return publicationsResponse([realState])
+        if (uf) return publicationsResponse([])
+        return publicationsResponse([realFederal])
+      }
+
+      return sourcesResponse()
+    }))
+
+    renderApp()
+
+    await waitFor(() => expect(screen.getByText('Ato federal coletado de verdade')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Publicação estadual real de São Paulo')).toBeInTheDocument())
+    expect(screen.queryByText(/Exemplo de captura/)).not.toBeInTheDocument()
+
+    const stateTabs = screen.getAllByRole('tab', { name: /^Exibir / })
+    fireEvent.click(stateTabs[1])
+
+    await waitFor(() => {
+      const card = screen.getByText(/Últimas publicações/).closest('.ref-state-publications-card')
+      expect(card).toHaveTextContent('Em implementação')
+    })
   })
 
   it('WEB-18 supports swipe, arrows and UF pills while keeping São Paulo first', () => {
