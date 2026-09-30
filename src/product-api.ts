@@ -265,3 +265,54 @@ export async function saveTaxProfile(
   const result = await requireJson<{ profile: TaxProfile }>(response)
   return result.profile
 }
+
+
+export type ProductArchiveItem = {
+  id: string
+  title: string
+  actType: string | null
+  actNumber: string | null
+  agency: string | null
+  jurisdictionLevel: string
+  uf: string | null
+  publishedOn: string | null
+  effectiveOn: string | null
+  officialUrl: string | null
+  sourceCode: string | null
+  sourceName: string | null
+  excerpt: string | null
+}
+
+export type ProductArchiveResponse = {
+  page: number
+  limit: number
+  hasMore: boolean
+  items: ProductArchiveItem[]
+}
+
+export async function fetchProductArchive(
+  apiFetch: ProductApiFetch,
+  filters: {
+    q?: string
+    uf?: string
+    jurisdiction?: 'FEDERAL' | 'STATE'
+    source?: string
+    page?: number
+    limit?: number
+  },
+): Promise<ProductArchiveResponse> {
+  const params = new URLSearchParams()
+
+  if (filters.q) params.set('q', filters.q)
+  if (filters.uf) params.set('uf', filters.uf)
+  if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
+  if (filters.source) params.set('source', filters.source)
+  params.set('page', String(filters.page ?? 1))
+  params.set('limit', String(filters.limit ?? 25))
+
+  const response = await apiFetch('/api/v1/archive?' + params.toString(), {
+    headers: { Accept: 'application/json' },
+  })
+
+  return requireJson<ProductArchiveResponse>(response)
+}
