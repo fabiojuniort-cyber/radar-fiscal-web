@@ -180,9 +180,10 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
     })
   })
 
-  await page.route('**/api/v1/companies', async (route) => {
+  await page.route('**/api/v1/companies/from-cnpj', async (route) => {
     expect(route.request().method()).toBe('POST')
     companyCreated = true
+    establishmentCreated = true
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
@@ -192,6 +193,38 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           legalName: 'Empresa Launch Ltda',
           tradeName: 'Empresa Launch',
           cnpj: '11222333000181',
+        },
+        establishment: {
+          id: '33333333-3333-4333-8333-333333333333',
+          companyId: '22222222-2222-4222-8222-222222222222',
+          cnpj: '11222333000181',
+          name: 'Empresa Launch',
+          typeCode: 'HEAD_OFFICE',
+          isHeadOffice: true,
+          uf: 'GO',
+          municipalityName: 'Goiânia',
+          municipalityIbgeCode: '5208707',
+          postalCode: '74000000',
+          street: 'Avenida Teste',
+          streetNumber: '100',
+          complement: null,
+          district: 'Centro',
+          stateRegistration: '10.123.456-2',
+          stateRegistrationStatus: 'ATIVO - HABILITADO',
+          stateRegistrationLookupStatus: 'SUCCESS',
+          stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
+          stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
+          cnaes: [{
+            code: '4683400',
+            description: 'Comércio atacadista de defensivos agrícolas',
+            isPrimary: true,
+          }],
+        },
+        registry: {
+          source: 'BRASILAPI_MINHA_RECEITA',
+          consultedAt: '2026-09-30T10:00:00.000Z',
+          registrationStatus: 'ATIVA',
+          openedOn: '2020-01-01',
         },
       }),
     })
@@ -226,29 +259,95 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
         street: null,
         streetNumber: null,
         complement: null,
-        district: null,
+        district: 'Centro',
+        stateRegistration: '10.123.456-2',
+        stateRegistrationStatus: 'ATIVO - HABILITADO',
+        stateRegistrationLookupStatus: 'SUCCESS',
+        stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
+        stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
         isActive: true,
+        cnaes: [{
+          code: '4683400',
+          description: 'Comércio atacadista de defensivos agrícolas',
+          isPrimary: true,
+        }],
       }] : [],
     }),
   }))
 
-  await page.route('**/api/v1/establishments', async (route) => {
-    expect(route.request().method()).toBe('POST')
-    establishmentCreated = true
+
+  await page.route('**/api/v1/taxonomy/profile-options', async (route) => {
     await route.fulfill({
-      status: 201,
+      status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        establishment: {
-          id: '33333333-3333-4333-8333-333333333333',
-          companyId: '22222222-2222-4222-8222-222222222222',
-          cnpj: '11222333000181',
-          name: 'Matriz Goiânia',
-          typeCode: 'HEAD_OFFICE',
-          isHeadOffice: true,
-          uf: 'GO',
-          municipalityName: 'Goiânia',
+        release: {
+          id: '77777777-7777-4777-8777-777777777777',
+          version: 'v1.0.0',
+          publishedAt: '2026-09-30T00:00:00.000Z',
         },
+        dimensions: [
+          {
+            code: 'tax',
+            name: 'Tributo',
+            description: null,
+            concepts: [{
+              code: 'tax.icms',
+              label: 'ICMS',
+              definition: 'Imposto sobre circulação.',
+            }],
+          },
+          {
+            code: 'sector',
+            name: 'Setor',
+            description: null,
+            concepts: [{
+              code: 'sector.agribusiness',
+              label: 'Agronegócio',
+              definition: 'Atividades do agronegócio.',
+            }],
+          },
+          {
+            code: 'product',
+            name: 'Produto',
+            description: null,
+            concepts: [{
+              code: 'product.fertilizer',
+              label: 'Fertilizantes',
+              definition: 'Fertilizantes e afins.',
+            }],
+          },
+          {
+            code: 'operation',
+            name: 'Operação',
+            description: null,
+            concepts: [{
+              code: 'operation.sale',
+              label: 'Venda',
+              definition: 'Operação de venda.',
+            }],
+          },
+          {
+            code: 'document',
+            name: 'Documento',
+            description: null,
+            concepts: [{
+              code: 'document.nfe',
+              label: 'NF-e',
+              definition: 'Nota Fiscal eletrônica.',
+            }],
+          },
+          {
+            code: 'obligation',
+            name: 'Obrigação',
+            description: null,
+            concepts: [{
+              code: 'obligation.efd',
+              label: 'EFD',
+              definition: 'Escrituração Fiscal Digital.',
+            }],
+          },
+        ],
       }),
     })
   })
@@ -274,6 +373,18 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
               documents: ['NF-e'],
               obligations: ['EFD'],
               keywords: ['crédito presumido'],
+              taxonomy: {
+                releaseId: '77777777-7777-4777-8777-777777777777',
+                releaseVersion: 'v1.0.0',
+                conceptCodes: [
+                  'tax.icms',
+                  'sector.agribusiness',
+                  'product.fertilizer',
+                  'operation.sale',
+                  'document.nfe',
+                  'obligation.efd',
+                ],
+              },
             },
             validFrom: '2026-09-30',
           },
@@ -396,30 +507,23 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await expect(page.getByRole('heading', { name: 'Fontes Oficiais' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Empresas' }).click()
-  await expect(page.getByRole('heading', { name: 'Empresas' })).toBeVisible()
-  await page.getByLabel('Razão social').fill('Empresa Launch Ltda')
-  await page.getByLabel('Nome fantasia').fill('Empresa Launch')
-  await page.getByLabel('CNPJ').fill('11222333000181')
-  await page.getByRole('button', { name: 'Salvar empresa' }).click()
-  await expect(page.getByText('Empresa Launch Ltda')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
+  await page.getByLabel('CNPJ da matriz').fill('11222333000181')
+  await page.getByRole('button', { name: 'Consultar e cadastrar' }).click()
+  await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Estabelecimentos' }).click()
-  await page.getByLabel('Nome').fill('Matriz Goiânia')
-  await page.getByLabel('CNPJ').fill('11222333000181')
-  await page.getByLabel('Município').fill('Goiânia')
-  await page.getByRole('button', { name: 'Adicionar estabelecimento' }).click()
-  await expect(page.getByText('Matriz Goiânia')).toBeVisible()
+  await page.getByRole('tab', { name: /Estabelecimentos/ }).click()
+  await expect(page.getByText('4683400')).toBeVisible()
+  await expect(page.getByText('Goiânia/GO').first()).toBeVisible()
+  await expect(page.getByText('10.123.456-2')).toBeVisible()
+  await expect(page.getByText(/Consulta estadual confirmada/)).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Perfil Tributário' }).click()
+  await page.getByRole('tab', { name: /Perfil tributário/ }).click()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
-  await page.getByLabel('Segmentos').fill('Agronegócio')
-  await page.getByLabel('Atividades').fill('Venda de insumos')
-  await page.getByLabel('Tributos').fill('ICMS')
-  await page.getByLabel('Produtos').fill('Fertilizantes')
-  await page.getByLabel('Operações').fill('Venda interestadual')
-  await page.getByLabel('Documentos').fill('NF-e')
-  await page.getByLabel('Obrigações').fill('EFD')
-  await page.getByLabel('Palavras-chave').fill('crédito presumido')
+  await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
+  for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
+    await page.getByText(label, { exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Criar Perfil Tributário' }).click()
   await expect(page.getByText(/Perfil atual v1/)).toBeVisible()
 

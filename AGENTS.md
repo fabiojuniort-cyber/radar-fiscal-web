@@ -68,3 +68,23 @@ Para a Home e o carrossel estadual:
 No runtime Railway/Vite Preview, chamadas públicas devem usar o mesmo domínio do frontend (`/public/...`). O `vite.config.ts` encaminha `/public` para o backend configurado em `VITE_API_BASE`.
 
 Motivo: evitar dependência de CORS do navegador entre o domínio público do site e o domínio do backend. Não reintroduzir `VITE_API_BASE` diretamente no cliente de `public-api.ts` sem uma decisão explícita de arquitetura.
+
+## Cadastro empresarial e Perfil Tributário
+
+A experiência autenticada de Empresas segue estas regras:
+- o fluxo principal é `CNPJ -> consultar -> cadastrar`, sem exigir que o usuário digite novamente razão social, endereço ou CNAEs;
+- mostrar CNAE principal e todos os secundários retornados/persistidos;
+- permitir edição manual de nome, endereço e CNAEs, mantendo o CNPJ bloqueado como identidade cadastral;
+- `Consulta API` atualiza novamente os dados cadastrais do estabelecimento;
+- o Perfil Tributário deve separar visualmente `Contexto cadastral automático`, `Contexto fiscal declarado` e `Taxonomia TriBusca`;
+- opções taxonômicas vêm do backend e de release publicada; salvar códigos canônicos, não labels inventados no frontend;
+- quando não houver release publicada, mostrar estado transparente de indisponibilidade e não fabricar opções.
+
+
+### Inscrição Estadual
+
+- Exibir IE como dado estadual separado do cadastro CNPJ/RFB.
+- Quando o backend confirmar a IE por fonte oficial estadual, mostrar o valor e o estado da consulta.
+- Diferenciar visualmente IE confirmada, não localizada, fonte indisponível e UF ainda não automatizada.
+- Permitir edição manual da IE, deixando claro que o valor manual não equivale a confirmação automática pela SEFAZ/SINTEGRA.
+- O botão de atualização cadastral pode reconsultar RFB + fonte estadual suportada; não chamar isso apenas de consulta à Receita quando houver enriquecimento estadual.

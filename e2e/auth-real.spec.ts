@@ -122,6 +122,17 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
       }),
     })
   })
+  await page.route('**/api/v1/taxonomy/profile-options', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        release: null,
+        dimensions: [],
+      }),
+    })
+  })
+
   await page.route('**/api/v1/establishment-types', async (route) => {
     await route.fulfill({
       status: 200,
