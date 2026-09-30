@@ -440,19 +440,19 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(position).toHaveTextContent('2 / 5')
   })
 
-  it('uses the official dark footer signature without CSS recoloring', () => {
+  it('uses the official light footer signature without CSS recoloring', () => {
     renderApp()
 
     const footerLogo = screen.getAllByRole('img', { name: 'TriBusca' }).at(-1)
-    expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-dark.png')
+    expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-light.png')
   })
 
   it('keeps text labels for every Sonar level', () => {
     renderApp('/portfolio')
 
-    expect(screen.getAllByText('Alta afinidade').length).toBeGreaterThan(0)
-    expect(screen.getByText('Média afinidade')).toBeInTheDocument()
-    expect(screen.getByText('Baixa afinidade')).toBeInTheDocument()
+    expect(screen.getByText(/Alta.*sinal próximo ao centro/)).toBeInTheDocument()
+    expect(screen.getByText(/Média.*distância intermediária/)).toBeInTheDocument()
+    expect(screen.getByText(/Baixa.*sinal distante/)).toBeInTheDocument()
   })
 
   it('self-hosts only the approved Inter weights used by the interface', () => {
@@ -530,20 +530,20 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(20)
   })
 
-  it('does not claim portfolio resources as available before release', () => {
+  it('shows the released Acervo and Central resources on the Home portfolio', () => {
     renderApp()
 
-    expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(6)
+    expect(screen.getAllByText('Disponível')).toHaveLength(2)
+    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(4)
   })
 
-  it('keeps the same development status on the portfolio page', () => {
+  it('shows the same factual availability on the portfolio page', () => {
     renderApp('/portfolio')
 
-    expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(6)
+    expect(screen.getAllByText('Disponível')).toHaveLength(2)
+    expect(screen.getAllByText('Em desenvolvimento')).toHaveLength(4)
     expect(screen.getByRole('link', { name: 'Acervo' })).toHaveAttribute('href', '#acervo')
-    expect(screen.getByRole('link', { name: 'Central de Monitoramento' })).toHaveAttribute('href', '#central')
+    expect(screen.getByRole('link', { name: 'Central de Monitoramento' })).toHaveAttribute('href', '#monitoramento')
     expect(screen.getByRole('link', { name: 'Sonar' })).toHaveAttribute('href', '#sonar')
     expect(screen.getByRole('link', { name: 'Revela' })).toHaveAttribute('href', '#revela')
     expect(screen.getByRole('link', { name: 'Decodifica' })).toHaveAttribute('href', '#decodifica')
@@ -554,7 +554,7 @@ describe('TriBusca release candidate WEB-11', () => {
     renderApp('/portfolio')
 
     expect(screen.getByText(/Split payment/)).toBeInTheDocument()
-    expect(screen.getByText('Exemplo 1 de 5')).toBeInTheDocument()
+    expect(screen.getByText('1 / 5')).toBeInTheDocument()
     expect(screen.getByText('Gerada por IA. Não substitui o texto oficial.')).toBeInTheDocument()
   })
 })
@@ -586,7 +586,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', {
-        name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
+        name: 'Saiba o que mudou. Entenda o que importa. Cheque à fonte oficial.',
       })).toBeInTheDocument()
     })
     expect(screen.queryByText('Modo demonstração')).not.toBeInTheDocument()
@@ -654,7 +654,7 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', {
-        name: 'Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.',
+        name: 'Saiba o que mudou. Entenda o que importa. Cheque à fonte oficial.',
       })).toBeInTheDocument()
     })
     const requestedUrls = fetchMock.mock.calls.map(([url]) => String(url))
