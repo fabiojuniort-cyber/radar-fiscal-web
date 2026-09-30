@@ -22,12 +22,10 @@ import {
 
 import type { PanelIdentity } from './panel-experience'
 import {
-  fetchPublicPublications,
   fetchPublicSources,
   fetchPublicStats,
   formatLastSuccessAt,
   formatPublicDate,
-  type PublicPublication,
   type PublicSource,
 } from './public-api'
 import {
@@ -37,8 +35,10 @@ import {
   fetchEstablishmentTypes,
   fetchEstablishments,
   fetchTaxProfile,
+  fetchProductArchive,
   saveTaxProfile,
   type ProductApiFetch,
+  type ProductArchiveItem,
 } from './product-api'
 import './panel-experience.css'
 import './authenticated-product-panel.css'
@@ -222,7 +222,7 @@ function SectionHeading({
 }
 
 function publicationReference(
-  item: PublicPublication,
+  item: ProductArchiveItem,
 ) {
   const reference = [
     item.actType,
@@ -238,7 +238,7 @@ function PublicationList({
   items,
   compact = false,
 }: {
-  items: PublicPublication[]
+  items: ProductArchiveItem[]
   compact?: boolean
 }) {
   if (items.length === 0) {
@@ -447,6 +447,8 @@ export function AuthenticatedProductPanel({
   const [screen, setScreen] =
     useState<Screen>('inicio')
   const [query, setQuery] = useState('')
+  const [appliedQuery, setAppliedQuery] = useState('')
+  const [archivePage, setArchivePage] = useState(1)
   const [jurisdiction, setJurisdiction] =
     useState('')
   const [uf, setUf] = useState('')
@@ -470,29 +472,42 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
-  const publicationsQuery = useQuery({
+  const latestArchiveQuery = useQuery({
+    queryKey: ['launch', 'archive', 'latest'],
+    queryFn: () =>
+      fetchProductArchive(apiFetch, {
+        page: 1,
+        limit: 5,
+      }),
+    retry: false,
+  })
+
+  const archiveQuery = useQuery({
     queryKey: [
       'launch',
-      'publications',
+      'archive',
+      appliedQuery,
       jurisdiction,
       uf,
       source,
+      archivePage,
     ],
-    queryFn: ({ signal }) =>
-      fetchPublicPublications(
-        {
-          jurisdiction:
-            jurisdiction === 'FEDERAL' ||
-            jurisdiction === 'STATE'
-              ? jurisdiction
-              : undefined,
-          uf: uf || undefined,
-          source: source || undefined,
-          limit: 20,
-        },
-        undefined,
-        signal,
-      ),
+    queryFn: () =>
+      fetchProductArchive(apiFetch, {
+        q:
+          appliedQuery.trim().length >= 2
+            ? appliedQuery.trim()
+            : undefined,
+        jurisdiction:
+          jurisdiction === 'FEDERAL' ||
+          jurisdiction === 'STATE'
+            ? jurisdiction
+            : undefined,
+        uf: uf || undefined,
+        source: source || undefined,
+        page: archivePage,
+        limit: 25,
+      }),
     retry: false,
   })
 
@@ -511,41 +526,11 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
-  const filteredPublications =
-    useMemo(() => {
-      const items =
-        publicationsQuery.data?.items ??
-        []
-
-      if (!query.trim()) return items
-
-      const needle = query
-        .trim()
-        .toLocaleLowerCase('pt-BR')
-
-      return items.filter((item) =>
-        [
-          item.title,
-          item.actType,
-          item.actNumber,
-          item.agency,
-          item.uf,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLocaleLowerCase('pt-BR')
-          .includes(needle),
-      )
-    }, [
-      publicationsQuery.data,
-      query,
-    ])
+  const archiveItems =
+    archiveQuery.data?.items ?? []
 
   const latestPublications =
-    publicationsQuery.data?.items.slice(
-      0,
-      5,
-    ) ?? []
+    latestArchiveQuery.data?.items ?? []
 
   const sources =
     sourcesQuery.data?.items ?? []
@@ -604,14 +589,18 @@ export function AuthenticatedProductPanel({
     event: FormEvent,
   ) => {
     event.preventDefault()
+    setAppliedQuery(query.trim())
+    setArchivePage(1)
     setScreen('acervo')
   }
 
   const resetArchiveFilters = () => {
     setQuery('')
+    setAppliedQuery('')
     setJurisdiction('')
     setUf('')
     setSource('')
+    setArchivePage(1)
   }
 
   const unavailable =
@@ -932,15 +921,13 @@ export function AuthenticatedProductPanel({
                     Ver todas →
                   </button>
                 </div>
-                {publicationsQuery.isPending ? (
+                {latestArchiveQuery.isPending ? (
                   <LoadingState />
-                ) : publicationsQuery.isError ? (
+                ) : latestArchiveQuery.isError ? (
                   <ErrorState />
                 ) : (
                   <PublicationList
-                    items={
-                      latestPublications
-                    }
+                    items={latestPublications}
                     compact
                   />
                 )}
@@ -1041,18 +1028,18 @@ export function AuthenticatedProductPanel({
             />
             <div className="tp-filterbar">
               <span>
-                {filteredPublications.length}{' '}
+                {archiveItems.length}{' '}
                 item(ns) no recorte
                 carregado
               </span>
             </div>
-            {publicationsQuery.isPending ? (
+            {archiveQuery.isPending ? (
               <LoadingState />
-            ) : publicationsQuery.isError ? (
+            ) : archiveQuery.isError ? (
               <ErrorState />
             ) : (
               <PublicationList
-                items={filteredPublications}
+                items={archiveItems}
               />
             )}
           </>
@@ -1093,12 +1080,10 @@ export function AuthenticatedProductPanel({
                   Esfera
                   <select
                     value={jurisdiction}
-                    onChange={(event) =>
-                      setJurisdiction(
-                        event.target
-                          .value,
-                      )
-                    }
+                    onChange={(event) => {
+                      setJurisdiction(event.target.value)
+                      setArchivePage(1)
+                    }}
                   >
                     <option value="">
                       Todas
@@ -1115,12 +1100,10 @@ export function AuthenticatedProductPanel({
                   UF
                   <select
                     value={uf}
-                    onChange={(event) =>
-                      setUf(
-                        event.target
-                          .value,
-                      )
-                    }
+                    onChange={(event) => {
+                      setUf(event.target.value)
+                      setArchivePage(1)
+                    }}
                   >
                     {UFS.map((item) => (
                       <option
@@ -1139,12 +1122,10 @@ export function AuthenticatedProductPanel({
                   Fonte
                   <select
                     value={source}
-                    onChange={(event) =>
-                      setSource(
-                        event.target
-                          .value,
-                      )
-                    }
+                    onChange={(event) => {
+                      setSource(event.target.value)
+                      setArchivePage(1)
+                    }}
                   >
                     <option value="">
                       Todas
@@ -1175,22 +1156,36 @@ export function AuthenticatedProductPanel({
                   Limpar filtros
                 </button>
                 <small>
-                  Contrato atual: até 20
-                  itens por consulta.
+                  Busca e paginação no Acervo autenticado.
                 </small>
               </aside>
 
               <section>
-                {publicationsQuery.isPending ? (
+                {archiveQuery.isPending ? (
                   <LoadingState />
-                ) : publicationsQuery.isError ? (
+                ) : archiveQuery.isError ? (
                   <ErrorState />
                 ) : (
-                  <PublicationList
-                    items={
-                      filteredPublications
-                    }
-                  />
+                  <>
+                    <PublicationList items={archiveItems} />
+                    <div className="launch-pagination" aria-label="Paginação do Acervo">
+                      <button
+                        type="button"
+                        disabled={archivePage <= 1}
+                        onClick={() => setArchivePage((page) => Math.max(1, page - 1))}
+                      >
+                        ← Anterior
+                      </button>
+                      <span>Página {archivePage}</span>
+                      <button
+                        type="button"
+                        disabled={!archiveQuery.data?.hasMore}
+                        onClick={() => setArchivePage((page) => page + 1)}
+                      >
+                        Próxima →
+                      </button>
+                    </div>
+                  </>
                 )}
               </section>
             </div>
