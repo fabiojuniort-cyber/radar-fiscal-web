@@ -230,6 +230,23 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
     })
   })
 
+  await page.route(
+    /\/api\/v1\/companies\/22222222-2222-4222-8222-222222222222$/,
+    async (route) => {
+      if (route.request().method() !== 'DELETE') {
+        await route.continue()
+        return
+      }
+
+      companyCreated = false
+      establishmentCreated = false
+      await route.fulfill({
+        status: 204,
+        body: '',
+      })
+    },
+  )
+
   await page.route('**/api/v1/establishment-types', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -526,6 +543,18 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   }
   await page.getByRole('button', { name: 'Criar Perfil Tributário' }).click()
   await expect(page.getByText(/Perfil atual v1/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Empresas' }).click()
+  await page.getByRole('tab', { name: /^Empresas/ }).click()
+  await page.getByRole('button', { name: 'Excluir' }).click()
+
+  const deleteDialog = page.getByRole('dialog', { name: 'Excluir empresa?' })
+  await expect(deleteDialog).toBeVisible()
+  await expect(deleteDialog).toContainText('O histórico será preservado')
+  await deleteDialog.getByRole('button', { name: 'Excluir empresa' }).click()
+
+  await expect(deleteDialog).toBeHidden()
+  await expect(page.getByLabel('CNPJ da matriz')).toBeVisible()
 
   await page.getByRole('button', { name: 'Menu do usuário' }).click()
   await page.getByRole('button', { name: 'Configurações' }).click()
