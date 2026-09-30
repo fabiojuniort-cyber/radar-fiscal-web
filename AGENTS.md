@@ -62,3 +62,9 @@ Para a Home e o carrossel estadual:
 - quando a consulta retornar com sucesso e sem publicações para a UF, exibir `Em implementação`;
 - quando a API falhar ou ficar indisponível, exibir `Dados indisponíveis`, sem confundir falha de fonte/API com ausência de publicações;
 - nunca preencher lacunas com títulos, datas, atos ou capturas inventadas.
+
+### Transporte da API pública
+
+No runtime Railway/Vite Preview, chamadas públicas devem usar o mesmo domínio do frontend (`/public/...`). O `vite.config.ts` encaminha `/public` para o backend configurado em `VITE_API_BASE`.
+
+Motivo: evitar dependência de CORS do navegador entre o domínio público do site e o domínio do backend. Não reintroduzir `VITE_API_BASE` diretamente no cliente de `public-api.ts` sem uma decisão explícita de arquitetura.
