@@ -232,7 +232,7 @@ describe('TriBusca release candidate WEB-11', () => {
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
     fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
 
-    await screen.findByRole('heading', { name: 'Bom dia, owner.' })
+    await screen.findByRole('heading', { name: 'Olá, owner.' })
     expect(screen.getByText('TriBusca Internal')).toBeInTheDocument()
     expect(screen.getByText('Conta autenticada')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
@@ -254,7 +254,7 @@ describe('TriBusca release candidate WEB-11', () => {
       headers: { 'x-csrf-protection': '1' },
     })))
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Entrar' }).length).toBeGreaterThan(0))
-    expect(screen.queryByRole('heading', { name: /Bom dia,/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Olá,/ })).not.toBeInTheDocument()
   })
 
   it('keeps São Paulo first and returns five carousel states', () => {
