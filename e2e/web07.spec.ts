@@ -515,10 +515,26 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   await expect(sweep).toBeVisible()
   expect(await sweep.evaluate((element) => getComputedStyle(element).animationName)).toBe('none')
 
-  const blips = page.locator('.ref-live-radar-blip')
-  await expect(blips).toHaveCount(3)
-  for (let index = 0; index < 3; index += 1) {
-    expect(await blips.nth(index).evaluate((element) => getComputedStyle(element).opacity)).toBe('1')
+  const radar = page.locator('.ref-live-radar')
+  const targetCount = Number(
+    await radar.getAttribute('data-target-count'),
+  )
+  expect(targetCount).toBeGreaterThanOrEqual(1)
+  expect(targetCount).toBeLessThanOrEqual(10)
+
+  const blips = page.locator(
+    '.ref-live-radar-blip:not(.is-residual)',
+  )
+  await expect(blips).toHaveCount(targetCount)
+  for (let index = 0; index < targetCount; index += 1) {
+    expect(
+      await blips
+        .nth(index)
+        .evaluate(
+          (element) =>
+            getComputedStyle(element).opacity,
+        ),
+    ).toBe('1')
   }
 })
 
