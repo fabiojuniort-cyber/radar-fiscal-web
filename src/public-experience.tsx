@@ -605,7 +605,15 @@ type RadarBlip = {
   detectionDelay: number
 }
 
+type RadarPattern = {
+  id: number
+  blips: RadarBlip[]
+}
+
 const RADAR_SWEEP_SECONDS = 4.8
+const RADAR_PATTERN_COUNT = 25
+const RADAR_MIN_TARGETS = 1
+const RADAR_MAX_TARGETS = 10
 
 function randomRadarBlip(): RadarBlip {
   const levels: RadarLevel[] = ['near','medium','far']
@@ -628,10 +636,74 @@ function randomRadarBlip(): RadarBlip {
   }
 }
 
+function randomRadarTargetCount(): number {
+  return (
+    RADAR_MIN_TARGETS +
+    Math.floor(
+      Math.random() *
+      (RADAR_MAX_TARGETS - RADAR_MIN_TARGETS + 1),
+    )
+  )
+}
+
+function buildRadarPatterns(): RadarPattern[] {
+  return Array.from(
+    { length: RADAR_PATTERN_COUNT },
+    (_, patternIndex) => {
+      const targetCount =
+        patternIndex === 0
+          ? 1
+          : randomRadarTargetCount()
+
+      return {
+        id: patternIndex,
+        blips: Array.from(
+          { length: targetCount },
+          () => randomRadarBlip(),
+        ),
+      }
+    },
+  )
+}
+
 function SonarDemo(){
-  const blips=useMemo(()=>[0,1,2].map(()=>randomRadarBlip()),[])
+  const patterns=useMemo(()=>buildRadarPatterns(),[])
+  const [cycle,setCycle]=useState({patternIndex:0,iteration:0})
+  const activePattern=patterns[cycle.patternIndex] ?? patterns[0]
+
+  useEffect(()=>{
+    const timer=window.setInterval(()=>{
+      setCycle((current)=>{
+        let nextIndex=current.patternIndex
+
+        while(
+          RADAR_PATTERN_COUNT>1 &&
+          nextIndex===current.patternIndex
+        ){
+          nextIndex=Math.floor(Math.random()*RADAR_PATTERN_COUNT)
+        }
+
+        return {
+          patternIndex:nextIndex,
+          iteration:current.iteration+1,
+        }
+      })
+    },RADAR_SWEEP_SECONDS*1000)
+
+    return ()=>window.clearInterval(timer)
+  },[])
+
+  const blips=activePattern?.blips ?? []
+
   return <div className="ref-sonar-model">
-    <div className="ref-live-radar" aria-label="Radar de afinidade ilustrativo">
+    <div
+      className="ref-live-radar"
+      aria-label="Radar de afinidade ilustrativo"
+      data-pattern-count={RADAR_PATTERN_COUNT}
+      data-pattern-index={activePattern?.id ?? 0}
+      data-target-count={blips.length}
+      data-cycle={cycle.iteration}
+    >
       <span className="ref-radar-zone zone-far"/><span className="ref-radar-zone zone-medium"/><span className="ref-radar-zone zone-near"/>
       <span className="ref-live-radar-center"/>
       <span
@@ -645,7 +717,7 @@ function SonarDemo(){
           '--blip-delay': blip.detectionDelay + 's',
           '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
         } as CSSProperties
-        return <span key={index} className={'ref-live-radar-blip is-'+blip.level} style={style}/>
+        return <span key={cycle.iteration+'-'+index} className={'ref-live-radar-blip is-'+blip.level} style={style}/>
       })}
     </div>
     <div className="ref-sonar-legend">
