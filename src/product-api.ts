@@ -316,3 +316,58 @@ export async function fetchProductArchive(
 
   return requireJson<ProductArchiveResponse>(response)
 }
+
+
+export type ProductPublicationDetail = {
+  publication: {
+    id: string
+    title: string
+    actType: string | null
+    actNumber: string | null
+    agency: string | null
+    jurisdictionLevel: string
+    uf: string | null
+    publishedOn: string | null
+    effectiveOn: string | null
+    officialUrl: string | null
+    firstCollectedAt: string
+    lastSeenAt: string
+  }
+  version: {
+    id: string
+    versionNo: number
+    versionCount: number
+    contentText: string | null
+    excerpt: string | null
+    capturedAt: string | null
+    presentation: {
+      version: number
+      format: 'PRESERVED_TEXT'
+      preservesWhitespace: boolean
+    }
+  } | null
+  origins: Array<{
+    sourceCode: string
+    sourceName: string
+    officialUrl: string
+    externalId: string | null
+    firstSeenAt: string
+    lastSeenAt: string
+  }>
+}
+
+export async function fetchProductPublicationDetail(
+  apiFetch: ProductApiFetch,
+  publicationId: string,
+): Promise<ProductPublicationDetail> {
+  const response = await apiFetch(
+    '/api/v1/publications/' + publicationId,
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  return requireJson<ProductPublicationDetail>(response)
+}
