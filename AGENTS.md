@@ -38,3 +38,16 @@ Fluxo obrigatório para cada incremento:
 7. informar ao Product Owner o SHA efetivamente implantado.
 
 A autorização para publicação incremental não autoriza inventar dados, contornar gates de segurança, alterar arquitetura congelada ou promover funcionalidades ainda não comprovadas como disponíveis. Status de produto continuam factuais.
+
+## Fidelidade por screenshot
+
+Quando o Product Owner fornecer screenshots explícitos de uma página, esses screenshots passam a ser a referência visual dominante daquela página, inclusive para hierarquia, espaçamento, proporções, posição dos componentes e tratamento tipográfico.
+
+Isso não substitui contratos reais, autenticação, dados factuais, segurança ou estados efetivamente disponíveis. Onde o screenshot contiver dados de exemplo, a implementação deve mantê-los claramente identificados como ilustrativos até existir contrato real aprovado.
+
+Para o Sonar, a referência aprovada inclui radar animado:
+- raio parte do centro e gira continuamente;
+- três detecções são exibidas sequencialmente, uma por volta;
+- distância é sorteada no carregamento entre perto, média e longe, podendo repetir categoria;
+- perto usa vermelho, média usa amarelo e longe usa verde;
+- prefers-reduced-motion deve desativar a rotação e manter os sinais legíveis.
