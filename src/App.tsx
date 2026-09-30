@@ -31,6 +31,7 @@ import { AuthSessionProvider, useAuthSession } from './auth-session'
 import { AuthenticatedProductPanel } from './authenticated-product-panel'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
+import { PublicationDetailPage } from './publication-detail-page'
 import { PublicExperience } from './public-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
@@ -118,6 +119,19 @@ function AppContent() {
     return demoAccessEnabled ? <DemoPage /> : <Navigate to="/" replace />
   }
 
+  const publicationDetailMatch =
+    /^\/painel\/publicacoes\/([0-9a-f-]{36})$/i.exec(
+      location.pathname,
+    )
+
+  if (publicationDetailMatch?.[1]) {
+    return (
+      <AuthenticatedPublicationDetail
+        publicationId={publicationDetailMatch[1]}
+      />
+    )
+  }
+
   if (location.pathname === '/painel') {
     return <AuthenticatedPanel />
   }
@@ -166,6 +180,42 @@ function AuthenticatedPanel() {
           setLogoutError(true)
         }
       }}
+    />
+  )
+}
+
+function AuthenticatedPublicationDetail({
+  publicationId,
+}: {
+  publicationId: string
+}) {
+  const {
+    me,
+    checked,
+    ensureSession,
+    apiFetch,
+  } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) {
+      void ensureSession()
+    }
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked
+      ? <Navigate to="/" replace />
+      : (
+          <main className="auth-panel-loading">
+            Verificando acesso…
+          </main>
+        )
+  }
+
+  return (
+    <PublicationDetailPage
+      publicationId={publicationId}
+      apiFetch={apiFetch}
     />
   )
 }
