@@ -2187,7 +2187,7 @@ function EstablishmentSection({
           cnpj,
           typeCode,
           businessLocationCode:
-            businessLocationCode.trim() || null,
+            businessLocationCode.trim() || undefined,
         },
       ),
     onSuccess: () => {
