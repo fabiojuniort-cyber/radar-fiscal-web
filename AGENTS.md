@@ -88,3 +88,17 @@ A experiência autenticada de Empresas segue estas regras:
 - Diferenciar visualmente IE confirmada, não localizada, fonte indisponível e UF ainda não automatizada.
 - Permitir edição manual da IE, deixando claro que o valor manual não equivale a confirmação automática pela SEFAZ/SINTEGRA.
 - O botão de atualização cadastral pode reconsultar RFB + fonte estadual suportada; não chamar isso apenas de consulta à Receita quando houver enriquecimento estadual.
+
+## Confirmações destrutivas
+
+Ações destrutivas no painel autenticado não devem depender de `window.confirm()`.
+
+Use confirmação própria da interface, com:
+- `role="dialog"` e `aria-modal="true"`;
+- texto explícito sobre o efeito da ação;
+- botões Cancelar e Confirmar;
+- estado de carregamento durante a mutation;
+- mensagem de erro visível quando a API falhar;
+- comportamento consistente em Safari/iPhone e desktop.
+
+A exclusão de empresa continua sendo soft-delete no backend; a confirmação deve informar que o histórico é preservado.
