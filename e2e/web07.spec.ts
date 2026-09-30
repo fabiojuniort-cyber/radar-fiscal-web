@@ -479,9 +479,9 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
     expect(contrastRatio(color, 'rgb(255, 255, 255)')).toBeGreaterThanOrEqual(3)
   }
 
-  await expect(page.getByText('Média afinidade')).toBeVisible()
-  await expect(page.getByText('Baixa afinidade')).toBeVisible()
-  expect((await page.getByText('Alta afinidade').count())).toBeGreaterThan(0)
+  await expect(page.locator('.sonar-state-medium strong')).toHaveText('Média afinidade')
+  await expect(page.locator('.sonar-state-low strong')).toHaveText('Baixa afinidade')
+  await expect(page.locator('.sonar-state-high strong')).toHaveText('Alta afinidade')
 
   const sweepAnimation = await page.locator('.sonar-sweep').first().evaluate((element) => getComputedStyle(element).animationName)
   const pingAnimation = await page.locator('.sonar-ping').first().evaluate((element) => getComputedStyle(element).animationName)
