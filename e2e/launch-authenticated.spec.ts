@@ -516,7 +516,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
   await expect(page.getByText('4683400')).toBeVisible()
   await expect(page.getByText('Goiânia/GO').first()).toBeVisible()
   await expect(page.getByText('10.123.456-2')).toBeVisible()
-  await expect(page.getByText(/Consulta estadual confirmada/)).toBeVisible()
+  await expect(page.getByText(/SEFAZ Goiás · SINTEGRA/)).toBeVisible()
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
