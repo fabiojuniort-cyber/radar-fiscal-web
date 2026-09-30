@@ -216,6 +216,11 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
 
   await page.route('**/api/v1/companies/from-cnpj', async (route) => {
     expect(route.request().method()).toBe('POST')
+    const payload = route.request().postDataJSON() as {
+      cnpj: string
+      businessLocationCode?: string
+    }
+    expect(payload.businessLocationCode).toBe('MATRIZ-01')
     companyCreated = true
     establishmentCreated = true
     await route.fulfill({
