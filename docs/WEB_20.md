@@ -49,3 +49,10 @@ A entrega deve preservar:
 - Playwright nos viewports configurados;
 - ausência de chamadas privadas no modo demonstração;
 - diferenciação entre **Em implementação** e **Dados indisponíveis**.
+
+
+## Transporte
+
+No navegador, o cliente usa caminhos same-origin `/public/...`. O Vite Preview encaminha `/public` ao backend configurado em `VITE_API_BASE`.
+
+Isso evita que a exibição pública dependa de CORS entre o domínio do site e o domínio do backend.
