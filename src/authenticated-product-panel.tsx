@@ -1816,9 +1816,16 @@ function CompanySection({
         tenantId,
         companyId,
       ),
-    onSuccess: () => {
+    onSuccess: (_result, deletedCompanyId) => {
+      const hasRemainingCompany =
+        account.companies.some(
+          (company) =>
+            company.id !== deletedCompanyId,
+        )
+
       setEditing(null)
       setDeleteCandidate(null)
+      setCreating(!hasRemainingCompany)
       onSelect('')
       onChanged()
     },
