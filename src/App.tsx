@@ -32,6 +32,11 @@ import { AuthenticatedProductPanel } from './authenticated-product-panel'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
+import {
+  PRIVACY_POLICY,
+  TERMS_OF_USE,
+  type LegalDocument,
+} from './legal-content'
 import { PublicExperience } from './public-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
 import {
@@ -839,7 +844,7 @@ function LoginForm({
   return (
     <>
       <Dialog.Title>Entrar na TriBusca</Dialog.Title>
-      <p className="dialog-intro">Acesse sua área autenticada com o contrato oficial do backend.</p>
+      <p className="dialog-intro">Acesse sua conta TriBusca.</p>
       {accountCreated && (
         <p className="auth-success" role="status">
           Conta criada com sucesso. Entre com a senha que você acabou de definir.
@@ -848,8 +853,7 @@ function LoginForm({
       <form className="auth-form" onSubmit={submit}>
         <label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
         <label>Senha<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-        <p className="auth-unavailable-note">Recuperação de senha em breve.</p>
-        {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e a conexão com a API.</p>}
+        {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e tente novamente.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
       {demoAccessEnabled && (
@@ -870,12 +874,9 @@ function ForgotPassword({ onView }: { onView: (view: AuthView) => void }) {
   return (
     <>
       <Dialog.Title>Recuperar senha</Dialog.Title>
-      <p className="dialog-intro">O fluxo visual está definido; o endpoint de recuperação ainda não será inventado.</p>
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
-        <label>E-mail<input type="email" required /></label>
-        <button className="btn full" type="submit" disabled>Enviar instruções</button>
-      </form>
-      <button className="text-button standalone" type="button" onClick={() => onView('reset')}>Visualizar etapa “Nova senha”</button>
+      <p className="dialog-intro">
+        Para recuperar o acesso, entre em contato pelo canal de suporte da TriBusca.
+      </p>
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
     </>
   )
@@ -897,6 +898,7 @@ function PasswordFlow({
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [legalView, setLegalView] = useState<'terms' | 'privacy' | null>(null)
   const checks = getPasswordChecks(password)
   const match = password.length > 0 && password === confirm
   const valid = isStrongPassword(password) && match && (mode === 'reset' || acceptedTerms)
@@ -935,7 +937,7 @@ function PasswordFlow({
         case 'too_many_requests':
           return 'Muitas tentativas de cadastro para este e-mail. Aguarde e tente novamente.'
         case 'network_error':
-          return 'Não foi possível conectar à API. Verifique sua conexão e tente novamente.'
+          return 'Não foi possível concluir o cadastro. Verifique sua conexão e tente novamente.'
         case 'unexpected_error':
           return 'Não foi possível criar a conta agora. Tente novamente.'
       }
@@ -958,7 +960,7 @@ function PasswordFlow({
       <p className="dialog-intro">
         {mode === 'signup'
           ? '7 dias para conhecer a TriBusca. Crie sua conta com seus próprios dados de acesso.'
-          : 'Defina a nova senha. O envio só será ativado quando houver contrato backend.'}
+          : 'Defina uma nova senha para sua conta.'}
       </p>
       <form className="auth-form" onSubmit={submit}>
         {mode === 'signup' && (
@@ -989,7 +991,22 @@ function PasswordFlow({
               required
             />
             <span>
-              Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de uso</a> e a <a href="/privacidade" target="_blank" rel="noreferrer">Política de privacidade</a>.
+              Li e aceito os{' '}
+              <button
+                type="button"
+                className="legal-inline-button"
+                onClick={() => setLegalView('terms')}
+              >
+                Termos de uso
+              </button>{' '}
+              e a{' '}
+              <button
+                type="button"
+                className="legal-inline-button"
+                onClick={() => setLegalView('privacy')}
+              >
+                Política de privacidade
+              </button>.
             </span>
           </div>
         )}
@@ -1005,14 +1022,71 @@ function PasswordFlow({
             ? (signup.isPending ? 'Criando conta…' : 'Criar conta')
             : 'Salvar nova senha'}
         </button>
-        {mode === 'signup' && (
-          <p className="integration-note">
-            A conta só será considerada criada após confirmação da API. O cadastro não inicia sessão automaticamente.
-          </p>
-        )}
       </form>
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
+      <LegalSignupDialog
+        document={
+          legalView === 'terms'
+            ? TERMS_OF_USE
+            : legalView === 'privacy'
+              ? PRIVACY_POLICY
+              : null
+        }
+        onClose={() => setLegalView(null)}
+      />
     </>
+  )
+}
+
+function LegalSignupDialog({
+  document,
+  onClose,
+}: {
+  document: LegalDocument | null
+  onClose: () => void
+}) {
+  return (
+    <Dialog.Root
+      open={document !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="legal-dialog-overlay" />
+        {document && (
+          <Dialog.Content
+            className="legal-dialog-content"
+            aria-describedby="legal-dialog-description"
+          >
+            <Dialog.Close
+              className="dialog-close"
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </Dialog.Close>
+            <Dialog.Title>{document.title}</Dialog.Title>
+            <Dialog.Description
+              id="legal-dialog-description"
+              className="legal-dialog-intro"
+            >
+              Versão {document.version} · Vigente desde {document.effectiveDate}.
+            </Dialog.Description>
+            <p className="legal-dialog-summary">{document.intro}</p>
+            <div className="legal-dialog-scroll">
+              {document.sections.map((section) => (
+                <section key={section.title}>
+                  <h3>{section.title}</h3>
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </section>
+              ))}
+            </div>
+          </Dialog.Content>
+        )}
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
