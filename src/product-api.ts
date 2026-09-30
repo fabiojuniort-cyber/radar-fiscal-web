@@ -27,6 +27,12 @@ export type AccountSummary = {
   companies: AccountCompany[]
 }
 
+export type EstablishmentCnae = {
+  code: string
+  description: string
+  isPrimary: boolean
+}
+
 export type Establishment = {
   id: string
   companyId: string
@@ -43,11 +49,50 @@ export type Establishment = {
   complement: string | null
   district: string | null
   isActive: boolean
+  cnaes: EstablishmentCnae[]
 }
 
 export type EstablishmentType = {
   code: string
   name: string
+}
+
+export type CnpjRegistryResult = {
+  company: {
+    id: string
+    legalName: string
+    tradeName: string | null
+    cnpj: string
+  }
+  establishment: Omit<Establishment, 'isActive'>
+  registry: {
+    source: string
+    consultedAt: string
+    registrationStatus: string | null
+    openedOn: string | null
+  }
+}
+
+export type TaxonomyProfileConcept = {
+  code: string
+  label: string
+  definition: string
+}
+
+export type TaxonomyProfileDimension = {
+  code: string
+  name: string
+  description: string | null
+  concepts: TaxonomyProfileConcept[]
+}
+
+export type TaxonomyProfileOptions = {
+  release: {
+    id: string
+    version: string
+    publishedAt: string | null
+  } | null
+  dimensions: TaxonomyProfileDimension[]
 }
 
 export type TaxProfile = {
@@ -64,6 +109,11 @@ export type TaxProfile = {
     documents?: string[]
     obligations?: string[]
     keywords?: string[]
+    taxonomy?: {
+      releaseId: string
+      releaseVersion: string
+      conceptCodes: string[]
+    } | null
   }
   validFrom: string | null
   createdAt?: string
@@ -115,6 +165,59 @@ export async function fetchAccountSummary(
   })
 
   return requireJson<AccountSummary>(response)
+}
+
+export async function createCompanyFromCnpj(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  cnpj: string,
+): Promise<CnpjRegistryResult> {
+  const response = await apiFetch('/api/v1/companies/from-cnpj', {
+    method: 'POST',
+    headers: tenantHeaders(tenantId, {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    }),
+    body: JSON.stringify({ cnpj }),
+  })
+
+  return requireJson<CnpjRegistryResult>(response)
+}
+
+export async function updateCompany(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+  input: {
+    legalName: string
+    tradeName?: string | null
+  },
+): Promise<void> {
+  const response = await apiFetch('/api/v1/companies/' + companyId, {
+    method: 'PUT',
+    headers: tenantHeaders(tenantId, {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    }),
+    body: JSON.stringify(input),
+  })
+
+  await requireJson(response)
+}
+
+export async function deleteCompany(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+): Promise<void> {
+  const response = await apiFetch('/api/v1/companies/' + companyId, {
+    method: 'DELETE',
+    headers: tenantHeaders(tenantId),
+  })
+
+  if (!response.ok) {
+    await requireJson(response)
+  }
 }
 
 export async function createCompany(
@@ -197,6 +300,7 @@ export async function createEstablishment(
     streetNumber?: string
     complement?: string
     district?: string
+    cnaes?: EstablishmentCnae[]
   },
 ): Promise<void> {
   const response = await apiFetch('/api/v1/establishments', {
@@ -209,6 +313,112 @@ export async function createEstablishment(
   })
 
   await requireJson(response)
+}
+
+export async function createEstablishmentFromCnpj(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+  input: {
+    cnpj: string
+    typeCode: string
+  },
+): Promise<void> {
+  const response = await apiFetch(
+    '/api/v1/companies/' + companyId + '/establishments/from-cnpj',
+    {
+      method: 'POST',
+      headers: tenantHeaders(tenantId, {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+      body: JSON.stringify(input),
+    },
+  )
+
+  await requireJson(response)
+}
+
+export async function updateEstablishment(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  establishmentId: string,
+  input: {
+    name: string
+    typeCode: string
+    uf: string
+    municipalityName?: string | null
+    municipalityIbgeCode?: string | null
+    postalCode?: string | null
+    street?: string | null
+    streetNumber?: string | null
+    complement?: string | null
+    district?: string | null
+    cnaes: EstablishmentCnae[]
+  },
+): Promise<void> {
+  const response = await apiFetch(
+    '/api/v1/establishments/' + establishmentId,
+    {
+      method: 'PUT',
+      headers: tenantHeaders(tenantId, {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+      body: JSON.stringify(input),
+    },
+  )
+
+  await requireJson(response)
+}
+
+export async function refreshEstablishmentCnpj(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  establishmentId: string,
+): Promise<void> {
+  const response = await apiFetch(
+    '/api/v1/establishments/' + establishmentId + '/refresh-cnpj',
+    {
+      method: 'POST',
+      headers: tenantHeaders(tenantId, {
+        Accept: 'application/json',
+      }),
+    },
+  )
+
+  await requireJson(response)
+}
+
+export async function deleteEstablishment(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  establishmentId: string,
+): Promise<void> {
+  const response = await apiFetch(
+    '/api/v1/establishments/' + establishmentId,
+    {
+      method: 'DELETE',
+      headers: tenantHeaders(tenantId),
+    },
+  )
+
+  if (!response.ok) {
+    await requireJson(response)
+  }
+}
+
+export async function fetchTaxonomyProfileOptions(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+): Promise<TaxonomyProfileOptions> {
+  const response = await apiFetch('/api/v1/taxonomy/profile-options', {
+    headers: tenantHeaders(tenantId, {
+      Accept: 'application/json',
+    }),
+  })
+
+  return requireJson<TaxonomyProfileOptions>(response)
 }
 
 export async function fetchTaxProfile(
@@ -247,6 +457,11 @@ export async function saveTaxProfile(
       documents: string[]
       obligations: string[]
       keywords: string[]
+      taxonomy: {
+        releaseId: string
+        releaseVersion: string
+        conceptCodes: string[]
+      } | null
     }
   },
 ): Promise<TaxProfile> {
