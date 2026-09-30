@@ -133,8 +133,9 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
         capturedAt: '2026-09-30T00:00:00.000Z',
         presentation: {
           version: 1,
-          format: 'PRESERVED_TEXT',
+          format: 'SANITIZED_HTML',
           preservesWhitespace: true,
+          html: '<h2>CAPÍTULO I</h2><p>Art. 1º Texto oficial.</p><table><tbody><tr><th>Tributo</th><th>Regra</th></tr><tr><td>ICMS</td><td>Primeiro item</td></tr></tbody></table>',
         },
       },
       origins: [{
@@ -344,15 +345,24 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
     }),
   ).toBeVisible()
 
-  const preservedText = page.locator(
-    '.publication-preserved-text',
+  const preservedHtml = page.locator(
+    '.publication-preserved-html',
   )
-  await expect(preservedText).toContainText(
-    'CAPÍTULO I',
-  )
-  await expect(preservedText).toContainText(
-    'I - primeiro item;',
-  )
+  await expect(
+    preservedHtml.getByRole('heading', {
+      name: 'CAPÍTULO I',
+    }),
+  ).toBeVisible()
+  await expect(
+    preservedHtml.getByRole('cell', {
+      name: 'ICMS',
+    }),
+  ).toBeVisible()
+  await expect(
+    preservedHtml.getByRole('cell', {
+      name: 'Primeiro item',
+    }),
+  ).toBeVisible()
 
   const officialLink = page.getByRole('link', {
     name: 'Abrir fonte oficial',
