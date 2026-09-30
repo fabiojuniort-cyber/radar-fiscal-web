@@ -329,7 +329,7 @@ test('WEB-16 — login modal, signup ativo, contenção de foco e Escape', async
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
-  await expect(dialog.getByText('Recuperação de senha em breve.')).toBeVisible()
+  await expect(dialog.getByText('Acesse sua conta TriBusca.')).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Esqueci minha senha' })).toHaveCount(0)
   await expect(dialog.getByRole('button', { name: 'Criar conta' })).toBeVisible()
 
@@ -691,7 +691,7 @@ test('WEB-18 — Home mostra Verificando durante loading da cobertura federal', 
 
 test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page }) => {
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByText('Em desenvolvimento')).toHaveCount(4)
+  await expect(page.getByText('Em desenvolvimento')).toHaveCount(0)
   await expect(page.getByText('Disponível', { exact: true })).toHaveCount(2)
   await expect(page.getByRole('navigation', { name: 'Recursos do portfólio' }).getByRole('link')).toHaveCount(6)
   await expect(page.getByRole('link', { name: 'Acervo' })).toHaveAttribute('href', '#acervo')
