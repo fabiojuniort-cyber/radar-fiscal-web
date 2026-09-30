@@ -877,6 +877,9 @@ export function AuthenticatedProductPanel({
         </div>
       )}
 
+      <span className="sr-only">Conta autenticada</span>
+      <span className="sr-only">{tenantName}</span>
+
       <main
         className={
           'tp-main tp-main-' + screen
