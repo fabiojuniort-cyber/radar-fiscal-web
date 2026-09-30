@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import {
   FormEvent,
+  useEffect,
   useState,
 } from 'react'
 
@@ -431,8 +432,12 @@ export function AuthenticatedProductPanel({
   exitError,
 }: Props) {
   const queryClient = useQueryClient()
+  const [selectedTenantId, setSelectedTenantId] =
+    useState(identity.memberships?.[0]?.tenantId ?? '')
   const membership =
-    identity.memberships?.[0]
+    identity.memberships?.find(
+      (item) => item.tenantId === selectedTenantId,
+    ) ?? identity.memberships?.[0]
   const tenantId = membership?.tenantId
   const displayName =
     identity.name ||
@@ -455,6 +460,13 @@ export function AuthenticatedProductPanel({
     useState<OrgTab>('empresa')
   const [userMenu, setUserMenu] =
     useState(false)
+  const [selectedCompanyId, setSelectedCompanyId] =
+    useState('')
+
+  useEffect(() => {
+    setSelectedCompanyId('')
+    setOrgTab('empresa')
+  }, [tenantId])
 
   const sourcesQuery = useQuery({
     queryKey: ['launch', 'sources'],
@@ -534,24 +546,27 @@ export function AuthenticatedProductPanel({
     sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
   const account = accountQuery.data
-  const firstCompany =
-    account?.companies[0]
+  const selectedCompany =
+    account?.companies.find(
+      (company) =>
+        company.id === selectedCompanyId,
+    ) ?? account?.companies[0]
 
   const establishmentsQuery = useQuery({
     queryKey: [
       'launch',
       'establishments',
       tenantId,
-      firstCompany?.id,
+      selectedCompany?.id,
     ],
     queryFn: () =>
       fetchEstablishments(
         apiFetch,
         tenantId!,
-        firstCompany!.id,
+        selectedCompany!.id,
       ),
     enabled: Boolean(
-      tenantId && firstCompany?.id,
+      tenantId && selectedCompany?.id,
     ),
     retry: false,
   })
@@ -569,16 +584,16 @@ export function AuthenticatedProductPanel({
       'launch',
       'tax-profile',
       tenantId,
-      firstCompany?.id,
+      selectedCompany?.id,
     ],
     queryFn: () =>
       fetchTaxProfile(
         apiFetch,
         tenantId!,
-        firstCompany!.id,
+        selectedCompany!.id,
       ),
     enabled: Boolean(
-      tenantId && firstCompany?.id,
+      tenantId && selectedCompany?.id,
     ),
     retry: false,
   })
@@ -630,18 +645,23 @@ export function AuthenticatedProductPanel({
             className="tp-logo"
           />
 
-          <div className="tp-company-button launch-account-static">
-            <span className="tp-company-copy">
-              <small>
-                Conta autenticada
-              </small>
-              <strong>{tenantName}</strong>
-              <span>
-                {membership?.role ??
-                  'Usuário'}
-              </span>
-            </span>
-          </div>
+          <label className="launch-tenant-selector">
+            <span>Conta autenticada</span>
+            <select
+              aria-label="Conta ativa"
+              value={tenantId ?? ''}
+              onChange={(event) => {
+                setSelectedTenantId(event.target.value)
+                setUserMenu(false)
+              }}
+            >
+              {(identity.memberships ?? []).map((item) => (
+                <option value={item.tenantId} key={item.tenantId}>
+                  {item.tenantName} · {item.role}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <form
             className="tp-global-search"
@@ -1354,6 +1374,26 @@ export function AuthenticatedProductPanel({
               </button>
             </div>
 
+            {account?.companies.length ? (
+              <label className="launch-company-selector">
+                <span>Empresa ativa</span>
+                <select
+                  aria-label="Empresa ativa"
+                  value={selectedCompany?.id ?? ''}
+                  onChange={(event) => {
+                    setSelectedCompanyId(event.target.value)
+                    setOrgTab('empresa')
+                  }}
+                >
+                  {account.companies.map((company) => (
+                    <option value={company.id} key={company.id}>
+                      {company.tradeName || company.legalName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             {!tenantId ? (
               <ErrorState title="Conta sem tenant ativo" />
             ) : accountQuery.isPending ? (
@@ -1365,6 +1405,8 @@ export function AuthenticatedProductPanel({
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 account={account!}
+                selectedCompanyId={selectedCompany?.id ?? ''}
+                onSelect={setSelectedCompanyId}
                 onChanged={() =>
                   void queryClient.invalidateQueries(
                     {
@@ -1377,7 +1419,7 @@ export function AuthenticatedProductPanel({
                   )
                 }
               />
-            ) : !firstCompany ? (
+            ) : !selectedCompany ? (
               <EmptyState title="Cadastre a empresa primeiro">
                 O Perfil Tributário e os
                 estabelecimentos dependem
@@ -1389,10 +1431,10 @@ export function AuthenticatedProductPanel({
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 companyId={
-                  firstCompany.id
+                  selectedCompany.id
                 }
                 companyCnpj={
-                  firstCompany.cnpj
+                  selectedCompany.cnpj
                 }
                 items={
                   establishmentsQuery
@@ -1433,7 +1475,7 @@ export function AuthenticatedProductPanel({
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 companyId={
-                  firstCompany.id
+                  selectedCompany.id
                 }
                 profile={
                   profileQuery.data ??
