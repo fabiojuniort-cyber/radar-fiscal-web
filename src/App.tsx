@@ -28,6 +28,7 @@ import {
   selectFeaturedStates,
 } from './content'
 import { AuthSessionProvider, useAuthSession } from './auth-session'
+import { AuthenticatedProductPanel } from './authenticated-product-panel'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicExperience } from './public-experience'
@@ -135,7 +136,7 @@ function AppContent() {
 }
 
 function AuthenticatedPanel() {
-  const { me, checked, ensureSession, logout } = useAuthSession()
+  const { me, checked, ensureSession, logout, apiFetch } = useAuthSession()
   const [logoutError, setLogoutError] = useState(false)
   const navigate = useNavigate()
 
@@ -148,13 +149,13 @@ function AuthenticatedPanel() {
   }
 
   return (
-    <PanelExperience
-      mode="authenticated"
+    <AuthenticatedProductPanel
       identity={{
         name: me.user.name ?? me.user.email,
         email: me.user.email,
         memberships: me.memberships,
       }}
+      apiFetch={apiFetch}
       exitError={logoutError ? 'Não foi possível encerrar a sessão. Tente novamente.' : null}
       onExit={async () => {
         setLogoutError(false)
