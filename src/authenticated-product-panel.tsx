@@ -1023,8 +1023,8 @@ export function AuthenticatedProductPanel({
                         empresa(s)
                       </strong>
                       <span>
-                        {firstCompany
-                          ? firstCompany
+                        {selectedCompany
+                          ? selectedCompany
                               .establishmentCount +
                             ' estabelecimento(s)'
                           : 'Complete a empresa para liberar o perfil tributário.'}
