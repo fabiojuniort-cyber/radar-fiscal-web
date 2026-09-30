@@ -40,6 +40,95 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
     expect(route.request().headers().authorization).toMatch(/^Bearer /)
     await route.fulfill({ status: 204, headers: { 'set-cookie': 'radar_refresh_token=; Max-Age=0; HttpOnly; Path=/auth; SameSite=Strict' } })
   })
+  await page.route('**/public/v1/sources', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-09-30T00:00:00.000Z',
+        items: [{
+          code: 'dou',
+          name: 'DOU',
+          jurisdictionLevel: 'FEDERAL',
+          uf: null,
+          isActive: true,
+          status: 'ONLINE',
+          lastRunStatus: 'SUCCESS',
+          lastSuccessAt: '2026-09-30T00:00:00.000Z',
+          lastAttemptAt: '2026-09-30T00:00:00.000Z',
+          importedToday: 1,
+          totalPublications: 10,
+        }],
+      }),
+    })
+  })
+  await page.route('**/public/v1/stats', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalPublications: 10,
+        totalSources: 1,
+        activeSources: 1,
+        importedToday: 1,
+        generatedAt: '2026-09-30T00:00:00.000Z',
+      }),
+    })
+  })
+  await page.route('**/api/v1/archive?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        page: 1,
+        limit: 25,
+        hasMore: false,
+        items: [{
+          id: 'pub-test',
+          title: 'Publicação oficial de teste',
+          actType: 'IN',
+          actNumber: '1/2026',
+          agency: 'Receita Federal',
+          jurisdictionLevel: 'FEDERAL',
+          uf: null,
+          publishedOn: '2026-09-30',
+          effectiveOn: null,
+          officialUrl: 'https://example.test/oficial',
+          sourceCode: 'dou',
+          sourceName: 'DOU',
+          excerpt: null,
+        }],
+      }),
+    })
+  })
+  await page.route('**/api/v1/account', async (route) => {
+    expect(route.request().headers()['x-tenant-id']).toBe('tenant-test')
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenant: {
+          id: 'tenant-test',
+          name: 'TriBusca Internal',
+          slug: 'tribusca-internal',
+          status: 'ACTIVE',
+        },
+        onboarding: {
+          companyName: 'TriBusca Internal',
+          cnpj: null,
+          createdAt: '2026-09-30T00:00:00.000Z',
+        },
+        companies: [],
+      }),
+    })
+  })
+  await page.route('**/api/v1/establishment-types', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  })
 
   await page.goto('/')
   await openLogin(page)
@@ -48,7 +137,7 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/painel$/)
-  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()
   await expect(page.getByText('TriBusca Internal')).toBeVisible()
 
   const cookies = await page.context().cookies()
@@ -56,11 +145,11 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()
   await page.getByRole('button', { name: 'Menu do usuário' }).click()
   await page.getByRole('button', { name: 'Sair', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toHaveCount(0)
 })
 
 test('unauthenticated direct access never renders account data', async ({ page }) => {
@@ -69,5 +158,5 @@ test('unauthenticated direct access never renders account data', async ({ page }
   }))
   await page.goto('/painel')
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Bom dia, owner.' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toHaveCount(0)
 })

@@ -18,6 +18,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   ensureSession: () => Promise<boolean>
   logout: () => Promise<void>
+  apiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -68,9 +69,9 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     setChecked(true)
   }
 
-  const ensureSession = (): Promise<boolean> => {
-    if (token.current && me) return Promise.resolve(true)
+  const refreshAccessToken = (): Promise<boolean> => {
     if (refreshInFlight.current) return refreshInFlight.current
+
     const pending = (async () => {
       try {
         const response = await fetch('/auth/refresh', {
@@ -91,9 +92,51 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         setChecked(true)
       }
     })()
+
     refreshInFlight.current = pending
     void pending.finally(() => { refreshInFlight.current = null })
     return pending
+  }
+
+  const ensureSession = (): Promise<boolean> => {
+    if (token.current && me) {
+      setChecked(true)
+      return Promise.resolve(true)
+    }
+
+    return refreshAccessToken()
+  }
+
+  const apiFetch = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    if (!token.current) {
+      const refreshed = await refreshAccessToken()
+      if (!refreshed || !token.current) throw new Error('unauthorized')
+    }
+
+    const execute = () => {
+      const headers = new Headers(init?.headers)
+      headers.set('Authorization', `Bearer ${token.current}`)
+
+      return fetch(input, {
+        ...init,
+        credentials: 'include',
+        headers,
+      })
+    }
+
+    let response = await execute()
+
+    if (response.status === 401) {
+      token.current = null
+
+      const refreshed = await refreshAccessToken()
+      if (refreshed && token.current) response = await execute()
+    }
+
+    return response
   }
 
   const logout = async () => {
@@ -113,7 +156,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     setChecked(true)
   }
 
-  return <AuthContext.Provider value={{ me, checked, login, ensureSession, logout }}>
+  return <AuthContext.Provider value={{ me, checked, login, ensureSession, logout, apiFetch }}>
     {children}
   </AuthContext.Provider>
 }

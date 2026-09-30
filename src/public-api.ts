@@ -149,3 +149,120 @@ export function toCoveragePresentation(
     totalPublications: String(source.totalPublications),
   }
 }
+
+
+export type PublicPublication = {
+  id: string
+  title: string
+  actType: string | null
+  actNumber: string | null
+  agency: string | null
+  uf: string | null
+  publishedOn: string | null
+  effectiveOn: string | null
+  officialUrl: string | null
+}
+
+export type PublicPublicationsResponse = {
+  items: PublicPublication[]
+}
+
+export type PublicPublicationFilters = {
+  uf?: string
+  jurisdiction?: 'FEDERAL' | 'STATE'
+  source?: string
+  limit?: number
+}
+
+export type PublicStatsResponse = {
+  totalPublications: number
+  totalSources: number
+  activeSources: number
+  importedToday: number
+  generatedAt: string
+}
+
+export function publicPublicationQuery(
+  filters: PublicPublicationFilters = {},
+): string {
+  const params = new URLSearchParams()
+
+  if (filters.uf) params.set('uf', filters.uf.toUpperCase())
+  if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
+  if (filters.source) params.set('source', filters.source)
+
+  const requestedLimit = filters.limit ?? 20
+  params.set('limit', String(Math.min(20, Math.max(1, requestedLimit))))
+
+  return params.toString()
+}
+
+export async function fetchPublicPublications(
+  filters: PublicPublicationFilters = {},
+  apiBase = publicApiBase(),
+  signal?: AbortSignal,
+): Promise<PublicPublicationsResponse> {
+  const query = publicPublicationQuery(filters)
+  const response = await fetch(
+    publicApiUrl(`/public/v1/publications?${query}`, apiBase),
+    {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(`public_publications_http_${response.status}`)
+  }
+
+  const payload = await response.json()
+
+  if (!payload || !Array.isArray(payload.items)) {
+    throw new Error('public_publications_invalid_payload')
+  }
+
+  return payload as PublicPublicationsResponse
+}
+
+export async function fetchPublicStats(
+  apiBase = publicApiBase(),
+  signal?: AbortSignal,
+): Promise<PublicStatsResponse> {
+  const response = await fetch(publicApiUrl('/public/v1/stats', apiBase), {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`public_stats_http_${response.status}`)
+  }
+
+  const payload = await response.json()
+
+  if (
+    !payload ||
+    typeof payload.totalPublications !== 'number' ||
+    typeof payload.totalSources !== 'number' ||
+    typeof payload.activeSources !== 'number' ||
+    typeof payload.importedToday !== 'number' ||
+    typeof payload.generatedAt !== 'string'
+  ) {
+    throw new Error('public_stats_invalid_payload')
+  }
+
+  return payload as PublicStatsResponse
+}
+
+export function formatPublicDate(value: string | null): string {
+  if (!value) return 'Data não informada'
+
+  const parsed = new Date(`${value}T12:00:00Z`)
+  if (Number.isNaN(parsed.getTime())) return value
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(parsed)
+}
