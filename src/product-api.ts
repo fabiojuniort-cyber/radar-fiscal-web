@@ -75,6 +75,7 @@ export type CnpjRegistryResult = {
     legalName: string
     tradeName: string | null
     cnpj: string
+    businessLocationCode: string | null
   }
   establishment: Omit<Establishment, 'isActive'>
   registry: {
