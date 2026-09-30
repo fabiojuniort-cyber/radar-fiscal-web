@@ -514,7 +514,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
 
   await page.getByRole('tab', { name: /Estabelecimentos/ }).click()
   await expect(page.getByText('4683400')).toBeVisible()
-  await expect(page.getByText('Goiânia/GO')).toBeVisible()
+  await expect(page.getByText('Goiânia/GO').first()).toBeVisible()
   await expect(page.getByText('10.123.456-2')).toBeVisible()
   await expect(page.getByText(/Consulta estadual confirmada/)).toBeVisible()
 
