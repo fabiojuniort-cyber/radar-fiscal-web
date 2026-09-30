@@ -108,6 +108,29 @@ export type TaxonomyProfileOptions = {
   dimensions: TaxonomyProfileDimension[]
 }
 
+export type MonitoringRun = {
+  id: string
+  sourceCode: string
+  sourceName: string
+  jurisdictionLevel: 'FEDERAL' | 'STATE' | string
+  uf: string | null
+  status: string
+  triggerType: string
+  scheduledFor: string
+  startedAt: string | null
+  finishedAt: string | null
+  durationMs: number | null
+  attemptCount: number
+  foundItems: number
+  importedDocuments: number
+}
+
+export type MonitoringRunsResponse = {
+  generatedAt: string
+  windowHours: 24
+  items: MonitoringRun[]
+}
+
 export type TaxProfile = {
   id: string
   companyId: string
@@ -165,6 +188,24 @@ function tenantHeaders(
   const headers = new Headers(extra)
   headers.set('X-Tenant-Id', tenantId)
   return headers
+}
+
+export async function fetchMonitoringRuns(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+): Promise<MonitoringRunsResponse> {
+  const response = await apiFetch(
+    '/api/v1/monitoring/runs',
+    {
+      headers: tenantHeaders(tenantId, {
+        Accept: 'application/json',
+      }),
+    },
+  )
+
+  return requireJson<MonitoringRunsResponse>(
+    response,
+  )
 }
 
 export async function fetchAccountSummary(
