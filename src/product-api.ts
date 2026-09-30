@@ -194,7 +194,7 @@ export async function createCompanyFromCnpj(
     body: JSON.stringify({
       cnpj,
       businessLocationCode:
-        businessLocationCode?.trim() || null,
+        businessLocationCode?.trim() || undefined,
     }),
   })
 
