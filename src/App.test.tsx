@@ -337,9 +337,6 @@ describe('TriBusca release candidate WEB-11', () => {
       publishedOn: '2026-09-30',
       effectiveOn: null,
       officialUrl: 'https://example.test/federal',
-      sourceCode: 'rfb-normas',
-      sourceName: 'Receita Federal',
-      collectedAt: new Date().toISOString(),
     }
     const realState: PublicPublication = {
       ...realFederal,
@@ -349,8 +346,6 @@ describe('TriBusca release candidate WEB-11', () => {
       actNumber: '45/2026',
       uf: 'SP',
       officialUrl: 'https://example.test/sp',
-      sourceCode: 'doe-sp',
-      sourceName: 'DOE-SP',
     }
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
