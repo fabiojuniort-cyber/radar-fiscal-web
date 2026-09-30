@@ -5,7 +5,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import {
@@ -28,14 +28,7 @@ type OpenAuth = (view: AuthView, returnFocus: HTMLElement) => void
 export const STATE_CAROUSEL_AUTOPLAY_MS = 15_000
 const STATE_CAROUSEL_SWIPE_THRESHOLD_PX = 48
 
-const products = [
-  { name: 'Acervo', descriptor: 'Base oficial organizada', icon: BookOpen, description: 'Publicações, versões, fontes, marcadores e busca em uma experiência única.' },
-  { name: 'Central de Monitoramento', descriptor: 'Saúde das fontes', icon: MonitorCheck, description: 'Consultas, indisponibilidades, falhas e cobertura visíveis em um só lugar.' },
-  { name: 'Sonar', descriptor: 'Afinidade tributária', icon: RadioTower, description: 'Cruza cada publicação com o Perfil Tributário da empresa e de seus estabelecimentos.' },
-  { name: 'Revela', descriptor: 'Boletim inteligente', icon: BellRing, description: 'Reúne diariamente o que merece atenção e explica por que cada item entrou.' },
-  { name: 'Decodifica', descriptor: 'Leitura auxiliar', icon: Sparkles, description: 'Explica o texto oficial em linguagem mais clara, sempre identificado como IA.' },
-  { name: 'Perfil Tributário', descriptor: 'Contexto da empresa', icon: Building2, description: 'Organiza empresa, estabelecimentos, atividades, UFs e demais atributos relevantes.' },
-] as const
+
 
 const federalDescriptions: Record<string, string> = {
   'DOU / INLABS': 'Atos federais publicados no Diário Oficial da União.',
@@ -161,7 +154,7 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
     <HomeDecodifica />
     <HomeHow />
     <HomeTraceability />
-    <PublicCta onAuth={onAuth} showLogin captionBelowActions />
+    <PublicCta onAuth={onAuth} showLogin />
   </main>
 }
 
@@ -519,7 +512,7 @@ function PortfolioPage({onAuth}:{onAuth:OpenAuth}) {
   </main>
 }
 
-function PortfolioFeature({id,status,eyebrow,title,description,children}:{id:string;status:'Disponível'|'Em desenvolvimento';eyebrow:string;title:string;description:React.ReactNode;children:React.ReactNode}) {
+function PortfolioFeature({id,status,eyebrow,title,description,children}:{id:string;status:'Disponível'|'Em desenvolvimento';eyebrow:string;title:string;description:ReactNode;children:ReactNode}) {
   return <section id={id} className="ref-portfolio-feature ref-container">
     <div className="ref-portfolio-feature-copy">
       <span className={status === 'Disponível' ? 'ref-feature-status is-available' : 'ref-feature-status'}>{status}</span>
@@ -822,10 +815,9 @@ function LegalDocumentPage({
 }
 
 function PageHero({eyebrow,title,copy}:{eyebrow:string;title:string;copy:string}) { return <section className="ref-page-hero"><div className="ref-container"><span className="ref-kicker">{eyebrow}</span><h1>{title}</h1><p>{copy}</p></div></section> }
-function SectionTitle({eyebrow,title,copy}:{eyebrow:string;title:string;copy?:string}) { return <div className="ref-section-title"><span>{eyebrow}</span><h2>{title}</h2>{copy ? <p>{copy}</p> : null}</div> }
 function statusClass(status:string){return status==='—'?'collection-pending-data':'collection-'+status.toLowerCase().replaceAll(' ','-').replaceAll('…','')}
 
-function PublicCta({onAuth,showLogin=false,captionBelowActions=false}:{onAuth:OpenAuth;showLogin?:boolean;captionBelowActions?:boolean}) {
+function PublicCta({onAuth,showLogin=false}:{onAuth:OpenAuth;showLogin?:boolean}) {
   return <section className="ref-public-cta"><div className="ref-container"><div className="ref-public-cta-card">
     <h2>Pare de procurar mudanças tributárias manualmente.</h2>
     <div className="ref-cta-actions"><div><button className="ref-button ref-cta-primary" type="button" onClick={(event)=>onAuth('signup',event.currentTarget)}>Experimentar grátis</button>{showLogin?<button className="ref-button ref-cta-secondary" type="button" onClick={(event)=>onAuth('login',event.currentTarget)}>Entrar</button>:null}</div><p>7 dias para conhecer a TriBusca.</p></div>
