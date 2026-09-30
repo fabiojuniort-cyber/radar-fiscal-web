@@ -81,6 +81,36 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
     }),
   }))
 
+  await page.route('**/api/v1/monitoring/runs', async (route) => {
+    expect(route.request().headers()['x-tenant-id'])
+      .toBe('11111111-1111-4111-8111-111111111111')
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-09-30T00:00:00.000Z',
+        windowHours: 24,
+        items: [{
+          id: '88888888-8888-4888-8888-888888888888',
+          sourceCode: 'dou',
+          sourceName: 'DOU',
+          jurisdictionLevel: 'FEDERAL',
+          uf: null,
+          status: 'SUCCESS',
+          triggerType: 'SCHEDULED',
+          scheduledFor: '2026-09-30T00:00:00.000Z',
+          startedAt: '2026-09-30T00:00:00.000Z',
+          finishedAt: '2026-09-30T00:00:03.000Z',
+          durationMs: 3000,
+          attemptCount: 1,
+          foundItems: 7,
+          importedDocuments: 7,
+        }],
+      }),
+    })
+  })
+
   await page.route('**/api/v1/archive?*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
