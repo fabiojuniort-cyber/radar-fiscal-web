@@ -15,10 +15,14 @@ import {
   selectFeaturedStates,
 } from './content'
 import {
+  fetchPublicPublications,
   fetchPublicSources,
   findFederalSource,
   findStateSource,
+  formatPublicDate,
+  formatRelativeCollectedAt,
   toCoveragePresentation,
+  type PublicPublication,
 } from './public-api'
 import './public-experience.css'
 
@@ -109,12 +113,7 @@ function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
   </header>
 }
 
-const HOME_FEED = [
-  { src: 'DOU', time: 'há 12 min', title: 'Exemplo de captura — substituir pelo feed real' },
-  { src: 'CONFAZ', time: 'há 40 min', title: 'Exemplo de captura — substituir pelo feed real' },
-  { src: 'SEFAZ-SP', time: 'há 1 h', title: 'Exemplo de captura — substituir pelo feed real' },
-  { src: 'CGIBS', time: 'há 2 h', title: 'Exemplo de captura — substituir pelo feed real' },
-] as const
+
 
 const HOME_PRODUCTS = [
   { name: 'Acervo', description: 'Conteúdo oficial preservado, com busca por título, número, órgão, conteúdo, fonte, UF e período.', status: 'Disponível' },
@@ -158,16 +157,61 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
   </main>
 }
 
+function publicationMeta(publication: PublicPublication): string {
+  const source = publication.sourceCode ?? publication.sourceName ?? publication.agency ?? 'Fonte oficial'
+  const recency = formatRelativeCollectedAt(publication.collectedAt)
+  return source + ' · ' + recency
+}
+
+function publicationActLabel(publication: PublicPublication): string {
+  const type = publication.actType?.trim()
+  const number = publication.actNumber?.trim()
+  const published = formatPublicDate(publication.publishedOn)
+
+  return [type, number, published].filter(Boolean).join(' · ')
+}
+
+function PublicationTitle({ publication }: { publication: PublicPublication }) {
+  if (publication.officialUrl) {
+    return <a href={publication.officialUrl} target="_blank" rel="noreferrer">{publication.title}</a>
+  }
+
+  return <strong>{publication.title}</strong>
+}
+
 function HomeFeedCard() {
+  const query = useQuery({
+    queryKey: ['public-publications-home-latest'],
+    queryFn: ({ signal }) => fetchPublicPublications(
+      { order: 'collected', limit: 4 },
+      undefined,
+      signal,
+    ),
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  const items = query.data?.items ?? []
+
   return <aside className="ref-home-feed" aria-label="Agora no radar">
     <div className="ref-home-feed-head">
       <div><span>Agora no radar</span><strong>Últimas capturas reais</strong></div>
       <i aria-hidden="true" />
     </div>
-    {HOME_FEED.map((item) => <div className="ref-home-feed-row" key={item.src}>
-      <span>{item.src} · {item.time}</span>
-      <strong>{item.title}</strong>
-    </div>)}
+
+    {query.isLoading || query.isFetching ? (
+      <div className="ref-home-feed-state">Carregando capturas reais…</div>
+    ) : query.isError ? (
+      <div className="ref-home-feed-state">Dados indisponíveis no momento.</div>
+    ) : items.length === 0 ? (
+      <div className="ref-home-feed-state">Em implementação</div>
+    ) : (
+      items.map((publication) => <div className="ref-home-feed-row" key={publication.id}>
+        <span>{publicationMeta(publication)}</span>
+        <PublicationTitle publication={publication} />
+      </div>)
+    )}
   </aside>
 }
 
@@ -194,6 +238,23 @@ function StateCarousel() {
   const dataAvailable = query.isSuccess && !query.isFetching
   const sourceItems = dataAvailable ? query.data.items : []
   const stateStatus = toCoveragePresentation(findStateSource(sourceItems, current.uf), dataAvailable).status
+  const publicationsQuery = useQuery({
+    queryKey: ['public-publications-state-latest', current.uf],
+    queryFn: ({ signal }) => fetchPublicPublications(
+      {
+        uf: current.uf,
+        jurisdiction: 'STATE',
+        order: 'collected',
+        limit: 3,
+      },
+      undefined,
+      signal,
+    ),
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+  const statePublications = publicationsQuery.data?.items ?? []
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return
@@ -238,12 +299,6 @@ function StateCarousel() {
     else previous()
   }
 
-  const examplePublications = [
-    { type: 'Decreto', date: '25 set', title: 'Altera o Regulamento do ICMS/' + current.uf + ' (exemplo)' },
-    { type: 'Portaria SEFAZ', date: '24 set', title: 'Prazos de obrigações acessórias em ' + current.name + ' (exemplo)' },
-    { type: 'Resolução', date: '22 set', title: 'Procedimentos para benefício fiscal (exemplo)' },
-  ]
-
   return <section className="ref-home-section ref-state-section">
     <div className="ref-container">
       <div className="ref-home-section-heading"><span>Cobertura estadual</span><h2>Monitoramento tributário nos estados</h2></div>
@@ -272,10 +327,18 @@ function StateCarousel() {
             <strong>Últimas publicações · {current.uf}</strong>
             <Link to="/cobertura">Ver todas →</Link>
           </div>
-          {examplePublications.map((publication) => <div className="ref-state-publication-row" key={publication.type}>
-            <span>{publication.type} · {publication.date}</span>
-            <strong>{publication.title}</strong>
-          </div>)}
+          {publicationsQuery.isLoading || publicationsQuery.isFetching ? (
+            <div className="ref-state-publications-state">Carregando publicações…</div>
+          ) : publicationsQuery.isError ? (
+            <div className="ref-state-publications-state">Dados indisponíveis</div>
+          ) : statePublications.length === 0 ? (
+            <div className="ref-state-publications-state">Em implementação</div>
+          ) : (
+            statePublications.map((publication) => <div className="ref-state-publication-row" key={publication.id}>
+              <span>{publicationActLabel(publication)}</span>
+              <PublicationTitle publication={publication} />
+            </div>)
+          )}
         </div>
 
         <div className="ref-state-controls">
