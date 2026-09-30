@@ -10,6 +10,7 @@ export type AccountCompany = {
   cnpj: string
   isActive: boolean
   establishmentCount: number
+  businessLocationCode: string | null
 }
 
 export type AccountSummary = {
@@ -48,6 +49,7 @@ export type Establishment = {
   streetNumber: string | null
   complement: string | null
   district: string | null
+  businessLocationCode: string | null
   stateRegistration: string | null
   stateRegistrationStatus: string | null
   stateRegistrationSource: string | null
@@ -181,6 +183,7 @@ export async function createCompanyFromCnpj(
   apiFetch: ProductApiFetch,
   tenantId: string,
   cnpj: string,
+  businessLocationCode?: string,
 ): Promise<CnpjRegistryResult> {
   const response = await apiFetch('/api/v1/companies/from-cnpj', {
     method: 'POST',
@@ -188,7 +191,11 @@ export async function createCompanyFromCnpj(
       'Content-Type': 'application/json',
       Accept: 'application/json',
     }),
-    body: JSON.stringify({ cnpj }),
+    body: JSON.stringify({
+      cnpj,
+      businessLocationCode:
+        businessLocationCode?.trim() || null,
+    }),
   })
 
   return requireJson<CnpjRegistryResult>(response)
@@ -200,7 +207,7 @@ export async function updateCompany(
   companyId: string,
   input: {
     legalName: string
-    tradeName?: string | null
+    businessLocationCode?: string | null
   },
 ): Promise<void> {
   const response = await apiFetch('/api/v1/companies/' + companyId, {
@@ -310,6 +317,7 @@ export async function createEstablishment(
     streetNumber?: string
     complement?: string
     district?: string
+    businessLocationCode?: string | null
     cnaes?: EstablishmentCnae[]
   },
 ): Promise<void> {
@@ -332,6 +340,7 @@ export async function createEstablishmentFromCnpj(
   input: {
     cnpj: string
     typeCode: string
+    businessLocationCode?: string | null
   },
 ): Promise<void> {
   const response = await apiFetch(
@@ -365,6 +374,7 @@ export async function updateEstablishment(
     complement?: string | null
     district?: string | null
     stateRegistration?: string | null
+    businessLocationCode?: string | null
     cnaes: EstablishmentCnae[]
   },
 ): Promise<void> {
