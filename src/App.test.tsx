@@ -158,7 +158,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     expect(
       screen.getByRole('dialog', {
-        name: 'Termos de Uso do TriBusca',
+        name: 'Termos de Uso da TriBusca',
       }),
     ).toBeInTheDocument()
 
@@ -176,7 +176,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     expect(
       screen.getByRole('dialog', {
-        name: 'Política de Privacidade do TriBusca',
+        name: 'Política de Privacidade da TriBusca',
       }),
     ).toBeInTheDocument()
   })
