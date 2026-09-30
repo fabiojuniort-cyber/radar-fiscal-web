@@ -48,6 +48,16 @@ export type Establishment = {
   streetNumber: string | null
   complement: string | null
   district: string | null
+  stateRegistration: string | null
+  stateRegistrationStatus: string | null
+  stateRegistrationSource: string | null
+  stateRegistrationCheckedAt: string | null
+  stateRegistrationLookupStatus:
+    | 'SUCCESS'
+    | 'NOT_FOUND'
+    | 'UNAVAILABLE'
+    | 'NOT_SUPPORTED'
+    | null
   isActive: boolean
   cnaes: EstablishmentCnae[]
 }
@@ -354,6 +364,7 @@ export async function updateEstablishment(
     streetNumber?: string | null
     complement?: string | null
     district?: string | null
+    stateRegistration?: string | null
     cnaes: EstablishmentCnae[]
   },
 ): Promise<void> {
