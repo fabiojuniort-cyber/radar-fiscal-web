@@ -15,6 +15,7 @@ async function openLogin(page: import('@playwright/test').Page) {
 test('LAUNCH-01 authenticated release candidate screens and account setup work end-to-end', async ({ page }) => {
   let companyCreated = false
   let establishmentCreated = false
+  let branchCreated = false
   let profileSaved = false
 
   await page.route('**/auth/login', (route) => route.fulfill({
@@ -204,7 +205,10 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           tradeName: 'Empresa Launch',
           cnpj: '11222333000181',
           isActive: true,
-          establishmentCount: establishmentCreated ? 1 : 0,
+          establishmentCount:
+            (establishmentCreated ? 1 : 0) +
+            (branchCreated ? 1 : 0),
+          businessLocationCode: 'MATRIZ-01',
         }] : [],
       }),
     })
@@ -223,6 +227,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           legalName: 'Empresa Launch Ltda',
           tradeName: 'Empresa Launch',
           cnpj: '11222333000181',
+          businessLocationCode: 'MATRIZ-01',
         },
         establishment: {
           id: '33333333-3333-4333-8333-333333333333',
@@ -239,6 +244,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
           streetNumber: '100',
           complement: null,
           district: 'Centro',
+          businessLocationCode: 'MATRIZ-01',
           stateRegistration: '10.123.456-2',
           stateRegistrationStatus: 'ATIVO - HABILITADO',
           stateRegistrationLookupStatus: 'SUCCESS',
@@ -270,6 +276,7 @@ test('LAUNCH-01 authenticated release candidate screens and account setup work e
 
       companyCreated = false
       establishmentCreated = false
+      branchCreated = false
       await route.fulfill({
         status: 204,
         body: '',
