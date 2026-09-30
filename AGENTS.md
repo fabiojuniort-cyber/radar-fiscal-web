@@ -79,3 +79,12 @@ A experiência autenticada de Empresas segue estas regras:
 - o Perfil Tributário deve separar visualmente `Contexto cadastral automático`, `Contexto fiscal declarado` e `Taxonomia TriBusca`;
 - opções taxonômicas vêm do backend e de release publicada; salvar códigos canônicos, não labels inventados no frontend;
 - quando não houver release publicada, mostrar estado transparente de indisponibilidade e não fabricar opções.
+
+
+### Inscrição Estadual
+
+- Exibir IE como dado estadual separado do cadastro CNPJ/RFB.
+- Quando o backend confirmar a IE por fonte oficial estadual, mostrar o valor e o estado da consulta.
+- Diferenciar visualmente IE confirmada, não localizada, fonte indisponível e UF ainda não automatizada.
+- Permitir edição manual da IE, deixando claro que o valor manual não equivale a confirmação automática pela SEFAZ/SINTEGRA.
+- O botão de atualização cadastral pode reconsultar RFB + fonte estadual suportada; não chamar isso apenas de consulta à Receita quando houver enriquecimento estadual.
