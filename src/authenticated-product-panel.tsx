@@ -1762,8 +1762,9 @@ function CompanySection({
         <div>
           <h2>Empresas da conta</h2>
           <p>
-            Informe somente o CNPJ da matriz. A TriBusca consulta os dados cadastrais,
-            cria a matriz e registra todos os CNAEs encontrados.
+            Informe somente o CNPJ da matriz. A TriBusca consulta o cadastro CNPJ/RFB,
+            cria a matriz, registra todos os CNAEs e tenta consultar a Inscrição Estadual
+            na fonte estadual oficial suportada para a UF.
           </p>
         </div>
         {!creating && (
@@ -1804,7 +1805,7 @@ function CompanySection({
             disabled={createMutation.isPending}
           >
             {createMutation.isPending
-              ? 'Consultando Receita Federal…'
+              ? 'Consultando RFB e cadastro estadual…'
               : 'Consultar e cadastrar'}
           </button>
           {account.companies.length > 0 && (
@@ -2125,7 +2126,8 @@ function EstablishmentSection({
           <h2>Estabelecimentos</h2>
           <p>
             Matriz e filiais da empresa ativa. Ao informar um CNPJ, a TriBusca consulta
-            endereço e CNAEs e registra o contexto usado pelo Sonar.
+            endereço e CNAEs na base cadastral e tenta recuperar a Inscrição Estadual
+            pela fonte oficial estadual suportada.
           </p>
         </div>
         {!creating && (
@@ -2189,7 +2191,7 @@ function EstablishmentSection({
             disabled={createMutation.isPending}
           >
             {createMutation.isPending
-              ? 'Consultando Receita Federal…'
+              ? 'Consultando RFB e cadastro estadual…'
               : 'Consultar e cadastrar'}
           </button>
           <button
@@ -2254,7 +2256,9 @@ function EstablishmentSection({
                 <b>{item.stateRegistration || '—'}</b>
                 {item.stateRegistrationLookupStatus === 'SUCCESS' && (
                   <small>
-                    Consulta estadual confirmada
+                    {item.stateRegistrationSource === 'SEFAZ_GO_SINTEGRA'
+                      ? 'SEFAZ Goiás · SINTEGRA'
+                      : 'Consulta estadual confirmada'}
                     {item.stateRegistrationStatus
                       ? ' · ' + item.stateRegistrationStatus
                       : ''}
@@ -2297,7 +2301,7 @@ function EstablishmentSection({
                     refreshMutation.mutate(item.id)
                   }
                 >
-                  Atualizar cadastro
+                  Atualizar RFB + IE
                 </button>
                 <button
                   type="button"
