@@ -99,6 +99,12 @@
   margin-top: 22px;
 }
 
+/* WEB-19: não exibir uma origem RFB fixa enquanto a proveniência do
+   cadastro CNPJ ainda não é persistida por registro. */
+.tp-company-row dl > div:nth-child(3) {
+  display: none;
+}
+
 @media (max-width: 680px) {
   .tp-manual-overlay {
     align-items: end;
