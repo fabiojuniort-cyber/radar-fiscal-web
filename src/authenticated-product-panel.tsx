@@ -2064,6 +2064,8 @@ function EstablishmentSection({
             draft.streetNumber,
           complement: draft.complement,
           district: draft.district,
+          stateRegistration:
+            draft.stateRegistration,
           cnaes: draft.cnaes,
         },
       )
@@ -2213,6 +2215,7 @@ function EstablishmentSection({
           <span>Tipo</span>
           <span>Município/UF</span>
           <span>Endereço</span>
+          <span>Inscrição estadual</span>
           <span>CNAE principal</span>
           <span>Ações</span>
         </div>
@@ -2247,6 +2250,29 @@ function EstablishmentSection({
               <span className="tp-address-cell">
                 {registrationAddress(item)}
               </span>
+              <span className="tp-state-registration-cell">
+                <b>{item.stateRegistration || '—'}</b>
+                {item.stateRegistrationLookupStatus === 'SUCCESS' && (
+                  <small>
+                    Consulta estadual confirmada
+                    {item.stateRegistrationStatus
+                      ? ' · ' + item.stateRegistrationStatus
+                      : ''}
+                  </small>
+                )}
+                {item.stateRegistrationLookupStatus === 'NOT_FOUND' && (
+                  <small>IE não localizada na consulta estadual</small>
+                )}
+                {item.stateRegistrationLookupStatus === 'UNAVAILABLE' && (
+                  <small>Consulta estadual indisponível</small>
+                )}
+                {item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' && (
+                  <small>Consulta automática em implementação</small>
+                )}
+                {item.stateRegistrationSource === 'MANUAL' && (
+                  <small>Informada manualmente</small>
+                )}
+              </span>
               <span className="tp-cnae-cell">
                 {primary ? (
                   <>
@@ -2271,7 +2297,7 @@ function EstablishmentSection({
                     refreshMutation.mutate(item.id)
                   }
                 >
-                  Consulta API
+                  Atualizar cadastro
                 </button>
                 <button
                   type="button"
@@ -2303,10 +2329,11 @@ function EstablishmentSection({
       </div>
 
       <p className="tp-registry-note">
-        Dados cadastrais são consultados a partir do cadastro do CNPJ. Use
-        <b> Consulta API </b>
-        para atualizar novamente ou <b>Editar dados</b> para ajustar manualmente.
-        O CNPJ permanece como identidade do estabelecimento.
+        Dados cadastrais e CNAEs são consultados a partir do CNPJ/RFB. A
+        Inscrição Estadual é buscada na fonte estadual oficial quando a UF já
+        possui consulta automática. Use <b>Atualizar cadastro</b> para consultar
+        novamente ou <b>Editar dados</b> para ajustar manualmente. O CNPJ
+        permanece como identidade do estabelecimento.
       </p>
 
       {editing && draft && (
@@ -2467,6 +2494,19 @@ function EstablishmentSection({
                       event.target.value || null,
                   })
                 }
+              />
+            </label>
+            <label>
+              Inscrição Estadual
+              <input
+                value={draft.stateRegistration ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    stateRegistration:
+                      event.target.value || null,
+                  })
+                }
+                placeholder="Consultada automaticamente quando disponível"
               />
             </label>
           </div>
