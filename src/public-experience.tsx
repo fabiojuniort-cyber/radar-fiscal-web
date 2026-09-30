@@ -668,41 +668,56 @@ function buildRadarPatterns(): RadarPattern[] {
 
 function SonarDemo(){
   const patterns=useMemo(()=>buildRadarPatterns(),[])
-  const [cycle,setCycle]=useState({patternIndex:0,iteration:0})
-  const activePattern=patterns[cycle.patternIndex] ?? patterns[0]
+  const [generations,setGenerations]=useState(() => [{
+    iteration:0,
+    patternIndex:0,
+    blips:patterns[0]?.blips ?? [],
+  }])
+  const activeGeneration=
+    generations[generations.length-1] ??
+    {iteration:0,patternIndex:0,blips:[]}
 
   useEffect(()=>{
     const timer=window.setInterval(()=>{
-      setCycle((current)=>{
-        let nextIndex=current.patternIndex
+      setGenerations((current)=>{
+        const active=
+          current[current.length-1] ??
+          {iteration:0,patternIndex:0,blips:[]}
+        let nextIndex=active.patternIndex
 
         while(
           RADAR_PATTERN_COUNT>1 &&
-          nextIndex===current.patternIndex
+          nextIndex===active.patternIndex
         ){
           nextIndex=Math.floor(Math.random()*RADAR_PATTERN_COUNT)
         }
 
-        return {
-          patternIndex:nextIndex,
-          iteration:current.iteration+1,
-        }
+        const nextPattern=
+          patterns[nextIndex] ??
+          patterns[0]
+
+        return [
+          ...current.slice(-1),
+          {
+            iteration:active.iteration+1,
+            patternIndex:nextIndex,
+            blips:nextPattern?.blips ?? [],
+          },
+        ]
       })
     },RADAR_SWEEP_SECONDS*1000)
 
     return ()=>window.clearInterval(timer)
-  },[])
-
-  const blips=activePattern?.blips ?? []
+  },[patterns])
 
   return <div className="ref-sonar-model">
     <div
       className="ref-live-radar"
       aria-label="Radar de afinidade ilustrativo"
       data-pattern-count={RADAR_PATTERN_COUNT}
-      data-pattern-index={activePattern?.id ?? 0}
-      data-target-count={blips.length}
-      data-cycle={cycle.iteration}
+      data-pattern-index={activeGeneration.patternIndex}
+      data-target-count={activeGeneration.blips.length}
+      data-cycle={activeGeneration.iteration}
     >
       <span className="ref-radar-zone zone-far"/><span className="ref-radar-zone zone-medium"/><span className="ref-radar-zone zone-near"/>
       <span className="ref-live-radar-center"/>
@@ -710,15 +725,22 @@ function SonarDemo(){
         className="ref-live-radar-sweep"
         style={{ '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties}
       />
-      {blips.map((blip,index)=>{
-        const style={
-          '--blip-left': blip.left + '%',
-          '--blip-top': blip.top + '%',
-          '--blip-delay': blip.detectionDelay + 's',
-          '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
-        } as CSSProperties
-        return <span key={cycle.iteration+'-'+index} className={'ref-live-radar-blip is-'+blip.level} style={style}/>
-      })}
+      {generations.flatMap((generation)=>
+        generation.blips.map((blip,index)=>{
+          const style={
+            '--blip-left': blip.left + '%',
+            '--blip-top': blip.top + '%',
+            '--blip-delay': blip.detectionDelay + 's',
+            '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
+          } as CSSProperties
+          return <span
+            key={generation.iteration+'-'+index}
+            className={'ref-live-radar-blip is-'+blip.level}
+            data-generation={generation.iteration}
+            style={style}
+          />
+        }),
+      )}
     </div>
     <div className="ref-sonar-legend">
       <span className="is-near">Alta · sinal próximo ao centro</span>
