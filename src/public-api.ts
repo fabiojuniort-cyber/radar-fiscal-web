@@ -161,6 +161,9 @@ export type PublicPublication = {
   publishedOn: string | null
   effectiveOn: string | null
   officialUrl: string | null
+  sourceCode: string | null
+  sourceName: string | null
+  collectedAt: string | null
 }
 
 export type PublicPublicationsResponse = {
@@ -171,6 +174,7 @@ export type PublicPublicationFilters = {
   uf?: string
   jurisdiction?: 'FEDERAL' | 'STATE'
   source?: string
+  order?: 'published' | 'collected'
   limit?: number
 }
 
@@ -190,6 +194,7 @@ export function publicPublicationQuery(
   if (filters.uf) params.set('uf', filters.uf.toUpperCase())
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)
+  if (filters.order) params.set('order', filters.order)
 
   const requestedLimit = filters.limit ?? 20
   params.set('limit', String(Math.min(20, Math.max(1, requestedLimit))))
@@ -265,4 +270,27 @@ export function formatPublicDate(value: string | null): string {
     dateStyle: 'short',
     timeZone: 'America/Sao_Paulo',
   }).format(parsed)
+}
+
+
+export function formatRelativeCollectedAt(
+  value: string | null,
+  now = new Date(),
+): string {
+  if (!value) return 'horário não informado'
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'horário não informado'
+
+  const diffMs = Math.max(0, now.getTime() - parsed.getTime())
+  const minutes = Math.floor(diffMs / 60_000)
+
+  if (minutes < 1) return 'agora'
+  if (minutes < 60) return `há ${minutes} min`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `há ${hours} h`
+
+  const days = Math.floor(hours / 24)
+  return `há ${days} d`
 }
