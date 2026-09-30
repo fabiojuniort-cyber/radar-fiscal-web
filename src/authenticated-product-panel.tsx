@@ -1665,6 +1665,77 @@ function registrationAddress(item: Establishment) {
   return [first, second].filter(Boolean).join(' — ') || 'Endereço não informado'
 }
 
+function DangerConfirmDialog({
+  title,
+  description,
+  confirmLabel,
+  pending,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  title: string
+  description: string
+  confirmLabel: string
+  pending: boolean
+  error?: Error | null
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div
+      className="tp-confirm-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          !pending
+        ) {
+          onCancel()
+        }
+      }}
+    >
+      <section
+        className="tp-confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tp-confirm-title"
+      >
+        <div>
+          <span className="tp-confirm-eyebrow">Confirmação</span>
+          <h3 id="tp-confirm-title">{title}</h3>
+          <p>{description}</p>
+        </div>
+
+        {error && (
+          <p className="auth-error" role="alert">
+            Não foi possível concluir a exclusão. Tente novamente.
+          </p>
+        )}
+
+        <div className="tp-confirm-actions">
+          <button
+            className="launch-secondary-button"
+            type="button"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            Cancelar
+          </button>
+          <button
+            className="tp-danger-button"
+            type="button"
+            disabled={pending}
+            onClick={onConfirm}
+          >
+            {pending ? 'Excluindo…' : confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function CompanySection({
   apiFetch,
   tenantId,
@@ -1698,6 +1769,8 @@ function CompanySection({
     useState('')
   const [editTradeName, setEditTradeName] =
     useState('')
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<AccountCompany | null>(null)
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -1745,6 +1818,7 @@ function CompanySection({
       ),
     onSuccess: () => {
       setEditing(null)
+      setDeleteCandidate(null)
       onSelect('')
       onChanged()
     },
@@ -1899,13 +1973,8 @@ function CompanySection({
                 type="button"
                 disabled={deleteMutation.isPending}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      'Excluir esta empresa e desativar seus estabelecimentos?',
-                    )
-                  ) {
-                    deleteMutation.mutate(company.id)
-                  }
+                  deleteMutation.reset()
+                  setDeleteCandidate(company)
                 }}
               >
                 <Trash2 size={14} />
@@ -1915,6 +1984,29 @@ function CompanySection({
           </article>
         ))}
       </div>
+
+      {deleteCandidate && (
+        <DangerConfirmDialog
+          title="Excluir empresa?"
+          description={
+            'A empresa ' +
+            deleteCandidate.legalName +
+            ' será desativada junto com seus estabelecimentos. O histórico será preservado e o mesmo CNPJ poderá ser reativado depois.'
+          }
+          confirmLabel="Excluir empresa"
+          pending={deleteMutation.isPending}
+          error={deleteMutation.error}
+          onCancel={() => {
+            if (!deleteMutation.isPending) {
+              deleteMutation.reset()
+              setDeleteCandidate(null)
+            }
+          }}
+          onConfirm={() =>
+            deleteMutation.mutate(deleteCandidate.id)
+          }
+        />
+      )}
 
       {editing && (
         <form
@@ -2006,6 +2098,8 @@ function EstablishmentSection({
     useState<Establishment | null>(null)
   const [draft, setDraft] =
     useState<Establishment | null>(null)
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<Establishment | null>(null)
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -2039,7 +2133,10 @@ function EstablishmentSection({
         tenantId,
         establishmentId,
       ),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setDeleteCandidate(null)
+      onChanged()
+    },
   })
 
   const updateMutation = useMutation({
@@ -2313,14 +2410,10 @@ function EstablishmentSection({
                   <button
                     className="is-danger"
                     type="button"
+                    disabled={deleteMutation.isPending}
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          'Excluir este estabelecimento?',
-                        )
-                      ) {
-                        deleteMutation.mutate(item.id)
-                      }
+                      deleteMutation.reset()
+                      setDeleteCandidate(item)
                     }}
                   >
                     Excluir
@@ -2331,6 +2424,29 @@ function EstablishmentSection({
           )
         })}
       </div>
+
+      {deleteCandidate && (
+        <DangerConfirmDialog
+          title="Excluir estabelecimento?"
+          description={
+            'O estabelecimento ' +
+            deleteCandidate.name +
+            ' será desativado. O histórico será preservado.'
+          }
+          confirmLabel="Excluir estabelecimento"
+          pending={deleteMutation.isPending}
+          error={deleteMutation.error}
+          onCancel={() => {
+            if (!deleteMutation.isPending) {
+              deleteMutation.reset()
+              setDeleteCandidate(null)
+            }
+          }}
+          onConfirm={() =>
+            deleteMutation.mutate(deleteCandidate.id)
+          }
+        />
+      )}
 
       <p className="tp-registry-note">
         Dados cadastrais e CNAEs são consultados a partir do CNPJ/RFB. A
