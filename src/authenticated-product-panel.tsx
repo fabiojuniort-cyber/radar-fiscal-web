@@ -647,6 +647,7 @@ export function AuthenticatedProductPanel({
 
           <label className="launch-tenant-selector">
             <span>Conta autenticada</span>
+            <strong className="launch-tenant-current">{tenantName}</strong>
             <select
               aria-label="Conta ativa"
               value={tenantId ?? ''}
