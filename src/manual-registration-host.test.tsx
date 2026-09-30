@@ -11,6 +11,7 @@ import {
   getPendingManualRegistration,
   rejectManualRegistration,
   requestManualRegistration,
+  type ManualCompanyForm,
 } from './manual-registration-bridge'
 import { ManualRegistrationHost } from './manual-registration-host'
 
@@ -25,7 +26,9 @@ afterEach(() => {
 
 describe('ManualRegistrationHost', () => {
   it('lets the user complete a company manually while preserving CNPJ and Local Negócio', async () => {
-    const submit = vi.fn(async (input) => ({
+    const submit = vi.fn(async (
+      input: ManualCompanyForm,
+    ) => ({
       company: {
         id: 'company-1',
         ...input,
