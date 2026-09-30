@@ -292,7 +292,7 @@ export async function createCompanyFromCnpj(
           body: JSON.stringify({
             cnpj: normalizedCnpj,
             businessLocationCode:
-              normalizedBusinessLocation,
+              normalizedBusinessLocation ?? undefined,
             ...input,
           }),
         },
@@ -487,29 +487,35 @@ export async function createEstablishmentFromCnpj(
     submit: async (
       manual: ManualEstablishmentForm,
     ) => {
-      await createEstablishment(
-        apiFetch,
-        tenantId,
+      const manualResponse = await apiFetch(
+        '/api/v1/establishments/manual',
         {
-          companyId,
-          cnpj: normalizedCnpj,
-          name: manual.name,
-          typeCode: input.typeCode,
-          isHeadOffice: false,
-          uf: manual.uf,
-          municipalityName:
-            manual.municipalityName,
-          postalCode: manual.postalCode,
-          street: manual.street,
-          streetNumber: manual.streetNumber,
-          district: manual.district,
-          stateRegistration:
-            manual.stateRegistration,
-          businessLocationCode:
-            normalizedBusinessLocation,
-          cnaes: [],
+          method: 'POST',
+          headers: tenantHeaders(tenantId, {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          }),
+          body: JSON.stringify({
+            companyId,
+            cnpj: normalizedCnpj,
+            name: manual.name,
+            typeCode: input.typeCode,
+            uf: manual.uf,
+            municipalityName:
+              manual.municipalityName,
+            postalCode: manual.postalCode,
+            street: manual.street,
+            streetNumber: manual.streetNumber,
+            district: manual.district,
+            stateRegistration:
+              manual.stateRegistration,
+            businessLocationCode:
+              normalizedBusinessLocation ?? undefined,
+          }),
         },
       )
+
+      await requireJson(manualResponse)
     },
   })
 }
