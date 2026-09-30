@@ -262,7 +262,7 @@ function StateCarousel() {
         <span className="sr-only" data-testid="state-carousel-status" aria-live="polite">{stateStatus}</span>
 
         <div className="ref-state-identity">
-          <strong>{current.uf}</strong>
+          <strong data-uf={current.uf} aria-label={current.uf}></strong>
           <span>{current.name} · {current.capital}</span>
           <small>{current.place} · Foto: Wikimedia Commons</small>
         </div>
@@ -459,9 +459,9 @@ function CoverageRow({code,name,description,status,lastSuccessAt,importedToday,t
   return <article className="coverage-card ref-coverage-row" data-testid={testId}>
     <div className="ref-coverage-source"><span>{code}</span><div><strong>{name}</strong><small>{description}</small></div></div>
     <div className="ref-coverage-cell"><small>Coleta</small><strong><i className={'ref-coverage-dot ' + coverageDotClass(status)} />{status}</strong></div>
-    <div className="ref-coverage-cell"><small>Última atualização</small><strong>{lastSuccessAt}</strong></div>
-    <div className="ref-coverage-cell"><small>Importadas hoje</small><b>{importedToday}</b></div>
-    <div className="ref-coverage-cell"><small>Total no acervo</small><b>{totalPublications}</b></div>
+    <div className="ref-coverage-cell"><small>Última atualização</small><strong data-value={lastSuccessAt}></strong></div>
+    <div className="ref-coverage-cell"><small>Importadas hoje</small><b data-value={importedToday}></b></div>
+    <div className="ref-coverage-cell"><small>Total no acervo</small><b data-value={totalPublications}></b></div>
     <span className={'collection-status sr-only ' + statusClass(status)}>Coleta {status}</span>
     <dl className="coverage-metrics sr-only"><div><dt>Última atualização</dt><dd>{lastSuccessAt}</dd></div><div><dt>Importadas hoje</dt><dd>{importedToday}</dd></div><div><dt>Total no acervo</dt><dd>{totalPublications}</dd></div></dl>
   </article>
@@ -567,9 +567,9 @@ function SonarDemo(){
       })}
     </div>
     <div className="ref-sonar-legend">
-      <span><b className="is-near">Alta</b> · sinal próximo ao centro</span>
-      <span><b className="is-medium">Média</b> · distância intermediária</span>
-      <span><b className="is-far">Baixa</b> · sinal distante</span>
+      <span className="is-near">Alta · sinal próximo ao centro</span>
+      <span className="is-medium">Média · distância intermediária</span>
+      <span className="is-far">Baixa · sinal distante</span>
     </div>
     <div className="ref-sonar-signals"><b>Sinais encontrados</b><span>✓ Trata de ICMS<br/>✓ Envolve operação de venda<br/>✓ Estabelecimento em GO</span></div>
     <small>Exemplo ilustrativo.</small>
