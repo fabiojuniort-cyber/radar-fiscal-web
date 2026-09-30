@@ -20,7 +20,6 @@ import {
   findFederalSource,
   findStateSource,
   formatPublicDate,
-  formatRelativeCollectedAt,
   toCoveragePresentation,
   type PublicPublication,
 } from './public-api'
@@ -158,9 +157,8 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
 }
 
 function publicationMeta(publication: PublicPublication): string {
-  const source = publication.sourceCode ?? publication.sourceName ?? publication.agency ?? 'Fonte oficial'
-  const recency = formatRelativeCollectedAt(publication.collectedAt)
-  return source + ' · ' + recency
+  const source = publication.agency?.trim() || 'Fonte oficial'
+  return source + ' · ' + formatPublicDate(publication.publishedOn)
 }
 
 function publicationActLabel(publication: PublicPublication): string {
@@ -183,7 +181,7 @@ function HomeFeedCard() {
   const query = useQuery({
     queryKey: ['public-publications-home-latest'],
     queryFn: ({ signal }) => fetchPublicPublications(
-      { order: 'collected', limit: 4 },
+      { limit: 4 },
       undefined,
       signal,
     ),
@@ -244,7 +242,6 @@ function StateCarousel() {
       {
         uf: current.uf,
         jurisdiction: 'STATE',
-        order: 'collected',
         limit: 3,
       },
       undefined,
