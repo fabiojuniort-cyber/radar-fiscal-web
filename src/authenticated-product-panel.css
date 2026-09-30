@@ -1034,3 +1034,92 @@
   font-size: 10px;
   line-height: 1.35;
 }
+
+
+/* Reliable in-app confirmation for destructive actions */
+.tp-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 31, 82, 0.46);
+  backdrop-filter: blur(4px);
+}
+
+.tp-confirm-dialog {
+  width: min(100%, 460px);
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--tp-border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(5, 31, 77, 0.24);
+  padding: 22px;
+}
+
+.tp-confirm-dialog h3 {
+  margin: 5px 0 8px;
+  color: var(--tp-navy);
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.tp-confirm-dialog p {
+  margin: 0;
+  color: var(--tp-copy);
+  line-height: 1.5;
+}
+
+.tp-confirm-eyebrow {
+  color: #2f59ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tp-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tp-confirm-actions button {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tp-danger-button {
+  border: 1px solid #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.tp-danger-button:disabled,
+.tp-confirm-actions button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+@media (max-width: 640px) {
+  .tp-confirm-overlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .tp-confirm-dialog {
+    width: 100%;
+    border-radius: 18px 18px 12px 12px;
+    padding: 20px;
+  }
+
+  .tp-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
