@@ -460,6 +460,8 @@ export function AuthenticatedProductPanel({
     useState<OrgTab>('empresa')
   const [userMenu, setUserMenu] =
     useState(false)
+  const [tenantMenu, setTenantMenu] =
+    useState(false)
   const [selectedCompanyId, setSelectedCompanyId] =
     useState('')
 
@@ -645,24 +647,49 @@ export function AuthenticatedProductPanel({
             className="tp-logo"
           />
 
-          <label className="launch-tenant-selector">
-            <span>Conta autenticada</span>
-            <strong className="launch-tenant-current">{tenantName}</strong>
-            <select
-              aria-label="Conta ativa"
-              value={tenantId ?? ''}
-              onChange={(event) => {
-                setSelectedTenantId(event.target.value)
+          <div className="tp-pop-wrap">
+            <button
+              className="tp-company-button"
+              type="button"
+              aria-label="Selecionar conta"
+              aria-expanded={tenantMenu}
+              onClick={() => {
+                setTenantMenu((value) => !value)
                 setUserMenu(false)
               }}
             >
-              {(identity.memberships ?? []).map((item) => (
-                <option value={item.tenantId} key={item.tenantId}>
-                  {item.tenantName} · {item.role}
-                </option>
-              ))}
-            </select>
-          </label>
+              <span className="tp-company-copy">
+                <small>Conta autenticada</small>
+                <strong>{tenantName}</strong>
+                <span>{membership?.role ?? 'Usuário'}</span>
+              </span>
+              <ChevronDown size={15} aria-hidden="true" />
+            </button>
+
+            {tenantMenu && (
+              <div className="tp-popover tp-company-popover">
+                <span className="tp-pop-label">Conta ativa</span>
+                {(identity.memberships ?? []).map((item) => (
+                  <button
+                    type="button"
+                    className={
+                      item.tenantId === tenantId
+                        ? 'is-selected'
+                        : undefined
+                    }
+                    key={item.tenantId}
+                    onClick={() => {
+                      setSelectedTenantId(item.tenantId)
+                      setTenantMenu(false)
+                    }}
+                  >
+                    <b>{item.tenantName}</b>
+                    <span>{item.role}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <form
             className="tp-global-search"
@@ -694,11 +721,12 @@ export function AuthenticatedProductPanel({
               type="button"
               aria-label="Menu do usuário"
               aria-expanded={userMenu}
-              onClick={() =>
+              onClick={() => {
                 setUserMenu(
                   (value) => !value,
                 )
-              }
+                setTenantMenu(false)
+              }}
             >
               <span>
                 {initials(displayName)}
