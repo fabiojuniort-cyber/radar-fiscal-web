@@ -295,7 +295,7 @@ function StateCarousel() {
           <button type="button" onClick={next} aria-label="Próximo estado"><ArrowRight /></button>
         </div>
       </div>
-      <div className="ref-state-tabs" aria-label="Estados em destaque">{states.map((state, stateIndex) => <button key={state.uf} type="button" aria-label={`Exibir ${state.name}`} aria-current={stateIndex === index} className={stateIndex === index ? 'active' : ''} onClick={() => setIndex(stateIndex)}>{state.uf}</button>)}</div>
+      <div className="ref-state-tabs" role="tablist" aria-label="Estados em destaque">{states.map((state, stateIndex) => <button key={state.uf} role="tab" type="button" aria-label={`Exibir ${state.name}`} aria-selected={stateIndex === index} className={stateIndex === index ? 'active' : ''} onClick={() => setIndex(stateIndex)}>{state.uf}</button>)}</div>
       <p className="ref-state-carousel-footer" data-testid="state-carousel-position">{index + 1} / {states.length} · Fotografias reais do Wikimedia Commons, com autoria e licença na legenda.</p>
     </div>
   </section>
@@ -311,7 +311,7 @@ function FederalHome() {
       <div className="ref-federal-grid">{FEDERAL_COVERAGE.map((source) => {
         const data = toCoveragePresentation(findFederalSource(items, source.code), available)
         const status = query.isLoading || query.isFetching ? 'Verificando…' : data.status
-        return <article key={source.code} className="ref-federal-card"><span className={`collection-status ref-status ${statusClass(status)}`}>Coleta {status}</span><strong>{source.name}</strong><p>{federalDescriptions[source.name] ?? 'Fonte oficial monitorada pela TriBusca.'}</p><small>Última atualização: {data.lastSuccessAt}</small></article>
+        return <article key={source.code} className="ref-federal-card"><span className={`collection-status ref-status ${statusClass(status)}`}>{status}</span><strong>{source.name}</strong><p>{federalDescriptions[source.name] ?? 'Fonte oficial monitorada pela TriBusca.'}</p><small>Última atualização: {data.lastSuccessAt}</small></article>
       })}</div>
     </div>
   </section>
@@ -372,7 +372,7 @@ function CoveragePage({ onAuth }: { onAuth: OpenAuth }) {
 }
 
 function CoverageCard({code,name,description,status,lastSuccessAt,importedToday,totalPublications,testId}:{code:string;name:string;description:string;status:string;lastSuccessAt:string;importedToday:string;totalPublications:string;testId?:string}) {
-  return <article className="coverage-card ref-coverage-card" data-testid={testId}><div className="ref-source-code">{code}</div><div className="ref-coverage-copy"><strong>{name}</strong><p>{description}</p><span className={`collection-status ref-status ${statusClass(status)}`}>{status}</span></div><dl className="coverage-metrics"><div><dt>Última atualização</dt><dd>{lastSuccessAt}</dd></div><div><dt>Importadas hoje</dt><dd>{importedToday}</dd></div><div><dt>Total no acervo</dt><dd>{totalPublications}</dd></div></dl></article>
+  return <article className="coverage-card ref-coverage-card" data-testid={testId}><div className="ref-source-code">{code}</div><div className="ref-coverage-copy"><strong>{name}</strong><p>{description}</p><span className={`collection-status ref-status ${statusClass(status)}`}>Coleta {status}</span></div><dl className="coverage-metrics"><div><dt>Última atualização</dt><dd>{lastSuccessAt}</dd></div><div><dt>Importadas hoje</dt><dd>{importedToday}</dd></div><div><dt>Total no acervo</dt><dd>{totalPublications}</dd></div></dl></article>
 }
 
 function Health({name,text}:{name:string;text:string}) { return <article><span className="ref-health-dot"/><strong>{name}</strong><p>{text}</p></article> }
