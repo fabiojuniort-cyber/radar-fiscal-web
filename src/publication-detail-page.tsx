@@ -206,7 +206,19 @@ export function PublicationDetailPage({
             </small>
           </div>
 
-          {version?.contentText ? (
+          {version?.presentation.format ===
+          'SANITIZED_HTML' ? (
+            <div
+              className="publication-preserved-html"
+              data-presentation-format="SANITIZED_HTML"
+              // The backend re-sanitizes this allowlisted legal HTML
+              // before returning it. Raw source HTML is never rendered.
+              dangerouslySetInnerHTML={{
+                __html:
+                  version.presentation.html,
+              }}
+            />
+          ) : version?.contentText ? (
             <div
               className="publication-preserved-text"
               data-presentation-format={
