@@ -78,7 +78,7 @@ describe('manual CNPJ fallback', () => {
       },
     }
 
-    const apiFetch = vi.fn(async (
+    const apiFetchMock = vi.fn(async (
       input: RequestInfo | URL,
     ) => {
       const url = String(input)
@@ -92,7 +92,8 @@ describe('manual CNPJ fallback', () => {
         return response(manualResult, 201)
       }
       return response({ error: 'unexpected' }, 500)
-    }) as ProductApiFetch
+    })
+    const apiFetch = apiFetchMock as ProductApiFetch
 
     const registration = createCompanyFromCnpj(
       apiFetch,
@@ -123,9 +124,9 @@ describe('manual CNPJ fallback', () => {
     resolveManualRegistration(submitted)
 
     await expect(registration).resolves.toEqual(manualResult)
-    expect(apiFetch).toHaveBeenCalledTimes(2)
+    expect(apiFetchMock).toHaveBeenCalledTimes(2)
 
-    const manualCall = apiFetch.mock.calls[1]
+    const manualCall = apiFetchMock.mock.calls[1]
     const manualBody = JSON.parse(
       String((manualCall?.[1] as RequestInit)?.body),
     )
@@ -139,7 +140,7 @@ describe('manual CNPJ fallback', () => {
   })
 
   it('uses the existing manual establishment route when providers are unavailable', async () => {
-    const apiFetch = vi.fn(async (
+    const apiFetchMock = vi.fn(async (
       input: RequestInfo | URL,
     ) => {
       const url = String(input)
@@ -156,7 +157,8 @@ describe('manual CNPJ fallback', () => {
         )
       }
       return response({ error: 'unexpected' }, 500)
-    }) as ProductApiFetch
+    })
+    const apiFetch = apiFetchMock as ProductApiFetch
 
     const registration = createEstablishmentFromCnpj(
       apiFetch,
@@ -190,9 +192,9 @@ describe('manual CNPJ fallback', () => {
     resolveManualRegistration(submitted)
 
     await expect(registration).resolves.toBeUndefined()
-    expect(apiFetch).toHaveBeenCalledTimes(2)
+    expect(apiFetchMock).toHaveBeenCalledTimes(2)
 
-    const manualCall = apiFetch.mock.calls[1]
+    const manualCall = apiFetchMock.mock.calls[1]
     const manualBody = JSON.parse(
       String((manualCall?.[1] as RequestInit)?.body),
     )
