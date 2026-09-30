@@ -4,6 +4,7 @@ import {
   getPendingManualRegistration,
   rejectManualRegistration,
   resolveManualRegistration,
+  type PendingManualRegistration,
 } from './manual-registration-bridge'
 import {
   createCompanyFromCnpj,
@@ -24,9 +25,21 @@ function response(
   })
 }
 
-async function nextTurn() {
-  await Promise.resolve()
-  await Promise.resolve()
+async function waitForPending(
+  kind: 'company' | 'establishment',
+): Promise<PendingManualRegistration> {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const pending = getPendingManualRegistration()
+    if (pending?.request.kind === kind) {
+      return pending
+    }
+
+    await new Promise((resolve) =>
+      setTimeout(resolve, 0),
+    )
+  }
+
+  throw new Error(kind + '_fallback_not_opened')
 }
 
 afterEach(() => {
@@ -103,17 +116,15 @@ describe('manual CNPJ fallback', () => {
       'MATRIZ-001',
     )
 
-    await nextTurn()
+    const pending = await waitForPending('company')
 
-    const pending = getPendingManualRegistration()
-    expect(pending?.request.kind).toBe('company')
-    expect(pending?.request.cnpj).toBe('10515785000350')
+    expect(pending.request.cnpj).toBe('10515785000350')
     expect(
-      pending?.request.businessLocationCode,
+      pending.request.businessLocationCode,
     ).toBe('MATRIZ-001')
 
-    if (!pending || pending.request.kind !== 'company') {
-      throw new Error('company fallback not opened')
+    if (pending.request.kind !== 'company') {
+      throw new Error('company_fallback_not_opened')
     }
 
     const submitted = await pending.request.submit({
@@ -173,16 +184,12 @@ describe('manual CNPJ fallback', () => {
       },
     )
 
-    await nextTurn()
-
-    const pending = getPendingManualRegistration()
-    expect(pending?.request.kind).toBe('establishment')
+    const pending = await waitForPending('establishment')
 
     if (
-      !pending ||
       pending.request.kind !== 'establishment'
     ) {
-      throw new Error('establishment fallback not opened')
+      throw new Error('establishment_fallback_not_opened')
     }
 
     const submitted = await pending.request.submit({
