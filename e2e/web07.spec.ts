@@ -254,22 +254,27 @@ test('WEB-07 — menu, carrossel e foco por teclado', async ({ page }, testInfo)
   expect(returnedFocus.text).toBe(firstFocus.text)
   expect(returnedFocus.aria).toBe(firstFocus.aria)
 
-  const dots = page.getByRole('button', { name: /^Exibir / })
-  await expect(dots).toHaveCount(5)
-  const names = await dots.evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))
+  const statePills = page.getByRole('button', { name: /^Exibir / })
+  await expect(statePills).toHaveCount(5)
+  const names = await statePills.evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))
   expect(new Set(names).size).toBe(5)
 
-  for (let index = 0; index < await dots.count(); index += 1) {
-    const box = await dots.nth(index).boundingBox()
+  for (let index = 0; index < await statePills.count(); index += 1) {
+    const box = await statePills.nth(index).boundingBox()
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(24)
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(24)
   }
 
-  await expect(page.locator('.state-position')).toHaveText('1 / 5')
+  const carouselPosition = page.getByTestId('state-carousel-position')
+  await expect(carouselPosition).toContainText('1 / 5')
+  await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible()
+  await page.getByRole('button', { name: 'Pausar' }).click()
+  await expect(page.getByRole('button', { name: 'Reproduzir' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reproduzir' }).click()
   await page.getByRole('button', { name: 'Próximo estado' }).click()
-  await expect(page.locator('.state-position')).toHaveText('2 / 5')
+  await expect(carouselPosition).toContainText('2 / 5')
   await page.getByRole('button', { name: 'Estado anterior' }).click()
-  await expect(page.locator('.state-position')).toHaveText('1 / 5')
+  await expect(carouselPosition).toContainText('1 / 5')
 
   await screenshot(page, testInfo.project.name, 'carousel-interaction')
 })
@@ -501,10 +506,21 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   }
 })
 
+test('WEB-18 — Home mostra Verificando durante loading da cobertura federal', async ({ page }) => {
+  await mockPublicSources(page, 200, 700)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  await expect(page.getByText('Verificando…')).toHaveCount(6)
+  await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Exibir São Paulo$/ })).toBeVisible()
+})
+
 test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page }) => {
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Em desenvolvimento')).toHaveCount(6)
   await expect(page.getByText('Disponível', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Recursos do portfólio' }).getByRole('link')).toHaveCount(6)
+  await expect(page.getByRole('link', { name: 'Acervo' })).toHaveAttribute('href', '#acervo')
 
   await mockPublicSources(page, 200, 350)
   await page.goto('/cobertura', { waitUntil: 'domcontentloaded' })
@@ -515,26 +531,26 @@ test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page })
 
   const federalCards = page.locator('[data-testid="federal-coverage-card"]')
   const douCard = federalCards.filter({ hasText: 'DOU / INLABS' }).first()
-  await expect(douCard.locator('.collection-status')).toHaveText('—')
+  await expect(douCard.locator('.collection-status')).toHaveText('Coleta —')
   await expect(douCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
 
-  await expect(douCard.locator('.collection-status')).toHaveText('Online')
+  await expect(douCard.locator('.collection-status')).toHaveText('Coleta Online')
   await expect(douCard).toContainText('3')
   await expect(douCard).toContainText('517')
   await expect(douCard).toContainText('10:30')
 
   const confazCard = federalCards.filter({ hasText: 'CONFAZ' }).first()
-  await expect(confazCard.locator('.collection-status')).toHaveText('Em validação')
+  await expect(confazCard.locator('.collection-status')).toHaveText('Coleta Em validação')
 
   const nfeCard = federalCards.filter({ hasText: 'NF-e / ENCAT' }).first()
-  await expect(nfeCard.locator('.collection-status')).toHaveText('Em validação')
+  await expect(nfeCard.locator('.collection-status')).toHaveText('Coleta Em validação')
   await expect(nfeCard.locator('.coverage-metrics dd').first()).toHaveText('—')
 
   const spedCard = federalCards.filter({ hasText: 'SPED' }).first()
-  await expect(spedCard.locator('.collection-status')).toHaveText('Em implantação')
+  await expect(spedCard.locator('.collection-status')).toHaveText('Coleta Em implantação')
 
   const goCard = stateCards.filter({ hasText: 'Goiás / GO' }).first()
-  await expect(goCard.locator('.collection-status')).toHaveText('Em implantação')
+  await expect(goCard.locator('.collection-status')).toHaveText('Coleta Em implantação')
   await expect(goCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
 })
 
@@ -548,7 +564,7 @@ test('WEB-11 — Coverage failure never invents current data', async ({ page }) 
   const statuses = page.locator('.collection-status')
   expect(await statuses.count()).toBeGreaterThan(27)
   for (let index = 0; index < await statuses.count(); index += 1) {
-    await expect(statuses.nth(index)).toHaveText('—')
+    await expect(statuses.nth(index)).toHaveText('Coleta —')
   }
 
   const metrics = page.locator('.coverage-metrics dd')
