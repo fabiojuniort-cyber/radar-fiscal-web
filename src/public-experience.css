@@ -328,20 +328,22 @@
 .ref-central-model>div i.is-idle{background:var(--ref-border)}
 
 .ref-sonar-model{background:var(--ref-navy);color:#fff;border-radius:24px;padding:28px;display:grid;grid-template-columns:180px minmax(0,1fr);gap:20px 24px;align-items:center}
-.ref-live-radar{position:relative;width:180px;height:180px}
-.ref-radar-zone{position:absolute;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
-.ref-radar-zone.zone-far{width:180px;height:180px;border:2px solid #2EB67D;background:rgba(46,182,125,.06)}
-.ref-radar-zone.zone-medium{width:120px;height:120px;border:2px solid #F5B400;background:rgba(245,180,0,.08)}
-.ref-radar-zone.zone-near{width:60px;height:60px;border:2px solid #E5484D;background:rgba(229,72,77,.10)}
-.ref-live-radar-center{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#E5484D;transform:translate(-50%,-50%);z-index:4;box-shadow:0 0 0 5px rgba(229,72,77,.25)}
-.ref-live-radar-sweep{position:absolute;left:50%;top:50%;width:48%;height:2px;transform-origin:0 50%;background:linear-gradient(90deg,rgba(0,230,214,.15),rgba(0,230,214,.95));box-shadow:0 0 10px rgba(0,230,214,.8);animation:tribuscaRadarSweep 3.1s linear infinite;z-index:3}
-.ref-live-radar-sweep:after{content:"";position:absolute;right:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--ref-cyan);box-shadow:0 0 10px rgba(0,230,214,.8)}
-.ref-live-radar-blip{position:absolute;left:var(--blip-left);top:var(--blip-top);width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);opacity:0;animation:tribuscaRadarBlip 9.3s ease-out infinite;animation-delay:var(--blip-delay);z-index:5}
-.ref-live-radar-blip.is-near{background:#E5484D;box-shadow:0 0 0 6px rgba(229,72,77,.25),0 0 14px rgba(229,72,77,.9)}
-.ref-live-radar-blip.is-medium{background:#F5B400;box-shadow:0 0 0 6px rgba(245,180,0,.22),0 0 14px rgba(245,180,0,.9)}
-.ref-live-radar-blip.is-far{background:#2EB67D;box-shadow:0 0 0 6px rgba(46,182,125,.22),0 0 14px rgba(46,182,125,.9)}
-@keyframes tribuscaRadarSweep{to{transform:rotate(360deg)}}
-@keyframes tribuscaRadarBlip{0%,4%,100%{opacity:0;transform:translate(-50%,-50%) scale(.5)}7%,12%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}16%{opacity:.35;transform:translate(-50%,-50%) scale(1)}22%{opacity:0}}
+.ref-live-radar{--radar-color:#26d7c8;position:relative;width:180px;height:180px}
+.ref-live-radar:before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(38,215,200,.08) 0%,rgba(38,215,200,.025) 62%,rgba(38,215,200,0) 72%)}
+.ref-radar-zone{position:absolute;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);border:1.5px solid rgba(38,215,200,.72);background:transparent;box-shadow:inset 0 0 18px rgba(38,215,200,.035)}
+.ref-radar-zone.zone-far{width:180px;height:180px}
+.ref-radar-zone.zone-medium{width:120px;height:120px}
+.ref-radar-zone.zone-near{width:60px;height:60px}
+.ref-live-radar-center{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:var(--radar-color);transform:translate(-50%,-50%);z-index:4;box-shadow:0 0 0 4px rgba(38,215,200,.14),0 0 14px rgba(38,215,200,.45)}
+.ref-live-radar-sweep{position:absolute;left:50%;top:50%;width:48%;height:2px;transform-origin:0 50%;background:linear-gradient(90deg,rgba(38,215,200,.18),rgba(38,215,200,.98));box-shadow:0 0 10px rgba(38,215,200,.58);animation:tribuscaRadarSweep var(--radar-sweep-duration,4.8s) linear infinite;z-index:3}
+.ref-live-radar-sweep:before{content:"";position:absolute;left:0;top:-18px;width:100%;height:38px;transform-origin:0 50%;clip-path:polygon(0 48%,100% 0,100% 100%);background:linear-gradient(90deg,rgba(38,215,200,.09),rgba(38,215,200,0));opacity:.5}
+.ref-live-radar-sweep:after{content:"";position:absolute;right:-3px;top:-2px;width:6px;height:6px;border-radius:50%;background:var(--radar-color);box-shadow:0 0 9px rgba(38,215,200,.72)}
+.ref-live-radar-blip{position:absolute;left:var(--blip-left);top:var(--blip-top);width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%) scale(.45);opacity:0;animation:tribuscaRadarBlip var(--radar-sweep-duration,4.8s) linear infinite;animation-delay:var(--blip-delay);z-index:5}
+.ref-live-radar-blip.is-near{background:#ef5b5b;box-shadow:0 0 0 6px rgba(239,91,91,.20),0 0 15px rgba(239,91,91,.92)}
+.ref-live-radar-blip.is-medium{background:#f4bf3a;box-shadow:0 0 0 6px rgba(244,191,58,.18),0 0 15px rgba(244,191,58,.9)}
+.ref-live-radar-blip.is-far{background:#45d483;box-shadow:0 0 0 6px rgba(69,212,131,.18),0 0 15px rgba(69,212,131,.9)}
+@keyframes tribuscaRadarSweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes tribuscaRadarBlip{0%{opacity:0;transform:translate(-50%,-50%) scale(.42)}1.5%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}4.5%{opacity:.95;transform:translate(-50%,-50%) scale(1)}8%{opacity:.18;transform:translate(-50%,-50%) scale(.82)}11%,100%{opacity:0;transform:translate(-50%,-50%) scale(.55)}}
 .ref-sonar-legend{display:flex;flex-direction:column;gap:8px;font-size:14px}
 .ref-sonar-legend b{padding:1px 8px;border-radius:6px}
 .ref-sonar-legend b.is-near{background:#E5484D;color:#fff}
