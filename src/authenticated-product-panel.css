@@ -473,11 +473,11 @@
 
 .tp-establishment-head,
 .tp-establishment-row {
-  min-width: 1180px;
+  min-width: 1320px;
   display: grid;
   grid-template-columns:
     1.05fr .95fr .7fr .9fr
-    1.4fr 1.35fr 1fr;
+    1.35fr 1fr 1.3fr 1fr;
   gap: 14px;
   align-items: start;
 }
@@ -1014,4 +1014,23 @@
 .tp-tenant-switch > button span {
   color: var(--tp-copy);
   font-size: 11px;
+}
+
+
+.tp-state-registration-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--tp-copy);
+}
+
+.tp-state-registration-cell b {
+  color: var(--tp-navy);
+  font-size: 13px;
+}
+
+.tp-state-registration-cell small {
+  max-width: 170px;
+  font-size: 10px;
+  line-height: 1.35;
 }
