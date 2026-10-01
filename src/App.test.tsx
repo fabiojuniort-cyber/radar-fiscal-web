@@ -289,7 +289,7 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(screen.queryByText('Conta autenticada')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
     fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Sair$/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair da conta' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
       method: 'POST', credentials: 'include',
       headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
@@ -741,8 +741,9 @@ describe('WEB-14 — acesso temporário ao painel demonstrativo', () => {
       'Início',
       'Publicações',
       'Acervo',
-      'Notícias',
+      'Reforma Tributária',
       'Central de Monitoramento',
+      'Fontes Oficiais',
       'Empresas',
     ]) {
       expect(screen.getByRole('button', { name: section })).toBeInTheDocument()
