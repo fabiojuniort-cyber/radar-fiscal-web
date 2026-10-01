@@ -30,7 +30,8 @@ function renderNews(apiFetch: ProductApiFetch) {
 }
 
 describe('NewsSection', () => {
-  it('renders official tax news and sends the applied search to the API', async () => {
+  it('renders official tax news as a newspaper lead with image and sends the applied search to the API', async () => {
+    const imageUrl = 'https://www.gov.br/receitafederal/imagens/noticias/ibs-cbs.jpg'
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       return new Response(
@@ -46,6 +47,7 @@ describe('NewsSection', () => {
             publishedAt: '2026-10-01T12:00:00.000Z',
             updatedAt: null,
             officialUrl: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/outubro/exemplo-ibs-cbs',
+            imageUrl,
             tags: ['IBS', 'CBS'],
           }],
           page: 1,
@@ -67,6 +69,11 @@ describe('NewsSection', () => {
         name: 'Receita Federal orienta sobre IBS e CBS',
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', {
+        name: 'Imagem da notícia: Receita Federal orienta sobre IBS e CBS',
+      }),
+    ).toHaveAttribute('src', imageUrl)
     expect(
       screen.getByText('Conteúdo tributário oficial selecionado pelo TriBusca.'),
     ).toBeInTheDocument()
