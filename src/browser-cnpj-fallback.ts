@@ -136,7 +136,7 @@ export async function lookupBrasilApiFromBrowser(
   if (!/^\d{14}$/.test(normalizedCnpj)) return null
 
   const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const response = await fetcher(
@@ -155,7 +155,7 @@ export async function lookupBrasilApiFromBrowser(
   } catch {
     return null
   } finally {
-    window.clearTimeout(timer)
+    globalThis.clearTimeout(timer)
   }
 }
 
