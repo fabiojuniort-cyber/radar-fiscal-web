@@ -14,7 +14,18 @@ import './styles.css'
 import './header-alignment.css'
 import './product-polish.css'
 
-const queryClient = new QueryClient()
+// Panel data changes at collection cadence, not per click. Without these
+// defaults every remount and every return to the browser tab refetched the
+// whole dashboard at once. Mutations still invalidate what they change, and
+// queries that need live status override these options explicitly.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

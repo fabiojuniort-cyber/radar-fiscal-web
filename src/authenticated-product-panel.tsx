@@ -384,6 +384,10 @@ function SourceHealth({
   )
 }
 
+// Global catalog aggregates refresh at collection cadence (backend caches them
+// for 60 s too); refetching them on every panel mount only adds load.
+const CATALOG_AGGREGATE_STALE_MS = 5 * 60_000
+
 export function AuthenticatedProductPanel({
   identity,
   apiFetch,
@@ -453,12 +457,14 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'sources-v2'],
     queryFn: ({ signal }) => fetchPublicSourcesV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const statsQuery = useQuery({
     queryKey: ['launch', 'stats-v2'],
     queryFn: ({ signal }) => fetchPublicStatsV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const monitoringRunsQuery = useQuery({
@@ -473,6 +479,7 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'archive-facets'],
     queryFn: () => fetchCatalogFacets(apiFetch),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const latestArchiveQuery = useQuery({
