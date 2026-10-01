@@ -83,7 +83,7 @@ function LeadStory({ item }: { item: NewsItem }) {
         href={item.officialUrl}
         target="_blank"
         rel="noreferrer"
-        aria-label={`Abrir notícia oficial: ${item.title}`}
+        aria-label={`Abrir notícia pela imagem: ${item.title}`}
       >
         <NewsVisual item={item} priority />
       </a>
@@ -106,7 +106,7 @@ function SideStory({ item }: { item: NewsItem }) {
         href={item.officialUrl}
         target="_blank"
         rel="noreferrer"
-        aria-label={`Abrir notícia oficial: ${item.title}`}
+        aria-label={`Abrir notícia pela imagem: ${item.title}`}
       >
         <NewsVisual item={item} />
       </a>
@@ -126,7 +126,7 @@ function GridStory({ item }: { item: NewsItem }) {
         href={item.officialUrl}
         target="_blank"
         rel="noreferrer"
-        aria-label={`Abrir notícia oficial: ${item.title}`}
+        aria-label={`Abrir notícia pela imagem: ${item.title}`}
       >
         <NewsVisual item={item} />
       </a>
