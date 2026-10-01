@@ -30,7 +30,10 @@ jobs:
           npm run typecheck 2>&1 | tee playwright-artifacts/TYPECHECK.txt
 
       - name: Test
-        run: npm test
+        run: |
+          mkdir -p playwright-artifacts
+          set -o pipefail
+          npm test 2>&1 | tee playwright-artifacts/TEST.txt
 
       - name: Validate official PNG assets
         run: |
