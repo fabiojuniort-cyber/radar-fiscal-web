@@ -22,6 +22,7 @@ export type CatalogFilters = {
   uf?: string
   jurisdiction?: 'FEDERAL' | 'STATE'
   source?: string
+  ncm?: string
   page?: number
   limit?: number
 }
@@ -43,6 +44,10 @@ export async function fetchCatalogArchive(
   if (filters.uf) params.set('uf', filters.uf)
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)
+
+  const normalizedNcm = filters.ncm?.replace(/\D/g, '')
+  if (normalizedNcm?.length === 8) params.set('ncm', normalizedNcm)
+
   params.set('page', String(filters.page ?? 1))
   params.set('limit', String(filters.limit ?? 25))
 
