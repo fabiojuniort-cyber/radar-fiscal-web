@@ -1,0 +1,185 @@
+/* Product polish v2 — header alignment and tactile action controls */
+.tp-header-primary {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+}
+
+.tp-header .tp-tabs {
+  justify-content: center;
+}
+
+.tp-app button:not(.tp-user-button):not(.tp-tabs button):not(.tp-org-tabs button),
+.publication-detail-app button,
+.publication-detail-app a.publication-official-button,
+.publication-detail-app a.publication-back-link,
+.tp-manual-dialog button {
+  position: relative;
+  transition:
+    transform 110ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    filter 140ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .8),
+    0 3px 0 rgba(8, 48, 107, .18),
+    0 6px 14px rgba(8, 48, 107, .08);
+}
+
+.tp-app button:not(.tp-user-button):not(.tp-tabs button):not(.tp-org-tabs button):hover,
+.publication-detail-app button:hover,
+.publication-detail-app a.publication-official-button:hover,
+.publication-detail-app a.publication-back-link:hover,
+.tp-manual-dialog button:hover {
+  border-color: #4f7cff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .9),
+    0 3px 0 rgba(8, 48, 107, .18),
+    0 0 0 2px rgba(49, 88, 255, .13),
+    0 7px 16px rgba(8, 48, 107, .1);
+}
+
+.tp-app button:not(.tp-user-button):not(.tp-tabs button):not(.tp-org-tabs button):active,
+.publication-detail-app button:active,
+.publication-detail-app a.publication-official-button:active,
+.publication-detail-app a.publication-back-link:active,
+.tp-manual-dialog button:active {
+  transform: translateY(3px) scale(.99);
+  box-shadow:
+    inset 0 2px 5px rgba(8, 48, 107, .14),
+    0 0 0 2px rgba(49, 88, 255, .16);
+}
+
+.tp-app button:not(.tp-user-button):not(.tp-tabs button):not(.tp-org-tabs button):active::after,
+.tp-manual-dialog button:active::after {
+  content: '✓';
+  margin-left: 6px;
+  font-weight: 900;
+}
+
+.tp-app button:disabled,
+.tp-manual-dialog button:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+.tp-page-numbers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tp-page-numbers button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 9px;
+}
+
+.tp-page-numbers button.is-current {
+  background: var(--tp-navy);
+  color: #fff;
+  border-color: var(--tp-navy);
+}
+
+.tp-page-numbers > span {
+  padding: 0 3px;
+  color: var(--tp-muted);
+}
+
+.tp-pagination-summary {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--tp-muted);
+  font-size: 12px;
+}
+
+.tp-news-placeholder {
+  min-height: 220px;
+}
+
+.tp-profile-cnaes-table > div {
+  display: block;
+}
+
+.tp-cnae-profile-table {
+  overflow-x: auto;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+}
+
+.tp-cnae-profile-head,
+.tp-cnae-profile-row {
+  min-width: 900px;
+  display: grid;
+  grid-template-columns: 110px minmax(260px, 1.5fr) 170px 170px 170px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+}
+
+.tp-cnae-profile-head {
+  background: var(--tp-pale);
+  color: var(--tp-copy);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tp-cnae-profile-row {
+  border-top: 1px solid var(--tp-border);
+  color: var(--tp-copy);
+  font-size: 12px;
+}
+
+.tp-cnae-profile-row b {
+  color: var(--tp-navy);
+}
+
+.tp-parameter-empty {
+  display: inline-flex;
+  border: 1px dashed #9fb3cc;
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--tp-blue);
+}
+
+.publication-ncm-card > p {
+  margin: 0 0 14px;
+  color: #5b6f8f;
+}
+
+.publication-ncm-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.publication-ncm-list span {
+  border: 1px solid #d6e6f7;
+  border-radius: 999px;
+  background: #f3f8ff;
+  color: #08306b;
+  padding: 7px 11px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Public/legal copy that represented launch-state messaging is no longer surfaced. */
+.status-chip,
+.coming-soon-action,
+.availability-note,
+.legal-dialog-intro {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .tp-header-primary {
+    max-width: none;
+  }
+
+  .tp-header .tp-tabs {
+    justify-content: flex-start;
+  }
+}

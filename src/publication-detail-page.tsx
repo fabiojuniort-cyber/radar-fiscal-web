@@ -6,7 +6,7 @@ import {
   History,
   Landmark,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { formatPublicDate } from './public-api'
 import {
@@ -32,10 +32,26 @@ function referenceLabel(
   return reference || title
 }
 
+function extractNcms(text: string): string[] {
+  const matches = text.match(/\b\d{4}[.\s-]?\d{2}[.\s-]?\d{2}\b/g) ?? []
+  const normalized = matches
+    .map((value) => value.replace(/\D/g, ''))
+    .filter((value) => value.length === 8)
+    .map(
+      (value) =>
+        value.slice(0, 4) + '.' +
+        value.slice(4, 6) + '.' +
+        value.slice(6, 8),
+    )
+
+  return [...new Set(normalized)].sort()
+}
+
 export function PublicationDetailPage({
   publicationId,
   apiFetch,
 }: Props) {
+  const navigate = useNavigate()
   const detailQuery = useQuery({
     queryKey: [
       'publication-detail',
@@ -49,6 +65,14 @@ export function PublicationDetailPage({
     retry: false,
   })
 
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/painel')
+  }
+
   if (detailQuery.isPending) {
     return (
       <main className="publication-detail-shell">
@@ -57,8 +81,7 @@ export function PublicationDetailPage({
             Carregando legislação…
           </strong>
           <p>
-            Buscando a versão preservada no
-            Acervo TriBusca.
+            Buscando a versão armazenada no Acervo TriBusca.
           </p>
         </div>
       </main>
@@ -73,16 +96,16 @@ export function PublicationDetailPage({
             Não foi possível abrir esta legislação
           </strong>
           <p>
-            A publicação pode estar indisponível
-            ou ter sido removida do Acervo.
+            A publicação pode estar indisponível ou ter sido removida do Acervo.
           </p>
-          <Link
-            to="/painel"
+          <button
+            type="button"
             className="publication-back-link"
+            onClick={goBack}
           >
             <ArrowLeft size={16} />
-            Voltar ao painel
-          </Link>
+            Voltar
+          </button>
         </div>
       </main>
     )
@@ -110,33 +133,39 @@ export function PublicationDetailPage({
         ? 'Versão ' + version.versionNo
         : null
 
+  const ncms = extractNcms(
+    [version?.contentText, version?.excerpt]
+      .filter(Boolean)
+      .join('\n'),
+  )
+
   return (
     <div className="publication-detail-app">
       <header className="publication-detail-header">
         <Link
           to="/painel"
           className="publication-detail-brand"
-          aria-label="Voltar ao painel TriBusca"
+          aria-label="Abrir painel TriBusca"
         >
           <img
-            src="/brand/tribusca-logo-horizontal-light.png"
+            src="/brand/tribusca-logo-horizontal-dark.png"
             alt="TriBusca"
           />
         </Link>
 
-        <Link
-          to="/painel"
+        <button
+          type="button"
           className="publication-back-link"
+          onClick={goBack}
         >
           <ArrowLeft size={16} />
-          Voltar ao Acervo
-        </Link>
+          Voltar
+        </button>
       </header>
 
       <main className="publication-detail-main">
         <section className="publication-document-header">
           <div className="publication-document-badges">
-            <span>Acervo oficial</span>
             <span>
               {publication.uf ?? 'Federal'}
             </span>
@@ -200,10 +229,6 @@ export function PublicationDetailPage({
               <FileText size={18} />
               Texto da legislação
             </span>
-            <small>
-              Estrutura e espaçamento preservados
-              da captura oficial.
-            </small>
           </div>
 
           {version?.presentation.format ===
@@ -211,8 +236,6 @@ export function PublicationDetailPage({
             <div
               className="publication-preserved-html"
               data-presentation-format="SANITIZED_HTML"
-              // The backend re-sanitizes this allowlisted legal HTML
-              // before returning it. Raw source HTML is never rendered.
               dangerouslySetInnerHTML={{
                 __html:
                   version.presentation.html,
@@ -234,17 +257,28 @@ export function PublicationDetailPage({
           ) : (
             <div className="publication-detail-empty">
               <strong>
-                Conteúdo integral ainda não
-                armazenado
+                Conteúdo integral ainda não armazenado
               </strong>
               <p>
-                A referência oficial foi preservada.
-                Use o botão “Abrir fonte oficial”
-                para consultar o documento na origem.
+                Use “Abrir fonte oficial” para consultar o documento na origem.
               </p>
             </div>
           )}
         </section>
+
+        {ncms.length > 0 && (
+          <section className="publication-origins-card publication-ncm-card">
+            <h2>NCMs identificados nesta legislação</h2>
+            <p>
+              Códigos extraídos do texto armazenado para associação e busca no Acervo.
+            </p>
+            <div className="publication-ncm-list">
+              {ncms.map((ncm) => (
+                <span key={ncm}>{ncm}</span>
+              ))}
+            </div>
+          </section>
+        )}
 
         {origins.length > 0 && (
           <section className="publication-origins-card">
