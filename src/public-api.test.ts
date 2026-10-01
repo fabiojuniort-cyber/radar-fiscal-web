@@ -29,7 +29,7 @@ describe('public Coverage API mapping', () => {
     expect(translatePublicStatus('ONLINE')).toBe('Online')
     expect(translatePublicStatus('UNSTABLE')).toBe('Em validação')
     expect(translatePublicStatus('UNAVAILABLE')).toBe('Em validação')
-    expect(translatePublicStatus('NOT_CONSULTED')).toBe('Em implantação')
+    expect(translatePublicStatus('NOT_CONSULTED')).toBe('Ainda não consultada')
   })
 
   it('maps federal sources by stable code', () => {
@@ -98,9 +98,9 @@ describe('public Coverage API mapping', () => {
     expect(presentation.lastSuccessAt).toBe('—')
   })
 
-  it('marks a planned-but-absent source as Em implantação only after a successful API response', () => {
+  it('marks a planned-but-absent source as not consulted only after a successful API response', () => {
     expect(toCoveragePresentation(undefined, true)).toEqual({
-      status: 'Em implantação',
+      status: 'Ainda não consultada',
       lastSuccessAt: '—',
       importedToday: '—',
       totalPublications: '—',
