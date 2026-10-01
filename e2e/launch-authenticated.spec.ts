@@ -188,9 +188,13 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     const limit = Number(url.searchParams.get('limit') ?? '25')
     // Searches answer with the PERF-02 capped contract; everything else with
     // the previous contract (no totalIsCapped), as an older backend would.
-    const body = url.searchParams.has('q')
-      ? { page: pageNumber, limit, totalItems: 10000, totalPages: 400, totalIsCapped: true, hasMore: true, items: [archiveItem] }
-      : { page: pageNumber, limit, totalItems: 1, totalPages: 1, hasMore: false, items: [archiveItem] }
+    // A source filter answers with no matches, so a filter leaking into
+    // another screen would empty it.
+    const body = url.searchParams.has('source')
+      ? { page: pageNumber, limit, totalItems: 0, totalPages: 1, totalIsCapped: false, hasMore: false, items: [] }
+      : url.searchParams.has('q')
+        ? { page: pageNumber, limit, totalItems: 10000, totalPages: 400, totalIsCapped: true, hasMore: true, items: [archiveItem] }
+        : { page: pageNumber, limit, totalItems: 1, totalPages: 1, hasMore: false, items: [archiveItem] }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -489,6 +493,25 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   expect(searched.length).toBeGreaterThan(0)
   expect(searched.every((url) => url.searchParams.get('scope') === 'full')).toBe(true)
   expect(archiveRequests.some((url) => !url.searchParams.has('q') && url.searchParams.has('scope'))).toBe(false)
+
+  // The applied search is visible and explains an empty filtered result.
+  await expect(page.getByText('Resultados para')).toBeVisible()
+  await page.getByLabel('Fonte').selectOption('dou')
+  await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU/)).toBeVisible()
+
+  // Acervo filters do not leak into Publicações.
+  await page.getByRole('button', { name: 'Publicações', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
+  await expect(page.getByText('Ato oficial real do Acervo')).toBeVisible()
+
+  // Clearing the search stops filtering by it.
+  await page.getByRole('button', { name: 'Acervo', exact: true }).click()
+  await page.getByRole('button', { name: 'Limpar busca' }).click()
+  await expect(page.getByText('Resultados para')).toHaveCount(0)
+  await expect.poll(() => archiveRequests.some(
+    (url) => url.searchParams.get('source') === 'dou' && !url.searchParams.has('q'),
+  )).toBe(true)
+  await page.getByRole('button', { name: 'Limpar filtros' }).click()
 
   await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
