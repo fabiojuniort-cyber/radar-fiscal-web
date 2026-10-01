@@ -384,9 +384,9 @@ function SourceHealth({
   )
 }
 
-// Global catalog aggregates refresh at collection cadence (backend caches them
-// for 60 s too); refetching them on every panel mount only adds load.
-const CATALOG_AGGREGATE_STALE_MS = 5 * 60_000
+// Global catalog aggregates are not real-time: the backend caches them for up
+// to 1 h, so refetching them on every panel mount only adds load.
+const CATALOG_AGGREGATE_STALE_MS = 30 * 60_000
 
 export function AuthenticatedProductPanel({
   identity,
