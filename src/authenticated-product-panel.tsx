@@ -159,6 +159,7 @@ function readPanelState() {
       screen?: Screen
       query?: string
       appliedQuery?: string
+      fullText?: boolean
       archivePage?: number
       jurisdiction?: string
       uf?: string
@@ -410,6 +411,7 @@ export function AuthenticatedProductPanel({
   const [screen, setScreen] = useState<Screen>(persisted?.screen ?? 'inicio')
   const [query, setQuery] = useState(persisted?.query ?? '')
   const [appliedQuery, setAppliedQuery] = useState(persisted?.appliedQuery ?? '')
+  const [fullText, setFullText] = useState(persisted?.fullText ?? false)
   const [archivePage, setArchivePage] = useState(persisted?.archivePage ?? 1)
   const [jurisdiction, setJurisdiction] = useState(persisted?.jurisdiction ?? '')
   const [uf, setUf] = useState(persisted?.uf ?? '')
@@ -428,6 +430,7 @@ export function AuthenticatedProductPanel({
         screen,
         query,
         appliedQuery,
+        fullText,
         archivePage,
         jurisdiction,
         uf,
@@ -440,6 +443,7 @@ export function AuthenticatedProductPanel({
     screen,
     query,
     appliedQuery,
+    fullText,
     archivePage,
     jurisdiction,
     uf,
@@ -493,6 +497,7 @@ export function AuthenticatedProductPanel({
       'launch',
       'archive-v2',
       appliedQuery,
+      fullText,
       jurisdiction,
       uf,
       source,
@@ -503,6 +508,7 @@ export function AuthenticatedProductPanel({
         q: appliedQuery.trim().length >= 2
           ? appliedQuery.trim()
           : undefined,
+        scope: fullText ? 'full' : 'title',
         jurisdiction:
           jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
             ? jurisdiction
@@ -571,6 +577,7 @@ export function AuthenticatedProductPanel({
   const resetArchiveFilters = () => {
     setQuery('')
     setAppliedQuery('')
+    setFullText(false)
     setJurisdiction('')
     setUf('')
     setSource('')
@@ -903,11 +910,22 @@ export function AuthenticatedProductPanel({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Título, número, órgão, NCM ou termo"
+                placeholder="Título, número, órgão ou termo"
                 aria-label="Pesquisar no Acervo"
               />
               <button type="submit">Buscar no Acervo</button>
             </form>
+            <label className="tp-acervo-fulltext">
+              <input
+                type="checkbox"
+                checked={fullText}
+                onChange={(event) => {
+                  setFullText(event.target.checked)
+                  setArchivePage(1)
+                }}
+              />
+              Buscar também no texto completo (ex.: NCM ou trecho do ato)
+            </label>
 
             <div className="tp-acervo-layout">
               <aside className="tp-filter-panel">
@@ -1010,8 +1028,9 @@ export function AuthenticatedProductPanel({
                       </button>
                     </div>
                     <p className="tp-pagination-summary">
-                      Página {archivePage} de {archiveQuery.data?.totalPages ?? 1} ·{' '}
-                      {archiveQuery.data?.totalItems ?? 0} publicações
+                      {archiveQuery.data?.totalIsCapped
+                        ? `Página ${archivePage} · mais de ${(archiveQuery.data.totalItems).toLocaleString('pt-BR')} publicações`
+                        : `Página ${archivePage} de ${archiveQuery.data?.totalPages ?? 1} · ${archiveQuery.data?.totalItems ?? 0} publicações`}
                     </p>
                   </>
                 )}
