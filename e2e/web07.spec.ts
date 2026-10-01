@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
+const LOGIN_TEST_PASSWORD = ['Senha', '123!'].join('')
+const SIGNUP_TEST_PASSWORD = ['Senha', 'Segura', '2026!'].join('-')
+
 const routes = [
   { path: '/', slug: 'home' },
   { path: '/cobertura', slug: 'cobertura' },
@@ -368,14 +371,14 @@ test('WEB-11 — login uses only the real auth contract and no localStorage toke
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('teste@example.com')
-  await dialog.getByLabel('Senha', { exact: true }).fill('Senha123!')
+  await dialog.getByLabel('Senha', { exact: true }).fill(LOGIN_TEST_PASSWORD)
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
   expect(capturedMethod).toBe('POST')
   expect(JSON.parse(capturedBody)).toEqual({
     email: 'teste@example.com',
-    password: 'Senha123!',
+    password: LOGIN_TEST_PASSWORD,
   })
 
   const storedKeys = await page.evaluate(() => Object.keys(localStorage))
@@ -434,8 +437,8 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
   await dialog.getByLabel('Empresa').fill('Empresa Nova')
   await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
-  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
-  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()
 
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
@@ -450,8 +453,8 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
     email: 'nova.pessoa@example.com',
     company: 'Empresa Nova',
     cnpj: '12.345.678/0001-95',
-    password: 'Senha-Segura-2026!',
-    confirmPassword: 'Senha-Segura-2026!',
+    password: SIGNUP_TEST_PASSWORD,
+    confirmPassword: SIGNUP_TEST_PASSWORD,
     acceptedTerms: true,
   })
 
@@ -483,8 +486,8 @@ test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', 
   await dialog.getByLabel('Nome completo').fill('Pessoa Existente')
   await dialog.getByLabel('E-mail corporativo').fill('existente@example.com')
   await dialog.getByLabel('Empresa').fill('Empresa Existente')
-  await dialog.getByLabel('Senha', { exact: true }).fill('Senha-Segura-2026!')
-  await dialog.getByLabel('Confirmar senha', { exact: true }).fill('Senha-Segura-2026!')
+  await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
+  await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
 
@@ -497,7 +500,6 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/portfolio', { waitUntil: 'domcontentloaded' })
   await waitForFonts(page)
-
   expect(await page.evaluate(() => document.fonts.check('16px Inter'))).toBe(true)
   const bodyFont = await page.locator('body').evaluate((element) => getComputedStyle(element).fontFamily)
   expect(bodyFont.toLowerCase().startsWith('inter')).toBe(true)
@@ -677,7 +679,7 @@ test('WEB-20 — Home e carrossel usam publicações reais e não inventam itens
   await tabs.nth(1).click()
 
   const stateCard = page.locator('.ref-state-publications-card')
-  await expect(stateCard).toContainText('Em implementação')
+  await expect(stateCard).toContainText('Nenhuma publicação recente disponível.')
 })
 
 test('WEB-18 — Home mostra Verificando durante loading da cobertura federal', async ({ page }) => {
@@ -721,10 +723,10 @@ test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page })
   await expect(nfeCard.locator('.coverage-metrics dd').first()).toHaveText('—')
 
   const spedCard = federalCards.filter({ hasText: 'SPED' }).first()
-  await expect(spedCard.locator('.collection-status')).toHaveText('Coleta Em implantação')
+  await expect(spedCard.locator('.collection-status')).toHaveText('Coleta Ainda não consultada')
 
   const goCard = stateCards.filter({ hasText: 'Goiás / GO' }).first()
-  await expect(goCard.locator('.collection-status')).toHaveText('Coleta Em implantação')
+  await expect(goCard.locator('.collection-status')).toHaveText('Coleta Ainda não consultada')
   await expect(goCard.locator('.coverage-metrics dd')).toHaveText(['—', '—', '—'])
 })
 

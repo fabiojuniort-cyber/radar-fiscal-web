@@ -149,7 +149,7 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/painel$/)
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()
-  await expect(page.getByText('TriBusca Internal')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Selecionar empresa ativa' })).toBeVisible()
 
   const cookies = await page.context().cookies()
   expect(cookies.find((cookie) => cookie.name === 'radar_refresh_token')?.httpOnly).toBe(true)
@@ -158,7 +158,7 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()
   await page.getByRole('button', { name: 'Menu do usuário' }).click()
-  await page.getByRole('button', { name: 'Sair', exact: true }).click()
+  await page.getByRole('button', { name: 'Sair da conta' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toHaveCount(0)
 })

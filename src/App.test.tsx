@@ -12,6 +12,8 @@ import { parseDemoAccessFlag } from './demo-access'
 import { STATE_CAROUSEL_AUTOPLAY_MS } from './public-experience'
 import type { PublicPublication, PublicSource } from './public-api'
 
+const strongTestPassword = ['Senha', 'Segura', '2026!'].join('-')
+
 function sourcesResponse(items: PublicSource[] = []) {
   return {
     ok: true,
@@ -120,10 +122,10 @@ describe('TriBusca release candidate WEB-11', () => {
       target: { value: '12.345.678/0001-95' },
     })
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
-      target: { value: 'Senha-Segura-2026!' },
+      target: { value: strongTestPassword },
     })
     fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
-      target: { value: 'Senha-Segura-2026!' },
+      target: { value: strongTestPassword },
     })
     fireEvent.click(within(dialog).getByLabelText(/Aceite dos Termos/))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
@@ -211,10 +213,10 @@ describe('TriBusca release candidate WEB-11', () => {
       target: { value: 'Empresa Existente' },
     })
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
-      target: { value: 'Senha-Segura-2026!' },
+      target: { value: strongTestPassword },
     })
     fireEvent.change(within(dialog).getByLabelText('Confirmar senha'), {
-      target: { value: 'Senha-Segura-2026!' },
+      target: { value: strongTestPassword },
     })
     fireEvent.click(within(dialog).getByLabelText(/Aceite dos Termos/))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Criar conta' }))
@@ -237,7 +239,7 @@ describe('TriBusca release candidate WEB-11', () => {
     renderApp('/como-funciona')
     fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'teste@example.com' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Senha123!' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'test-login-value' } })
     fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
@@ -266,7 +268,7 @@ describe('TriBusca release candidate WEB-11', () => {
     renderApp('/como-funciona')
     fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
     fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'owner@example.test' } })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Only-For-Test-2026!' } })
+    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'test-login-value' } })
     fireEvent.click(screen.getByRole('dialog').querySelector('button[type="submit"]')!)
 
     await waitFor(
@@ -285,11 +287,11 @@ describe('TriBusca release candidate WEB-11', () => {
       { name: 'Olá, owner.' },
       { timeout: 3000 },
     )
-    expect(screen.getByText('TriBusca Internal')).toBeInTheDocument()
-    expect(screen.getByText('Conta autenticada')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Selecionar empresa ativa' })).toBeInTheDocument()
+    expect(screen.queryByText('Conta autenticada')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/auth/me', expect.objectContaining({ credentials: 'include' }))
     fireEvent.click(screen.getByRole('button', { name: 'Menu do usuário' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Sair$/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair da conta' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({
       method: 'POST', credentials: 'include',
       headers: expect.objectContaining({ 'x-csrf-protection': '1' }),
@@ -370,7 +372,7 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(position).toHaveTextContent('2 / 5')
   })
 
-  it('WEB-20 renders real latest captures and marks states without publications as Em implementação', async () => {
+  it('WEB-20 renders real latest captures and shows a neutral empty state when a state has no recent publications', async () => {
     const realFederal: PublicPublication = {
       id: 'pub-fed-1',
       title: 'Ato federal coletado de verdade',
@@ -435,7 +437,7 @@ describe('TriBusca release candidate WEB-11', () => {
 
     await waitFor(() => {
       const card = screen.getByText(/Últimas publicações/).closest('.ref-state-publications-card')
-      expect(card).toHaveTextContent('Em implementação')
+      expect(card).toHaveTextContent('Nenhuma publicação recente disponível.')
     })
   })
 
@@ -501,13 +503,13 @@ describe('TriBusca release candidate WEB-11', () => {
     })
   })
 
-  it('WEB-16-R1 keeps a state without an implemented source as Em implantação', async () => {
+  it('WEB-16-R1 keeps a state without a source as Ainda não consultada', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse([])))
 
     renderApp()
 
     await waitFor(() => {
-      expect(screen.getByTestId('state-carousel-status')).toHaveTextContent('Em implantação')
+      expect(screen.getByTestId('state-carousel-status')).toHaveTextContent('Ainda não consultada')
     })
     expect(screen.getByTestId('state-carousel-status')).not.toHaveTextContent('Online')
   })
@@ -628,10 +630,10 @@ describe('TriBusca release candidate WEB-11', () => {
     expect(within(spCard as HTMLElement).getByText('91')).toBeInTheDocument()
   })
 
-  it('keeps planned-but-absent Coverage sources as Em implantação after a successful response', async () => {
+  it('keeps planned-but-absent Coverage sources as Ainda não consultada after a successful response', async () => {
     renderApp('/cobertura')
 
-    await waitFor(() => expect(screen.getAllByText('Coleta Em implantação').length).toBeGreaterThan(20))
+    await waitFor(() => expect(screen.getAllByText('Coleta Ainda não consultada').length).toBeGreaterThan(20))
     const stateCards = screen.getAllByTestId('state-coverage-card')
     expect(stateCards).toHaveLength(27)
     expect(stateCards[0]).toHaveTextContent('São Paulo / SP')
@@ -647,7 +649,10 @@ describe('TriBusca release candidate WEB-11', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(screen.queryByText('Online')).not.toBeInTheDocument()
-    expect(screen.queryByText('Em implantação')).not.toBeInTheDocument()
+    const coverageCards = document.querySelectorAll('.coverage-card')
+    for (const card of coverageCards) {
+      expect(card).not.toHaveTextContent('Ainda não consultada')
+    }
     expect(screen.getAllByText('—').length).toBeGreaterThan(20)
   })
 

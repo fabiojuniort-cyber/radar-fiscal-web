@@ -24,6 +24,13 @@ function formatCnpj(value: string) {
     .replace(/(\d{4})(\d)/, '$1-$2')
 }
 
+function formatCep(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  return digits.length > 5
+    ? digits.slice(0, 5) + '-' + digits.slice(5)
+    : digits
+}
+
 const EMPTY_COMMON = {
   uf: '',
   municipalityName: '',
@@ -76,17 +83,25 @@ export function ManualRegistrationHost() {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+
+    const postalDigits = common.postalCode.replace(/\D/g, '')
+    if (postalDigits && postalDigits.length !== 8) {
+      setError('CEP inválido. Informe os 8 dígitos do CEP.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
       let result: unknown
+      const postalCode = postalDigits || undefined
 
       if (request.kind === 'company') {
         const input: ManualCompanyForm = {
           legalName: legalName.trim(),
           uf: common.uf,
           municipalityName: optional(common.municipalityName),
-          postalCode: optional(common.postalCode),
+          postalCode,
           street: optional(common.street),
           streetNumber: optional(common.streetNumber),
           district: optional(common.district),
@@ -98,7 +113,7 @@ export function ManualRegistrationHost() {
           name: establishmentName.trim(),
           uf: common.uf,
           municipalityName: optional(common.municipalityName),
-          postalCode: optional(common.postalCode),
+          postalCode,
           street: optional(common.street),
           streetNumber: optional(common.streetNumber),
           district: optional(common.district),
@@ -125,9 +140,16 @@ export function ManualRegistrationHost() {
         setError('Este CNPJ já está cadastrado.')
       } else if (code === 'invalid_cnpj') {
         setError('O CNPJ informado é inválido.')
+      } else if (
+        code === 'invalid_postal_code' ||
+        code.includes('postalCode')
+      ) {
+        setError('CEP inválido. Informe os 8 dígitos do CEP.')
+      } else if (code === 'admin_required') {
+        setError('Seu usuário não possui permissão para concluir este cadastro.')
       } else {
         setError(
-          'Não foi possível concluir o cadastro manual. Revise os dados e tente novamente.',
+          'Não foi possível concluir o cadastro. Confira os campos destacados e tente novamente.',
         )
       }
     } finally {
@@ -157,13 +179,12 @@ export function ManualRegistrationHost() {
         aria-labelledby="tp-manual-title"
       >
         <div className="tp-manual-heading">
-          <span>Cadastro alternativo</span>
           <h2 id="tp-manual-title">
             Continuar manualmente
           </h2>
           <p>
-            A consulta automática do CNPJ está indisponível neste momento.
-            Você pode concluir o cadastro agora e atualizar os dados cadastrais depois.
+            A consulta automática do CNPJ não respondeu. Você pode concluir o cadastro
+            agora e atualizar os dados cadastrais por uma nova consulta depois.
           </p>
         </div>
 
@@ -255,12 +276,16 @@ export function ManualRegistrationHost() {
               <input
                 value={common.postalCode}
                 onChange={(event) =>
-                  patchCommon({ postalCode: event.target.value })
+                  patchCommon({
+                    postalCode: formatCep(event.target.value),
+                  })
                 }
                 inputMode="numeric"
                 maxLength={9}
                 placeholder="00000-000"
+                aria-describedby="tp-manual-cep-help"
               />
+              <small id="tp-manual-cep-help">8 dígitos</small>
             </label>
 
             <label>
@@ -310,11 +335,8 @@ export function ManualRegistrationHost() {
           </div>
 
           <p className="tp-manual-note">
-            Estes dados foram informados manualmente porque a consulta cadastral
-            automática não estava disponível. Eles poderão ser atualizados por
-            uma nova consulta posteriormente. O CNPJ permanece bloqueado como
-            identidade cadastral e o Local Negócio não será sobrescrito por
-            consultas futuras.
+            O CNPJ permanece como identidade cadastral. O Local Negócio é um código
+            interno e não será alterado por consultas cadastrais futuras.
           </p>
 
           {error && (
@@ -334,7 +356,7 @@ export function ManualRegistrationHost() {
                 )
               }
             >
-              Cancelar
+              Cancelar cadastro
             </button>
             <button
               type="submit"
@@ -343,7 +365,7 @@ export function ManualRegistrationHost() {
             >
               {submitting
                 ? 'Cadastrando…'
-                : 'Cadastrar manualmente'}
+                : 'Cadastrar empresa'}
             </button>
           </div>
         </form>

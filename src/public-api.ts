@@ -24,7 +24,7 @@ export type PublicSourcesResponse = {
 }
 
 export type CoveragePresentation = {
-  status: 'Online' | 'Em validação' | 'Em implantação' | '—'
+  status: 'Online' | 'Em validação' | 'Ainda não consultada' | '—'
   lastSuccessAt: string
   importedToday: string
   totalPublications: string
@@ -77,7 +77,7 @@ export function translatePublicStatus(status: PublicSourceStatus): CoveragePrese
     case 'UNAVAILABLE':
       return 'Em validação'
     case 'NOT_CONSULTED':
-      return 'Em implantação'
+      return 'Ainda não consultada'
   }
 }
 
@@ -135,7 +135,7 @@ export function toCoveragePresentation(
 
   if (!source) {
     return {
-      status: 'Em implantação',
+      status: 'Ainda não consultada',
       lastSuccessAt: '—',
       importedToday: '—',
       totalPublications: '—',
@@ -149,7 +149,6 @@ export function toCoveragePresentation(
     totalPublications: String(source.totalPublications),
   }
 }
-
 
 export type PublicPublication = {
   id: string

@@ -36,8 +36,6 @@ type OpenAuth = (view: AuthView, returnFocus: HTMLElement) => void
 export const STATE_CAROUSEL_AUTOPLAY_MS = 15_000
 const STATE_CAROUSEL_SWIPE_THRESHOLD_PX = 48
 
-
-
 const federalDescriptions: Record<string, string> = {
   'DOU / INLABS': 'Atos federais publicados no Diário Oficial da União.',
   CONFAZ: 'Convênios, ajustes e protocolos relacionados ao ICMS.',
@@ -117,8 +115,6 @@ function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
   </header>
 }
 
-
-
 const HOME_PRODUCTS = [
   { name: 'Acervo', description: 'Conteúdo oficial preservado, com busca por título, número, órgão, conteúdo, fonte, UF e período.', status: 'Disponível' },
   { name: 'Central de Monitoramento', description: 'Situação operacional de cada fonte oficial: última consulta, falhas e tempo de resposta.', status: 'Disponível' },
@@ -170,7 +166,6 @@ function publicationActLabel(publication: PublicPublication): string {
   const type = publication.actType?.trim()
   const number = publication.actNumber?.trim()
   const published = formatPublicDate(publication.publishedOn)
-
   return [type, number, published].filter(Boolean).join(' · ')
 }
 
@@ -178,23 +173,17 @@ function PublicationTitle({ publication }: { publication: PublicPublication }) {
   if (publication.officialUrl) {
     return <a href={publication.officialUrl} target="_blank" rel="noreferrer">{publication.title}</a>
   }
-
   return <strong>{publication.title}</strong>
 }
 
 function HomeFeedCard() {
   const query = useQuery({
     queryKey: ['public-publications-home-latest'],
-    queryFn: ({ signal }) => fetchPublicPublications(
-      { limit: 4 },
-      undefined,
-      signal,
-    ),
+    queryFn: ({ signal }) => fetchPublicPublications({ limit: 4 }, undefined, signal),
     retry: false,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   })
-
   const items = query.data?.items ?? []
 
   return <aside className="ref-home-feed" aria-label="Agora no radar">
@@ -202,13 +191,12 @@ function HomeFeedCard() {
       <div><span>Agora no radar</span><strong>Últimas capturas</strong></div>
       <i aria-hidden="true" />
     </div>
-
     {query.isLoading || query.isFetching ? (
       <div className="ref-home-feed-state">Carregando capturas…</div>
     ) : query.isError ? (
       <div className="ref-home-feed-state">Dados indisponíveis no momento.</div>
     ) : items.length === 0 ? (
-      <div className="ref-home-feed-state">Em implementação</div>
+      <div className="ref-home-feed-state">Nenhuma publicação recente disponível.</div>
     ) : (
       items.map((publication) => <div className="ref-home-feed-row" key={publication.id}>
         <span>{publicationMeta(publication)}</span>
@@ -243,15 +231,7 @@ function StateCarousel() {
   const stateStatus = toCoveragePresentation(findStateSource(sourceItems, current.uf), dataAvailable).status
   const publicationsQuery = useQuery({
     queryKey: ['public-publications-state-latest', current.uf],
-    queryFn: ({ signal }) => fetchPublicPublications(
-      {
-        uf: current.uf,
-        jurisdiction: 'STATE',
-        limit: 3,
-      },
-      undefined,
-      signal,
-    ),
+    queryFn: ({ signal }) => fetchPublicPublications({ uf: current.uf, jurisdiction: 'STATE', limit: 3 }, undefined, signal),
     retry: false,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -334,7 +314,7 @@ function StateCarousel() {
           ) : publicationsQuery.isError ? (
             <div className="ref-state-publications-state">Dados indisponíveis</div>
           ) : statePublications.length === 0 ? (
-            <div className="ref-state-publications-state">Em implementação</div>
+            <div className="ref-state-publications-state">Nenhuma publicação recente disponível.</div>
           ) : (
             statePublications.map((publication) => <div className="ref-state-publication-row" key={publication.id}>
               <span>{publicationActLabel(publication)}</span>
@@ -366,8 +346,8 @@ function FederalHome() {
     <div className="ref-container ref-home-federal-layout">
       <div className="ref-home-federal-copy">
         <span>Cobertura Federal</span>
-        <h2>O que está ativo fica claro.</h2>
-        <p>A TriBusca diferencia uma fonte em produção de outra ainda em implantação. Nada é apresentado como cobertura produtiva antes de estar operacional.</p>
+        <h2>O estado de cada fonte fica claro.</h2>
+        <p>A TriBusca mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis.</p>
       </div>
       <div className="ref-home-federal-grid">{FEDERAL_COVERAGE.map((source) => {
         const data = toCoveragePresentation(findFederalSource(items, source.code), available)
@@ -390,9 +370,7 @@ function PortfolioHome() {
         {HOME_PRODUCTS.map((product) => <article className={product.status === 'Disponível' ? 'is-available' : ''} key={product.name}>
           <strong>{product.name}</strong>
           <p>{product.description}</p>
-          {product.status && (
-            <span className="is-available">{product.status}</span>
-          )}
+          {product.status && <span className="is-available">{product.status}</span>}
         </article>)}
       </div>
     </div>
@@ -481,11 +459,11 @@ function CoveragePage({ onAuth }: { onAuth: OpenAuth }) {
   const federalCodes: Record<string,string> = { dou:'DOU', confaz:'CONF', 'nfe-encat':'NF-e', sped:'SPED', cgibs:'CGIBS', 'rfb-normas':'RFB' }
 
   return <main className="ref-model-page">
-    <PageHero eyebrow="Cobertura" title="Fontes oficiais acompanhadas, com saúde operacional visível." copy="A TriBusca diferencia uma fonte em produção de outra ainda em implantação. Nada é apresentado como cobertura produtiva antes de estar operacional." />
+    <PageHero eyebrow="Cobertura" title="Fontes oficiais acompanhadas, com saúde operacional visível." copy="A TriBusca mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis." />
     <section className="ref-model-section">
       <div className="ref-container">
         {!available && !query.isLoading && <div className="ref-live-warning">Dados ao vivo indisponíveis no momento. Os campos sem informação aparecem como “—”.</div>}
-        <div className="ref-model-heading"><span>Cobertura Federal</span><h2>O que está ativo fica claro.</h2></div>
+        <div className="ref-model-heading"><span>Cobertura Federal</span><h2>O estado de cada fonte fica claro.</h2></div>
         <div className="ref-coverage-rows">
           {FEDERAL_COVERAGE.map(source=>{
             const data=toCoveragePresentation(findFederalSource(items,source.code),available)
@@ -496,7 +474,7 @@ function CoveragePage({ onAuth }: { onAuth: OpenAuth }) {
         <div className="ref-model-heading ref-coverage-state-heading">
           <span>Cobertura estadual</span>
           <h2>Monitoramento tributário nos estados</h2>
-          <p>Diários oficiais estaduais entram um a um. São Paulo é o primeiro; os demais estados seguem em implantação.</p>
+          <p>A cobertura estadual é apresentada de acordo com as fontes disponíveis no monitoramento.</p>
         </div>
         <div className="ref-coverage-rows">
           {states.map(state=>{
@@ -514,7 +492,7 @@ function CoveragePage({ onAuth }: { onAuth: OpenAuth }) {
           <Health name="Operacional" text="Consultada com sucesso no ciclo mais recente." tone="ok"/>
           <Health name="Instável" text="Respostas intermitentes ou parciais." tone="partial"/>
           <Health name="Indisponível" text="A fonte oficial não respondeu. Isso não significa ausência de publicações." tone="down"/>
-          <Health name="Ainda não consultada" text="Fonte em implantação, sem coleta produtiva." tone="idle"/>
+          <Health name="Ainda não consultada" text="Fonte sem consulta registrada no período." tone="idle"/>
         </div>
       </div>
     </section>
@@ -567,9 +545,7 @@ function PortfolioPage({onAuth}:{onAuth:OpenAuth}) {
       <RevelaMock />
     </PortfolioFeature>
 
-    <section id="decodifica" className="ref-decoding-feature">
-      <DecodificaDetail />
-    </section>
+    <section id="decodifica" className="ref-decoding-feature"><DecodificaDetail /></section>
 
     <PortfolioFeature id="perfil" status={null} eyebrow="Contexto da empresa" title="Perfil Tributário" description={<p>Organiza o contexto da empresa: CNPJ, regime, CNAEs, atividades, segmentos, estabelecimentos e UFs. Progressivamente, produtos, NCMs, operações, CFOPs, tributos e obrigações. Nada disso é exigido de uma vez no cadastro.</p>}>
       <div className="ref-profile-cloud">{['CNPJ','Regime','CNAEs','Estabelecimentos','UFs','Produtos','NCMs','Operações','CFOPs','Tributos'].map(x=><span key={x}>{x}</span>)}</div>
@@ -595,7 +571,6 @@ function AcervoMock(){
   return <div className="ref-acervo-model">
     <div><span>Buscar no Acervo…</span><b>Buscar</b></div>
     <div>{['Título ▾','Número ▾','Órgão ▾','Conteúdo ▾','Fonte ▾','UF ▾','Período ▾'].map(x=><span key={x}>{x}</span>)}</div>
-    
   </div>
 }
 
@@ -605,17 +580,8 @@ function CentralMock(){
 }
 
 type RadarLevel = 'near' | 'medium' | 'far'
-type RadarBlip = {
-  level: RadarLevel
-  left: number
-  top: number
-  detectionDelay: number
-}
-
-type RadarPattern = {
-  id: number
-  blips: RadarBlip[]
-}
+type RadarBlip = { level: RadarLevel; left: number; top: number; detectionDelay: number }
+type RadarPattern = { id: number; blips: RadarBlip[] }
 
 const RADAR_SWEEP_SECONDS = 4.8
 const RADAR_PATTERN_COUNT = 25
@@ -625,145 +591,56 @@ const RADAR_MAX_TARGETS = 10
 function randomRadarBlip(): RadarBlip {
   const levels: RadarLevel[] = ['near','medium','far']
   const level = levels[Math.floor(Math.random()*levels.length)] ?? 'medium'
-  const ranges: Record<RadarLevel,[number,number]> = {
-    near:[8,20],
-    medium:[24,34],
-    far:[38,45],
-  }
+  const ranges: Record<RadarLevel,[number,number]> = { near:[8,20], medium:[24,34], far:[38,45] }
   const [min,max]=ranges[level]
   const radius=min+Math.random()*(max-min)
   const angle=Math.random()*Math.PI*2
   const angleFraction=(angle%(Math.PI*2))/(Math.PI*2)
-
-  return {
-    level,
-    left:50+Math.cos(angle)*radius,
-    top:50+Math.sin(angle)*radius,
-    detectionDelay:angleFraction*RADAR_SWEEP_SECONDS,
-  }
+  return { level, left:50+Math.cos(angle)*radius, top:50+Math.sin(angle)*radius, detectionDelay:angleFraction*RADAR_SWEEP_SECONDS }
 }
 
 function randomRadarTargetCount(): number {
-  return (
-    RADAR_MIN_TARGETS +
-    Math.floor(
-      Math.random() *
-      (RADAR_MAX_TARGETS - RADAR_MIN_TARGETS + 1),
-    )
-  )
+  return RADAR_MIN_TARGETS + Math.floor(Math.random() * (RADAR_MAX_TARGETS - RADAR_MIN_TARGETS + 1))
 }
 
 function buildRadarPatterns(): RadarPattern[] {
-  return Array.from(
-    { length: RADAR_PATTERN_COUNT },
-    (_, patternIndex) => {
-      const targetCount =
-        patternIndex === 0
-          ? 1
-          : randomRadarTargetCount()
-
-      return {
-        id: patternIndex,
-        blips: Array.from(
-          { length: targetCount },
-          () => randomRadarBlip(),
-        ),
-      }
-    },
-  )
+  return Array.from({ length: RADAR_PATTERN_COUNT }, (_, patternIndex) => {
+    const targetCount = patternIndex === 0 ? 1 : randomRadarTargetCount()
+    return { id: patternIndex, blips: Array.from({ length: targetCount }, () => randomRadarBlip()) }
+  })
 }
 
 function SonarDemo(){
   const patterns=useMemo(()=>buildRadarPatterns(),[])
-  const [generations,setGenerations]=useState(() => [{
-    iteration:0,
-    patternIndex:0,
-    blips:patterns[0]?.blips ?? [],
-  }])
-  const activeGeneration=
-    generations[generations.length-1] ??
-    {iteration:0,patternIndex:0,blips:[]}
+  const [generations,setGenerations]=useState(() => [{ iteration:0, patternIndex:0, blips:patterns[0]?.blips ?? [] }])
+  const activeGeneration=generations[generations.length-1] ?? {iteration:0,patternIndex:0,blips:[]}
 
   useEffect(()=>{
     const timer=window.setInterval(()=>{
       setGenerations((current)=>{
-        const active=
-          current[current.length-1] ??
-          {iteration:0,patternIndex:0,blips:[]}
+        const active=current[current.length-1] ?? {iteration:0,patternIndex:0,blips:[]}
         let nextIndex=active.patternIndex
-
-        while(
-          RADAR_PATTERN_COUNT>1 &&
-          nextIndex===active.patternIndex
-        ){
-          nextIndex=Math.floor(Math.random()*RADAR_PATTERN_COUNT)
-        }
-
-        const nextPattern=
-          patterns[nextIndex] ??
-          patterns[0]
-
-        return [
-          ...current.slice(-1),
-          {
-            iteration:active.iteration+1,
-            patternIndex:nextIndex,
-            blips:nextPattern?.blips ?? [],
-          },
-        ]
+        while(RADAR_PATTERN_COUNT>1 && nextIndex===active.patternIndex){ nextIndex=Math.floor(Math.random()*RADAR_PATTERN_COUNT) }
+        const nextPattern=patterns[nextIndex] ?? patterns[0]
+        return [...current.slice(-1), { iteration:active.iteration+1, patternIndex:nextIndex, blips:nextPattern?.blips ?? [] }]
       })
     },RADAR_SWEEP_SECONDS*1000)
-
     return ()=>window.clearInterval(timer)
   },[patterns])
 
   return <div className="ref-sonar-model">
-    <div
-      className="ref-live-radar"
-      aria-label="Radar de afinidade ilustrativo"
-      data-pattern-count={RADAR_PATTERN_COUNT}
-      data-pattern-index={activeGeneration.patternIndex}
-      data-target-count={activeGeneration.blips.length}
-      data-cycle={activeGeneration.iteration}
-    >
+    <div className="ref-live-radar" aria-label="Radar de afinidade ilustrativo" data-pattern-count={RADAR_PATTERN_COUNT} data-pattern-index={activeGeneration.patternIndex} data-target-count={activeGeneration.blips.length} data-cycle={activeGeneration.iteration}>
       <span className="ref-radar-zone zone-far"/><span className="ref-radar-zone zone-medium"/><span className="ref-radar-zone zone-near"/>
       <span className="ref-live-radar-center"/>
-      <span
-        className="ref-live-radar-sweep"
-        style={{ '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties}
-      />
-      {generations.flatMap((generation)=>
-        generation.blips.map((blip,index)=>{
-          const style={
-            '--blip-left': blip.left + '%',
-            '--blip-top': blip.top + '%',
-            '--blip-delay': blip.detectionDelay + 's',
-            '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's',
-          } as CSSProperties
-          const isResidual =
-            generation.iteration !==
-            activeGeneration.iteration
-
-          return <span
-            key={generation.iteration+'-'+index}
-            className={
-              'ref-live-radar-blip is-' +
-              blip.level +
-              (isResidual ? ' is-residual' : '')
-            }
-            data-generation={generation.iteration}
-            style={style}
-          />
-        }),
-      )}
+      <span className="ref-live-radar-sweep" style={{ '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties}/>
+      {generations.flatMap((generation)=>generation.blips.map((blip,index)=>{
+        const style={ '--blip-left': blip.left + '%', '--blip-top': blip.top + '%', '--blip-delay': blip.detectionDelay + 's', '--radar-sweep-duration': RADAR_SWEEP_SECONDS + 's' } as CSSProperties
+        const isResidual = generation.iteration !== activeGeneration.iteration
+        return <span key={generation.iteration+'-'+index} className={'ref-live-radar-blip is-' + blip.level + (isResidual ? ' is-residual' : '')} data-generation={generation.iteration} style={style}/>
+      }))}
     </div>
-    <div className="ref-sonar-legend">
-      <span className="is-near">Alta · sinal próximo ao centro</span>
-      <span className="is-medium">Média · distância intermediária</span>
-      <span className="is-far">Baixa · sinal distante</span>
-    </div>
+    <div className="ref-sonar-legend"><span className="is-near">Alta · sinal próximo ao centro</span><span className="is-medium">Média · distância intermediária</span><span className="is-far">Baixa · sinal distante</span></div>
     <div className="ref-sonar-signals"><b>Sinais encontrados</b><span>✓ Trata de ICMS<br/>✓ Envolve operação de venda<br/>✓ Estabelecimento em GO</span></div>
-    
   </div>
 }
 
@@ -772,7 +649,6 @@ function RevelaMock(){
     <div className="ref-revela-head"><b>Revela · boletim de hoje</b><span>Empresa exemplo</span></div>
     <article><em className="is-high">Alta afinidade</em><strong>Convênio ICMS · benefício fiscal para fertilizantes</strong><span>Sinais: ICMS · fertilizantes · estabelecimento em GO</span></article>
     <article><em className="is-direct">Menção direta</em><strong>Publicação cita o CNPJ da filial GO-02</strong><span>Estabelecimento relacionado: GO-02</span></article>
-    
   </div>
 }
 
@@ -803,11 +679,7 @@ function DecodificaDetail(){
 function HowItWorksPage({onAuth}:{onAuth:OpenAuth}) {
   return <main className="ref-model-page">
     <PageHero eyebrow="Como funciona" title="A legislação encontra a empresa." copy="Da fonte oficial à relevância para a sua empresa, cada etapa preserva a origem e explica o porquê."/>
-    <section className="ref-model-section">
-      <div className="ref-container ref-how-grid">
-        {howSteps.map(([n,name,desc])=><article key={n}><span>{n}</span><strong>{name}</strong><p>{desc}</p></article>)}
-      </div>
-    </section>
+    <section className="ref-model-section"><div className="ref-container ref-how-grid">{howSteps.map(([n,name,desc])=><article key={n}><span>{n}</span><strong>{name}</strong><p>{desc}</p></article>)}</div></section>
     <section className="ref-model-section">
       <div className="ref-container ref-how-relevance">
         <div><span>Relevância</span><h2>Por que priorizar</h2><p>Cada prioridade vem com os motivos verificáveis. A TriBusca prefere linguagem baseada em evidência e grau de certeza, como “Possível impacto identificado”.</p></div>
@@ -839,9 +711,7 @@ function TaxReformPage({onAuth}:{onAuth:OpenAuth}) {
         <div className="ref-model-heading"><span>Linha do tempo</span><h2>Publicação e vigência são datas diferentes.</h2></div>
         <div className="ref-reform-timeline-model">
           {reformTimeline.map((item)=><article key={item.date+'-'+item.title} className={item.kind==='Vigência'?'is-effective':item.kind==='Publicação'?'is-publication':'is-future'}>
-            <i/>
-            <div><span>{item.date}</span><em>{item.kind}</em></div>
-            <strong>{item.title}</strong><p>{item.text}</p>
+            <i/><div><span>{item.date}</span><em>{item.kind}</em></div><strong>{item.title}</strong><p>{item.text}</p>
           </article>)}
         </div>
         <p className="ref-legal-note">Datas futuras são exibidas apenas quando previstas em norma oficial.</p>
@@ -859,40 +729,18 @@ function TaxReformPage({onAuth}:{onAuth:OpenAuth}) {
   </main>
 }
 
-function TermsPage() {
-  return <LegalDocumentPage document={TERMS_OF_USE} />
-}
+function TermsPage() { return <LegalDocumentPage document={TERMS_OF_USE} /> }
+function PrivacyPage() { return <LegalDocumentPage document={PRIVACY_POLICY} /> }
 
-function PrivacyPage() {
-  return <LegalDocumentPage document={PRIVACY_POLICY} />
-}
-
-function LegalDocumentPage({
-  document,
-}: {
-  document: LegalDocument
-}) {
+function LegalDocumentPage({ document }: { document: LegalDocument }) {
   return <main className="ref-legal-page">
-    <PageHero
-      eyebrow={document.eyebrow}
-      title={document.title}
-      copy={
-        'Versão ' +
-        document.version +
-        ' · Vigente desde ' +
-        document.effectiveDate +
-        '. ' +
-        document.intro
-      }
-    />
+    <PageHero eyebrow={document.eyebrow} title={document.title} copy={document.intro} />
     <section className="ref-section">
       <div className="ref-container ref-legal-document">
         {document.sections.map((section) => (
           <section key={section.title}>
             <h2>{section.title}</h2>
-            {section.paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
+            {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           </section>
         ))}
       </div>
