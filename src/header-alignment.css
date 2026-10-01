@@ -1,0 +1,10 @@
+.tp-tabs {
+  justify-content: center;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .tp-tabs {
+    justify-content: flex-start;
+  }
+}
