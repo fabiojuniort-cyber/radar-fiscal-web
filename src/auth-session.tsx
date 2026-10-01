@@ -1,5 +1,11 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 
+import {
+  buildManualCompanyPayload,
+  buildManualEstablishmentPayload,
+  lookupBrasilApiFromBrowser,
+} from './browser-cnpj-fallback'
+
 interface Membership {
   tenantId: string
   tenantName: string
@@ -47,6 +53,100 @@ async function fetchMe(accessToken: string): Promise<AuthMe> {
     !Array.isArray(body.memberships)
   ) throw new Error('invalid_auth_response')
   return body as AuthMe
+}
+
+function requestPath(input: RequestInfo | URL): string | null {
+  try {
+    if (typeof input === 'string') {
+      return new URL(input, window.location.origin).pathname
+    }
+
+    if (input instanceof URL) return input.pathname
+
+    return new URL(input.url, window.location.origin).pathname
+  } catch {
+    return null
+  }
+}
+
+function requestJsonBody(init?: RequestInit): Record<string, unknown> | null {
+  if (typeof init?.body !== 'string') return null
+
+  try {
+    const body: unknown = JSON.parse(init.body)
+    return body !== null && typeof body === 'object' && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+async function tryBrowserCnpjFallback(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  accessToken: string,
+): Promise<Response | null> {
+  if ((init?.method ?? 'GET').toUpperCase() !== 'POST') return null
+
+  const path = requestPath(input)
+  const body = requestJsonBody(init)
+  if (!path || !body || typeof body.cnpj !== 'string') return null
+
+  const companyPath = path === '/api/v1/companies/from-cnpj'
+  const establishmentMatch =
+    /^\/api\/v1\/companies\/([^/]+)\/establishments\/from-cnpj$/.exec(path)
+
+  if (!companyPath && !establishmentMatch) return null
+
+  const registry = await lookupBrasilApiFromBrowser(body.cnpj)
+  if (!registry) return null
+
+  const headers = new Headers(init?.headers)
+  headers.set('Authorization', `Bearer ${accessToken}`)
+  headers.set('Content-Type', 'application/json')
+  headers.set('Accept', 'application/json')
+
+  const businessLocationCode =
+    typeof body.businessLocationCode === 'string'
+      ? body.businessLocationCode
+      : null
+
+  if (companyPath) {
+    return fetch('/api/v1/companies/manual', {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: JSON.stringify(
+        buildManualCompanyPayload(
+          registry,
+          businessLocationCode,
+        ),
+      ),
+    })
+  }
+
+  const companyId = establishmentMatch?.[1]
+  if (!companyId) return null
+
+  const typeCode =
+    typeof body.typeCode === 'string' && body.typeCode.trim()
+      ? body.typeCode.trim()
+      : 'OTHER'
+
+  return fetch('/api/v1/establishments/manual', {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify(
+      buildManualEstablishmentPayload(
+        registry,
+        companyId,
+        typeCode,
+        businessLocationCode,
+      ),
+    ),
+  })
 }
 
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
@@ -134,6 +234,19 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
 
       const refreshed = await refreshAccessToken()
       if (refreshed && token.current) response = await execute()
+    }
+
+    if (
+      (response.status === 502 || response.status === 503) &&
+      token.current
+    ) {
+      const fallbackResponse = await tryBrowserCnpjFallback(
+        input,
+        init,
+        token.current,
+      )
+
+      if (fallbackResponse) response = fallbackResponse
     }
 
     return response
