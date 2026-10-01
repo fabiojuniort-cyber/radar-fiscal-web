@@ -493,6 +493,15 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
+  // Publicações always lists the most recent acts; the Acervo filters and
+  // search must not leak into it.
+  const recentPublicationsQuery = useQuery({
+    queryKey: ['launch', 'archive-v2', 'recent'],
+    queryFn: () => fetchCatalogArchive(apiFetch, { page: 1, limit: 25 }),
+    enabled: screen === 'publicacoes',
+    retry: false,
+  })
+
   const archiveQuery = useQuery({
     queryKey: [
       'launch',
@@ -531,6 +540,13 @@ export function AuthenticatedProductPanel({
 
   const archiveItems = archiveQuery.data?.items ?? []
   const latestPublications = latestArchiveQuery.data?.items ?? []
+  const recentPublications = recentPublicationsQuery.data?.items ?? []
+  const activeSourceName = source
+    ? facetsQuery.data?.sources.find((item) => item.code === source)?.name ?? source
+    : ''
+  const archiveHasNarrowing = Boolean(
+    appliedQuery.trim() || jurisdiction || uf || source,
+  )
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
   const account = accountQuery.data
@@ -567,6 +583,22 @@ export function AuthenticatedProductPanel({
     enabled: Boolean(tenantId),
     retry: false,
   })
+
+  const updateQuery = (value: string) => {
+    setQuery(value)
+    // An emptied search box means "no search": do not keep filtering by a
+    // term the user can no longer see.
+    if (value.trim() === '' && appliedQuery !== '') {
+      setAppliedQuery('')
+      setArchivePage(1)
+    }
+  }
+
+  const clearSearch = () => {
+    setQuery('')
+    setAppliedQuery('')
+    setArchivePage(1)
+  }
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault()
@@ -670,7 +702,7 @@ export function AuthenticatedProductPanel({
             <Search size={17} aria-hidden="true" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateQuery(event.target.value)}
               placeholder="Buscar no Acervo"
               aria-label="Buscar no Acervo"
             />
@@ -779,7 +811,7 @@ export function AuthenticatedProductPanel({
               <div>
                 <input
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => updateQuery(event.target.value)}
                   placeholder="Ex.: ICMS, NF-e, CONFAZ"
                   aria-label="Consulta rápida no Acervo"
                 />
@@ -888,12 +920,12 @@ export function AuthenticatedProductPanel({
               title="Publicações"
               description="Publicações mais recentes do Acervo, ordenadas pela data oficial de publicação."
             />
-            {archiveQuery.isPending ? (
+            {recentPublicationsQuery.isPending ? (
               <LoadingState />
-            ) : archiveQuery.isError ? (
+            ) : recentPublicationsQuery.isError ? (
               <ErrorState />
             ) : (
-              <PublicationList items={archiveItems} />
+              <PublicationList items={recentPublications} />
             )}
           </>
         )}
@@ -910,7 +942,7 @@ export function AuthenticatedProductPanel({
               <Search size={19} />
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => updateQuery(event.target.value)}
                 placeholder="Título, número, órgão ou termo"
                 aria-label="Pesquisar no Acervo"
               />
@@ -927,6 +959,14 @@ export function AuthenticatedProductPanel({
               />
               Buscar também no texto completo (ex.: NCM ou trecho do ato)
             </label>
+            {appliedQuery.trim() && (
+              <p className="tp-acervo-active-search" role="status">
+                Resultados para <strong>“{appliedQuery.trim()}”</strong>
+                <button type="button" onClick={clearSearch}>
+                  Limpar busca
+                </button>
+              </p>
+            )}
 
             <div className="tp-acervo-layout">
               <aside className="tp-filter-panel">
@@ -991,7 +1031,19 @@ export function AuthenticatedProductPanel({
                   <ErrorState />
                 ) : (
                   <>
-                    <PublicationList items={archiveItems} />
+                    {archiveItems.length === 0 && archiveHasNarrowing ? (
+                      <EmptyState title="Nenhuma publicação encontrada">
+                        {[
+                          'Nenhum resultado com os filtros atuais',
+                          appliedQuery.trim() ? `busca “${appliedQuery.trim()}”` : '',
+                          activeSourceName ? `fonte ${activeSourceName}` : '',
+                          uf ? `UF ${uf}` : '',
+                        ].filter(Boolean).join(' · ') +
+                          '. Use “Limpar filtros” ou altere a busca.'}
+                      </EmptyState>
+                    ) : (
+                      <PublicationList items={archiveItems} />
+                    )}
                     <div className="launch-pagination" aria-label="Paginação do Acervo">
                       <button
                         type="button"
