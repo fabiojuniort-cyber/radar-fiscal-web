@@ -160,6 +160,7 @@ function readPanelState() {
       screen?: Screen
       query?: string
       appliedQuery?: string
+      fullText?: boolean
       archivePage?: number
       jurisdiction?: string
       uf?: string
@@ -385,6 +386,10 @@ function SourceHealth({
   )
 }
 
+// Global catalog aggregates are not real-time: the backend caches them for up
+// to 1 h, so refetching them on every panel mount only adds load.
+const CATALOG_AGGREGATE_STALE_MS = 30 * 60_000
+
 export function AuthenticatedProductPanel({
   identity,
   apiFetch,
@@ -407,6 +412,7 @@ export function AuthenticatedProductPanel({
   const [screen, setScreen] = useState<Screen>(persisted?.screen ?? 'inicio')
   const [query, setQuery] = useState(persisted?.query ?? '')
   const [appliedQuery, setAppliedQuery] = useState(persisted?.appliedQuery ?? '')
+  const [fullText, setFullText] = useState(persisted?.fullText ?? false)
   const [archivePage, setArchivePage] = useState(persisted?.archivePage ?? 1)
   const [jurisdiction, setJurisdiction] = useState(persisted?.jurisdiction ?? '')
   const [uf, setUf] = useState(persisted?.uf ?? '')
@@ -425,6 +431,7 @@ export function AuthenticatedProductPanel({
         screen,
         query,
         appliedQuery,
+        fullText,
         archivePage,
         jurisdiction,
         uf,
@@ -437,6 +444,7 @@ export function AuthenticatedProductPanel({
     screen,
     query,
     appliedQuery,
+    fullText,
     archivePage,
     jurisdiction,
     uf,
@@ -454,12 +462,14 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'sources-v2'],
     queryFn: ({ signal }) => fetchPublicSourcesV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const statsQuery = useQuery({
     queryKey: ['launch', 'stats-v2'],
     queryFn: ({ signal }) => fetchPublicStatsV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const monitoringRunsQuery = useQuery({
@@ -474,6 +484,7 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'archive-facets'],
     queryFn: () => fetchCatalogFacets(apiFetch),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const latestArchiveQuery = useQuery({
@@ -487,6 +498,7 @@ export function AuthenticatedProductPanel({
       'launch',
       'archive-v2',
       appliedQuery,
+      fullText,
       jurisdiction,
       uf,
       source,
@@ -497,6 +509,7 @@ export function AuthenticatedProductPanel({
         q: appliedQuery.trim().length >= 2
           ? appliedQuery.trim()
           : undefined,
+        scope: fullText ? 'full' : 'title',
         jurisdiction:
           jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
             ? jurisdiction
@@ -565,6 +578,7 @@ export function AuthenticatedProductPanel({
   const resetArchiveFilters = () => {
     setQuery('')
     setAppliedQuery('')
+    setFullText(false)
     setJurisdiction('')
     setUf('')
     setSource('')
@@ -897,11 +911,22 @@ export function AuthenticatedProductPanel({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Título, número, órgão, NCM ou termo"
+                placeholder="Título, número, órgão ou termo"
                 aria-label="Pesquisar no Acervo"
               />
               <button type="submit">Buscar no Acervo</button>
             </form>
+            <label className="tp-acervo-fulltext">
+              <input
+                type="checkbox"
+                checked={fullText}
+                onChange={(event) => {
+                  setFullText(event.target.checked)
+                  setArchivePage(1)
+                }}
+              />
+              Buscar também no texto completo (ex.: NCM ou trecho do ato)
+            </label>
 
             <div className="tp-acervo-layout">
               <aside className="tp-filter-panel">
@@ -1004,8 +1029,9 @@ export function AuthenticatedProductPanel({
                       </button>
                     </div>
                     <p className="tp-pagination-summary">
-                      Página {archivePage} de {archiveQuery.data?.totalPages ?? 1} ·{' '}
-                      {archiveQuery.data?.totalItems ?? 0} publicações
+                      {archiveQuery.data?.totalIsCapped
+                        ? `Página ${archivePage} · mais de ${(archiveQuery.data.totalItems).toLocaleString('pt-BR')} publicações`
+                        : `Página ${archivePage} de ${archiveQuery.data?.totalPages ?? 1} · ${archiveQuery.data?.totalItems ?? 0} publicações`}
                     </p>
                   </>
                 )}

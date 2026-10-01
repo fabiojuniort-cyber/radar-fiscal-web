@@ -5,6 +5,8 @@ export type CatalogArchiveResponse = {
   limit: number
   totalItems: number
   totalPages: number
+  /** True when there are more than totalItems matches (count is capped). */
+  totalIsCapped?: boolean
   hasMore: boolean
   items: ProductArchiveItem[]
 }
@@ -19,6 +21,8 @@ export type CatalogFacets = {
 
 export type CatalogFilters = {
   q?: string
+  /** 'full' also searches the full text of each act; default is the title. */
+  scope?: 'title' | 'full'
   uf?: string
   jurisdiction?: 'FEDERAL' | 'STATE'
   source?: string
@@ -40,6 +44,7 @@ export async function fetchCatalogArchive(
   const params = new URLSearchParams()
 
   if (filters.q) params.set('q', filters.q)
+  if (filters.q && filters.scope === 'full') params.set('scope', 'full')
   if (filters.uf) params.set('uf', filters.uf)
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)

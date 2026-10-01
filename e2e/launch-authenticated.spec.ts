@@ -35,6 +35,7 @@ const archiveItem = {
 }
 
 test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }) => {
+  const archiveRequests: URL[] = []
   let companyCreated = false
   let profileSaved = false
 
@@ -182,18 +183,18 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.route('**/api/v2/archive?*', (route) => {
     const url = new URL(route.request().url())
+    archiveRequests.push(url)
     const pageNumber = Number(url.searchParams.get('page') ?? '1')
+    const limit = Number(url.searchParams.get('limit') ?? '25')
+    // Searches answer with the PERF-02 capped contract; everything else with
+    // the previous contract (no totalIsCapped), as an older backend would.
+    const body = url.searchParams.has('q')
+      ? { page: pageNumber, limit, totalItems: 10000, totalPages: 400, totalIsCapped: true, hasMore: true, items: [archiveItem] }
+      : { page: pageNumber, limit, totalItems: 1, totalPages: 1, hasMore: false, items: [archiveItem] }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        page: pageNumber,
-        limit: Number(url.searchParams.get('limit') ?? '25'),
-        totalItems: 1,
-        totalPages: 1,
-        hasMore: false,
-        items: [archiveItem],
-      }),
+      body: JSON.stringify(body),
     })
   })
 
@@ -476,6 +477,18 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
   await expect(page.getByLabel('UF')).toContainText('GO')
+  // Response without totalIsCapped (previous backend contract) keeps the
+  // exact summary.
+  await expect(page.getByText('Página 1 de 1 · 1 publicações')).toBeVisible()
+
+  await page.getByLabel('Buscar também no texto completo (ex.: NCM ou trecho do ato)').check()
+  await page.getByLabel('Pesquisar no Acervo').fill('Convênio')
+  await page.getByRole('button', { name: 'Buscar no Acervo' }).click()
+  await expect(page.getByText('Página 1 · mais de 10.000 publicações')).toBeVisible()
+  const searched = archiveRequests.filter((url) => url.searchParams.get('q') === 'Convênio')
+  expect(searched.length).toBeGreaterThan(0)
+  expect(searched.every((url) => url.searchParams.get('scope') === 'full')).toBe(true)
+  expect(archiveRequests.some((url) => !url.searchParams.has('q') && url.searchParams.has('scope'))).toBe(false)
 
   await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
