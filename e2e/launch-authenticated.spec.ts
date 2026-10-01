@@ -240,6 +240,25 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     }),
   }))
 
+  await page.route(`**/api/v1/publications/${publicationId}/ncms`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      items: [{
+        code: '10063011',
+        description: 'Arroz semibranqueado ou branqueado',
+        verificationStatus: 'CATALOG_MATCHED',
+        method: {
+          type: 'DETERMINISTIC',
+          detectorKey: 'ncm-catalog-v1',
+          detectorVersion: '1',
+        },
+        confidence: 1,
+        excerpt: 'Art. 1º NCM 1006.30.11.',
+      }],
+    }),
+  }))
+
   await page.route('**/api/v1/account', async (route) => {
     expect(route.request().headers()['x-tenant-id']).toBe(tenantId)
     await route.fulfill({
@@ -359,6 +378,12 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         }],
       }] : [],
     }),
+  }))
+
+  await page.route(`**/api/v1/companies/${companyId}/product-profiles`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ items: [] }),
   }))
 
   await page.route('**/api/v1/establishment-types', (route) => route.fulfill({
@@ -503,7 +528,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.getByText('10.123.456-2')).toBeVisible()
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
-  await expect(page.getByText('Adicionar NCM')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Adicionar produto e NCM' })).toBeVisible()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
