@@ -494,7 +494,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' }).click()
   await expect(page).toHaveURL(new RegExp(`/painel/publicacoes/${publicationId}$`))
   await expect(page.getByRole('heading', { name: 'Ato oficial real do Acervo' })).toBeVisible()
-  await expect(page.getByText('1006.30.11')).toBeVisible()
+  await expect(page.getByText('1006.30.11', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Voltar' }).click()
   await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
 
