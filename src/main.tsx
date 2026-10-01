@@ -11,6 +11,7 @@ import '@fontsource/inter/900.css'
 import App from './App'
 import { ManualRegistrationHost } from './manual-registration-host'
 import './styles.css'
+import './header-alignment.css'
 
 const queryClient = new QueryClient()
 
