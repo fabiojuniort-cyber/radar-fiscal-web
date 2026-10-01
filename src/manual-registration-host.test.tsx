@@ -79,7 +79,7 @@ describe('ManualRegistrationHost', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Cadastrar manualmente',
+        name: 'Cadastrar empresa',
       }),
     )
 
