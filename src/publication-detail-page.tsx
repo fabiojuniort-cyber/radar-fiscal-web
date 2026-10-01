@@ -5,10 +5,12 @@ import {
   FileText,
   History,
   Landmark,
+  Search,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { formatPublicDate } from './public-api'
+import { fetchPublicationNcms } from './product-ncm-api'
 import {
   fetchProductPublicationDetail,
   type ProductApiFetch,
@@ -32,19 +34,45 @@ function referenceLabel(
   return reference || title
 }
 
-function extractNcms(text: string): string[] {
-  const matches = text.match(/\b\d{4}[.\s-]?\d{2}[.\s-]?\d{2}\b/g) ?? []
-  const normalized = matches
-    .map((value) => value.replace(/\D/g, ''))
-    .filter((value) => value.length === 8)
-    .map(
-      (value) =>
-        value.slice(0, 4) + '.' +
-        value.slice(4, 6) + '.' +
-        value.slice(6, 8),
-    )
+function formatNcmCode(value: string) {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length !== 8) return value
+  return (
+    digits.slice(0, 4) + '.' +
+    digits.slice(4, 6) + '.' +
+    digits.slice(6, 8)
+  )
+}
 
-  return [...new Set(normalized)].sort()
+function setArchiveNcmState(code: string) {
+  const normalized = code.replace(/\D/g, '')
+  if (normalized.length !== 8) return
+
+  try {
+    const raw = sessionStorage.getItem('tribusca.panel.state')
+    const current = raw
+      ? JSON.parse(raw) as Record<string, unknown>
+      : {}
+
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({
+        ...current,
+        screen: 'acervo',
+        ncm: normalized,
+        archivePage: 1,
+      }),
+    )
+  } catch {
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({
+        screen: 'acervo',
+        ncm: normalized,
+        archivePage: 1,
+      }),
+    )
+  }
 }
 
 export function PublicationDetailPage({
@@ -65,11 +93,23 @@ export function PublicationDetailPage({
     retry: false,
   })
 
+  const ncmQuery = useQuery({
+    queryKey: ['publication-ncms', publicationId],
+    queryFn: () => fetchPublicationNcms(apiFetch, publicationId),
+    enabled: Boolean(publicationId),
+    retry: false,
+  })
+
   const goBack = () => {
     if (window.history.length > 1) {
       navigate(-1)
       return
     }
+    navigate('/painel')
+  }
+
+  const openNcmInArchive = (code: string) => {
+    setArchiveNcmState(code)
     navigate('/painel')
   }
 
@@ -133,11 +173,7 @@ export function PublicationDetailPage({
         ? 'Versão ' + version.versionNo
         : null
 
-  const ncms = extractNcms(
-    [version?.contentText, version?.excerpt]
-      .filter(Boolean)
-      .join('\n'),
-  )
+  const ncms = ncmQuery.data ?? []
 
   return (
     <div className="publication-detail-app">
@@ -266,19 +302,43 @@ export function PublicationDetailPage({
           )}
         </section>
 
-        {ncms.length > 0 && (
-          <section className="publication-origins-card publication-ncm-card">
-            <h2>NCMs identificados nesta legislação</h2>
-            <p>
-              Códigos extraídos do texto armazenado para associação e busca no Acervo.
+        <section className="publication-origins-card publication-ncm-card">
+          <h2>NCMs identificados nesta legislação</h2>
+          <p>
+            Códigos confirmados no catálogo oficial e extraídos do conteúdo armazenado.
+          </p>
+
+          {ncmQuery.isPending ? (
+            <p className="publication-ncm-state">Carregando NCMs identificados…</p>
+          ) : ncmQuery.isError ? (
+            <p className="publication-ncm-state is-error">
+              Não foi possível carregar os NCMs identificados. O texto da legislação continua disponível normalmente.
             </p>
+          ) : ncms.length === 0 ? (
+            <p className="publication-ncm-state">
+              Nenhum NCM do catálogo oficial foi identificado nesta versão.
+            </p>
+          ) : (
             <div className="publication-ncm-list">
               {ncms.map((ncm) => (
-                <span key={ncm}>{ncm}</span>
+                <article className="publication-ncm-item" key={ncm.code}>
+                  <div>
+                    <strong>{formatNcmCode(ncm.code)}</strong>
+                    {ncm.description && <span>{ncm.description}</span>}
+                    {ncm.excerpt && <small>{ncm.excerpt}</small>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openNcmInArchive(ncm.code)}
+                  >
+                    <Search size={15} />
+                    Buscar este NCM no Acervo
+                  </button>
+                </article>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {origins.length > 0 && (
           <section className="publication-origins-card">
