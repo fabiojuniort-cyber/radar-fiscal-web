@@ -1,0 +1,79 @@
+name: Temporary NEWS integration patch
+
+on:
+  push:
+    branches:
+      - feat/live-news-and-copy-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[news-patch-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/live-news-and-copy-cleanup
+          fetch-depth: 0
+
+      - name: Apply deterministic NEWS patch
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs')
+
+          const panelPath = 'src/authenticated-product-panel.tsx'
+          let panel = fs.readFileSync(panelPath, 'utf8')
+
+          const importAnchor = "import type { PanelIdentity } from './panel-experience'\n"
+          const importLine = "import { NewsSection as LiveNewsSection } from './news-section'\n"
+          if (!panel.includes(importAnchor)) throw new Error('panel import anchor not found')
+          if (!panel.includes(importLine)) {
+            panel = panel.replace(importAnchor, importAnchor + importLine)
+          }
+
+          const oldRender = `        {screen === 'noticias' && (\n          <NewsSection />\n        )}`
+          const newRender = `        {screen === 'noticias' && (\n          <LiveNewsSection apiFetch={apiFetch} />\n        )}`
+          if (!panel.includes(oldRender)) throw new Error('old NEWS render not found')
+          panel = panel.replace(oldRender, newRender)
+
+          const placeholder = /\nfunction NewsSection\(\) \{[\s\S]*?\n\}\n\nfunction monitoringStatusLabel/
+          if (!placeholder.test(panel)) throw new Error('NEWS placeholder function not found')
+          panel = panel.replace(placeholder, '\nfunction monitoringStatusLabel')
+
+          fs.writeFileSync(panelPath, panel)
+
+          const e2ePath = 'e2e/launch-authenticated.spec.ts'
+          let e2e = fs.readFileSync(e2ePath, 'utf8')
+          const routeAnchor = "  await page.route('**/api/v2/archive/facets', (route) => route.fulfill({"
+          if (!e2e.includes(routeAnchor)) throw new Error('E2E route anchor not found')
+          const newsRoute = `  await page.route('**/api/v1/news?*', (route) => route.fulfill({\n    status: 200,\n    contentType: 'application/json',\n    body: JSON.stringify({\n      items: [{\n        id: '99999999-9999-4999-8999-999999999999',\n        sourceCode: 'rfb-news',\n        sourceName: 'Receita Federal — Notícias',\n        agency: 'RFB',\n        title: 'Receita Federal orienta sobre IBS e CBS',\n        summary: 'Conteúdo tributário oficial selecionado pelo TriBusca.',\n        category: 'Tributação',\n        publishedAt: '2026-10-01T12:00:00.000Z',\n        updatedAt: null,\n        officialUrl: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/outubro/exemplo-ibs-cbs',\n        tags: ['IBS', 'CBS'],\n      }],\n      page: 1,\n      limit: 20,\n      totalItems: 1,\n      totalPages: 1,\n    }),\n  }))\n\n`
+          if (!e2e.includes("sourceCode: 'rfb-news'")) {
+            e2e = e2e.replace(routeAnchor, newsRoute + routeAnchor)
+          }
+
+          const oldAssertions = `  await page.getByRole('button', { name: 'Notícias', exact: true }).click()\n  await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()\n  await expect(page.getByRole('button', { name: 'Fontes Oficiais', exact: true })).toHaveCount(0)`
+          const newAssertions = `  await page.getByRole('button', { name: 'Notícias', exact: true }).click()\n  await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()\n  await expect(page.getByRole('heading', { name: 'Receita Federal orienta sobre IBS e CBS' })).toBeVisible()\n  await expect(page.getByRole('link', { name: /Abrir notícia oficial/ })).toHaveAttribute(\n    'href',\n    'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/outubro/exemplo-ibs-cbs',\n  )\n  await expect(page.getByRole('button', { name: 'Fontes Oficiais', exact: true })).toHaveCount(0)`
+          if (!e2e.includes(oldAssertions)) throw new Error('E2E NEWS assertions anchor not found')
+          e2e = e2e.replace(oldAssertions, newAssertions)
+
+          fs.writeFileSync(e2ePath, e2e)
+          NODE
+
+      - name: Verify patch scope
+        run: |
+          grep -q "LiveNewsSection apiFetch={apiFetch}" src/authenticated-product-panel.tsx
+          ! grep -q "Coleta oficial em configuração" src/authenticated-product-panel.tsx
+          grep -q "Receita Federal orienta sobre IBS e CBS" e2e/launch-authenticated.spec.ts
+          git diff --check
+          git diff -- src/authenticated-product-panel.tsx e2e/launch-authenticated.spec.ts
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/authenticated-product-panel.tsx e2e/launch-authenticated.spec.ts
+          git commit -m "feat(news): wire live official news feed [news-patch-applied]"
+          git push origin HEAD:feat/live-news-and-copy-cleanup
