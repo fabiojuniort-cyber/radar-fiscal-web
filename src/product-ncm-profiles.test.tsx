@@ -146,14 +146,18 @@ describe('ProductNcmProfiles', () => {
     })
     fireEvent.click(ncmResult)
 
-    expect(screen.getByText('1006.30.11')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Remover NCM 1006.30.11' }),
+    ).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Salvar produto e NCM' }),
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Arroz beneficiado')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Editar produto Arroz beneficiado' }),
+      ).toBeInTheDocument()
     })
 
     const postCall = calls.find(
@@ -203,11 +207,10 @@ describe('ProductNcmProfiles', () => {
 
     renderProfiles(apiFetch)
 
-    expect(await screen.findByText('Arroz')).toBeInTheDocument()
-    expect(screen.getByText('1006.20.99')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Editar produto Arroz' }),
+      await screen.findByRole('button', { name: 'Editar produto Arroz' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('1006.20.99')).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Remover produto Arroz' }),
     ).toBeInTheDocument()
