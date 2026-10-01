@@ -1,0 +1,86 @@
+name: NCM profile integration once
+
+on:
+  push:
+    branches:
+      - feat/profile-product-ncm
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message != 'feat(ncm): integrate product profile editor'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/profile-product-ncm
+          fetch-depth: 0
+
+      - name: Apply exact integration patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/authenticated-product-panel.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          old_import = "import { NewsSection as LiveNewsSection } from './news-section'\n"
+          new_import = old_import + "import { ProductNcmProfile } from './product-ncm-profile'\n"
+          if old_import not in text:
+              raise SystemExit('Expected NewsSection import anchor not found')
+          if "from './product-ncm-profile'" not in text:
+              text = text.replace(old_import, new_import, 1)
+
+          old_block = '''        <div className="tp-profile-cnaes tp-profile-cnaes-table">
+          <strong>CNAEs capturados</strong>
+          {cnaes.length ? (
+            <div className="tp-cnae-profile-table">
+              <div className="tp-cnae-profile-head">
+                <span>CNAE</span><span>Atividade</span><span>Setor</span><span>Produto</span><span>NCM</span>
+              </div>
+              {cnaes.map((cnae) => (
+                <div className="tp-cnae-profile-row" key={cnae.code}>
+                  <b>{cnae.code}</b>
+                  <span>{cnae.description}</span>
+                  <span>{cnaeSector(cnae.code)}</span>
+                  <span className="tp-parameter-empty">Adicionar produto</span>
+                  <span className="tp-parameter-empty">Adicionar NCM</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>Nenhum CNAE cadastrado.</p>
+          )}
+        </div>'''
+
+          new_block = '''        <div className="tp-profile-cnaes tp-profile-cnaes-table">
+          <strong>CNAEs capturados</strong>
+          {cnaes.length ? (
+            <ProductNcmProfile
+              apiFetch={apiFetch}
+              tenantId={tenantId}
+              companyId={company.id}
+              cnaes={cnaes}
+              sectorForCnae={cnaeSector}
+            />
+          ) : (
+            <p>Nenhum CNAE cadastrado.</p>
+          )}
+        </div>'''
+
+          if old_block not in text:
+              raise SystemExit('Expected static CNAE table block not found')
+          text = text.replace(old_block, new_block, 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/ncm-profile-integration-once.yml
+          git config user.name "TriBusca Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/authenticated-product-panel.tsx .github/workflows/ncm-profile-integration-once.yml
+          git diff --cached --check
+          git commit -m "feat(ncm): integrate product profile editor"
+          git push origin HEAD:feat/profile-product-ncm
