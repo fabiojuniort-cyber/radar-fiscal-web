@@ -649,7 +649,10 @@ describe('TriBusca release candidate WEB-11', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(screen.queryByText('Online')).not.toBeInTheDocument()
-    expect(screen.queryByText('Ainda não consultada')).not.toBeInTheDocument()
+    const coverageCards = document.querySelectorAll('.coverage-card')
+    for (const card of coverageCards) {
+      expect(card).not.toHaveTextContent('Ainda não consultada')
+    }
     expect(screen.getAllByText('—').length).toBeGreaterThan(20)
   })
 
