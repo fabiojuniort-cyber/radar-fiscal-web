@@ -11,6 +11,7 @@ export type NewsItem = {
   publishedAt: string | null
   updatedAt: string | null
   officialUrl: string
+  imageUrl: string | null
   tags: string[]
 }
 
