@@ -34,19 +34,29 @@ function requireJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
+function normalizeNcm(value: string | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!/^[\d.\s-]+$/.test(trimmed)) return null
+  const digits = trimmed.replace(/\D/g, '')
+  return digits.length === 8 ? digits : null
+}
+
 export async function fetchCatalogArchive(
   apiFetch: ProductApiFetch,
   filters: CatalogFilters = {},
 ): Promise<CatalogArchiveResponse> {
   const params = new URLSearchParams()
 
-  if (filters.q) params.set('q', filters.q)
+  const explicitNcm = normalizeNcm(filters.ncm)
+  const queryNcm = normalizeNcm(filters.q)
+  const ncm = explicitNcm ?? queryNcm
+
+  if (filters.q && !queryNcm) params.set('q', filters.q)
   if (filters.uf) params.set('uf', filters.uf)
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)
-
-  const normalizedNcm = filters.ncm?.replace(/\D/g, '')
-  if (normalizedNcm?.length === 8) params.set('ncm', normalizedNcm)
+  if (ncm) params.set('ncm', ncm)
 
   params.set('page', String(filters.page ?? 1))
   params.set('limit', String(filters.limit ?? 25))
