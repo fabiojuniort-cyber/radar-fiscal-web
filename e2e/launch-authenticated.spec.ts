@@ -431,14 +431,14 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('owner@example.test')
-  await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
+  await dialog.getByLabel('Senha').fill('browser-test-value')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/painel$/)
   await expect(page.getByRole('heading', { name: 'Olá, Owner.' })).toBeVisible()
   await expect(page.getByText('321')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Publicações' }).click()
+  await page.getByRole('button', { name: 'Publicações', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
   await expect(page.getByText('Ato oficial real do Acervo')).toBeVisible()
 
@@ -449,19 +449,19 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Voltar' }).click()
   await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Acervo' }).click()
+  await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
   await expect(page.getByLabel('UF')).toContainText('GO')
 
-  await page.getByRole('button', { name: 'Central de Monitoramento' }).click()
+  await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
   await expect(page.getByText('DOU').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Notícias' }).click()
+  await page.getByRole('button', { name: 'Notícias', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Fontes Oficiais' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Fontes Oficiais', exact: true })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Empresas' }).click()
+  await page.getByRole('button', { name: 'Empresas', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
@@ -480,14 +480,14 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
     await page.getByText(label, { exact: true }).click()
   }
-  await page.getByRole('button', { name: 'Salvar Perfil Tributário' }).click()
+  await page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true }).click()
   await expect(page.getByText('Perfil v1')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Menu do usuário' }).click()
-  await page.getByRole('button', { name: 'Abrir configurações' }).click()
+  await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
+  await page.getByRole('button', { name: 'Abrir configurações', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Configurações' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Menu do usuário' }).click()
-  await page.getByRole('button', { name: 'Sair da conta' }).click()
+  await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
+  await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
 })
