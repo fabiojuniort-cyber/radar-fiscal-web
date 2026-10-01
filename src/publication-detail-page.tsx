@@ -16,6 +16,7 @@ import {
   type ProductApiFetch,
 } from './product-api'
 import './publication-detail-page.css'
+import './publication-ncm.css'
 
 type Props = {
   publicationId: string
@@ -47,6 +48,7 @@ function formatNcmCode(value: string) {
 function setArchiveNcmState(code: string) {
   const normalized = code.replace(/\D/g, '')
   if (normalized.length !== 8) return
+  const formatted = formatNcmCode(normalized)
 
   try {
     const raw = sessionStorage.getItem('tribusca.panel.state')
@@ -59,7 +61,8 @@ function setArchiveNcmState(code: string) {
       JSON.stringify({
         ...current,
         screen: 'acervo',
-        ncm: normalized,
+        query: formatted,
+        appliedQuery: formatted,
         archivePage: 1,
       }),
     )
@@ -68,7 +71,8 @@ function setArchiveNcmState(code: string) {
       'tribusca.panel.state',
       JSON.stringify({
         screen: 'acervo',
-        ncm: normalized,
+        query: formatted,
+        appliedQuery: formatted,
         archivePage: 1,
       }),
     )
