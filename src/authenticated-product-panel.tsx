@@ -24,6 +24,7 @@ import {
 import { Link } from 'react-router-dom'
 
 import type { PanelIdentity } from './panel-experience'
+import { NewsSection as LiveNewsSection } from './news-section'
 import {
   formatLastSuccessAt,
   formatPublicDate,
@@ -1014,7 +1015,7 @@ export function AuthenticatedProductPanel({
         )}
 
         {screen === 'noticias' && (
-          <NewsSection />
+          <LiveNewsSection apiFetch={apiFetch} />
         )}
 
         {screen === 'central' && (
@@ -1173,29 +1174,6 @@ export function AuthenticatedProductPanel({
         )}
       </main>
     </div>
-  )
-}
-
-function NewsSection() {
-  return (
-    <>
-      <SectionHeading
-        eyebrow="Inteligência tributária"
-        title="Notícias"
-        description="Notícias oficiais selecionadas por relevância tributária, documentos fiscais e Reforma Tributária."
-      />
-      <div className="tp-panel-card tp-news-placeholder">
-        <div className="tp-card-head">
-          <span>
-            <b>Receita Federal</b>
-            <small>Coleta oficial em configuração</small>
-          </span>
-        </div>
-        <EmptyState title="Fonte preparada">
-          A página já está disponível. O conector de notícias será alimentado pela Receita Federal e demais fontes oficiais selecionadas.
-        </EmptyState>
-      </div>
-    </>
   )
 }
 

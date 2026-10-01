@@ -147,6 +147,30 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     })
   })
 
+  await page.route('**/api/v1/news?*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      items: [{
+        id: '99999999-9999-4999-8999-999999999999',
+        sourceCode: 'rfb-news',
+        sourceName: 'Receita Federal — Notícias',
+        agency: 'RFB',
+        title: 'Receita Federal orienta sobre IBS e CBS',
+        summary: 'Conteúdo tributário oficial selecionado pelo TriBusca.',
+        category: 'Tributação',
+        publishedAt: '2026-10-01T12:00:00.000Z',
+        updatedAt: null,
+        officialUrl: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/outubro/exemplo-ibs-cbs',
+        tags: ['IBS', 'CBS'],
+      }],
+      page: 1,
+      limit: 20,
+      totalItems: 1,
+      totalPages: 1,
+    }),
+  }))
+
   await page.route('**/api/v2/archive/facets', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -459,6 +483,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.getByRole('button', { name: 'Notícias', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Receita Federal orienta sobre IBS e CBS' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Abrir notícia oficial/ })).toHaveAttribute(
+    'href',
+    'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/outubro/exemplo-ibs-cbs',
+  )
   await expect(page.getByRole('button', { name: 'Fontes Oficiais', exact: true })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Empresas', exact: true }).click()
