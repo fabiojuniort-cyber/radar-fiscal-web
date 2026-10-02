@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ArchiveDateBridge } from './archive-date-bridge'
 
@@ -22,6 +22,11 @@ describe('ArchiveDateBridge', () => {
         <div class="tp-acervo-layout"></div>
       </main>
     `
+  })
+
+  afterEach(() => {
+    cleanup()
+    document.body.innerHTML = ''
   })
 
   it('mounts inside Acervo, persists a selected date and resets pagination only after a change', async () => {
