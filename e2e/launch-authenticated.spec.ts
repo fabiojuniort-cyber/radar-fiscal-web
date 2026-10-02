@@ -35,6 +35,7 @@ const archiveItem = {
 }
 
 test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }) => {
+  const archiveRequests: URL[] = []
   let companyCreated = false
   let profileSaved = false
 
@@ -182,18 +183,22 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.route('**/api/v2/archive?*', (route) => {
     const url = new URL(route.request().url())
+    archiveRequests.push(url)
     const pageNumber = Number(url.searchParams.get('page') ?? '1')
+    const limit = Number(url.searchParams.get('limit') ?? '25')
+    // Searches answer with the PERF-02 capped contract; everything else with
+    // the previous contract (no totalIsCapped), as an older backend would.
+    // A source filter answers with no matches, so a filter leaking into
+    // another screen would empty it.
+    const body = url.searchParams.has('source')
+      ? { page: pageNumber, limit, totalItems: 0, totalPages: 1, totalIsCapped: false, hasMore: false, items: [] }
+      : url.searchParams.has('q')
+        ? { page: pageNumber, limit, totalItems: 10000, totalPages: 400, totalIsCapped: true, hasMore: true, items: [archiveItem] }
+        : { page: pageNumber, limit, totalItems: 1, totalPages: 1, hasMore: false, items: [archiveItem] }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        page: pageNumber,
-        limit: Number(url.searchParams.get('limit') ?? '25'),
-        totalItems: 1,
-        totalPages: 1,
-        hasMore: false,
-        items: [archiveItem],
-      }),
+      body: JSON.stringify(body),
     })
   })
 
@@ -236,25 +241,6 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         externalId: 'ato-99',
         firstSeenAt: '2026-09-30T00:00:00.000Z',
         lastSeenAt: '2026-09-30T00:00:00.000Z',
-      }],
-    }),
-  }))
-
-  await page.route(`**/api/v1/publications/${publicationId}/ncms`, (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      items: [{
-        code: '10063011',
-        description: 'Arroz semibranqueado ou branqueado',
-        verificationStatus: 'CATALOG_MATCHED',
-        method: {
-          type: 'DETERMINISTIC',
-          detectorKey: 'ncm-catalog-v1',
-          detectorVersion: '1',
-        },
-        confidence: 1,
-        excerpt: 'Art. 1º NCM 1006.30.11.',
       }],
     }),
   }))
@@ -380,12 +366,6 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     }),
   }))
 
-  await page.route(`**/api/v1/companies/${companyId}/product-profiles`, (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ items: [] }),
-  }))
-
   await page.route('**/api/v1/establishment-types', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -494,13 +474,44 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' }).click()
   await expect(page).toHaveURL(new RegExp(`/painel/publicacoes/${publicationId}$`))
   await expect(page.getByRole('heading', { name: 'Ato oficial real do Acervo' })).toBeVisible()
-  await expect(page.getByText('1006.30.11', { exact: true })).toBeVisible()
+  await expect(page.getByText('1006.30.11')).toBeVisible()
   await page.getByRole('button', { name: 'Voltar' }).click()
   await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
   await expect(page.getByLabel('UF')).toContainText('GO')
+  // Response without totalIsCapped (previous backend contract) keeps the
+  // exact summary.
+  await expect(page.getByText('Página 1 de 1 · 1 publicações')).toBeVisible()
+
+  await page.getByLabel('Buscar também no texto completo (ex.: NCM ou trecho do ato)').check()
+  await page.getByLabel('Pesquisar no Acervo').fill('Convênio')
+  await page.getByRole('button', { name: 'Buscar no Acervo' }).click()
+  await expect(page.getByText('Página 1 · mais de 10.000 publicações')).toBeVisible()
+  const searched = archiveRequests.filter((url) => url.searchParams.get('q') === 'Convênio')
+  expect(searched.length).toBeGreaterThan(0)
+  expect(searched.every((url) => url.searchParams.get('scope') === 'full')).toBe(true)
+  expect(archiveRequests.some((url) => !url.searchParams.has('q') && url.searchParams.has('scope'))).toBe(false)
+
+  // The applied search is visible and explains an empty filtered result.
+  await expect(page.getByText('Resultados para')).toBeVisible()
+  await page.getByLabel('Fonte').selectOption('dou')
+  await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU/)).toBeVisible()
+
+  // Acervo filters do not leak into Publicações.
+  await page.getByRole('button', { name: 'Publicações', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Publicações' })).toBeVisible()
+  await expect(page.getByText('Ato oficial real do Acervo')).toBeVisible()
+
+  // Clearing the search stops filtering by it.
+  await page.getByRole('button', { name: 'Acervo', exact: true }).click()
+  await page.getByRole('button', { name: 'Limpar busca' }).click()
+  await expect(page.getByText('Resultados para')).toHaveCount(0)
+  await expect.poll(() => archiveRequests.some(
+    (url) => url.searchParams.get('source') === 'dou' && !url.searchParams.has('q'),
+  )).toBe(true)
+  await page.getByRole('button', { name: 'Limpar filtros' }).click()
 
   await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
@@ -528,7 +539,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.getByText('10.123.456-2')).toBeVisible()
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
-  await expect(page.getByRole('button', { name: 'Adicionar produto e NCM' })).toBeVisible()
+  await expect(page.getByText('Adicionar NCM')).toBeVisible()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {

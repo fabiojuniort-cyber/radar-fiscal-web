@@ -25,7 +25,6 @@ import { Link } from 'react-router-dom'
 
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
-import { ProductNcmProfiles } from './product-ncm-profiles'
 import {
   formatLastSuccessAt,
   formatPublicDate,
@@ -161,6 +160,7 @@ function readPanelState() {
       screen?: Screen
       query?: string
       appliedQuery?: string
+      fullText?: boolean
       archivePage?: number
       jurisdiction?: string
       uf?: string
@@ -386,6 +386,10 @@ function SourceHealth({
   )
 }
 
+// Global catalog aggregates are not real-time: the backend caches them for up
+// to 1 h, so refetching them on every panel mount only adds load.
+const CATALOG_AGGREGATE_STALE_MS = 30 * 60_000
+
 export function AuthenticatedProductPanel({
   identity,
   apiFetch,
@@ -408,6 +412,7 @@ export function AuthenticatedProductPanel({
   const [screen, setScreen] = useState<Screen>(persisted?.screen ?? 'inicio')
   const [query, setQuery] = useState(persisted?.query ?? '')
   const [appliedQuery, setAppliedQuery] = useState(persisted?.appliedQuery ?? '')
+  const [fullText, setFullText] = useState(persisted?.fullText ?? false)
   const [archivePage, setArchivePage] = useState(persisted?.archivePage ?? 1)
   const [jurisdiction, setJurisdiction] = useState(persisted?.jurisdiction ?? '')
   const [uf, setUf] = useState(persisted?.uf ?? '')
@@ -426,6 +431,7 @@ export function AuthenticatedProductPanel({
         screen,
         query,
         appliedQuery,
+        fullText,
         archivePage,
         jurisdiction,
         uf,
@@ -438,6 +444,7 @@ export function AuthenticatedProductPanel({
     screen,
     query,
     appliedQuery,
+    fullText,
     archivePage,
     jurisdiction,
     uf,
@@ -455,12 +462,14 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'sources-v2'],
     queryFn: ({ signal }) => fetchPublicSourcesV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const statsQuery = useQuery({
     queryKey: ['launch', 'stats-v2'],
     queryFn: ({ signal }) => fetchPublicStatsV2(signal),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const monitoringRunsQuery = useQuery({
@@ -475,6 +484,7 @@ export function AuthenticatedProductPanel({
     queryKey: ['launch', 'archive-facets'],
     queryFn: () => fetchCatalogFacets(apiFetch),
     retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
   })
 
   const latestArchiveQuery = useQuery({
@@ -483,11 +493,21 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
+  // Publicações always lists the most recent acts; the Acervo filters and
+  // search must not leak into it.
+  const recentPublicationsQuery = useQuery({
+    queryKey: ['launch', 'archive-v2', 'recent'],
+    queryFn: () => fetchCatalogArchive(apiFetch, { page: 1, limit: 25 }),
+    enabled: screen === 'publicacoes',
+    retry: false,
+  })
+
   const archiveQuery = useQuery({
     queryKey: [
       'launch',
       'archive-v2',
       appliedQuery,
+      fullText,
       jurisdiction,
       uf,
       source,
@@ -498,6 +518,7 @@ export function AuthenticatedProductPanel({
         q: appliedQuery.trim().length >= 2
           ? appliedQuery.trim()
           : undefined,
+        scope: fullText ? 'full' : 'title',
         jurisdiction:
           jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
             ? jurisdiction
@@ -519,6 +540,13 @@ export function AuthenticatedProductPanel({
 
   const archiveItems = archiveQuery.data?.items ?? []
   const latestPublications = latestArchiveQuery.data?.items ?? []
+  const recentPublications = recentPublicationsQuery.data?.items ?? []
+  const activeSourceName = source
+    ? facetsQuery.data?.sources.find((item) => item.code === source)?.name ?? source
+    : ''
+  const archiveHasNarrowing = Boolean(
+    appliedQuery.trim() || jurisdiction || uf || source,
+  )
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
   const account = accountQuery.data
@@ -556,6 +584,22 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
+  const updateQuery = (value: string) => {
+    setQuery(value)
+    // An emptied search box means "no search": do not keep filtering by a
+    // term the user can no longer see.
+    if (value.trim() === '' && appliedQuery !== '') {
+      setAppliedQuery('')
+      setArchivePage(1)
+    }
+  }
+
+  const clearSearch = () => {
+    setQuery('')
+    setAppliedQuery('')
+    setArchivePage(1)
+  }
+
   const submitSearch = (event: FormEvent) => {
     event.preventDefault()
     setAppliedQuery(query.trim())
@@ -566,6 +610,7 @@ export function AuthenticatedProductPanel({
   const resetArchiveFilters = () => {
     setQuery('')
     setAppliedQuery('')
+    setFullText(false)
     setJurisdiction('')
     setUf('')
     setSource('')
@@ -657,7 +702,7 @@ export function AuthenticatedProductPanel({
             <Search size={17} aria-hidden="true" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateQuery(event.target.value)}
               placeholder="Buscar no Acervo"
               aria-label="Buscar no Acervo"
             />
@@ -766,7 +811,7 @@ export function AuthenticatedProductPanel({
               <div>
                 <input
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => updateQuery(event.target.value)}
                   placeholder="Ex.: ICMS, NF-e, CONFAZ"
                   aria-label="Consulta rápida no Acervo"
                 />
@@ -875,12 +920,12 @@ export function AuthenticatedProductPanel({
               title="Publicações"
               description="Publicações mais recentes do Acervo, ordenadas pela data oficial de publicação."
             />
-            {archiveQuery.isPending ? (
+            {recentPublicationsQuery.isPending ? (
               <LoadingState />
-            ) : archiveQuery.isError ? (
+            ) : recentPublicationsQuery.isError ? (
               <ErrorState />
             ) : (
-              <PublicationList items={archiveItems} />
+              <PublicationList items={recentPublications} />
             )}
           </>
         )}
@@ -897,12 +942,31 @@ export function AuthenticatedProductPanel({
               <Search size={19} />
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Título, número, órgão, NCM ou termo"
+                onChange={(event) => updateQuery(event.target.value)}
+                placeholder="Título, número, órgão ou termo"
                 aria-label="Pesquisar no Acervo"
               />
               <button type="submit">Buscar no Acervo</button>
             </form>
+            <label className="tp-acervo-fulltext">
+              <input
+                type="checkbox"
+                checked={fullText}
+                onChange={(event) => {
+                  setFullText(event.target.checked)
+                  setArchivePage(1)
+                }}
+              />
+              Buscar também no texto completo (ex.: NCM ou trecho do ato)
+            </label>
+            {appliedQuery.trim() && (
+              <p className="tp-acervo-active-search" role="status">
+                Resultados para <strong>“{appliedQuery.trim()}”</strong>
+                <button type="button" onClick={clearSearch}>
+                  Limpar busca
+                </button>
+              </p>
+            )}
 
             <div className="tp-acervo-layout">
               <aside className="tp-filter-panel">
@@ -967,7 +1031,19 @@ export function AuthenticatedProductPanel({
                   <ErrorState />
                 ) : (
                   <>
-                    <PublicationList items={archiveItems} />
+                    {archiveItems.length === 0 && archiveHasNarrowing ? (
+                      <EmptyState title="Nenhuma publicação encontrada">
+                        {[
+                          'Nenhum resultado com os filtros atuais',
+                          appliedQuery.trim() ? `busca “${appliedQuery.trim()}”` : '',
+                          activeSourceName ? `fonte ${activeSourceName}` : '',
+                          uf ? `UF ${uf}` : '',
+                        ].filter(Boolean).join(' · ') +
+                          '. Use “Limpar filtros” ou altere a busca.'}
+                      </EmptyState>
+                    ) : (
+                      <PublicationList items={archiveItems} />
+                    )}
                     <div className="launch-pagination" aria-label="Paginação do Acervo">
                       <button
                         type="button"
@@ -1005,8 +1081,9 @@ export function AuthenticatedProductPanel({
                       </button>
                     </div>
                     <p className="tp-pagination-summary">
-                      Página {archivePage} de {archiveQuery.data?.totalPages ?? 1} ·{' '}
-                      {archiveQuery.data?.totalItems ?? 0} publicações
+                      {archiveQuery.data?.totalIsCapped
+                        ? `Página ${archivePage} · mais de ${(archiveQuery.data.totalItems).toLocaleString('pt-BR')} publicações`
+                        : `Página ${archivePage} de ${archiveQuery.data?.totalPages ?? 1} · ${archiveQuery.data?.totalItems ?? 0} publicações`}
                     </p>
                   </>
                 )}
@@ -2319,13 +2396,20 @@ function TaxProfileSection({
         <div className="tp-profile-cnaes tp-profile-cnaes-table">
           <strong>CNAEs capturados</strong>
           {cnaes.length ? (
-            <ProductNcmProfiles
-              apiFetch={apiFetch}
-              tenantId={tenantId}
-              companyId={company.id}
-              cnaes={cnaes}
-              sectorLabel={cnaeSector}
-            />
+            <div className="tp-cnae-profile-table">
+              <div className="tp-cnae-profile-head">
+                <span>CNAE</span><span>Atividade</span><span>Setor</span><span>Produto</span><span>NCM</span>
+              </div>
+              {cnaes.map((cnae) => (
+                <div className="tp-cnae-profile-row" key={cnae.code}>
+                  <b>{cnae.code}</b>
+                  <span>{cnae.description}</span>
+                  <span>{cnaeSector(cnae.code)}</span>
+                  <span className="tp-parameter-empty">Adicionar produto</span>
+                  <span className="tp-parameter-empty">Adicionar NCM</span>
+                </div>
+              ))}
+            </div>
           ) : (
             <p>Nenhum CNAE cadastrado.</p>
           )}
