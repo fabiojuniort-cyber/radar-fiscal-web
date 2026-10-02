@@ -39,6 +39,13 @@ export type CatalogFilters = {
   limit?: number
 }
 
+type StoredArchiveDate = {
+  mode?: 'single' | 'range'
+  singleDate?: string
+  from?: string
+  to?: string
+}
+
 function requireJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error(`catalog_http_${response.status}`)
@@ -54,28 +61,65 @@ function normalizeNcm(value: string | undefined): string | null {
   return digits.length === 8 ? digits : null
 }
 
+function activeAcervoDateFilters(filters: CatalogFilters): Partial<CatalogFilters> {
+  if (
+    typeof window === 'undefined' ||
+    typeof document === 'undefined' ||
+    filters.publishedOn ||
+    filters.publishedFrom ||
+    filters.publishedTo ||
+    filters.limit !== 25 ||
+    !document.querySelector('.tp-main-acervo')
+  ) {
+    return {}
+  }
+
+  try {
+    const raw = sessionStorage.getItem('tribusca.archive.date')
+    if (!raw) return {}
+    const stored = JSON.parse(raw) as StoredArchiveDate
+
+    if (stored.mode === 'range') {
+      return {
+        ...(stored.from ? { publishedFrom: stored.from } : {}),
+        ...(stored.to ? { publishedTo: stored.to } : {}),
+      }
+    }
+
+    return stored.singleDate
+      ? { publishedOn: stored.singleDate }
+      : {}
+  } catch {
+    return {}
+  }
+}
+
 export async function fetchCatalogArchive(
   apiFetch: ProductApiFetch,
   filters: CatalogFilters = {},
 ): Promise<CatalogArchiveResponse> {
   const params = new URLSearchParams()
+  const effectiveFilters = {
+    ...filters,
+    ...activeAcervoDateFilters(filters),
+  }
 
-  const explicitNcm = normalizeNcm(filters.ncm)
-  const queryNcm = normalizeNcm(filters.q)
+  const explicitNcm = normalizeNcm(effectiveFilters.ncm)
+  const queryNcm = normalizeNcm(effectiveFilters.q)
   const ncm = explicitNcm ?? queryNcm
 
-  if (filters.q && !queryNcm) params.set('q', filters.q)
-  if (filters.q && !queryNcm && filters.scope === 'full') params.set('scope', 'full')
-  if (filters.uf) params.set('uf', filters.uf)
-  if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
-  if (filters.source) params.set('source', filters.source)
-  if (filters.actType) params.set('actType', filters.actType)
-  if (filters.publishedOn) params.set('publishedOn', filters.publishedOn)
-  if (filters.publishedFrom) params.set('publishedFrom', filters.publishedFrom)
-  if (filters.publishedTo) params.set('publishedTo', filters.publishedTo)
+  if (effectiveFilters.q && !queryNcm) params.set('q', effectiveFilters.q)
+  if (effectiveFilters.q && !queryNcm && effectiveFilters.scope === 'full') params.set('scope', 'full')
+  if (effectiveFilters.uf) params.set('uf', effectiveFilters.uf)
+  if (effectiveFilters.jurisdiction) params.set('jurisdiction', effectiveFilters.jurisdiction)
+  if (effectiveFilters.source) params.set('source', effectiveFilters.source)
+  if (effectiveFilters.actType) params.set('actType', effectiveFilters.actType)
+  if (effectiveFilters.publishedOn) params.set('publishedOn', effectiveFilters.publishedOn)
+  if (effectiveFilters.publishedFrom) params.set('publishedFrom', effectiveFilters.publishedFrom)
+  if (effectiveFilters.publishedTo) params.set('publishedTo', effectiveFilters.publishedTo)
   if (ncm) params.set('ncm', ncm)
-  params.set('page', String(filters.page ?? 1))
-  params.set('limit', String(filters.limit ?? 25))
+  params.set('page', String(effectiveFilters.page ?? 1))
+  params.set('limit', String(effectiveFilters.limit ?? 25))
 
   const response = await apiFetch(
     '/api/v2/archive?' + params.toString(),
