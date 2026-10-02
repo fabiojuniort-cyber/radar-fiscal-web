@@ -1,0 +1,34 @@
+name: Apply NCM v2 integration patch
+
+on:
+  push:
+    branches:
+      - feat/profile-product-ncm-ui-v2
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[ncm-v2-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/profile-product-ncm-ui-v2
+          fetch-depth: 0
+
+      - name: Apply guarded patch
+        run: node scripts/apply-ncm-v2-patch.mjs
+
+      - name: Commit localized integration
+        run: |
+          if git diff --quiet; then
+            echo "No patch changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/authenticated-product-panel.tsx e2e/launch-authenticated.spec.ts
+          git commit -m "feat(ncm): integrate profile UI on current main [ncm-v2-patched]"
+          git push origin HEAD:feat/profile-product-ncm-ui-v2
