@@ -102,8 +102,7 @@ async function expectArchiveRequest(
       dateKeys.every((key) => url.searchParams.get(key) === (dates[key] ?? null)) &&
       Object.entries(filters).every(([key, value]) => url.searchParams.get(key) === value)
   }, { timeout: 8_000 })
-  await action()
-  const response = await pending
+  const [response] = await Promise.all([pending, action()])
   expect(response.status()).toBe(200)
   await expect(page.locator('.tp-page-numbers [aria-current="page"]')).toHaveText(String(pageNumber))
 }
@@ -113,6 +112,14 @@ async function expectDateUrl(page: Page, expected: Record<string, string>) {
     url.pathname === '/painel' &&
     ['date', 'range', 'from', 'to'].every((key) => url.searchParams.get(key) === (expected[key] ?? null)),
   )
+}
+
+async function enableRange(page: Page) {
+  const dateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+  // The styled switch uses a label over a pointer-events:none native input.
+  // Click its visible label, as a user would, then assert the native state.
+  await dateFilter.getByText('Intervalo', { exact: true }).click()
+  await expect(dateFilter.getByRole('checkbox', { name: 'Intervalo' })).toBeChecked()
 }
 
 async function visitDetailAndReturn(page: Page, expectedUrl: Record<string, string>, dates: DateParams) {
@@ -150,7 +157,7 @@ test('DATE-01: dates, requests, pagination, detail return, open ranges and clear
   await visitDetailAndReturn(page, { date: singleDate }, { publishedOn: singleDate })
   await expect(dateInput).toHaveValue(singleDate)
 
-  await expectArchiveRequest(page, () => dateFilter.getByLabel('Intervalo').check(), { publishedFrom: singleDate, publishedTo: singleDate })
+  await expectArchiveRequest(page, () => enableRange(page), { publishedFrom: singleDate, publishedTo: singleDate })
   await expectArchiveRequest(page, () => dateFilter.getByLabel('De:', { exact: true }).fill(from), { publishedFrom: from, publishedTo: singleDate })
   await expectArchiveRequest(page, () => dateFilter.getByLabel('Até:', { exact: true }).fill(to), { publishedFrom: from, publishedTo: to })
   await expectDateUrl(page, { range: '1', from, to })
@@ -194,7 +201,7 @@ for (const mode of ['single', 'range'] as const) {
     const dateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
     await expectArchiveRequest(page, () => dateFilter.getByLabel('Data', { exact: true }).fill(singleDate), { publishedOn: singleDate })
     if (mode === 'range') {
-      await expectArchiveRequest(page, () => dateFilter.getByLabel('Intervalo').check(), { publishedFrom: singleDate, publishedTo: singleDate })
+      await expectArchiveRequest(page, () => enableRange(page), { publishedFrom: singleDate, publishedTo: singleDate })
       await expectArchiveRequest(page, () => dateFilter.getByLabel('Até:', { exact: true }).fill(to), { publishedFrom: singleDate, publishedTo: to })
     }
     const storedBefore = await page.evaluate(() => sessionStorage.getItem('tribusca.archive.date'))
