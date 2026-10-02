@@ -41,4 +41,28 @@ describe('fetchCatalogArchive', () => {
     expect(url.searchParams.get('jurisdiction')).toBe('FEDERAL')
     expect(url.searchParams.get('page')).toBe('2')
   })
+
+  it('sends exact and inclusive range publication dates', async () => {
+    const apiFetch = okFetch()
+
+    await fetchCatalogArchive(apiFetch, {
+      publishedOn: '2026-10-01',
+      page: 3,
+    })
+    await fetchCatalogArchive(apiFetch, {
+      publishedFrom: '2023-06-01',
+      publishedTo: '2026-06-30',
+    })
+
+    const exact = new URL(String(apiFetch.mock.calls[0]?.[0]), 'http://x')
+    expect(exact.searchParams.get('publishedOn')).toBe('2026-10-01')
+    expect(exact.searchParams.get('publishedFrom')).toBeNull()
+    expect(exact.searchParams.get('publishedTo')).toBeNull()
+    expect(exact.searchParams.get('page')).toBe('3')
+
+    const range = new URL(String(apiFetch.mock.calls[1]?.[0]), 'http://x')
+    expect(range.searchParams.get('publishedOn')).toBeNull()
+    expect(range.searchParams.get('publishedFrom')).toBe('2023-06-01')
+    expect(range.searchParams.get('publishedTo')).toBe('2026-06-30')
+  })
 })
