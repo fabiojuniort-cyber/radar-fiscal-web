@@ -63,6 +63,58 @@ describe('ArchiveDateBridge', () => {
     })
   })
 
+  it.each([
+    { label: 'De:', from: '', to: '2024-06-20' },
+    { label: 'Até:', from: '2024-06-15', to: '' },
+  ])('clearing only $label preserves the opposite endpoint in the UI, URL and storage', async ({ label, from, to }) => {
+    window.history.replaceState({}, '', '/painel?range=1&from=2024-06-15&to=2024-06-20')
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <ArchiveDateBridge />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(await screen.findByLabelText(label), { target: { value: '' } })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('De:')).toHaveValue(from)
+      expect(screen.getByLabelText('Até:')).toHaveValue(to)
+      expect(screen.getByRole('checkbox', { name: 'Intervalo' })).toBeChecked()
+      const params = new URL(window.location.href).searchParams
+      expect(params.get('range')).toBe('1')
+      expect(params.get('from')).toBe(from || null)
+      expect(params.get('to')).toBe(to || null)
+      expect(JSON.parse(sessionStorage.getItem('tribusca.archive.date') ?? '{}'))
+        .toMatchObject({ mode: 'range', from, to })
+    })
+  })
+
+  it.each(['Limpar data', 'Limpar filtros'])('%s clears both range endpoints and the saved single date', async (action) => {
+    sessionStorage.setItem(
+      'tribusca.archive.date',
+      JSON.stringify({ mode: 'range', singleDate: '2024-06-15', from: '2024-06-15', to: '2024-06-20' }),
+    )
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <ArchiveDateBridge />
+      </QueryClientProvider>,
+    )
+
+    await screen.findByLabelText('Até:')
+    fireEvent.click(screen.getByRole('button', { name: action }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('De:')).toHaveValue('')
+      expect(screen.getByLabelText('Até:')).toHaveValue('')
+      const params = new URL(window.location.href).searchParams
+      for (const key of ['date', 'from', 'to']) expect(params.has(key)).toBe(false)
+      expect(JSON.parse(sessionStorage.getItem('tribusca.archive.date') ?? '{}'))
+        .toMatchObject({ singleDate: '', from: '', to: '' })
+    })
+  })
+
   it('clears the date together with the Acervo Limpar filtros action', async () => {
     sessionStorage.setItem(
       'tribusca.archive.date',

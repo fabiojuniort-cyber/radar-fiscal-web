@@ -349,7 +349,7 @@ export function ArchiveDateFilter({
     const safe = value > maximumDate ? maximumDate : value
     onRangeChange({
       from: safe,
-      to: range.to && range.to >= safe ? range.to : safe,
+      to: !safe || (range.to && range.to >= safe) ? range.to : safe,
     })
     setActiveEndpoint('from')
   }
@@ -357,7 +357,7 @@ export function ArchiveDateFilter({
   const updateTo = (value: string) => {
     const safe = value > maximumDate ? maximumDate : value
     onRangeChange({
-      from: range.from && range.from <= safe ? range.from : safe,
+      from: !safe || (range.from && range.from <= safe) ? range.from : safe,
       to: safe,
     })
     setActiveEndpoint('to')
