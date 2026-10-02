@@ -178,6 +178,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     body: JSON.stringify({
       ufs: ['GO'],
       sources: [{ code: 'dou', name: 'DOU' }],
+      actTypes: ['IN', 'Convênio ICMS'],
     }),
   }))
 
@@ -506,6 +507,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo' })).toBeVisible()
   await expect(page.getByLabel('UF')).toContainText('GO')
+  await expect(page.getByLabel('Tipo de base legal')).toContainText('Convênio ICMS')
+  await page.getByLabel('Tipo de base legal').selectOption('IN')
+  await expect.poll(() => archiveRequests.some(
+    (url) => url.searchParams.get('actType') === 'IN',
+  )).toBe(true)
   // Response without totalIsCapped (previous backend contract) keeps the
   // exact summary.
   await expect(page.getByText('Página 1 de 1 · 1 publicações')).toBeVisible()
@@ -517,12 +523,13 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const searched = archiveRequests.filter((url) => url.searchParams.get('q') === 'Convênio')
   expect(searched.length).toBeGreaterThan(0)
   expect(searched.every((url) => url.searchParams.get('scope') === 'full')).toBe(true)
+  expect(searched.every((url) => url.searchParams.get('actType') === 'IN')).toBe(true)
   expect(archiveRequests.some((url) => !url.searchParams.has('q') && url.searchParams.has('scope'))).toBe(false)
 
   // The applied search is visible and explains an empty filtered result.
   await expect(page.getByText('Resultados para')).toBeVisible()
   await page.getByLabel('Fonte').selectOption('dou')
-  await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU/)).toBeVisible()
+  await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU · tipo IN/)).toBeVisible()
 
   // Acervo filters do not leak into Publicações.
   await page.getByRole('button', { name: 'Publicações', exact: true }).click()
@@ -534,7 +541,10 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Limpar busca' }).click()
   await expect(page.getByText('Resultados para')).toHaveCount(0)
   await expect.poll(() => archiveRequests.some(
-    (url) => url.searchParams.get('source') === 'dou' && !url.searchParams.has('q'),
+    (url) =>
+      url.searchParams.get('source') === 'dou' &&
+      url.searchParams.get('actType') === 'IN' &&
+      !url.searchParams.has('q'),
   )).toBe(true)
   await page.getByRole('button', { name: 'Limpar filtros' }).click()
 

@@ -26,4 +26,19 @@ describe('fetchCatalogArchive', () => {
     expect(urls[1]?.searchParams.has('scope')).toBe(false)
     expect(urls[2]?.searchParams.has('scope')).toBe(false)
   })
+
+  it('sends the exact collected legal act type as an archive filter', async () => {
+    const apiFetch = okFetch()
+
+    await fetchCatalogArchive(apiFetch, {
+      actType: 'Convênio ICMS',
+      jurisdiction: 'FEDERAL',
+      page: 2,
+    })
+
+    const url = new URL(String(apiFetch.mock.calls[0]?.[0]), 'http://x')
+    expect(url.searchParams.get('actType')).toBe('Convênio ICMS')
+    expect(url.searchParams.get('jurisdiction')).toBe('FEDERAL')
+    expect(url.searchParams.get('page')).toBe('2')
+  })
 })
