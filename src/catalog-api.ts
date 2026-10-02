@@ -17,6 +17,7 @@ export type CatalogFacets = {
     code: string
     name: string
   }>
+  actTypes: string[]
 }
 
 export type CatalogFilters = {
@@ -26,6 +27,7 @@ export type CatalogFilters = {
   uf?: string
   jurisdiction?: 'FEDERAL' | 'STATE'
   source?: string
+  actType?: string
   ncm?: string
   page?: number
   limit?: number
@@ -61,6 +63,7 @@ export async function fetchCatalogArchive(
   if (filters.uf) params.set('uf', filters.uf)
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)
+  if (filters.actType) params.set('actType', filters.actType)
   if (ncm) params.set('ncm', ncm)
   params.set('page', String(filters.page ?? 1))
   params.set('limit', String(filters.limit ?? 25))
