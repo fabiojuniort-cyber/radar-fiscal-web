@@ -1,8 +1,12 @@
+[data-archive-date-host='true'] {
+  margin-top: -8px;
+}
+
 .tp-date-filter {
-  margin: 18px 0 22px;
-  padding: 18px 20px 16px;
+  margin: 4px 0 14px;
+  padding: 14px 18px 12px;
   border: 1px solid rgba(27, 51, 71, 0.12);
-  border-radius: 18px;
+  border-radius: 16px;
   background: #fff;
   box-shadow: 0 8px 28px rgba(26, 50, 70, 0.06);
   overflow: hidden;
@@ -17,18 +21,18 @@
 
 .tp-date-filter-head {
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 14px;
+  gap: 16px;
+  margin-bottom: 10px;
 }
 
 .tp-date-filter-head > div {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .tp-date-filter-kicker {
   color: #668096;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -36,15 +40,15 @@
 
 .tp-date-filter-head strong {
   color: #183449;
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .tp-date-mode-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   color: #34546b;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -58,8 +62,8 @@
 
 .tp-date-mode-toggle > span {
   position: relative;
-  width: 38px;
-  height: 22px;
+  width: 34px;
+  height: 20px;
   border-radius: 999px;
   background: #d9e2e8;
   transition: background 160ms ease;
@@ -70,8 +74,8 @@
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 4px rgba(24, 52, 73, 0.25);
@@ -83,7 +87,7 @@
 }
 
 .tp-date-mode-toggle input:checked + span::after {
-  transform: translateX(16px);
+  transform: translateX(14px);
 }
 
 .tp-date-mode-toggle input:focus-visible + span {
@@ -92,13 +96,15 @@
 }
 
 .tp-date-single-field {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 270px;
-  padding: 9px 12px;
+  gap: 8px;
+  width: fit-content;
+  min-width: 238px;
+  margin: 0 auto;
+  padding: 7px 10px;
   border: 1px solid #ccd9e2;
-  border-radius: 11px;
+  border-radius: 10px;
   color: #527086;
   background: #fbfdff;
 }
@@ -106,9 +112,9 @@
 .tp-date-single-field label {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: 1px;
   color: #687f91;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 700;
 }
 
@@ -123,26 +129,29 @@
   font-weight: 700;
 }
 
+/* The native date input already renders the selected value. Hide the old
+   mirrored text so the date appears only once. */
 .tp-date-single-field small {
-  color: #34546b;
-  font-size: 0.76rem;
-  white-space: nowrap;
+  display: none;
 }
 
 .tp-date-range-fields {
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
+  max-width: 620px;
+  margin: 0 auto;
   flex-wrap: wrap;
 }
 
 .tp-date-range-fields > label {
   display: grid;
-  grid-template-columns: auto minmax(140px, 1fr);
+  grid-template-columns: auto minmax(130px, 1fr);
   align-items: center;
-  gap: 8px;
-  min-width: 230px;
-  padding: 10px 12px;
+  gap: 7px;
+  min-width: 210px;
+  padding: 8px 10px;
   border: 1px solid #ccd9e2;
-  border-radius: 11px;
+  border-radius: 10px;
   background: #fbfdff;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -154,14 +163,16 @@
 
 .tp-date-range-fields > label > span {
   color: #47657a;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
 }
 
 .tp-date-endpoint-hint {
-  margin-left: auto;
+  flex-basis: 100%;
+  margin-left: 0;
   color: #698193;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -171,9 +182,11 @@
 
 .tp-date-ruler {
   display: flex;
-  gap: 8px;
-  margin: 16px -20px 0;
-  padding: 4px 20px 8px;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  margin: 10px auto 0;
+  padding: 3px 4px 6px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scroll-behavior: smooth;
@@ -185,12 +198,12 @@
 .tp-date-period {
   position: relative;
   display: grid;
-  flex: 0 0 94px;
+  flex: 0 0 82px;
   place-items: center;
-  min-height: 82px;
-  padding: 10px 8px;
+  min-height: 70px;
+  padding: 8px 6px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #26475f;
   background: transparent;
   cursor: pointer;
@@ -204,11 +217,11 @@
 }
 
 .tp-date-ruler.is-month .tp-date-period {
-  flex-basis: 106px;
+  flex-basis: 94px;
 }
 
 .tp-date-ruler.is-year .tp-date-period {
-  flex-basis: 122px;
+  flex-basis: 106px;
 }
 
 .tp-date-period:hover:not(:disabled),
@@ -229,7 +242,7 @@
 .tp-date-ruler.is-day .tp-date-period.is-selected {
   background: #1774c6;
   color: #fff;
-  box-shadow: 0 8px 18px rgba(23, 116, 198, 0.2);
+  box-shadow: 0 6px 14px rgba(23, 116, 198, 0.18);
 }
 
 .tp-date-ruler.is-month .tp-date-period.is-selected,
@@ -256,24 +269,24 @@
 }
 
 .tp-date-period-value {
-  font-size: 1.78rem;
+  font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
 }
 
 .tp-date-ruler.is-month .tp-date-period-value {
-  font-size: 1.3rem;
+  font-size: 1.12rem;
   letter-spacing: 0.01em;
 }
 
 .tp-date-ruler.is-year .tp-date-period-value {
-  font-size: 1.46rem;
+  font-size: 1.24rem;
 }
 
 .tp-date-period-label {
-  margin-top: 6px;
-  font-size: 0.67rem;
+  margin-top: 4px;
+  font-size: 0.61rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   opacity: 0.72;
@@ -284,7 +297,7 @@
   z-index: 1;
   top: 0;
   bottom: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(23, 116, 198, 0.22);
   pointer-events: none;
 }
@@ -306,16 +319,22 @@
 }
 
 .tp-date-filter-foot {
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 26px;
-  margin-top: 4px;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 20px;
+  margin-top: 1px;
   color: #688095;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
+}
+
+/* The selected date/range is already visible in the field(s) above. */
+.tp-date-filter-foot > span {
+  display: none;
 }
 
 .tp-date-filter-foot button {
-  padding: 4px 0;
+  margin-left: auto;
+  padding: 3px 0;
   border: 0;
   color: #1774c6;
   background: transparent;
@@ -325,38 +344,52 @@
 }
 
 @media (max-width: 720px) {
+  [data-archive-date-host='true'] {
+    margin-top: -4px;
+  }
+
   .tp-date-filter {
-    padding: 16px;
+    margin-top: 2px;
+    padding: 12px 14px 10px;
     border-radius: 14px;
   }
 
   .tp-date-filter-head {
     align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tp-date-single-field {
+    min-width: min(238px, 100%);
   }
 
   .tp-date-range-fields {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    width: 100%;
   }
 
   .tp-date-range-fields > label {
     grid-template-columns: 1fr;
     min-width: 0;
+    padding: 7px 9px;
   }
 
   .tp-date-endpoint-hint {
     grid-column: 1 / -1;
-    margin-left: 0;
   }
 
   .tp-date-ruler {
-    margin-inline: -16px;
-    padding-inline: 16px;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+    padding-inline: 2px;
   }
 
   .tp-date-period {
-    flex-basis: 82px;
+    flex-basis: 74px;
+    min-height: 66px;
   }
 }
 
