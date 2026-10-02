@@ -28,6 +28,12 @@ export type CatalogFilters = {
   jurisdiction?: 'FEDERAL' | 'STATE'
   source?: string
   actType?: string
+  /** Exact official publication date (YYYY-MM-DD). */
+  publishedOn?: string
+  /** Inclusive initial official publication date (YYYY-MM-DD). */
+  publishedFrom?: string
+  /** Inclusive final official publication date (YYYY-MM-DD). */
+  publishedTo?: string
   ncm?: string
   page?: number
   limit?: number
@@ -64,6 +70,9 @@ export async function fetchCatalogArchive(
   if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
   if (filters.source) params.set('source', filters.source)
   if (filters.actType) params.set('actType', filters.actType)
+  if (filters.publishedOn) params.set('publishedOn', filters.publishedOn)
+  if (filters.publishedFrom) params.set('publishedFrom', filters.publishedFrom)
+  if (filters.publishedTo) params.set('publishedTo', filters.publishedTo)
   if (ncm) params.set('ncm', ncm)
   params.set('page', String(filters.page ?? 1))
   params.set('limit', String(filters.limit ?? 25))
