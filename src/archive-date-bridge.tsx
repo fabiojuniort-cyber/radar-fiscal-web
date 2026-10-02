@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { ArchiveDateFilter } from './archive-date-filter'
@@ -52,16 +52,16 @@ function resetLiveArchivePage() {
 function ArchiveDateBridgeActive({ host }: { host: HTMLElement }) {
   const queryClient = useQueryClient()
   const date = useArchiveDateFilterState()
-  const [initialized, setInitialized] = useState(false)
+  const initialized = useRef(false)
 
   useEffect(() => {
-    // The first pass only synchronizes the already persisted/URL state with
-    // the archive request. Subsequent changes also return pagination to page 1.
-    if (initialized) {
+    // The first pass synchronizes persisted/URL state without destroying the
+    // page restored by the panel. Only an actual date change returns to page 1.
+    if (initialized.current) {
       resetPersistedArchivePage()
       resetLiveArchivePage()
     } else {
-      setInitialized(true)
+      initialized.current = true
     }
 
     void queryClient.invalidateQueries({
@@ -75,7 +75,6 @@ function ArchiveDateBridgeActive({ host }: { host: HTMLElement }) {
     date.singleDate,
     date.range.from,
     date.range.to,
-    initialized,
     queryClient,
   ])
 
