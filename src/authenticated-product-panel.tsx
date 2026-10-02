@@ -25,6 +25,7 @@ import { Link } from 'react-router-dom'
 
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
+import { ProductNcmProfiles } from './product-ncm-profiles'
 import {
   formatLastSuccessAt,
   formatPublicDate,
@@ -2396,20 +2397,13 @@ function TaxProfileSection({
         <div className="tp-profile-cnaes tp-profile-cnaes-table">
           <strong>CNAEs capturados</strong>
           {cnaes.length ? (
-            <div className="tp-cnae-profile-table">
-              <div className="tp-cnae-profile-head">
-                <span>CNAE</span><span>Atividade</span><span>Setor</span><span>Produto</span><span>NCM</span>
-              </div>
-              {cnaes.map((cnae) => (
-                <div className="tp-cnae-profile-row" key={cnae.code}>
-                  <b>{cnae.code}</b>
-                  <span>{cnae.description}</span>
-                  <span>{cnaeSector(cnae.code)}</span>
-                  <span className="tp-parameter-empty">Adicionar produto</span>
-                  <span className="tp-parameter-empty">Adicionar NCM</span>
-                </div>
-              ))}
-            </div>
+            <ProductNcmProfiles
+              apiFetch={apiFetch}
+              tenantId={tenantId}
+              companyId={company.id}
+              cnaes={cnaes}
+              sectorLabel={cnaeSector}
+            />
           ) : (
             <p>Nenhum CNAE cadastrado.</p>
           )}
