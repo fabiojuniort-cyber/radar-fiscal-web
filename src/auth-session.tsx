@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 
+import { ArchiveDateBridge } from './archive-date-bridge'
 import {
   buildManualCompanyPayload,
   buildManualEstablishmentPayload,
@@ -271,6 +272,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={{ me, checked, login, ensureSession, logout, apiFetch }}>
     {children}
+    <ArchiveDateBridge />
   </AuthContext.Provider>
 }
 
