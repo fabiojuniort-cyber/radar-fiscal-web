@@ -101,7 +101,7 @@ async function expectArchiveRequest(
       url.searchParams.get('page') === String(pageNumber) &&
       dateKeys.every((key) => url.searchParams.get(key) === (dates[key] ?? null)) &&
       Object.entries(filters).every(([key, value]) => url.searchParams.get(key) === value)
-  })
+  }, { timeout: 8_000 })
   await action()
   const response = await pending
   expect(response.status()).toBe(200)
@@ -208,7 +208,7 @@ for (const mode of ['single', 'range'] as const) {
     const pending = page.waitForResponse((response) => {
       const url = new URL(response.url())
       return url.pathname === '/api/v2/archive' && url.searchParams.get('limit') === '25'
-    })
+    }, { timeout: 8_000 })
     await page.getByRole('button', { name: 'Publicações', exact: true }).click()
     expect((await pending).status()).toBe(200)
     await expect(page.getByRole('heading', { name: 'Publicações', exact: true })).toBeVisible()
