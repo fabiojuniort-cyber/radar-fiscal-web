@@ -166,6 +166,7 @@ function readPanelState() {
       jurisdiction?: string
       uf?: string
       source?: string
+      actType?: string
       orgTab?: OrgTab
       selectedCompanyId?: string
     }
@@ -418,6 +419,7 @@ export function AuthenticatedProductPanel({
   const [jurisdiction, setJurisdiction] = useState(persisted?.jurisdiction ?? '')
   const [uf, setUf] = useState(persisted?.uf ?? '')
   const [source, setSource] = useState(persisted?.source ?? '')
+  const [actType, setActType] = useState(persisted?.actType ?? '')
   const [orgTab, setOrgTab] = useState<OrgTab>(persisted?.orgTab ?? 'empresa')
   const [userMenu, setUserMenu] = useState(false)
   const [tenantMenu, setTenantMenu] = useState(false)
@@ -437,6 +439,7 @@ export function AuthenticatedProductPanel({
         jurisdiction,
         uf,
         source,
+        actType,
         orgTab,
         selectedCompanyId,
       }),
@@ -450,6 +453,7 @@ export function AuthenticatedProductPanel({
     jurisdiction,
     uf,
     source,
+    actType,
     orgTab,
     selectedCompanyId,
   ])
@@ -512,6 +516,7 @@ export function AuthenticatedProductPanel({
       jurisdiction,
       uf,
       source,
+      actType,
       archivePage,
     ],
     queryFn: () =>
@@ -526,6 +531,7 @@ export function AuthenticatedProductPanel({
             : undefined,
         uf: uf || undefined,
         source: source || undefined,
+        actType: actType || undefined,
         page: archivePage,
         limit: 25,
       }),
@@ -546,7 +552,7 @@ export function AuthenticatedProductPanel({
     ? facetsQuery.data?.sources.find((item) => item.code === source)?.name ?? source
     : ''
   const archiveHasNarrowing = Boolean(
-    appliedQuery.trim() || jurisdiction || uf || source,
+    appliedQuery.trim() || jurisdiction || uf || source || actType,
   )
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
@@ -615,6 +621,7 @@ export function AuthenticatedProductPanel({
     setJurisdiction('')
     setUf('')
     setSource('')
+    setActType('')
     setArchivePage(1)
   }
 
@@ -936,7 +943,7 @@ export function AuthenticatedProductPanel({
             <SectionHeading
               eyebrow="Pesquisa"
               title="Acervo"
-              description="Pesquise por esfera, UF, fonte e conteúdo."
+              description="Pesquise por esfera, UF, fonte, tipo de base legal e conteúdo."
             />
 
             <form className="tp-acervo-search" onSubmit={submitSearch}>
@@ -1016,6 +1023,21 @@ export function AuthenticatedProductPanel({
                     ))}
                   </select>
                 </label>
+                <label>
+                  Tipo de base legal
+                  <select
+                    value={actType}
+                    onChange={(event) => {
+                      setActType(event.target.value)
+                      setArchivePage(1)
+                    }}
+                  >
+                    <option value="">Todos</option>
+                    {(facetsQuery.data?.actTypes ?? []).map((item) => (
+                      <option value={item} key={item}>{item}</option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   className="launch-secondary-button"
                   type="button"
@@ -1038,6 +1060,7 @@ export function AuthenticatedProductPanel({
                           'Nenhum resultado com os filtros atuais',
                           appliedQuery.trim() ? `busca “${appliedQuery.trim()}”` : '',
                           activeSourceName ? `fonte ${activeSourceName}` : '',
+                          actType ? `tipo ${actType}` : '',
                           uf ? `UF ${uf}` : '',
                         ].filter(Boolean).join(' · ') +
                           '. Use “Limpar filtros” ou altere a busca.'}
