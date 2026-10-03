@@ -427,20 +427,20 @@
 
 .publication-preserved-html[data-source-style='confaz'] p.Remisso,
 .publication-preserved-html[data-source-style='confaz'] p.A8-1Remissao {
-  margin-left: 88pt;
+  margin-left: 72pt;
   color: #f00;
 }
 
 .publication-preserved-html[data-source-style='confaz'] p.RemissoAnt,
 .publication-preserved-html[data-source-style='confaz'] p.A8-2RemissaoAnt {
-  margin-left: 128pt;
+  margin-left: 113pt;
   font-weight: 700;
   color: #008000;
 }
 
 .publication-preserved-html[data-source-style='confaz'] p.RedaoAnt,
 .publication-preserved-html[data-source-style='confaz'] p.A8-3RedacaoAnt {
-  margin-left: 128pt;
+  margin-left: 113pt;
   text-indent: 36pt;
   color: #008000;
 }
@@ -573,7 +573,7 @@
 
 .publication-preserved-html[data-legal-template='ATO_COTEPE_PMPF'] p.TituloAcordo {
   margin: 0 0 12pt;
-  font-size: 1.2em;
+  font-size: 1.4em;
   font-weight: 700;
   text-align: center;
 }
@@ -750,8 +750,8 @@
 }
 
 .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Ementa {
-  margin: 30pt 0 18pt min(36%, 295px);
-  max-width: min(64%, 525px);
+  margin: 30pt 0 18pt min(35%, 287px);
+  max-width: min(65%, 533px);
   font-weight: 700;
 }
 
@@ -982,7 +982,7 @@
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A2DataPublicacao {
   margin: 6pt 0 0;
   color: #f00;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Ementa {
@@ -993,7 +993,7 @@
 
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo,
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A5-1TextoAcordo {
-  text-indent: 72pt;
+  text-indent: 56pt;
 }
 
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.AcordoTipo {
