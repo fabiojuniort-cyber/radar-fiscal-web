@@ -12,12 +12,16 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
-function detail(sourceCode: string, effectiveUntil: unknown = null) {
+function detail(
+  sourceCode: string,
+  effectiveUntil: unknown = null,
+  actType = 'CONVÊNIO ICMS',
+) {
   return {
     publication: {
       id: 'pub-1',
       title: 'Reduz a base de cálculo do ICMS nas saídas dos insumos agropecuários.',
-      actType: 'CONVÊNIO ICMS',
+      actType,
       actNumber: '100/1997',
       agency: 'CONFAZ',
       jurisdictionLevel: 'FEDERAL',
@@ -56,10 +60,14 @@ function detail(sourceCode: string, effectiveUntil: unknown = null) {
   }
 }
 
-async function renderDetail(sourceCode: string, effectiveUntil: unknown = null) {
+async function renderDetail(
+  sourceCode: string,
+  effectiveUntil: unknown = null,
+  actType = 'CONVÊNIO ICMS',
+) {
   const apiFetch = vi.fn(async (input: RequestInfo | URL) =>
     String(input) === '/api/v1/publications/pub-1'
-      ? json(detail(sourceCode, effectiveUntil))
+      ? json(detail(sourceCode, effectiveUntil, actType))
       : json({ error: 'not_found' }, 404),
   ) as unknown as ProductApiFetch
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -74,15 +82,23 @@ async function renderDetail(sourceCode: string, effectiveUntil: unknown = null) 
 }
 
 describe('Texto da legislação com identidade da fonte oficial', () => {
-  it('uses the CONFAZ portal style for CONFAZ acts', async () => {
+  it('uses the CONVENIO_ICMS family contract for CONFAZ convênios', async () => {
     const body = await renderDetail('confaz')
-    expect(body).toHaveAttribute('data-source-style', 'confaz')
+    expect(body).toHaveAttribute('data-legal-template', 'CONVENIO_ICMS')
+    expect(body).toHaveAttribute('data-legal-template-version', '1.0.0')
     expect(screen.getByText('Publicado no DOU de 06.11.97.')).toHaveClass('DataPublicao')
   })
 
-  it('uses the CONFAZ style for convênios collected from other sources too', async () => {
+  it('uses the same family contract for convênios collected from DOU', async () => {
     const body = await renderDetail('dou')
+    expect(body).toHaveAttribute('data-legal-template', 'CONVENIO_ICMS')
+    expect(body).not.toHaveAttribute('data-source-style', 'confaz')
+  })
+
+  it('keeps Ato COTEPE on the legacy CONFAZ source style', async () => {
+    const body = await renderDetail('confaz', null, 'ATO COTEPE/ICMS')
     expect(body).toHaveAttribute('data-source-style', 'confaz')
+    expect(body).not.toHaveAttribute('data-legal-template')
   })
 
   it('shows until when the act is in force, from its current wording', async () => {

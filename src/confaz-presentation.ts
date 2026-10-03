@@ -135,13 +135,21 @@ export function confazDisplayHtml(input: {
 
   const doc = new DOMParser().parseFromString(`<body>${source}</body>`, 'text/html')
   const body = doc.body
-  if (!body.querySelector('p') && body.textContent?.trim()) {
+  if (
+    !body.querySelector('p') &&
+    body.childElementCount === 0 &&
+    body.textContent?.trim()
+  ) {
     body.innerHTML = textToParagraphs(body.textContent)
   }
 
   // A paragraph holding a whole act (or several of its parts) is split.
   for (const paragraph of Array.from(body.querySelectorAll('p'))) {
-    if (paragraph.querySelector('table') || paragraph.closest('table')) continue
+    if (
+      paragraph.querySelector('table') ||
+      paragraph.closest('table') ||
+      paragraph.childElementCount > 0
+    ) continue
     const text = (paragraph.textContent ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
     if (text.length < 200) continue
     const pieces = splitActBlock(text)
