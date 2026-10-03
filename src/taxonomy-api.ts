@@ -426,6 +426,7 @@ export async function importDimensionCsv(
     updated: number
     groupsCreated: number
     errors: Array<{ line: number; message: string }>
+    warnings?: Array<{ line: number; message: string }>
   }>(
     await apiFetch(
       `${ADMIN}/drafts/current/dimensions/${dimensionCode}/import`,

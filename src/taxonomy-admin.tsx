@@ -543,7 +543,10 @@ function DimensionEditor({
       setImportReport(
         `${report.rows} linhas · ${report.created} criados · ${report.updated} atualizados · ${report.groupsCreated} grupos novos` +
           (report.errors.length
-            ? ` · erros: ${report.errors.map((e) => `linha ${e.line}: ${e.message}`).join('; ')}`
+            ? ` · erros (linhas não gravadas): ${report.errors.map((e) => `linha ${e.line}: ${e.message}`).join('; ')}`
+            : '') +
+          ((report.warnings ?? []).length
+            ? ` · avisos: ${(report.warnings ?? []).map((w) => `linha ${w.line}: ${w.message}`).join('; ')}`
             : ''),
       )
       await onChanged()
@@ -647,9 +650,10 @@ function DimensionEditor({
           Sinônimos · No perfil · Ordem · Classificar pelo nome · Código TriBusca. Só “Item” é obrigatório.
         </p>
         <ul>
-          <li>Pode reimportar a planilha exportada inteira: cada linha encontra o item pelo “Código TriBusca” (ou, se
-          vazio, pelo nome) e só atualiza o que mudou; nada é duplicado.</li>
-          <li>Linha nova: deixe “Código TriBusca” vazio; o código é gerado a partir do nome do item.</li>
+          <li><b>“Código TriBusca” preenchido</b> = atualiza esse item (pode reimportar a planilha exportada inteira;
+          só muda o que você alterou). Código que não existe na tabela é recusado.</li>
+          <li><b>“Código TriBusca” em branco</b> = cria um item novo; o código é gerado a partir do nome e aparece na
+          próxima exportação. Se já houver item com o mesmo nome, ele é criado e o relatório avisa.</li>
           <li>Itens que não estão na planilha continuam como estão. Para excluir, use “Excluir selecionadas” na
           tabela.</li>
           <li>“No perfil” e “Classificar pelo nome”: marque com <b>x</b> (vazio mantém o valor atual).</li>
