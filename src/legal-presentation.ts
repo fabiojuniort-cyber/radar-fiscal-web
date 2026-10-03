@@ -542,6 +542,57 @@ const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   },
 }
 
+function prepareAjusteSiniefSource(html: string): string {
+  if (typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const openingParagraphs = Array.from(doc.body.querySelectorAll('p')).slice(0, 12)
+
+  for (const paragraph of openingParagraphs) {
+    const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+    if (!/^(?:Exclus[ãa]o|Inclus[ãa]o)\s+de\b/i.test(text)) continue
+
+    const placeholder = doc.createElement('div')
+    placeholder.setAttribute('data-ajuste-editorial-note', '')
+    while (paragraph.firstChild) placeholder.append(paragraph.firstChild)
+    paragraph.replaceWith(placeholder)
+  }
+
+  return doc.body.innerHTML
+}
+
+function restoreAjusteSiniefEditorialNotes(html: string): string {
+  if (typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  for (const placeholder of Array.from(
+    doc.body.querySelectorAll('div[data-ajuste-editorial-note]'),
+  )) {
+    const paragraph = doc.createElement('p')
+    paragraph.className = 'DataPublicao AjusteNotaEditorial'
+    while (placeholder.firstChild) paragraph.append(placeholder.firstChild)
+    placeholder.replaceWith(paragraph)
+  }
+  return doc.body.innerHTML
+}
+
+function ajusteSiniefHasHistoricalWording(html: string): boolean {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+    return Array.from(doc.body.querySelectorAll('[class]')).some((element) =>
+      Array.from(element.classList).some((className) =>
+        ['RemissoAnt', 'RedaoAnt', 'A8-2RemissaoAnt', 'A8-3RedacaoAnt'].includes(
+          className,
+        ),
+      ),
+    )
+  }
+
+  return /\bclass=["'][^"']*\b(?:RemissoAnt|RedaoAnt|A8-2RemissaoAnt|A8-3RedacaoAnt)\b[^"']*["']/i.test(
+    html,
+  )
+}
+
 const ajusteSiniefTemplate: LegalPresentationTemplate = {
   id: 'AJUSTE_SINIEF',
   version: '1.0.0',
@@ -569,8 +620,9 @@ const ajusteSiniefTemplate: LegalPresentationTemplate = {
       }
     }
 
+    const preparedHtml = prepareAjusteSiniefSource(input.html)
     const view = confazDisplayHtml({
-      html: input.html,
+      html: preparedHtml,
       text: null,
       ementa: input.ementa,
       publishedOn: input.sourceCodes.includes('dou')
@@ -586,11 +638,15 @@ const ajusteSiniefTemplate: LegalPresentationTemplate = {
       }
     }
 
-    const displayHtml = wrapLegalTables(view.html)
+    const displayHtml = wrapLegalTables(
+      restoreAjusteSiniefEditorialNotes(view.html),
+    )
     return {
       html: displayHtml,
       inferredStructure: view.inferred,
-      variant: hasHistoryClass(displayHtml) ? 'consolidated' : 'standard',
+      variant: ajusteSiniefHasHistoricalWording(displayHtml)
+        ? 'consolidated'
+        : 'standard',
     }
   },
 }
