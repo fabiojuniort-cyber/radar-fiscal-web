@@ -865,6 +865,11 @@
   text-align: left;
 }
 
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .TabelaTitulo {
+  font-weight: 700;
+  text-align: left;
+}
+
 .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .AtoCotepeUfHeader,
 .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='annex-structured'] .AtoCotepeUfHeader {
   font-weight: 700;
