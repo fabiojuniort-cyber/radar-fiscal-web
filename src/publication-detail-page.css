@@ -485,8 +485,8 @@
 }
 
 .publication-preserved-html[data-inferred-structure='true'] p.Ementa {
-  margin: 30pt 0 18pt min(36%, 295px);
-  max-width: min(64%, 525px);
+  margin: 30pt 0 18pt min(45%, 370px);
+  max-width: min(55%, 450px);
 }
 
 .publication-preserved-html[data-inferred-structure='true'] p.TextoAcordo {
@@ -987,8 +987,8 @@
 }
 
 .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa {
-  margin: 30pt 0 18pt min(45%, 370px);
-  max-width: min(55%, 450px);
+  margin: 30pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
   font-weight: 700;
 }
 
