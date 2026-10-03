@@ -169,7 +169,7 @@ export function CurationGrid({
     { key: 'profileVisible', label: 'No perfil', className: 'is-narrow' },
     { key: 'classifyByLabel', label: 'Classificar pelo nome', className: 'is-narrow' },
     { key: 'displayOrder', label: 'Ordem', className: 'is-narrow' },
-    { key: 'code', label: 'Código TriBusca' },
+    { key: 'code', label: 'Código TriFaros' },
   ]
 
   const normalizedQuery = normalize(query.trim())

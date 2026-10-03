@@ -223,8 +223,8 @@ test.describe('WEB-09 — rotas, responsividade e rodapé', () => {
 
       const footerLogo = footer.locator('.footer-logo')
       await expect(footerLogo).toBeVisible()
-      await expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-light.png')
-      await expect(footerLogo).toHaveAttribute('alt', 'TriBusca')
+      await expect(footerLogo).toHaveAttribute('src', '/brand/trifaros-logo-horizontal.png')
+      await expect(footerLogo).toHaveAttribute('alt', '')
       const footerLogoState = await footerLogo.evaluate((element) => {
         const image = element as HTMLImageElement
         const box = image.getBoundingClientRect()
@@ -331,8 +331,8 @@ test('WEB-16 — login modal, signup ativo, contenção de foco e Escape', async
 
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
-  await expect(dialog.getByText('Acesse sua conta TriBusca.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entrar na TriFaros' })).toBeVisible()
+  await expect(dialog.getByText('Acesse sua conta TriFaros.')).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Esqueci minha senha' })).toHaveCount(0)
   await expect(dialog.getByRole('button', { name: 'Criar conta' })).toBeVisible()
 
@@ -443,7 +443,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
 
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Entrar na TriBusca' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entrar na TriFaros' })).toBeVisible()
   await expect(page.getByRole('status')).toContainText('Conta criada com sucesso')
   await expect(page.getByLabel('E-mail')).toHaveValue('nova.pessoa@example.com')
 
@@ -505,7 +505,7 @@ test('WEB-07 — Sonar, fontes, footer e reduced motion no build real', async ({
   expect(bodyFont.toLowerCase().startsWith('inter')).toBe(true)
 
   const footerLogo = page.locator('.footer-logo')
-  await expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-light.png')
+  await expect(footerLogo).toHaveAttribute('src', '/brand/trifaros-logo-horizontal.png')
   const footerFilter = await footerLogo.evaluate((element) => getComputedStyle(element).filter)
   expect(footerFilter).toBe('none')
 

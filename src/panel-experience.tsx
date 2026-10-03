@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { FormEvent, type ReactNode, useState } from 'react'
 
+import { BrandMark } from './brand-mark'
 import './panel-experience.css'
 
 export type PanelMode = 'authenticated' | 'demo'
@@ -155,7 +156,7 @@ const todayLabel = () => {
 
 function initials(name: string) {
   const values = name.trim().split(/\s+/).filter(Boolean)
-  if (values.length === 0) return 'TB'
+  if (values.length === 0) return 'TF'
   if (values.length === 1) return values[0].slice(0, 2).toUpperCase()
   return `${values[0][0]}${values[values.length - 1][0]}`.toUpperCase()
 }
@@ -213,9 +214,9 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
   const [orgTab, setOrgTab] = useState<OrganizationTab>('empresas')
 
   const membership = identity.memberships?.[0]
-  const tenantName = demo ? 'Cerrado Insumos Agrícolas S.A.' : membership?.tenantName ?? 'Conta TriBusca'
+  const tenantName = demo ? 'Cerrado Insumos Agrícolas S.A.' : membership?.tenantName ?? 'Conta TriFaros'
   const tenantRole = demo ? 'Administradora da conta' : membership?.role ?? 'Usuário'
-  const displayName = demo ? 'Ana Ribeiro' : identity.name || identity.email || 'Usuário TriBusca'
+  const displayName = demo ? 'Ana Ribeiro' : identity.name || identity.email || 'Usuário TriFaros'
   const displayEmail = demo ? 'ana.ribeiro@empresa.com.br' : identity.email ?? '—'
   const establishment = demo ? 'Matriz · Rio Verde/GO' : 'Estabelecimento não selecionado'
   const metricValue = demo ? '—' : '—'
@@ -236,7 +237,7 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
   return <div className="tp-app" data-panel-mode={mode}>
     <header className="tp-header">
       <div className="tp-header-primary">
-        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="tp-logo" />
+        <BrandMark compact />
 
         <div className="tp-pop-wrap">
           <button className="tp-company-button" type="button" aria-expanded={companyMenu} onClick={() => { setCompanyMenu((value) => !value); setUserMenu(false) }}>
@@ -289,7 +290,7 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
     <main className={`tp-main tp-main-${screen}`}>
       {screen === 'inicio' && <>
         <div className="tp-welcome-row">
-          <div><span>{demo ? 'Segunda-feira, 28 de setembro de 2026' : todayLabel()}</span><h1>Bom dia, {firstName(displayName)}.</h1><p>{demo ? 'O Sonar encontrou sinais relevantes para o perfil selecionado. Veja o que merece atenção agora.' : 'Seu painel autenticado já usa o novo formato do TriBusca. Dados privados aparecem apenas quando houver integração aprovada para cada módulo.'}</p></div>
+          <div><span>{demo ? 'Segunda-feira, 28 de setembro de 2026' : todayLabel()}</span><h1>Bom dia, {firstName(displayName)}.</h1><p>{demo ? 'O Sonar encontrou sinais relevantes para o perfil selecionado. Veja o que merece atenção agora.' : 'Seu painel autenticado já usa o novo formato do TriFaros. Dados privados aparecem apenas quando houver integração aprovada para cada módulo.'}</p></div>
         </div>
 
         <form className="tp-search-hero" onSubmit={submitSearch}>
@@ -309,7 +310,7 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
               {demoMentions.map((mention) => <button type="button" key={mention.ref}><small>{mention.orgao} · {mention.date}</small><strong>{mention.ref}: {mention.title}</strong><span>{mention.detail}</span></button>)}
             </section>}
             <section className="tp-panel-card">
-              <div className="tp-card-head"><span><b>Alta afinidade</b><small>Sonar · Inteligência TriBusca · {establishment}</small></span><button type="button" onClick={() => go('publicacoes')}>Ver todas →</button></div>
+              <div className="tp-card-head"><span><b>Alta afinidade</b><small>Sonar · Inteligência TriFaros · {establishment}</small></span><button type="button" onClick={() => go('publicacoes')}>Ver todas →</button></div>
               <PublicationList demo={demo} compact />
             </section>
           </div>
@@ -340,7 +341,7 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
       </>}
 
       {screen === 'publicacoes' && <>
-        <SectionHeading eyebrow="Sonar · Inteligência TriBusca" title="Publicações" description="Acompanhe publicações e sinais de afinidade por estabelecimento." />
+        <SectionHeading eyebrow="Sonar · Inteligência TriFaros" title="Publicações" description="Acompanhe publicações e sinais de afinidade por estabelecimento." />
         <div className="tp-filterbar"><button className="is-active" type="button">Todas</button><button type="button">Alta afinidade</button><button type="button">Média afinidade</button><button type="button">Menção direta</button><span>{demo ? '3 resultados demonstrativos' : '— resultados'}</span></div>
         <PublicationList demo={demo} />
       </>}
@@ -362,7 +363,7 @@ export function PanelExperience({ mode, identity, onExit, exitError }: PanelExpe
       </>}
 
       {screen === 'fontes' && <>
-        <SectionHeading eyebrow="Cobertura legislativa" title="Fontes Oficiais" description="Catálogo das fontes acompanhadas pelo TriBusca e da abrangência prevista." />
+        <SectionHeading eyebrow="Cobertura legislativa" title="Fontes Oficiais" description="Catálogo das fontes acompanhadas pelo TriFaros e da abrangência prevista." />
         <div className="tp-source-catalog">{officialSources.map(([name, sphere, scope]) => <article key={name}><span className="tp-source-icon"><Landmark size={18} /></span><div><strong>{name}</strong><span>{sphere}</span><p>{scope}</p></div><em>{demo ? (name === 'SPED' ? 'Em implantação' : 'Em produção') : 'Configuração do produto'}</em></article>)}</div>
       </>}
 

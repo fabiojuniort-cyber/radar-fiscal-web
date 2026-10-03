@@ -24,7 +24,7 @@ function NewsVisual({ item, priority = false }: NewsVisualProps) {
     return (
       <div className="tp-news-image-fallback" aria-hidden="true">
         <Newspaper size={30} />
-        <span>TriBusca Notícias</span>
+        <span>TriFaros Notícias</span>
       </div>
     )
   }
@@ -185,7 +185,7 @@ export function NewsSection({ apiFetch }: Props) {
     <section className="tp-news-section">
       <header className="tp-news-masthead">
         <div>
-          <span className="tp-news-kicker">TriBusca · Inteligência tributária</span>
+          <span className="tp-news-kicker">TriFaros · Inteligência tributária</span>
           <h1>Notícias</h1>
         </div>
         <p>Informação oficial selecionada por relevância fiscal e tributária.</p>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
+import { BrandMark } from './brand-mark'
 import {
   confazDisplayHtml,
   isConfazAct,
@@ -130,7 +131,7 @@ export function PublicationDetailPage({
             Carregando legislação…
           </strong>
           <p>
-            Buscando a versão armazenada no Acervo TriBusca.
+            Buscando a versão armazenada no Acervo TriFaros.
           </p>
         </div>
       </main>
@@ -213,12 +214,9 @@ export function PublicationDetailPage({
         <Link
           to="/painel"
           className="publication-detail-brand"
-          aria-label="Abrir painel TriBusca"
+          aria-label="Abrir painel TriFaros"
         >
-          <img
-            src="/brand/tribusca-logo-horizontal-dark.png"
-            alt="TriBusca"
-          />
+          <BrandMark surface="dark" compact />
         </Link>
 
         <button
@@ -292,7 +290,7 @@ export function PublicationDetailPage({
             {version?.capturedAt && (
               <span>
                 <History size={16} />
-                Capturada pelo TriBusca
+                Capturada pelo TriFaros
               </span>
             )}
           </div>

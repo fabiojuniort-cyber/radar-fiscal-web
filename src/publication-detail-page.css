@@ -14,7 +14,7 @@
   gap: 18px;
 }
 
-.publication-detail-brand img {
+.publication-detail-brand > img {
   display: block;
   width: min(190px, 44vw);
   height: auto;

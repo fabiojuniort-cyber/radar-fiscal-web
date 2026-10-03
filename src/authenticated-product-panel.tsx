@@ -24,6 +24,7 @@ import {
 } from 'react'
 import { Link } from 'react-router-dom'
 
+import { BrandMark } from './brand-mark'
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
 import { ProductNcmProfiles } from './product-ncm-profiles'
@@ -147,7 +148,7 @@ function initials(value: string) {
     .split(/\s+/)
     .filter(Boolean)
 
-  if (parts.length === 0) return 'TB'
+  if (parts.length === 0) return 'TF'
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase()
   }
@@ -414,8 +415,8 @@ export function AuthenticatedProductPanel({
     ) ?? identity.memberships?.[0]
   const tenantId = membership?.tenantId
   const displayName =
-    identity.name || identity.email || 'Usuário TriBusca'
-  const tenantName = membership?.tenantName ?? 'Conta TriBusca'
+    identity.name || identity.email || 'Usuário TriFaros'
+  const tenantName = membership?.tenantName ?? 'Conta TriFaros'
 
   const [screen, setScreen] = useState<Screen>(persisted?.screen ?? 'inicio')
   const [query, setQuery] = useState(persisted?.query ?? '')
@@ -655,11 +656,7 @@ export function AuthenticatedProductPanel({
     <div className="tp-app" data-panel-mode="authenticated">
       <header className="tp-header">
         <div className="tp-header-primary">
-          <img
-            src="/brand/tribusca-logo-horizontal-light.png"
-            alt="TriBusca"
-            className="tp-logo"
-          />
+          <BrandMark compact />
 
           <div className="tp-pop-wrap">
             <button
@@ -1643,7 +1640,7 @@ function CompanySection({
         <div>
           <h2>Empresas da conta</h2>
           <p>
-            Informe o CNPJ da matriz e, se desejar, o Local Negócio. O TriBusca consulta
+            Informe o CNPJ da matriz e, se desejar, o Local Negócio. O TriFaros consulta
             o cadastro CNPJ, cria a matriz, registra os CNAEs e consulta a Inscrição Estadual
             quando a fonte estadual estiver disponível.
           </p>

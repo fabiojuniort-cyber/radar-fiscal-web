@@ -1,6 +1,8 @@
-# TriBusca — frontend definitivo
+# TriFaros — frontend definitivo
 
-Frontend oficial do TriBusca. A WEB-02 alinha o site público ao design aprovado e mantém o PR #1 em **draft** até os gates de revisão.
+Frontend oficial do TriFaros. A WEB-02 alinha o site público ao design aprovado e mantém o PR #1 em **draft** até os gates de revisão.
+
+Identidade vigente: **TriFaros**, conforme BRAND-02 (tribusca-control#64). TriBusca é a denominação anterior. Nomes de repositório, pacote e identificadores internos legados permanecem por compatibilidade; consulte [BRAND-02](docs/BRAND_02.md).
 
 ## Rotas públicas
 

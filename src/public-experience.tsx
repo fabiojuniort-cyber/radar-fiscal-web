@@ -8,6 +8,8 @@ import {
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
+import { BrandMark } from './brand-mark'
+
 import {
   DECODIFICA_EXAMPLES,
   FEDERAL_COVERAGE,
@@ -49,7 +51,7 @@ const howSteps = [
   ['1', 'Captura oficial', 'Fontes oficiais consultadas automaticamente; texto, arquivos e hash preservados.'],
   ['2', 'Normalização', 'Cada publicação é organizada em um formato comum, com órgão, tipo, número e datas oficiais.'],
   ['3', 'Deduplicação e versões', 'A mesma norma não é duplicada. Mudanças de conteúdo geram nova versão, com histórico.'],
-  ['4', 'Marcadores Tributários', 'Vocabulário controlado da TriBusca — nunca tags livres criadas pela IA.'],
+  ['4', 'Marcadores Tributários', 'Vocabulário controlado da TriFaros — nunca tags livres criadas pela IA.'],
   ['5', 'Perfil Tributário', 'Contexto da empresa e de seus estabelecimentos.'],
   ['6', 'Relevância explicável', 'Cruzamento com o Perfil Tributário, dizendo por que cada norma foi priorizada.'],
 ] as const
@@ -87,8 +89,8 @@ function PublicHeader({ onAuth }: { onAuth: OpenAuth }) {
   const close = () => setMobileOpen(false)
   return <header className="site-header ref-header">
     <nav className="ref-container ref-nav-wrap">
-      <Link to="/" className="brand-link" aria-label="TriBusca — página inicial" onClick={close}>
-        <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="brand-horizontal" />
+      <Link to="/" className="brand-link" aria-label="TriFaros — página inicial" onClick={close}>
+        <BrandMark />
       </Link>
       <nav aria-label="Navegação principal" className="nav-links ref-nav-links">
         <NavLink to="/cobertura">Cobertura</NavLink>
@@ -136,12 +138,12 @@ function HomePage({ onAuth }: { onAuth: OpenAuth }) {
             importa.<br />
             <span>Cheque à fonte<br />oficial.</span>
           </h1>
-          <p>A TriBusca acompanha fontes oficiais e organiza mudanças tributárias para sua empresa chegar mais rápido ao que merece atenção.</p>
+          <p>A TriFaros acompanha fontes oficiais e organiza mudanças tributárias para sua empresa chegar mais rápido ao que merece atenção.</p>
           <div className="ref-hero-actions">
             <button className="ref-button ref-button-primary ref-home-primary" type="button" onClick={(event) => onAuth('signup', event.currentTarget)}>Experimentar grátis <ArrowRight size={17} /></button>
             <Link className="ref-button ref-button-hero-outline" to="/portfolio">Conhecer soluções</Link>
           </div>
-          <small>7 dias para conhecer a TriBusca.</small>
+          <small>7 dias para conhecer a TriFaros.</small>
         </div>
         <HomeFeedCard />
       </div>
@@ -347,7 +349,7 @@ function FederalHome() {
       <div className="ref-home-federal-copy">
         <span>Cobertura Federal</span>
         <h2>O estado de cada fonte fica claro.</h2>
-        <p>A TriBusca mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis.</p>
+        <p>A TriFaros mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis.</p>
       </div>
       <div className="ref-home-federal-grid">{FEDERAL_COVERAGE.map((source) => {
         const data = toCoveragePresentation(findFederalSource(items, source.code), available)
@@ -410,7 +412,7 @@ function HomeDecodifica() {
 function HomeHow() {
   const steps = [
     ['1','Captura oficial','Fontes oficiais consultadas automaticamente; texto, arquivos e hash preservados.'],
-    ['2','Marcadores Tributários','Vocabulário controlado da TriBusca — nunca tags livres criadas pela IA.'],
+    ['2','Marcadores Tributários','Vocabulário controlado da TriFaros — nunca tags livres criadas pela IA.'],
     ['3','Relevância explicável','Cruzamento com o Perfil Tributário, dizendo por que cada norma foi priorizada.'],
   ] as const
   return <section className="ref-home-section ref-home-how">
@@ -459,7 +461,7 @@ function CoveragePage({ onAuth }: { onAuth: OpenAuth }) {
   const federalCodes: Record<string,string> = { dou:'DOU', confaz:'CONF', 'nfe-encat':'NF-e', sped:'SPED', cgibs:'CGIBS', 'rfb-normas':'RFB' }
 
   return <main className="ref-model-page">
-    <PageHero eyebrow="Cobertura" title="Fontes oficiais acompanhadas, com saúde operacional visível." copy="A TriBusca mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis." />
+    <PageHero eyebrow="Cobertura" title="Fontes oficiais acompanhadas, com saúde operacional visível." copy="A TriFaros mostra a situação operacional de cada fonte e diferencia consultas bem-sucedidas, instáveis ou indisponíveis." />
     <section className="ref-model-section">
       <div className="ref-container">
         {!available && !query.isLoading && <div className="ref-live-warning">Dados ao vivo indisponíveis no momento. Os campos sem informação aparecem como “—”.</div>}
@@ -526,10 +528,10 @@ function Health({name,text,tone='ok'}:{name:string;text:string;tone?:'ok'|'parti
 function PortfolioPage({onAuth}:{onAuth:OpenAuth}) {
   const portfolioAnchors=[['acervo','Acervo'],['monitoramento','Central de Monitoramento'],['sonar','Sonar'],['revela','Revela'],['decodifica','Decodifica'],['perfil','Perfil Tributário']] as const
   return <main className="ref-model-page ref-portfolio-page">
-    <PageHero eyebrow="Portfólio" title="Recursos da TriBusca para encontrar o que importa no meio do ruído." copy="Os recursos são partes da mesma plataforma, não produtos separados. Os recursos fazem parte da mesma plataforma e trabalham em conjunto ao longo do fluxo de monitoramento e análise." />
+    <PageHero eyebrow="Portfólio" title="Recursos da TriFaros para encontrar o que importa no meio do ruído." copy="Os recursos são partes da mesma plataforma, não produtos separados. Os recursos fazem parte da mesma plataforma e trabalham em conjunto ao longo do fluxo de monitoramento e análise." />
     <nav className="ref-model-anchors" aria-label="Recursos do portfólio"><div className="ref-container">{portfolioAnchors.map(([id,label])=><a key={id} href={'#'+id}>{label}</a>)}</div></nav>
 
-    <PortfolioFeature id="acervo" status="Disponível" eyebrow="Base de consulta" title="Acervo" description={<p>Consulta organizada ao conteúdo oficial coletado e preservado pela TriBusca: publicações, versões, origem oficial e metadados. A <b>Busca</b> é uma função do Acervo, com pesquisa por título, número, órgão, conteúdo, fonte, UF e período.</p>}>
+    <PortfolioFeature id="acervo" status="Disponível" eyebrow="Base de consulta" title="Acervo" description={<p>Consulta organizada ao conteúdo oficial coletado e preservado pela TriFaros: publicações, versões, origem oficial e metadados. A <b>Busca</b> é uma função do Acervo, com pesquisa por título, número, órgão, conteúdo, fonte, UF e período.</p>}>
       <AcervoMock />
     </PortfolioFeature>
 
@@ -541,7 +543,7 @@ function PortfolioPage({onAuth}:{onAuth:OpenAuth}) {
       <SonarDemo />
     </PortfolioFeature>
 
-    <PortfolioFeature id="revela" status={null} eyebrow="Boletim diário" title="Revela" description={<><p>Atualização tributária diária personalizada. Reúne as publicações de <b>Alta afinidade</b> no Sonar e as que têm <b>menção direta</b> à empresa ou a seus estabelecimentos, como a citação do CNPJ.</p><p>Cada item informa por que entrou no boletim e leva à publicação na TriBusca.</p></>}>
+    <PortfolioFeature id="revela" status={null} eyebrow="Boletim diário" title="Revela" description={<><p>Atualização tributária diária personalizada. Reúne as publicações de <b>Alta afinidade</b> no Sonar e as que têm <b>menção direta</b> à empresa ou a seus estabelecimentos, como a citação do CNPJ.</p><p>Cada item informa por que entrou no boletim e leva à publicação na TriFaros.</p></>}>
       <RevelaMock />
     </PortfolioFeature>
 
@@ -682,7 +684,7 @@ function HowItWorksPage({onAuth}:{onAuth:OpenAuth}) {
     <section className="ref-model-section"><div className="ref-container ref-how-grid">{howSteps.map(([n,name,desc])=><article key={n}><span>{n}</span><strong>{name}</strong><p>{desc}</p></article>)}</div></section>
     <section className="ref-model-section">
       <div className="ref-container ref-how-relevance">
-        <div><span>Relevância</span><h2>Por que priorizar</h2><p>Cada prioridade vem com os motivos verificáveis. A TriBusca prefere linguagem baseada em evidência e grau de certeza, como “Possível impacto identificado”.</p></div>
+        <div><span>Relevância</span><h2>Por que priorizar</h2><p>Cada prioridade vem com os motivos verificáveis. A TriFaros prefere linguagem baseada em evidência e grau de certeza, como “Possível impacto identificado”.</p></div>
         <RelevancePanel/>
       </div>
     </section>
@@ -691,7 +693,7 @@ function HowItWorksPage({onAuth}:{onAuth:OpenAuth}) {
         <div className="ref-model-heading"><span>Transparência</span><h2>Fato oficial, inteligência e IA, sempre separados.</h2></div>
         <div className="ref-transparency-model">
           <article className="is-official"><strong>Fato oficial</strong><p>Texto e arquivos como publicados pela fonte, com órgão, URL e data.</p></article>
-          <article className="is-tribusca"><strong>Inteligência TriBusca</strong><p>Marcadores, versões e relevância calculados pela plataforma, com motivos.</p></article>
+          <article className="is-tribusca"><strong>Inteligência TriFaros</strong><p>Marcadores, versões e relevância calculados pela plataforma, com motivos.</p></article>
           <article className="is-ai"><strong>Conteúdo gerado por IA</strong><p>Leituras auxiliares sempre identificadas. Não substituem o texto oficial.</p></article>
         </div>
       </div>
@@ -705,7 +707,7 @@ function TaxReformPage({onAuth}:{onAuth:OpenAuth}) {
   const [filter,setFilter]=useState('Todos')
   const related=[['CGIBS','Resolução CGIBS nº 18/2026','15/09/2026'],['CGIBS','Resolução CGIBS nº 6/2026 — Regulamento do IBS','30/04/2026'],['CGIBS','Split Payment — OpenAPI v1.1.0','Documento técnico'],['CGIBS','DeRE v1.2.0 — leiautes e XSD','Documento técnico'],['Planalto','Lei Complementar nº 214/2025','2025']]
   return <main className="ref-model-page">
-    <PageHero eyebrow="Reforma Tributária" title="A Reforma Tributária, organizada a partir da fonte oficial." copy="Legislação, regulamentação, notas técnicas e demais publicações oficiais da reforma reunidas a partir do Acervo da TriBusca, com uma linha do tempo que separa publicação, vigência e marcos."/>
+    <PageHero eyebrow="Reforma Tributária" title="A Reforma Tributária, organizada a partir da fonte oficial." copy="Legislação, regulamentação, notas técnicas e demais publicações oficiais da reforma reunidas a partir do Acervo da TriFaros, com uma linha do tempo que separa publicação, vigência e marcos."/>
     <section className="ref-model-section">
       <div className="ref-container">
         <div className="ref-model-heading"><span>Linha do tempo</span><h2>Publicação e vigência são datas diferentes.</h2></div>
@@ -737,6 +739,9 @@ function LegalDocumentPage({ document }: { document: LegalDocument }) {
     <PageHero eyebrow={document.eyebrow} title={document.title} copy={document.intro} />
     <section className="ref-section">
       <div className="ref-container ref-legal-document">
+        <p className="ref-legal-brand-note">
+          TriFaros é a nova marca da plataforma anteriormente denominada TriBusca. Este documento conserva a denominação da versão publicada.
+        </p>
         {document.sections.map((section) => (
           <section key={section.title}>
             <h2>{section.title}</h2>
@@ -754,8 +759,8 @@ function statusClass(status:string){return status==='—'?'collection-pending-da
 function PublicCta({onAuth,showLogin=false}:{onAuth:OpenAuth;showLogin?:boolean}) {
   return <section className="ref-public-cta"><div className="ref-container"><div className="ref-public-cta-card">
     <h2>Pare de procurar mudanças tributárias manualmente.</h2>
-    <div className="ref-cta-actions"><div><button className="ref-button ref-cta-primary" type="button" onClick={(event)=>onAuth('signup',event.currentTarget)}>Experimentar grátis</button>{showLogin?<button className="ref-button ref-cta-secondary" type="button" onClick={(event)=>onAuth('login',event.currentTarget)}>Entrar</button>:null}</div><p>7 dias para conhecer a TriBusca.</p></div>
+    <div className="ref-cta-actions"><div><button className="ref-button ref-cta-primary" type="button" onClick={(event)=>onAuth('signup',event.currentTarget)}>Experimentar grátis</button>{showLogin?<button className="ref-button ref-cta-secondary" type="button" onClick={(event)=>onAuth('login',event.currentTarget)}>Entrar</button>:null}</div><p>7 dias para conhecer a TriFaros.</p></div>
   </div></div></section>
 }
 
-function PublicFooter(){return <footer className="site-footer ref-footer"><div className="ref-container ref-footer-wrap"><div><img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="footer-logo"/><p>Monitoramento e Inteligência Tributária</p></div><p className="footer-note"><Link to="/termos">Termos de uso</Link> · <Link to="/privacidade">Política de privacidade</Link> · © 2026 TriBusca</p></div></footer>}
+function PublicFooter(){return <footer className="site-footer ref-footer"><div className="ref-container ref-footer-wrap"><div><BrandMark surface="dark" imageClassName="footer-logo" /><p>Monitoramento e Inteligência Tributária</p></div><p className="footer-note"><Link to="/termos">Termos de uso</Link> · <Link to="/privacidade">Política de privacidade</Link> · © 2026 TriFaros</p></div></footer>}
