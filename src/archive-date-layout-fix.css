@@ -5,12 +5,12 @@
 @media (min-width: 981px) {
   .tp-app .tp-main.tp-main-acervo {
     display: grid !important;
-    grid-template-columns: minmax(430px, 0.95fr) minmax(0, 2fr) !important;
+    grid-template-columns: minmax(390px, 0.9fr) minmax(0, 2.1fr) !important;
     grid-template-rows: auto auto auto auto auto !important;
-    column-gap: 28px !important;
-    row-gap: 8px !important;
+    column-gap: 22px !important;
+    row-gap: 4px !important;
     align-items: start !important;
-    padding-top: 14px !important;
+    padding-top: 8px !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-section-heading {
@@ -20,42 +20,43 @@
     justify-self: stretch !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 0 0 0 6px !important;
+    padding: 0 0 0 4px !important;
     text-align: left !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-section-heading h1 {
     margin: 0 !important;
-    font-size: 34px !important;
-    line-height: 1.06 !important;
+    font-size: 30px !important;
+    line-height: 1.02 !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-section-heading p {
-    max-width: 520px !important;
-    margin: 0 !important;
-    font-size: 15px !important;
+    max-width: 480px !important;
+    margin: 2px 0 0 !important;
+    font-size: 14px !important;
+    line-height: 1.32 !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-acervo-search {
     grid-column: 2 !important;
     grid-row: 1 !important;
     width: 100% !important;
-    min-height: 58px !important;
+    min-height: 50px !important;
     margin: 0 !important;
-    padding: 6px 8px 6px 16px !important;
-    border-radius: 14px !important;
+    padding: 4px 6px 4px 14px !important;
+    border-radius: 12px !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-acervo-search input {
-    height: 44px !important;
-    font-size: 16px !important;
+    height: 40px !important;
+    font-size: 15px !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-acervo-search button {
-    height: 46px !important;
-    min-width: 190px !important;
-    padding: 0 20px !important;
-    font-size: 15px !important;
+    height: 40px !important;
+    min-width: 172px !important;
+    padding: 0 16px !important;
+    font-size: 14px !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-acervo-fulltext {
@@ -63,11 +64,11 @@
     grid-row: 2 !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    min-height: 30px !important;
+    gap: 6px !important;
+    min-height: 24px !important;
     margin: 0 !important;
     padding: 0 0 0 4px !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
   }
 
@@ -88,30 +89,123 @@
     grid-column: 1 / -1 !important;
     grid-row: 5 !important;
     width: 100% !important;
-    margin-top: 2px !important;
-  }
-
-  .tp-app .tp-main.tp-main-acervo .tp-date-filter {
-    margin: 0 0 10px !important;
-    padding: 12px 22px 8px !important;
-    row-gap: 5px !important;
-  }
-
-  .tp-app .tp-main.tp-main-acervo .tp-date-single-field {
-    min-height: 50px !important;
-  }
-
-  .tp-app .tp-main.tp-main-acervo .tp-date-ruler {
     margin-top: 0 !important;
   }
 
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter {
+    margin: 0 0 6px !important;
+    padding: 8px 18px 5px !important;
+    row-gap: 2px !important;
+    border-radius: 14px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter-kicker {
+    font-size: 0.66rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter-head strong {
+    font-size: 0.9rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-mode-toggle {
+    gap: 6px !important;
+    font-size: 0.74rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-mode-toggle > span {
+    width: 30px !important;
+    height: 18px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-mode-toggle > span::after {
+    top: 3px !important;
+    left: 3px !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-mode-toggle input:checked + span::after {
+    transform: translateX(12px) !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-single-field {
+    width: 270px !important;
+    min-width: 270px !important;
+    min-height: 44px !important;
+    padding: 5px 9px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-range-fields {
+    gap: 8px !important;
+    max-width: 550px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-range-fields > label {
+    min-width: 188px !important;
+    padding: 5px 8px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-range-fields > label > span,
+  .tp-app .tp-main.tp-main-acervo .tp-date-single-field label {
+    font-size: 0.67rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-single-field input,
+  .tp-app .tp-main.tp-main-acervo .tp-date-range-fields input {
+    font-size: 0.8rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-endpoint-hint {
+    margin-top: -2px !important;
+    font-size: 0.64rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler {
+    gap: 5px !important;
+    margin-top: -1px !important;
+    padding: 1px 3px 3px !important;
+  }
+
   .tp-app .tp-main.tp-main-acervo .tp-date-period {
-    min-height: 78px !important;
+    flex-basis: 88px !important;
+    min-height: 64px !important;
+    padding: 5px 5px !important;
+    border-radius: 9px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler.is-month .tp-date-period {
+    flex-basis: 96px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler.is-year .tp-date-period {
+    flex-basis: 104px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-period-value {
+    font-size: 1.45rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler.is-month .tp-date-period-value {
+    font-size: 1.04rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler.is-year .tp-date-period-value {
+    font-size: 1.15rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-period-label {
+    margin-top: 3px !important;
+    font-size: 0.56rem !important;
   }
 
   .tp-app .tp-main.tp-main-acervo .tp-date-filter-foot {
-    min-height: 14px !important;
-    margin-top: -3px !important;
+    min-height: 10px !important;
+    margin-top: -5px !important;
+    font-size: 0.64rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter-foot button {
+    padding: 1px 0 !important;
   }
 }
 
@@ -119,8 +213,8 @@
   .tp-app .tp-main.tp-main-acervo {
     display: flex !important;
     flex-direction: column !important;
-    gap: 18px !important;
-    padding-top: 18px !important;
+    gap: 12px !important;
+    padding-top: 12px !important;
   }
 
   .tp-app .tp-main.tp-main-acervo > .tp-section-heading,
