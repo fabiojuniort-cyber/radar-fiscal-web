@@ -10,9 +10,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 
 import {
+  confazDisplayHtml,
   isConfazAct,
-  textToParagraphs,
-  withConfazParagraphClasses,
 } from './confaz-presentation'
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
@@ -176,16 +175,19 @@ export function PublicationDetailPage({
   })
     ? 'confaz'
     : undefined
-  const presentationHtml =
+  const storedHtml =
     version?.presentation.format === 'SANITIZED_HTML'
-      ? version.presentation.html
-      : sourceStyle && version?.contentText
-        ? textToParagraphs(version.contentText)
-        : null
-  const displayHtml =
-    presentationHtml && sourceStyle
-      ? withConfazParagraphClasses(presentationHtml, publication.title)
-      : presentationHtml
+      ? (version.presentation.html ?? null)
+      : null
+  const confazView = sourceStyle
+    ? confazDisplayHtml({
+        html: storedHtml,
+        text: version?.contentText ?? null,
+        ementa: publication.title,
+        publishedOn: publication.publishedOn,
+      })
+    : null
+  const displayHtml = confazView?.html ?? storedHtml
 
   const reference = referenceLabel(
     publication.actType,
@@ -325,6 +327,9 @@ export function PublicationDetailPage({
                 version?.presentation.format
               }
               data-source-style={sourceStyle}
+              data-inferred-structure={
+                confazView?.inferred ? 'true' : undefined
+              }
               dangerouslySetInnerHTML={{
                 __html: displayHtml,
               }}

@@ -405,7 +405,9 @@
 }
 
 .publication-preserved-html[data-source-style='confaz'] p.Ementa {
-  margin: 36pt 0 18pt 36%;
+  /* Right column of the 820px text block, like the portal. */
+  margin: 36pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
   font-weight: 700;
 }
 
@@ -443,6 +445,7 @@
 @media (max-width: 680px) {
   .publication-preserved-html[data-source-style='confaz'] p.Ementa {
     margin-left: 18%;
+    max-width: none;
   }
 
   .publication-preserved-html[data-source-style='confaz'] p.Remisso,
@@ -462,5 +465,44 @@
   .publication-preserved-html[data-source-style='confaz'] p.RedaoAnt,
   .publication-preserved-html[data-source-style='confaz'] p.A8-3RedacaoAnt {
     text-indent: 24pt;
+  }
+}
+
+/* Acts whose paragraphs were restored from the text (DOU, plain text):
+   layout of the current CONFAZ portal pages — centered title, red DOU
+   note, summary to the right, bold clause heads, no first-line indent. */
+.publication-preserved-html[data-inferred-structure='true'] p.TituloAcordo {
+  margin: 0 0 12pt;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+.publication-preserved-html[data-inferred-structure='true'] p.DataPublicao {
+  margin: 12pt 0 0;
+}
+
+.publication-preserved-html[data-inferred-structure='true'] p.Ementa {
+  margin: 30pt 0 18pt min(45%, 370px);
+  max-width: min(55%, 450px);
+}
+
+.publication-preserved-html[data-inferred-structure='true'] p.TextoAcordo {
+  margin-top: 10pt;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-inferred-structure='true'] p.AcordoTipo {
+  margin: 12pt 0;
+  letter-spacing: normal;
+}
+
+@media (max-width: 680px) {
+  .publication-preserved-html[data-inferred-structure='true'] p.Ementa {
+    margin-left: 18%;
+    max-width: none;
+  }
+
+  .publication-preserved-html[data-inferred-structure='true'] p.TextoAcordo {
+    text-indent: 0;
   }
 }

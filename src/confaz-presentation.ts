@@ -1,20 +1,29 @@
 /**
  * CONFAZ acts (convênios, ajustes, protocolos) are shown with the official
- * portal's paragraph styles. Acts stored before the portal classes were kept
- * (or collected from another source) have no classes: here each paragraph
- * gets the portal class it would have, from what the text says — publication
- * notes, amendment notes, previous wordings and the act text itself.
+ * portal's paragraph styles. Acts stored without the portal classes (from
+ * the DOU, plain text, or collected before the classes were kept) are
+ * rebuilt here: paragraphs are restored from the act's own structure and
+ * each one gets the portal class it would have — title, publication notes,
+ * summary (ementa), act text, amendment notes and previous wordings.
  */
 
 const ACT_TYPE = /^(CONV[ÊE]NIO|AJUSTE|PROTOCOLO)\b/i
 const PORTAL_CLASS = /\bclass=["'][^"']*\b(TextoAcordo|A5-1TextoAcordo|DataPublicao|Remisso|RedaoAnt)\b/
 
-const TITLE = /^(CONV[ÊE]NIO|AJUSTE(\s+SINIEF)?|PROTOCOLO)\b.{0,60}\d+\s*\/\s*\d{2,4}\s*$/i
-const ACT_KIND = /^(C\s*O\s*N\s*V\s*[ÊE]\s*N\s*I\s*O|A\s*J\s*U\s*S\s*T\s*E|P\s*R\s*O\s*T\s*O\s*C\s*O\s*L\s*O)$/i
-const BODY_START = /^(O\s+Conselho|O\s+Ministro|O\s+Presidente|Os\s+Secret[áa]rios|Cl[áa]usula\b|Art\.?\s*\d)/i
+const TITLE =
+  /^(CONV[ÊE]NIO|AJUSTE|PROTOCOLO|ATO\s+COTEPE)\b[^.]{0,90}?(\d+\s*\/\s*\d{2,4}|\bDE\s+\d{4})\s*\.?$/i
+const ACT_KIND =
+  /^(C\s*O\s*N\s*V\s*[ÊE]\s*N\s*I\s*O|A\s*J\s*U\s*S\s*T\s*E|P\s*R\s*O\s*T\s*O\s*C\s*O\s*L\s*O)$/i
+const BODY_START =
+  /^(O\s+Conselho|O\s+Ministro|O\s+Presidente|Os\s+Secret[áa]rios|A\s+Comiss[ãa]o|"?Cl[áa]usula\b|Art\.?\s*\d)/i
 const PREVIOUS_WORDING = /^(Reda[çc][ãa]o|Nova)\s+(original|anterior)\b/i
 const NOTE =
   /^(Nova\s+reda[çc][ãa]o|Reda[çc][ãa]o\s+dada|Acrescentad[oa]s?|Acrescid[oa]s?|Convalidad[oa]s?|Autorizad[oa]s?\b|Revogad[oa]s?|Renumerad[oa]s?|Inclu[íi]d[oa]s?|Alterad[oa]s?|Prorrogad[oa]s?|Vide\b|Efeitos\b|Ratifica[çc][ãa]o|Retifica[çc][ãa]o|Republica[çc][ãa]o|Publicad[oa]\b)/i
+const ORDINAL =
+  '(?:(?:d[ée]cima|vig[ée]sima|trig[ée]sima|quadrag[ée]sima|quinquag[ée]sima)[\\s-]+)?(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|vig[ée]sima|trig[ée]sima|quadrag[ée]sima|quinquag[ée]sima|[úu]nica)(?:-[A-Z])?'
+// "Cláusula primeira", "Cláusula décima segunda", "Cláusula terceira-A".
+const CLAUSE_HEAD = new RegExp(`^"?Cl[áa]usula\\s+${ORDINAL}(?=\\s)`)
+const COUNCIL_HEAD = /^O\s+Conselho\s+Nacional\s+de\s+Pol[íi]tica\s+Fazend[áa]ria\s*[-–]\s*CONFAZ,/
 
 const normalize = (value: string) =>
   value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -45,46 +54,134 @@ export function textToParagraphs(text: string): string {
     .join('')
 }
 
-/**
- * Adds the portal paragraph classes to CONFAZ HTML that has none. HTML that
- * already carries the official classes is returned unchanged.
- */
-export function withConfazParagraphClasses(html: string, ementa: string): string {
-  if (PORTAL_CLASS.test(html) || typeof DOMParser === 'undefined') return html
+const UPPER = 'A-ZÁÉÍÓÚÂÊÔÃÕÇ'
+// Where an act published as one block of text starts a new paragraph. Each
+// pattern matches the gap (whitespace) between two paragraphs.
+const PARAGRAPH_GAPS: RegExp[] = [
+  // after the title "CONVÊNIO ICMS Nº 113, DE 23 DE SETEMBRO DE 2026"
+  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO)\b[^.]{0,90}?\bDE\s+\d{4})\s+/gi,
+  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO)\b[^.]{0,60}?\d+\s*\/\s*\d{2,4})\s+/gi,
+  // before the preamble and after "resolve celebrar o seguinte"
+  /\s+(?=(?:O|Os)\s+(?:Conselho\s+Nacional|Ministro\s+de\s+Estado|Secret[áa]rios?\s+de\s+Fazenda)\b)/g,
+  /(?<=resolve[^.]{0,60}?\bseguinte)\s+/gi,
+  // around the act kind ("C O N V Ê N I O") before the first clause
+  /(?<=(?:C\s?O\s?N\s?V\s?[ÊE]\s?N\s?I\s?O|AJUSTE|PROTOCOLO))\s+(?=Cl[áa]usula\s)/g,
+  // clauses, items after ":"/";", paragraphs, signatures
+  new RegExp(`(?<=[.:;"”])\\s+(?="?Cl[áa]usula\\s+${ORDINAL}\\s)`, 'g'),
+  /(?<=[:;])\s+(?=[IVXLC]+\s+[-–]\s)/g,
+  /(?<=[.:"”])\s+(?=(?:Par[áa]grafo\s+[úu]nico|§\s*\d))/g,
+  /\s+(?=Presidente\s+do\s+CONFAZ\b)/g,
+  new RegExp(`(?<=\\.)\\s+(?=[${UPPER}]{2,}(?:\\s+[${UPPER}]{1,}){1,6}\\s*$)`, 'g'),
+]
 
-  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
-  const paragraphs = Array.from(doc.body.querySelectorAll('p'))
-  const ementaKey = normalize(ementa)
+/** Restores the paragraphs of an act published as one block of text. */
+export function splitActBlock(text: string): string[] {
+  const cuts = new Set<number>()
+  for (const pattern of PARAGRAPH_GAPS) {
+    for (const match of text.matchAll(pattern)) cuts.add(match.index ?? 0)
+  }
+  const pieces: string[] = []
+  let start = 0
+  for (const cut of [...cuts].sort((a, b) => a - b).concat(text.length)) {
+    const piece = text.slice(start, cut).trim()
+    if (piece) pieces.push(piece)
+    start = cut
+  }
+  return pieces
+}
+
+function formatDouDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-')
+  return `${day}.${month}.${year}`
+}
+
+function leadInBold(paragraph: HTMLParagraphElement, pattern: RegExp): void {
+  const first = paragraph.firstChild
+  if (!first || first.nodeType !== Node.TEXT_NODE) return
+  const text = first.textContent ?? ''
+  const match = pattern.exec(text.trimStart())
+  if (!match?.[0]) return
+  const leading = text.length - text.trimStart().length
+  const bold = paragraph.ownerDocument.createElement('b')
+  bold.textContent = match[0]
+  first.textContent = text.slice(leading + match[0].length)
+  paragraph.insertBefore(bold, first)
+}
+
+/**
+ * HTML of a CONFAZ act with the portal paragraph classes. HTML that already
+ * carries the official classes is returned unchanged; otherwise paragraphs
+ * are restored and classified (`inferred: true`).
+ */
+export function confazDisplayHtml(input: {
+  html: string | null
+  text: string | null
+  ementa: string
+  publishedOn?: string | null
+}): { html: string; inferred: boolean } | null {
+  const source = input.html ?? (input.text ? textToParagraphs(input.text) : null)
+  if (!source) return null
+  if (PORTAL_CLASS.test(source) || typeof DOMParser === 'undefined') {
+    return { html: source, inferred: false }
+  }
+
+  const doc = new DOMParser().parseFromString(`<body>${source}</body>`, 'text/html')
+  const body = doc.body
+  if (!body.querySelector('p') && body.textContent?.trim()) {
+    body.innerHTML = textToParagraphs(body.textContent)
+  }
+
+  // A paragraph holding a whole act (or several of its parts) is split.
+  for (const paragraph of Array.from(body.querySelectorAll('p'))) {
+    if (paragraph.querySelector('table')) continue
+    const text = (paragraph.textContent ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
+    if (text.length < 200) continue
+    const pieces = splitActBlock(text)
+    if (pieces.length < 2) continue
+    for (const piece of pieces) {
+      const part = doc.createElement('p')
+      part.textContent = piece
+      paragraph.before(part)
+    }
+    paragraph.remove()
+  }
+
+  const paragraphs = Array.from(body.querySelectorAll('p')).filter((p) => (p.textContent ?? '').trim())
+  const ementaKey = normalize(input.ementa)
+  let seenTitle = false
   let inBody = false
+  let hasPublicationNote = false
+  let titleParagraph: HTMLParagraphElement | undefined
   // After "Redação anterior/original": the old wording. It spans several
   // paragraphs only when it opens a list (":") — then while items end in ";".
   let expectPreviousWording = false
   let previousWordingList = false
 
-  paragraphs.forEach((paragraph, index) => {
-    const text = (paragraph.textContent ?? '').replace(/\u00a0/g, ' ').trim()
-    if (!text) return
+  for (const paragraph of paragraphs) {
+    const text = (paragraph.textContent ?? '').replace(/ /g, ' ').trim()
     const key = normalize(text)
     let className: string
 
     if (text.startsWith('·')) {
       // Closing remarks the portal lists after the signatures.
       className = 'DataPublicao'
-    } else if (!inBody && index < 3 && TITLE.test(text)) {
+    } else if (!inBody && !seenTitle && text.length < 140 && TITLE.test(text)) {
       className = 'TituloAcordo'
+      seenTitle = true
+      titleParagraph = paragraph
     } else if (ACT_KIND.test(text)) {
       className = 'AcordoTipo'
       inBody = true
     } else if (!inBody && ementaKey.length > 20 && (key === ementaKey || key.startsWith(ementaKey))) {
       className = 'Ementa'
       inBody = true
-    } else if (!inBody && ementaKey.length <= 20 && !NOTE.test(text) && !BODY_START.test(text) && text.length >= 80) {
-      // No stored summary to compare with: the first long paragraph.
+    } else if (!inBody && NOTE.test(text)) {
+      className = 'DataPublicao'
+      if (/^Publicad/i.test(text)) hasPublicationNote = true
+    } else if (!inBody && !BODY_START.test(text)) {
+      // Between the title (and its notes) and the preamble: the summary.
       className = 'Ementa'
       inBody = true
-    } else if (!inBody && !BODY_START.test(text)) {
-      // Before the summary everything is a publication/amendment note.
-      className = 'DataPublicao'
     } else if (PREVIOUS_WORDING.test(text)) {
       className = 'RemissoAnt'
       inBody = true
@@ -101,7 +198,20 @@ export function withConfazParagraphClasses(html: string, ementa: string): string
       className === 'RedaoAnt' && (/:$/.test(text) || (previousWordingList && /;$/.test(text)))
     expectPreviousWording = className === 'RemissoAnt' || previousWordingList
     paragraph.className = className
-  })
 
-  return doc.body.innerHTML
+    if (className === 'TextoAcordo') {
+      leadInBold(paragraph, CLAUSE_HEAD)
+      leadInBold(paragraph, COUNCIL_HEAD)
+    }
+  }
+
+  // The portal shows the DOU publication right under the title.
+  if (titleParagraph && !hasPublicationNote && input.publishedOn) {
+    const note = doc.createElement('p')
+    note.className = 'DataPublicao'
+    note.textContent = `Publicado no DOU de ${formatDouDate(input.publishedOn)}`
+    titleParagraph.after(note)
+  }
+
+  return { html: body.innerHTML, inferred: true }
 }
