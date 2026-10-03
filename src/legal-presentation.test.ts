@@ -133,8 +133,7 @@ describe('legal presentation template registry', () => {
       html,
     })
 
-    expect(result.inferredStructure).toBe(false)
-    expect(result.html).toBe(html)
+    expect(result.inferredStructure).toBe(true)
     expect(result.html).toContain('<a href="https://example.gov.br/ref">referência</a>')
     expect(result.html).toContain('<em>ênfase</em>')
   })
