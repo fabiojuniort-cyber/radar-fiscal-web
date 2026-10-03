@@ -513,7 +513,8 @@ describe('legal presentation template registry', () => {
         '<p>Altera o Protocolo ICMS 22/99, que dispõe sobre as operações realizadas pelos estabelecimentos.</p>',
         '<p>Os Estados do Amazonas e do Rio de Janeiro resolvem celebrar o seguinte</p>',
         '<p>PROTOCOLO</p>',
-        '<p>Cláusula primeira Passa a vigorar com a seguinte redação.</p>',
+        '<p>Cláusula primeira</p>',
+        '<p>Passa a vigorar com a seguinte redação.</p>',
       ].join(''),
     })
 
@@ -521,6 +522,7 @@ describe('legal presentation template registry', () => {
     expect(result.variant).toBe('legacy')
     expect(result.html).toContain('Ementa ProtocoloEmentaLegacy')
     expect(result.html).toContain('AcordoTipo ProtocoloTipoLegacy')
+    expect(result.html).toContain('ProtocoloTextoLegacy ProtocoloRubricaLegacy')
   })
 
   it('keeps consolidated history independent from the classic protocol layout', () => {
@@ -567,6 +569,43 @@ describe('legal presentation template registry', () => {
 
     expect(result.variant).toBe('standard')
     expect(result.html).toContain('Ficam revogados os Protocolos ICMS')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
+  it('does not activate legacy layout from a quoted PROTOCOLO marker', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Altera protocolo anterior na forma que especifica.',
+      html: [
+        '<p>PROTOCOLO ICMS Nº 119, DE 14 DE SETEMBRO DE 2026</p>',
+        '<p>Altera protocolo anterior na forma que especifica.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<blockquote><p>PROTOCOLO</p><p>Cláusula primeira</p></blockquote>',
+        '<p>Cláusula primeira Texto atual.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+    expect(result.html).not.toContain('ProtocoloTextoLegacy')
+  })
+
+  it('does not activate legacy layout from a plain modern marker with inline clauses', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Dispõe sobre procedimento fiscal na forma que especifica.',
+      html: [
+        '<p>PROTOCOLO ICMS Nº 1, DE 2026</p>',
+        '<p>Dispõe sobre procedimento fiscal na forma que especifica.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p>PROTOCOLO</p>',
+        '<p>Cláusula primeira Texto inline moderno.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
     expect(result.html).not.toContain('ProtocoloEmentaLegacy')
   })
 
