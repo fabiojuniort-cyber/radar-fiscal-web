@@ -9,6 +9,11 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
+import {
+  isConfazAct,
+  textToParagraphs,
+  withConfazParagraphClasses,
+} from './confaz-presentation'
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
 import { PublicationTaxonomySection } from './publication-taxonomy'
@@ -162,10 +167,25 @@ export function PublicationDetailPage({
     origins,
   } = detailQuery.data
 
-  // CONFAZ acts keep the visual identity of the official portal.
-  const sourceStyle = origins.some((origin) => origin.sourceCode === 'confaz')
+  // CONFAZ acts (every convênio, ajuste and protocolo) keep the visual
+  // identity of the official portal.
+  const sourceStyle = isConfazAct({
+    agency: publication.agency,
+    actType: publication.actType,
+    sourceCodes: origins.map((origin) => origin.sourceCode),
+  })
     ? 'confaz'
     : undefined
+  const presentationHtml =
+    version?.presentation.format === 'SANITIZED_HTML'
+      ? version.presentation.html
+      : sourceStyle && version?.contentText
+        ? textToParagraphs(version.contentText)
+        : null
+  const displayHtml =
+    presentationHtml && sourceStyle
+      ? withConfazParagraphClasses(presentationHtml, publication.title)
+      : presentationHtml
 
   const reference = referenceLabel(
     publication.actType,
@@ -298,15 +318,15 @@ export function PublicationDetailPage({
             </span>
           </div>
 
-          {version?.presentation.format ===
-          'SANITIZED_HTML' ? (
+          {displayHtml ? (
             <div
               className="publication-preserved-html"
-              data-presentation-format="SANITIZED_HTML"
+              data-presentation-format={
+                version?.presentation.format
+              }
               data-source-style={sourceStyle}
               dangerouslySetInnerHTML={{
-                __html:
-                  version.presentation.html,
+                __html: displayHtml,
               }}
             />
           ) : version?.contentText ? (

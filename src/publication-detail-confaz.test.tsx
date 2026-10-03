@@ -80,9 +80,9 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
     expect(screen.getByText('Publicado no DOU de 06.11.97.')).toHaveClass('DataPublicao')
   })
 
-  it('keeps the TriBusca style for other sources', async () => {
+  it('uses the CONFAZ style for convênios collected from other sources too', async () => {
     const body = await renderDetail('dou')
-    expect(body).not.toHaveAttribute('data-source-style')
+    expect(body).toHaveAttribute('data-source-style', 'confaz')
   })
 
   it('shows until when the act is in force, from its current wording', async () => {
