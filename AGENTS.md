@@ -1,4 +1,4 @@
-# TriBusca — instruções de continuidade do frontend
+# TriFaros — instruções de continuidade do frontend
 
 Antes de qualquer implementação, leia o contexto durável em:
 - https://github.com/fabiojuniort-cyber/tribusca-control/blob/main/contexts/WEB.md
@@ -9,6 +9,10 @@ Antes de qualquer implementação, leia o contexto durável em:
 A Issue define escopo, autorização e critérios. Revalide o estado vivo deste repositório, a API real do backend e as decisões antes de escrever código. Não tratar protótipo como frontend definitivo nem iniciar trabalho por conta de um cartão no Projects.
 
 A cada marco relevante, registre PR, testes, limitações e handoff na Issue; atualize documentação técnica neste repositório no mesmo PR quando comportamento/contrato mudar. O Gerente Geral audita e atualiza os contextos gerenciais no `tribusca-control`. Não afirmar sincronização automática entre chats.
+
+## Identidade vigente
+
+BRAND-02 (tribusca-control#64) define **TriFaros** como a identidade comercial vigente e prevalece sobre referências de marca da identidade v1. Decisões históricas, nomes reais de infraestrutura e identificadores legados não devem ser reescritos retroativamente. Consulte `docs/BRAND_02.md`.
 
 ## Modelos visuais e estado publicado
 
@@ -80,7 +84,7 @@ A experiência autenticada de Empresas segue estas regras:
 - mostrar CNAE principal e todos os secundários retornados/persistidos;
 - permitir edição manual de nome, endereço e CNAEs, mantendo o CNPJ bloqueado como identidade cadastral;
 - `Consulta API` atualiza novamente os dados cadastrais do estabelecimento;
-- o Perfil Tributário deve separar visualmente `Contexto cadastral automático`, `Contexto fiscal declarado` e `Taxonomia TriBusca`;
+- o Perfil Tributário deve separar visualmente `Contexto cadastral automático`, `Contexto fiscal declarado` e `Taxonomia TriFaros`;
 - opções taxonômicas vêm do backend e de release publicada; salvar códigos canônicos, não labels inventados no frontend;
 - quando não houver release publicada, mostrar estado transparente de indisponibilidade e não fabricar opções.
 

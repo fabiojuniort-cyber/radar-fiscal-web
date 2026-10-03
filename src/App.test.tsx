@@ -58,7 +58,7 @@ function renderApp(route = '/') {
   )
 }
 
-describe('TriBusca release candidate WEB-11', () => {
+describe('TriFaros release candidate WEB-11', () => {
   it('renders the approved public navigation', () => {
     renderApp()
 
@@ -138,7 +138,7 @@ describe('TriBusca release candidate WEB-11', () => {
       }),
     ))
 
-    await screen.findByRole('heading', { name: 'Entrar na TriBusca' })
+    await screen.findByRole('heading', { name: 'Entrar na TriFaros' })
     expect(screen.getByRole('status')).toHaveTextContent('Conta criada com sucesso')
     expect(screen.getByLabelText('E-mail')).toHaveValue('nova.pessoa@example.com')
   })
@@ -566,8 +566,8 @@ describe('TriBusca release candidate WEB-11', () => {
   it('uses the official light footer signature without CSS recoloring', () => {
     renderApp()
 
-    const footerLogo = screen.getAllByRole('img', { name: 'TriBusca' }).at(-1)
-    expect(footerLogo).toHaveAttribute('src', '/brand/tribusca-logo-horizontal-light.png')
+    const footerBrand = screen.getAllByRole('img', { name: 'TriFaros' }).at(-1)
+    expect(footerBrand?.querySelector('img')).toHaveAttribute('src', '/brand/trifaros-logo-horizontal.png')
   })
 
   it('keeps text labels for every Sonar level', () => {

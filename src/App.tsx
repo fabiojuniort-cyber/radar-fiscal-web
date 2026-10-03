@@ -29,6 +29,7 @@ import {
 } from './content'
 import { AuthSessionProvider, useAuthSession } from './auth-session'
 import { AuthenticatedProductPanel } from './authenticated-product-panel'
+import { BrandMark } from './brand-mark'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
@@ -268,12 +269,8 @@ function SiteHeader({ onAuth }: { onAuth: OpenAuth }) {
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link to="/" className="brand-link" aria-label="TriBusca — página inicial" onClick={closeMobile}>
-          <img
-            src="/brand/tribusca-logo-horizontal-light.png"
-            alt="TriBusca"
-            className="brand-horizontal"
-          />
+        <Link to="/" className="brand-link" aria-label="TriFaros — página inicial" onClick={closeMobile}>
+          <BrandMark />
         </Link>
 
         <nav aria-label="Navegação principal" className="nav-links">
@@ -336,7 +333,7 @@ function HomePage() {
             <span className="eyebrow">Monitoramento e Inteligência Tributária</span>
             <h1>Saiba o que mudou. Entenda o que importa. Chegue à fonte oficial.</h1>
             <p className="hero-copy">
-              O TriBusca acompanha fontes oficiais e organiza mudanças tributárias para sua empresa
+              O TriFaros acompanha fontes oficiais e organiza mudanças tributárias para sua empresa
               chegar mais rápido ao que merece atenção.
             </p>
             <div className="hero-actions">
@@ -360,7 +357,7 @@ function HomePage() {
           <SectionHeading
             eyebrow="Portfólio"
             title="Uma base oficial. Seis formas de transformar informação em contexto."
-            copy="Cada recurso resolve uma etapa diferente da jornada, sem misturar fato oficial, inteligência TriBusca e conteúdo gerado por IA."
+            copy="Cada recurso resolve uma etapa diferente da jornada, sem misturar fato oficial, inteligência TriFaros e conteúdo gerado por IA."
           />
           <div className="feature-grid feature-grid-six">
             {products.map((product) => (
@@ -391,7 +388,7 @@ function HomePage() {
             <span className="eyebrow">Rastreabilidade</span>
             <h2>A fonte oficial continua no centro.</h2>
             <p>
-              A TriBusca organiza o caminho até a evidência: origem, versão, histórico e contexto
+              A TriFaros organiza o caminho até a evidência: origem, versão, histórico e contexto
               permanecem distinguíveis das camadas de inteligência.
             </p>
           </div>
@@ -483,7 +480,7 @@ function CoveragePage() {
     <main>
       <PageHero
         eyebrow="Cobertura"
-        title="Fontes oficiais acompanhadas pela TriBusca."
+        title="Fontes oficiais acompanhadas pela TriFaros."
         copy="O status operacional vem da API pública oficial. Enquanto uma fonte não tiver dado público disponível, a interface mantém “—” sem inventar sucesso ou métricas."
       />
       <section className="section">
@@ -693,7 +690,7 @@ function HowItWorksPage() {
       <PageHero
         eyebrow="Como funciona"
         title="Da fonte oficial ao contexto da empresa."
-        copy="A TriBusca separa coleta, organização, afinidade, entrega e compreensão para manter cada etapa explicável."
+        copy="A TriFaros separa coleta, organização, afinidade, entrega e compreensão para manter cada etapa explicável."
       />
       <section className="section">
         <div className="container process-list">
@@ -798,7 +795,7 @@ function AuthModal({
           }}
         >
           <Dialog.Close className="dialog-close" aria-label="Fechar"><X size={18} /></Dialog.Close>
-          <img src="/brand/tribusca-logo-horizontal-light.png" alt="TriBusca" className="dialog-logo" />
+          <BrandMark compact />
           {view === 'login' && (
             <LoginForm
               onClose={onClose}
@@ -862,8 +859,8 @@ function LoginForm({
 
   return (
     <>
-      <Dialog.Title>Entrar na TriBusca</Dialog.Title>
-      <p className="dialog-intro">Acesse sua conta TriBusca.</p>
+      <Dialog.Title>Entrar na TriFaros</Dialog.Title>
+      <p className="dialog-intro">Acesse sua conta TriFaros.</p>
       {accountCreated && (
         <p className="auth-success" role="status">
           Conta criada com sucesso. Entre com a senha que você acabou de definir.
@@ -894,7 +891,7 @@ function ForgotPassword({ onView }: { onView: (view: AuthView) => void }) {
     <>
       <Dialog.Title>Recuperar senha</Dialog.Title>
       <p className="dialog-intro">
-        Para recuperar o acesso, entre em contato pelo canal de suporte da TriBusca.
+        Para recuperar o acesso, entre em contato pelo canal de suporte da TriFaros.
       </p>
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
     </>
@@ -948,7 +945,7 @@ function PasswordFlow({
         case 'email_already_registered':
           return 'Este e-mail já está cadastrado. Use Entrar para acessar a conta.'
         case 'company_already_registered':
-          return 'Este CNPJ já está associado a uma conta TriBusca. Não foi criado um segundo tenant.'
+          return 'Este CNPJ já está associado a uma conta TriFaros. Não foi criado um segundo tenant.'
         case 'invalid_password':
           return 'A senha não atende aos requisitos ou a confirmação não coincide.'
         case 'invalid_signup_data':
@@ -978,7 +975,7 @@ function PasswordFlow({
       <Dialog.Title>{mode === 'signup' ? 'Criar conta' : 'Nova senha'}</Dialog.Title>
       <p className="dialog-intro">
         {mode === 'signup'
-          ? '7 dias para conhecer a TriBusca. Crie sua conta com seus próprios dados de acesso.'
+          ? '7 dias para conhecer a TriFaros. Crie sua conta com seus próprios dados de acesso.'
           : 'Defina uma nova senha para sua conta.'}
       </p>
       <form className="auth-form" onSubmit={submit}>
@@ -1091,6 +1088,9 @@ function LegalSignupDialog({
             >
               Versão {document.version} · Vigente desde {document.effectiveDate}.
             </Dialog.Description>
+            <p className="legal-dialog-summary legal-brand-history-note">
+              TriFaros é a nova marca da plataforma anteriormente denominada TriBusca. Este documento conserva a denominação da versão publicada.
+            </p>
             <p className="legal-dialog-summary">{document.intro}</p>
             <div className="legal-dialog-scroll">
               {document.sections.map((section) => (
@@ -1198,7 +1198,7 @@ function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-wrap">
-        <img src="/brand/tribusca-logo-horizontal-dark.png" alt="TriBusca" className="footer-logo" />
+        <BrandMark surface="dark" imageClassName="footer-logo" />
         <p>Monitoramento e Inteligência Tributária.</p>
         <p className="footer-note">Fonte oficial no centro.</p>
       </div>

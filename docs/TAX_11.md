@@ -33,7 +33,7 @@ Issue: fabiojuniort-cyber/tribusca-control#61 · Backend: fabiojuniort-cyber/rad
   cabeçalho fixo ao rolar, Enter/↑/↓ entre linhas, sinônimos como etiquetas (vários por
   linha; vírgula, ponto e vírgula ou Enter separam).
 - “Importar planilha (carga massiva)” sempre visível (desabilitado sem rascunho), com guia
-  de preenchimento; “x” nas colunas de marcação; “Código TriBusca” opcional.
+  de preenchimento; “x” nas colunas de marcação; na planilha, “Código TriBusca” (cabeçalho legado de compatibilidade, exibido na tabela como “Código TriFaros”) opcional.
 - Motivo das alterações opcional (padrão “Curadoria da taxonomia”); criar rascunho não
   depende mais dele.
 - Catálogos: conferência mostra o resultado e libera “Carregar”; cClassTrib explica o

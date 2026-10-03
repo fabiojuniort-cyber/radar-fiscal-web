@@ -646,6 +646,10 @@ function DimensionEditor({
       <details className="tc-hint tc-import-help">
         <summary>Como montar a planilha de carga massiva</summary>
         <p>
+          Na tabela, o campo aparece como <b>“Código TriFaros”</b>. Nas planilhas de importação e exportação,
+          o cabeçalho legado <b>“Código TriBusca”</b> é mantido para preservar a compatibilidade dos arquivos.
+        </p>
+        <p>
           Use o arquivo do “Exportar planilha” como modelo: uma linha por item, colunas Grupo · Item · {codeLabel} ·
           Sinônimos · No perfil · Ordem · Classificar pelo nome · Código TriBusca. Só “Item” é obrigatório.
         </p>

@@ -38,15 +38,19 @@ jobs:
       - name: Validate official PNG assets
         run: |
           mkdir -p playwright-artifacts
+          set -o pipefail
           node scripts/validate-png.mjs \
             public/brand/tribusca-logo-horizontal-dark.png \
-            public/brand/tribusca-icon.png | tee playwright-artifacts/PNG_INTEGRITY.txt
+            public/brand/tribusca-icon.png \
+            public/brand/trifaros-logo-horizontal.png | tee playwright-artifacts/PNG_INTEGRITY.txt
           node --test scripts/validate-png.test.mjs | tee playwright-artifacts/PNG_NEGATIVE_TESTS.txt
           printf '%s  %s\n' \
             'c541566c88a53d4dac0e473f430c4d9a26bb40c9ecaa47d96ae8a8998e37da99' \
             'public/brand/tribusca-logo-horizontal-dark.png' \
             '7f289e7e09eb914464f14bd86178d7d73a6066daae8d3ee269f7a34f4acc6268' \
             'public/brand/tribusca-icon.png' \
+            'a9e4dab1392861c1927629bd181a60c462c32514e9427cc2ef8e3da0e2a64b4f' \
+            'public/brand/trifaros-logo-horizontal.png' \
             | tee playwright-artifacts/BRAND_ASSETS.sha256 \
             | sha256sum --check --strict
 
