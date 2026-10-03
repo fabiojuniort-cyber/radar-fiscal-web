@@ -70,21 +70,24 @@
   letter-spacing: .02em;
 }
 
+/* The act reference ("ATO COTEPE/ICMS 105/2026") is the heading people
+   look for; the summary under it reads at body size. */
 .publication-document-reference {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   color: #315f8f;
-  font-size: 13px;
+  font-size: 19px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: .03em;
 }
 
 .publication-document-header h1 {
   margin: 0;
   max-width: 900px;
-  font-size: clamp(26px, 4vw, 42px);
-  line-height: 1.14;
-  letter-spacing: -.025em;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: normal;
 }
 
 .publication-document-meta {
