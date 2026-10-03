@@ -1249,3 +1249,92 @@
 .tc-toolbar .tc-search {
   flex: 1 1 260px;
 }
+
+/* ---- Centered page on every tab ---------------------------------------- */
+
+.tc-app {
+  --tc-page: 1760px;
+  --tc-gutter: max(28px, calc((100% - var(--tc-page)) / 2));
+}
+
+.tc-header,
+.tc-status {
+  padding-left: var(--tc-gutter);
+  padding-right: var(--tc-gutter);
+}
+
+.tc-main {
+  max-width: none;
+  padding-left: var(--tc-gutter);
+  padding-right: var(--tc-gutter);
+}
+
+@media (max-width: 680px) {
+  .tc-app {
+    --tc-gutter: 16px;
+  }
+}
+
+/* ---- Grid fits the screen; scroll only when it really does not fit ----- */
+
+.tc-grid .is-select {
+  width: 44px;
+}
+
+.tc-grid .is-group {
+  min-width: 160px;
+}
+
+.tc-grid .is-label {
+  min-width: 210px;
+}
+
+.tc-grid .is-codes {
+  min-width: 120px;
+}
+
+.tc-grid .is-synonyms {
+  min-width: 190px;
+}
+
+.tc-grid thead th.is-narrow {
+  white-space: normal;
+  width: 76px;
+  min-width: 64px;
+}
+
+.tc-grid thead th.is-narrow .tc-grid-sort {
+  height: auto;
+  min-height: 34px;
+  line-height: 1.15;
+  text-align: center;
+  padding: 4px 6px !important;
+}
+
+.tc-grid-code {
+  white-space: normal !important;
+  word-break: break-all;
+  min-width: 120px;
+}
+
+.tc-grid .is-actions {
+  width: 80px;
+}
+
+/* The whole header block (titles + filters) sticks together, whatever the
+   title height. */
+.tc-grid thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.tc-grid thead th,
+.tc-grid thead tr.tc-grid-filters th {
+  position: static;
+  top: auto;
+}
+
+.tc-grid .is-group {
+  min-width: 190px;
+}
