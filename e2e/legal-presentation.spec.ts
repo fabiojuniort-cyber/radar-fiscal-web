@@ -97,7 +97,7 @@ const fixture = `
       <p class="Ementa">Altera relação de empresas nacionais beneficiárias.</p>
       <p class="AtoCotepeAnexoTitulo">Anexo único</p>
       <div class="legal-table-scroll" role="region" tabindex="0" aria-label="Tabela da legislação">
-        <table><tbody>
+        <table class="AtoCotepeEmpresaTable"><tbody>
           <tr><td colspan="2" class="AtoCotepeUfHeader">SÃO PAULO</td></tr>
           <tr><td>814.</td><td>DIVISION TURBOS BRASIL LTDA<br>CNPJ: 17.524.167/0001-54<br>IE: 669.738.227.110</td></tr>
         </tbody></table>
@@ -246,10 +246,10 @@ test('DESIGN-01C — ATO COTEPE/ICMS preserva moderno, anexo e histórico', asyn
   await expect(historical.locator('.Ementa')).toHaveCSS('font-weight', '400')
   await expect(historical.locator('.AtoCotepeDeclara')).toHaveCSS('text-align', 'center')
 
-  await expect(page.getByTestId('ato-cotepe-105').locator('.TabelaTitulo')).toHaveCSS(
-    'text-align',
-    'left',
-  )
+  const ato105Table = page.getByTestId('ato-cotepe-105').locator('table')
+  await expect(ato105Table.locator('.TabelaTitulo')).toHaveCSS('text-align', 'left')
+  await expect(ato105Table).toHaveCSS('max-width', '100%')
+  await expect(ato105Table).toHaveCSS('margin-left', '0px')
 
   const viewportOverflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
