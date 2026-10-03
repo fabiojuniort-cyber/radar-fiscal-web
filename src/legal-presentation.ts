@@ -49,8 +49,14 @@ const normalizeCode = (value: string | null) =>
     .toUpperCase()
     .replace(/[\s/-]+/g, '_')
 
-const HISTORY_CLASS =
-  /\b(Remisso|RemissoAnt|RedaoAnt|A8-1Remissao|A8-2RemissaoAnt|A8-3RedacaoAnt)\b/
+const HISTORY_CLASSES = new Set([
+  'Remisso',
+  'RemissoAnt',
+  'RedaoAnt',
+  'A8-1Remissao',
+  'A8-2RemissaoAnt',
+  'A8-3RedacaoAnt',
+])
 
 const OFFICIAL_EMENTA_CLASS =
   /\bclass=["'][^"']*\bEmenta\b[^"']*["']/i
@@ -58,11 +64,41 @@ const OFFICIAL_EMENTA_CLASS =
 const ISOLATED_CLAUSE =
   /<p\b[^>]*>\s*(?:<(?:b|strong)\b[^>]*>\s*)?Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)(?:\s*<\/(?:b|strong)>)?\s*<\/p>/i
 
+function hasHistoryClass(html: string): boolean {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+    return Array.from(doc.body.querySelectorAll('[class]')).some((element) =>
+      Array.from(element.classList).some((className) => HISTORY_CLASSES.has(className)),
+    )
+  }
+
+  return /\bclass=["'][^"']*\b(?:Remisso|RemissoAnt|RedaoAnt|A8-1Remissao|A8-2RemissaoAnt|A8-3RedacaoAnt)\b[^"']*["']/i.test(
+    html,
+  )
+}
+
+function wrapLegalTables(html: string): string {
+  if (typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+  for (const table of Array.from(doc.body.querySelectorAll('table'))) {
+    if (table.closest('.legal-table-scroll')) continue
+    const wrapper = doc.createElement('div')
+    wrapper.className = 'legal-table-scroll'
+    wrapper.setAttribute('role', 'region')
+    wrapper.setAttribute('tabindex', '0')
+    wrapper.setAttribute('aria-label', 'Tabela da legislação')
+    table.before(wrapper)
+    wrapper.append(table)
+  }
+  return doc.body.innerHTML
+}
+
 function convenioVariant(
   sourceHtml: string | null,
   renderedHtml: string,
 ): LegalPresentationVariant {
-  if (HISTORY_CLASS.test(renderedHtml)) {
+  if (hasHistoryClass(renderedHtml)) {
     return 'consolidated'
   }
 
@@ -83,7 +119,10 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
   version: '1.0.0',
   matches: ({ actType }) => {
     const code = normalizeCode(actType)
-    return code === 'CONVENIO_ICMS' || code.startsWith('CONVENIO_ICMS_')
+    return (
+      code === 'CONVENIO_ICMS' ||
+      /^CONVENIO_ICMS_\d{1,3}_\d{2,4}$/.test(code)
+    )
   },
   render: (input) => {
     if (input.presentationFormat === 'PRESERVED_TEXT') {
@@ -94,7 +133,7 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
       }
     }
 
-    if (!input.html) {
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
       return {
         html: null,
         inferredStructure: false,
@@ -119,17 +158,18 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
       }
     }
 
+    const displayHtml = wrapLegalTables(view.html)
     return {
-      html: view.html,
+      html: displayHtml,
       inferredStructure: view.inferred,
-      variant: convenioVariant(input.html, view.html),
+      variant: convenioVariant(input.html, displayHtml),
     }
   },
 }
 
 /**
- * Registry of visual contracts for legal families already homologated by
- * TriBusca. A document only receives a family template when its act type is
+ * Registry of visual contracts for legal families under controlled
+ * TriBusca audit. A document only receives a family template when its act type is
  * an unambiguous match; source/agency alone never selects a family template.
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
