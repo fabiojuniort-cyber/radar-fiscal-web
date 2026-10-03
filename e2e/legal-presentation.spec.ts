@@ -132,6 +132,72 @@ const fixture = `
 
     <section
       class="publication-preserved-html"
+      data-legal-template="PROTOCOLO_ICMS"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="standard"
+      data-testid="protocolo-119"
+    >
+      <p class="TituloAcordo">PROTOCOLO ICMS Nº 119, DE 14 DE SETEMBRO DE 2026</p>
+      <p class="DataPublicao">Publicado no DOU de 15.09.2026.</p>
+      <p class="Ementa">Altera protocolo anterior na forma que especifica.</p>
+      <p class="TextoAcordo">Os Estados signatários resolvem celebrar o seguinte</p>
+      <p class="AcordoTipo">P R O T O C O L O</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Fica alterada a cláusula primeira.</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
+      data-legal-template="PROTOCOLO_ICMS"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="standard"
+      data-testid="protocolo-50"
+    >
+      <p class="TituloAcordo">PROTOCOLO ICMS 50, DE 15 DE DEZEMBRO DE 2017</p>
+      <p class="DataPublicao">Publicado no DOU de 18.12.17.</p>
+      <p class="DataPublicao">Retificação no DOU de 20.12.17.</p>
+      <p class="Ementa">Revoga protocolos que especifica.</p>
+      <p class="AcordoTipo">P R O T O C O L O</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Ficam revogados os Protocolos ICMS 1/01 e 2/02.</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
+      data-legal-template="PROTOCOLO_ICMS"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="legacy"
+      data-testid="protocolo-53"
+    >
+      <p class="TituloAcordo">PROTOCOLO ICMS 53/02</p>
+      <p class="DataPublicao">Publicado no DOU de 20.12.02</p>
+      <p class="DataPublicao">Retificação no DOU de 05.02.03</p>
+      <p class="Ementa ProtocoloEmentaLegacy">Altera o Protocolo ICMS 22/99 nas operações que especifica.</p>
+      <p class="TextoAcordo">Os Estados do Amazonas e do Rio de Janeiro resolvem celebrar o seguinte</p>
+      <p class="AcordoTipo ProtocoloTipoLegacy">PROTOCOLO</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Passa a vigorar com a seguinte redação.</p>
+      <p class="TextoAcordo">Natal, RN, 13 de dezembro de 2002.</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
+      data-legal-template="PROTOCOLO_ICMS"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="consolidated"
+      data-testid="protocolo-22"
+    >
+      <p class="DataPublicao">REVOGADO</p>
+      <p class="TituloAcordo">PROTOCOLO ICMS 22/99</p>
+      <p class="DataPublicao">Publicado no DOU de 18.11.99.</p>
+      <p class="DataPublicao">Alterado pelo Prot. ICMS 53/02.</p>
+      <p class="Ementa">Dispõe sobre operações realizadas por estabelecimentos industriais.</p>
+      <p class="AcordoTipo">P R O T O C O L O</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Texto vigente.</p>
+      <p class="Remisso">Nova redação dada pelo Prot. ICMS 61/19.</p>
+      <p class="RemissoAnt">Redação original.</p>
+      <p class="RedaoAnt">Cláusula primeira Texto original.</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
       data-legal-template="ATO_COTEPE_PMPF"
       data-legal-template-version="1.0.0"
       data-legal-variant="pmpf-table"
@@ -263,6 +329,54 @@ test('DESIGN-01C — ATO COTEPE/ICMS preserva moderno, anexo e histórico', asyn
   for (const variant of ['ato-cotepe-standard', 'ato-cotepe-annex', 'ato-cotepe-historical'] as const) {
     await page.getByTestId(variant).screenshot({
       path: path.join(evidenceDir, testInfo.project.name + '-' + variant + '.png'),
+    })
+  }
+})
+
+
+test('DESIGN-01C — Protocolo ICMS preserva atual, legado e consolidado', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate((html) => {
+    document.body.innerHTML = html
+  }, fixture)
+
+  const current = page.getByTestId('protocolo-119')
+  await expect(current.locator('.TituloAcordo')).toHaveCSS('text-align', 'center')
+  await expect(current.locator('.DataPublicao')).toHaveCSS('color', 'rgb(255, 0, 0)')
+  await expect(current.locator('.AcordoTipo')).toHaveCSS('text-align', 'center')
+  expect(
+    await current.locator('.Ementa').evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).marginLeft),
+    ),
+  ).toBeGreaterThan(0)
+
+  const current50 = page.getByTestId('protocolo-50')
+  await expect(current50.locator('.DataPublicao')).toHaveCount(2)
+  await expect(current50).toContainText('Ficam revogados os Protocolos ICMS')
+
+  const legacy = page.getByTestId('protocolo-53')
+  await expect(legacy.locator('.ProtocoloEmentaLegacy')).toHaveCSS('margin-left', '0px')
+  await expect(legacy.locator('.ProtocoloTipoLegacy')).toHaveCSS('letter-spacing', 'normal')
+  await expect(legacy).toContainText('Natal, RN, 13 de dezembro de 2002.')
+
+  const consolidated = page.getByTestId('protocolo-22')
+  await expect(consolidated.locator('.Remisso')).toHaveCSS('color', 'rgb(255, 0, 0)')
+  await expect(consolidated.locator('.RedaoAnt')).toHaveCSS('color', 'rgb(0, 128, 0)')
+  await expect(consolidated).toContainText('REVOGADO')
+
+  const viewportOverflow = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }))
+  expect(viewportOverflow.scrollWidth).toBeLessThanOrEqual(viewportOverflow.clientWidth + 1)
+
+  const evidenceDir = path.join('playwright-artifacts', 'screenshots')
+  await mkdir(evidenceDir, { recursive: true })
+  for (const reference of ['protocolo-119', 'protocolo-50', 'protocolo-53', 'protocolo-22'] as const) {
+    await page.getByTestId(reference).screenshot({
+      path: path.join(evidenceDir, testInfo.project.name + '-' + reference + '.png'),
     })
   }
 })
