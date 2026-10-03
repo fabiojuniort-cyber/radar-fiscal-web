@@ -238,11 +238,32 @@ export function PublicationDetailPage({
                 publication.publishedOn,
               )}
             </span>
-            {publication.effectiveOn && (
-              <span>
+            {(publication.effectiveOn ||
+              publication.effectiveUntil) && (
+              <span
+                title={
+                  publication.effectiveUntil?.amendedBy
+                    ? `Prazo dado pelo ${publication.effectiveUntil.amendedBy}`
+                    : undefined
+                }
+              >
                 Vigência:{' '}
-                {formatPublicDate(
-                  publication.effectiveOn,
+                {publication.effectiveOn &&
+                  formatPublicDate(
+                    publication.effectiveOn,
+                  )}
+                {publication.effectiveUntil && (
+                  <>
+                    {publication.effectiveOn
+                      ? ' até '
+                      : 'até '}
+                    {formatPublicDate(
+                      publication.effectiveUntil.date,
+                    )}
+                    {publication.effectiveUntil.date <
+                      new Date().toISOString().slice(0, 10) &&
+                      ' (encerrada)'}
+                  </>
                 )}
               </span>
             )}

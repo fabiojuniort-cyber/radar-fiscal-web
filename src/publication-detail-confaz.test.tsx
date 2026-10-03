@@ -12,7 +12,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 }
 
-function detail(sourceCode: string) {
+function detail(sourceCode: string, effectiveUntil: unknown = null) {
   return {
     publication: {
       id: 'pub-1',
@@ -24,6 +24,7 @@ function detail(sourceCode: string) {
       uf: null,
       publishedOn: '1997-11-06',
       effectiveOn: '1997-11-06',
+      effectiveUntil,
       officialUrl: 'https://www.confaz.fazenda.gov.br/legislacao/convenios/1997/CV100_97',
       firstCollectedAt: '2026-10-03T06:18:40Z',
       lastSeenAt: '2026-10-03T06:18:40Z',
@@ -55,9 +56,11 @@ function detail(sourceCode: string) {
   }
 }
 
-async function renderDetail(sourceCode: string) {
+async function renderDetail(sourceCode: string, effectiveUntil: unknown = null) {
   const apiFetch = vi.fn(async (input: RequestInfo | URL) =>
-    String(input) === '/api/v1/publications/pub-1' ? json(detail(sourceCode)) : json({ error: 'not_found' }, 404),
+    String(input) === '/api/v1/publications/pub-1'
+      ? json(detail(sourceCode, effectiveUntil))
+      : json({ error: 'not_found' }, 404),
   ) as unknown as ProductApiFetch
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
@@ -80,5 +83,17 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
   it('keeps the TriBusca style for other sources', async () => {
     const body = await renderDetail('dou')
     expect(body).not.toHaveAttribute('data-source-style')
+  })
+
+  it('shows until when the act is in force, from its current wording', async () => {
+    await renderDetail('confaz', { date: '2027-12-31', basis: 'CURRENT_VALIDITY_CLAUSE', amendedBy: 'Conv. ICMS 79/25' })
+    const validity = screen.getByText(/Vigência:/)
+    expect(validity).toHaveTextContent('Vigência: 06/11/1997 até 31/12/2027')
+    expect(validity).toHaveAttribute('title', 'Prazo dado pelo Conv. ICMS 79/25')
+  })
+
+  it('keeps only the start date when the end is unknown', async () => {
+    await renderDetail('confaz')
+    expect(screen.getByText(/Vigência:/)).toHaveTextContent(/^Vigência: 06\/11\/1997$/)
   })
 })
