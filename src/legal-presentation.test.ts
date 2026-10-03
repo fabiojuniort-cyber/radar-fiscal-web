@@ -28,6 +28,9 @@ describe('legal presentation template registry', () => {
     )
 
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/ICMS' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/PMPF' })?.id).toBe(
+      'ATO_COTEPE_PMPF',
+    )
     expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'CONVENIO_ICMS_X' })).toBeNull()
@@ -161,6 +164,177 @@ describe('legal presentation template registry', () => {
     expect(result.inferredStructure).toBe(true)
     expect(result.html).toContain('<a href="https://example.gov.br/ref">referência</a>')
     expect(result.html).toContain('<em>ênfase</em>')
+  })
+
+  it('restores the fixed PMPF table from a legacy flattened capture', () => {
+    // Values transcribed from the official CONFAZ PMPF 26/2026 table used
+    // as the visual reference for this regression.
+    const rows = [
+      '1 AC - **4,9363 - - - -',
+      '2 AL 3,4910 5,1155 4,5764 - - -',
+      '3 AM - *5,1620 *3,3810 *1,8336 - -',
+      '4 AP - 5,8100 - - - -',
+      '5 BA - 4,5900 3,6940 - - -',
+      '6 CE - 4,9850 5,1334 - - -',
+      '7 DF - *4,4600 6,7800 - - -',
+      '8 ES - **4,6593 *4,4795 - - -',
+      '9 GO - *4,0929 - - - -',
+      '10 MA - **4,9900 - - - -',
+      '11 MG *8,0232 *4,2808 *5,1447 - - -',
+      '12 MS *6,9523 *3,9505 *4,5776 - - -',
+      '13 MT **7,1276 3,7943 **3,8069 3,6700 - -',
+      '14 PA - 4,5793 - - - -',
+      '15 PB *6,2783 **4,6475 **5,0573 - 4,9389 4,9389',
+      '16 PE - **4,8900 - - - -',
+      '17 PI 5,6800 4,6400 - - - -',
+      '18 PR - *4,0351 *4,7651 - - -',
+      '19 RJ 2,4456 *4,7200 **4,4800 - - -',
+      '20 RN - 5,2500 5,0300 - - -',
+      '21 RO - 5,0790 - - 4,0864 -',
+      '22 RR *8,2200 **5,3500 - - - -',
+      '23 RS - **4,2493 *5,3458 - - -',
+      '24 SC - **4,2957 **4,7648 - - -',
+      '25 SE *7,4090 **5,2590 *4,8090 - - -',
+      '26 SP - *3,7700 - - - -',
+      '27 TO *9,8200 **4,9600 - - - -',
+    ].join(' ')
+    const text = [
+      'Secretaria Executiva ATO COTEPE/PMPF Nº 26, DE 24 DE SETEMBRO DE 2026',
+      'Preço médio ponderado ao consumidor final (PMPF) de combustíveis.',
+      'O Secretário Executivo da Secretaria Executiva do Conselho Nacional de Política Fazendária - CONFAZ, no uso das atribuições legais;',
+      'CONSIDERANDO as informações recebidas das unidades federadas, TORNA PÚBLICO que os Estados adotarão os seguintes preços:',
+      'ITEM UF QAV AEHC GNV GNI ÓLEO COMBUSTÍVEL (R$/ litro) (R$/ litro) (R$/ m³) (R$/ m³) (R$/ litro) (R$/ Kg)',
+      rows,
+      'Notas Explicativas: a) * valores alterados de PMPF; b) ** valores alterados de PMPF que apresentam redução.',
+    ].join(' ')
+
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/PMPF',
+      sourceCodes: ['dou'],
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text,
+      ementa: 'Preço médio ponderado ao consumidor final (PMPF) de combustíveis.',
+      publishedOn: '2026-09-25',
+    })
+
+    expect(result.templateId).toBe('ATO_COTEPE_PMPF')
+    expect(result.templateVersion).toBe('1.0.0')
+    expect(result.variant).toBe('pmpf-table')
+    expect(result.inferredStructure).toBe(true)
+    expect(result.html).toContain('<table>')
+    expect(result.html).toContain('rowspan="2"')
+    expect(result.html).toContain('colspan="2"')
+    expect(result.html).toContain('<td>27</td><td>TO</td><td>*9,8200</td><td>**4,9600</td>')
+    expect(result.html).toContain('<td>15</td><td>PB</td><td>*6,2783</td><td>**4,6475</td><td>**5,0573</td><td>-</td><td>4,9389</td><td>4,9389</td>')
+    expect(result.html).toContain('Notas Explicativas:')
+    expect(result.html).toContain('class="TituloAcordo"')
+    expect(result.html).not.toContain('Secretaria Executiva ATO COTEPE/PMPF')
+    expect(result.html).toContain('Publicado no DOU de 25.09.2026')
+  })
+
+  it('does not invent a PMPF table from an incomplete 26-row sequence', () => {
+    const ufs = [
+      'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+      'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+      'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP',
+    ]
+    const rows = ufs
+      .map((uf, index) => `${index + 1} ${uf} - 4,0000 - - - -`)
+      .join(' ')
+
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/PMPF',
+      sourceCodes: ['dou'],
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text:
+        'ATO COTEPE/PMPF Nº 1, DE 1 DE JANEIRO DE 2026 ' +
+        'ITEM UF QAV AEHC GNV GNI ÓLEO COMBUSTÍVEL ' +
+        rows,
+    })
+
+    expect(result.templateId).toBe('ATO_COTEPE_PMPF')
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('<table')
+  })
+
+  it('keeps legacy PMPF text intact when a row has an unexpected extra value', () => {
+    const ufs = [
+      'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+      'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+      'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+    ]
+    const rows = ufs
+      .map((uf, index) =>
+        `${index + 1} ${uf} - 4,0000 - - - -${index === 0 ? ' 9,9999' : ''}`,
+      )
+      .join(' ')
+    const text =
+      'ATO COTEPE/PMPF Nº 1, DE 1 DE JANEIRO DE 2026 ' +
+      'ITEM UF QAV AEHC GNV GNI ÓLEO COMBUSTÍVEL ' +
+      '(R$/ litro) (R$/ litro) (R$/ m³) (R$/ m³) (R$/ litro) (R$/ Kg) ' +
+      rows
+
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/PMPF',
+      sourceCodes: ['dou'],
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text,
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('<table')
+    expect(result.html).toContain('9,9999')
+  })
+
+  it('rejects extra data after the final PMPF cell instead of moving it to notes', () => {
+    const ufs = [
+      'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+      'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+      'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+    ]
+    const rows = ufs
+      .map((uf, index) => `${index + 1} ${uf} - 4,0000 - - - -`)
+      .join(' ')
+    const text =
+      'ATO COTEPE/PMPF Nº 1, DE 1 DE JANEIRO DE 2026 ' +
+      'ITEM UF QAV AEHC GNV GNI ÓLEO COMBUSTÍVEL ' +
+      '(R$/ litro) (R$/ litro) (R$/ m³) (R$/ m³) (R$/ litro) (R$/ Kg) ' +
+      rows + ' 9,8765'
+
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/PMPF',
+      sourceCodes: ['dou'],
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text,
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('<table')
+    expect(result.html).toContain('9,8765')
+  })
+
+  it('does not flatten rich markup while attempting a legacy PMPF repair', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/PMPF',
+      sourceCodes: ['dou'],
+      html:
+        '<p>Secretaria Executiva ATO COTEPE/PMPF Nº 1, DE 1 DE JANEIRO DE 2026</p>' +
+        '<p>ITEM UF QAV AEHC GNV GNI ÓLEO COMBUSTÍVEL ' +
+        '(R$/ litro) (R$/ litro) (R$/ m³) (R$/ m³) (R$/ litro) (R$/ Kg) ' +
+        '<strong>conteúdo oficial preservado</strong></p>',
+    })
+
+    expect(result.html).toContain('<strong>conteúdo oficial preservado</strong>')
+    expect(result.html).not.toContain('<table')
   })
 
   it('keeps Ato COTEPE on the existing CONFAZ fallback', () => {
