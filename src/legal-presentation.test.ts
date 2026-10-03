@@ -550,6 +550,26 @@ describe('legal presentation template registry', () => {
     expect(result.html).not.toContain('ProtocoloEmentaLegacy')
   })
 
+  it('does not treat revocations of other acts in a current protocol as consolidated history', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Revoga protocolos que especifica sem alterar o status deste documento.',
+      html: [
+        '<p>PROTOCOLO ICMS 50, DE 15 DE DEZEMBRO DE 2017</p>',
+        '<p>Publicado no DOU de 18.12.17.</p>',
+        '<p>Revoga protocolos que especifica sem alterar o status deste documento.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p>P R O T O C O L O</p>',
+        '<p>Cláusula primeira Ficam revogados os Protocolos ICMS 1/01 e 2/02.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('Ficam revogados os Protocolos ICMS')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
   it('keeps PROTOCOLO_ICMS PRESERVED_TEXT outside the HTML path', () => {
     const result = renderLegalPresentation({
       ...baseInput,
