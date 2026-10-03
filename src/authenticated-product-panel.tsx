@@ -643,6 +643,7 @@ export function AuthenticatedProductPanel({
     setUf('')
     setSource('')
     setActType('')
+    setArchiveTag(null)
     setArchivePage(1)
   }
 
@@ -1103,6 +1104,7 @@ export function AuthenticatedProductPanel({
                           activeSourceName ? `fonte ${activeSourceName}` : '',
                           actType ? `tipo ${actType}` : '',
                           uf ? `UF ${uf}` : '',
+                          archiveTag ? `tag ${archiveTag.label}` : '',
                         ].filter(Boolean).join(' · ') +
                           '. Use “Limpar filtros” ou altere a busca.'}
                       </EmptyState>
@@ -1269,6 +1271,7 @@ export function AuthenticatedProductPanel({
               />
             ) : (
               <TaxProfileSection
+                key={selectedCompany.id}
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 company={selectedCompany}
@@ -2444,18 +2447,21 @@ function TaxProfileSection({
   )
 
   // CNAE principal pre-selects its segments while the company has never saved
-  // taxonomy markers; secondary CNAEs only show the "sugerido" badge.
-  const [suggestionsApplied, setSuggestionsApplied] = useState(false)
+  // taxonomy markers; secondary CNAEs only show the "sugerido" badge. Runs
+  // once per company, only after the profile, the options and the
+  // suggestions are all loaded (the profile effect above resets selections).
+  const [suggestionsAppliedFor, setSuggestionsAppliedFor] = useState<string | null>(null)
   useEffect(() => {
-    if (suggestionsApplied || !suggestionsQuery.data) return
-    setSuggestionsApplied(true)
+    if (loading || !suggestionsQuery.data || offeredCodes.size === 0) return
+    if (suggestionsAppliedFor === company.id) return
+    setSuggestionsAppliedFor(company.id)
     if (profile?.personalization.taxonomy) return
     const primary = suggestionsQuery.data.segments
       .filter((segment) => segment.strength === 'PRIMARY' && offeredCodes.has(segment.conceptCode))
       .map((segment) => segment.conceptCode)
     if (primary.length === 0) return
     setSelectedCodes((current) => new Set([...current, ...primary]))
-  }, [suggestionsApplied, suggestionsQuery.data, profile, offeredCodes])
+  }, [loading, suggestionsQuery.data, offeredCodes, suggestionsAppliedFor, company.id, profile])
 
   const setMany = (codes: string[], checked: boolean) => {
     setSelectedCodes((current) => {
@@ -2468,11 +2474,16 @@ function TaxProfileSection({
     })
   }
 
+  // Legacy label fields include hidden-but-selected concepts as well.
   const selectedLabels = (dimensionCode: string) =>
-    profileDimensions
-      .find((dimension) => dimension.code === dimensionCode)
-      ?.concepts.filter((concept) => selectedCodes.has(concept.code))
-      .map((concept) => concept.label) ?? []
+    taxonomyOptions.conceptIndex
+      ? taxonomyOptions.conceptIndex
+          .filter((concept) => concept.dimensionCode === dimensionCode && selectedCodes.has(concept.code))
+          .map((concept) => concept.label)
+      : profileDimensions
+          .find((dimension) => dimension.code === dimensionCode)
+          ?.concepts.filter((concept) => selectedCodes.has(concept.code))
+          .map((concept) => concept.label) ?? []
 
   const mutation = useMutation({
     mutationFn: () =>

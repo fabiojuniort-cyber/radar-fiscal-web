@@ -31,6 +31,7 @@ import {
   formatOfficialCode,
   importCatalog,
   importDimensionCsv,
+  readCsvFile,
   patchConcept,
   patchDimension,
   patchGroup,
@@ -494,6 +495,7 @@ function DimensionEditor({
   const [groupEditor, setGroupEditor] = useState<CurationGroup | 'new' | null>(null)
   const [importing, setImporting] = useState(false)
   const [importReport, setImportReport] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const groups = view.groups
     .filter((group) => group.dimensionCode === dimension.code)
@@ -521,20 +523,27 @@ function DimensionEditor({
     : [{ group: null, items: concepts }]
 
   const exportCsv = async () => {
-    const blob = await downloadDimensionCsv(apiFetch, view.release.id, dimension.code)
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `taxonomia-${view.release.version}-${dimension.code}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
+    setExportError(null)
+    try {
+      const blob = await downloadDimensionCsv(apiFetch, view.release.id, dimension.code)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `taxonomia-${view.release.version}-${dimension.code}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      setExportError(`Não foi possível exportar: ${errorText(error)}`)
+    }
   }
 
   const importCsv = async (file: File) => {
     setImporting(true)
     setImportReport(null)
     try {
-      const report = await importDimensionCsv(apiFetch, dimension.code, justification, await file.text())
+      const report = await importDimensionCsv(apiFetch, dimension.code, justification, await readCsvFile(file))
       setImportReport(
         `${report.rows} linhas · ${report.created} criados · ${report.updated} atualizados · ${report.groupsCreated} grupos novos` +
           (report.errors.length
@@ -618,10 +627,12 @@ function DimensionEditor({
           </>
         )}
       </div>
+      {exportError && <p className="tc-error" role="alert">{exportError}</p>}
       {importReport && <p className="tc-hint">{importReport}</p>}
       <p className="tc-hint">
-        Planilha: uma linha por item com as colunas Grupo · Item · {codeLabel} · Sinônimos · No perfil · Ordem. Só
-        “Item” é obrigatório; deixe em branco o que não souber.
+        Planilha: uma linha por item com as colunas Grupo · Item · {codeLabel} · Sinônimos · No perfil · Ordem (a coluna
+        de código também pode se chamar “Código oficial”, “NCM”, “CNAE”, “CFOP”, “NBS”, “Modelo”, “cClassTrib” ou “Item LC
+        116”). Só “Item” é obrigatório. Célula em branco mantém o valor atual; “—” apaga o valor.
       </p>
 
       <div className="tc-table" role="table" aria-label={`Itens de ${dimension.name}`}>
@@ -662,7 +673,7 @@ function DimensionEditor({
               )}
               {items.map((concept) => (
                 <ConceptRow
-                  key={`${concept.code}-${concept.label}-${concept.officialCodes.join()}-${concept.aliases.length}-${concept.profileVisible}-${concept.classifyByLabel}-${concept.displayOrder}-${concept.membershipStatus}`}
+                  key={`${concept.code}-${concept.label}-${concept.officialCodes.join()}-${concept.aliases.map((alias) => `${alias.aliasType}:${alias.text}`).join('|')}-${concept.profileVisible}-${concept.classifyByLabel}-${concept.displayOrder}-${concept.membershipStatus}`}
                   apiFetch={apiFetch}
                   concept={concept}
                   dimension={dimension}
@@ -903,6 +914,7 @@ function ConceptDrawer({
     },
   })
 
+  const [confirmRetire, setConfirmRetire] = useState(false)
   const toggleRetired = useMutation({
     mutationFn: () =>
       patchConcept(apiFetch, concept!.code, justification, {
@@ -1078,7 +1090,13 @@ function ConceptDrawer({
         {editable && (
           <footer>
             {concept && (
-              <button type="button" disabled={toggleRetired.isPending} onClick={() => toggleRetired.mutate()}>
+              <button
+                type="button"
+                disabled={toggleRetired.isPending}
+                onClick={() =>
+                  concept.membershipStatus === 'INCLUDED' ? setConfirmRetire(true) : toggleRetired.mutate()
+                }
+              >
                 {concept.membershipStatus === 'INCLUDED' ? 'Retirar item' : 'Restaurar item'}
               </button>
             )}
@@ -1097,6 +1115,74 @@ function ConceptDrawer({
           </footer>
         )}
       </aside>
+      {confirmRetire && concept && (
+        <ConfirmDialog
+          title="Retirar item?"
+          message={`“${concept.label}” deixa de aparecer no Perfil Tributário e de marcar legislações quando esta versão for publicada. Ele pode ser restaurado depois em “Mostrar retirados”.`}
+          confirmLabel="Retirar item"
+          pending={toggleRetired.isPending}
+          error={toggleRetired.isError ? errorText(toggleRetired.error) : null}
+          onCancel={() => {
+            toggleRetired.reset()
+            setConfirmRetire(false)
+          }}
+          onConfirm={() => toggleRetired.mutate()}
+        />
+      )}
+    </div>
+  )
+}
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  pending,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  title: string
+  message: string
+  confirmLabel: string
+  pending: boolean
+  error: string | null
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div
+      className="tc-confirm-backdrop"
+      role="presentation"
+      onClick={(event) => {
+        event.stopPropagation()
+        if (!pending) onCancel()
+      }}
+    >
+      <div
+        className="tc-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tc-confirm-title"
+        aria-describedby="tc-confirm-message"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id="tc-confirm-title">{title}</h3>
+        <p id="tc-confirm-message">{message}</p>
+        {error && (
+          <p className="tc-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="tc-confirm-actions">
+          <button type="button" disabled={pending} onClick={onCancel} autoFocus>
+            Cancelar
+          </button>
+          <button type="button" className="is-danger" disabled={pending} onClick={onConfirm}>
+            {pending ? 'Aguarde…' : confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1146,6 +1232,7 @@ function GroupDrawer({
       onClose()
     },
   })
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const remove = useMutation({
     mutationFn: () => deleteGroup(apiFetch, group!.id, justification),
     onSuccess: async () => {
@@ -1230,7 +1317,7 @@ function GroupDrawer({
         </div>
         <footer>
           {group && (
-            <button type="button" disabled={remove.isPending} onClick={() => remove.mutate()}>
+            <button type="button" disabled={remove.isPending} onClick={() => setConfirmDelete(true)}>
               Excluir grupo (itens ficam sem grupo)
             </button>
           )}
@@ -1246,6 +1333,20 @@ function GroupDrawer({
           </button>
         </footer>
       </aside>
+      {confirmDelete && group && (
+        <ConfirmDialog
+          title="Excluir grupo?"
+          message={`O grupo “${group.label}” será excluído deste rascunho. Os itens dele continuam na tabela, mas ficam sem grupo.`}
+          confirmLabel="Excluir grupo"
+          pending={remove.isPending}
+          error={remove.isError ? errorText(remove.error) : null}
+          onCancel={() => {
+            remove.reset()
+            setConfirmDelete(false)
+          }}
+          onConfirm={() => remove.mutate()}
+        />
+      )}
     </div>
   )
 }
@@ -1494,7 +1595,7 @@ function CatalogCard({
               onChange={async (event) => {
                 const file = event.target.files?.[0]
                 setCheck(null)
-                setCsv(file ? await file.text() : null)
+                setCsv(file ? await readCsvFile(file) : null)
               }}
             />
           </label>

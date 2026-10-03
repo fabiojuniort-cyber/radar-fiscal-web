@@ -128,6 +128,8 @@ export type TaxonomyProfileOptions = {
   dimensions: TaxonomyProfileDimension[]
   /** Every included code of the release (visible or hidden). */
   conceptCodes?: string[]
+  /** Label of every included concept, visible or hidden. */
+  conceptIndex?: Array<{ code: string; label: string; dimensionCode: string }>
 }
 
 export type MonitoringRun = {

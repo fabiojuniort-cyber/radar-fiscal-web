@@ -535,7 +535,11 @@ export function formatOfficialCode(type: OfficialCodeType | null, code: string):
   return code
 }
 
-/** "Acervo filtrado por esta tag": handed to the panel through its session state. */
+/**
+ * "Acervo filtrado por esta tag": handed to the panel through its session
+ * state. Other Acervo filters (text, sphere, UF, source, act type, dates)
+ * are cleared so the result reflects the tag alone.
+ */
 export function setArchiveTagState(tag: { code: string; label: string }) {
   try {
     const raw = sessionStorage.getItem('tribusca.panel.state')
@@ -547,11 +551,30 @@ export function setArchiveTagState(tag: { code: string; label: string }) {
         screen: 'acervo',
         query: '',
         appliedQuery: '',
+        fullText: false,
+        jurisdiction: '',
+        uf: '',
+        source: '',
+        actType: '',
         archivePage: 1,
         archiveTag: tag,
       }),
     )
+    sessionStorage.removeItem('tribusca.archive.date')
   } catch {
     // Storage blocked: the panel simply opens without the filter.
+  }
+}
+
+/**
+ * Reads a CSV picked by the curator. Excel in pt-BR saves "CSV" as
+ * Windows-1252; fall back to it when the bytes are not valid UTF-8.
+ */
+export async function readCsvFile(file: Blob): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes)
   }
 }

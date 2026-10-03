@@ -161,6 +161,35 @@ describe('Curadoria da taxonomia', () => {
     expect(body.officialCodes).toEqual(['3102.10', '3102.90'])
     expect(body.aliases).toEqual([{ text: 'carbamida', aliasType: 'EXACT_LEXICAL' }])
   })
+
+  it('asks for confirmation before deleting a group and only then calls the API', async () => {
+    const calls: string[] = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      calls.push(url)
+      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/taxonomy/state') return json(state)
+      if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(view)
+      if (url.endsWith('/groups/g1/delete')) return json({ error: 'group_in_use', message: 'Falha simulada' }, 409)
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+
+    renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar grupo' }))
+    fireEvent.click(screen.getByRole('button', { name: /Excluir grupo/ }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Excluir grupo?' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(calls.some((url) => url.endsWith('/delete'))).toBe(false)
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('dialog', { name: 'Excluir grupo?' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Excluir grupo/ }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Excluir grupo?' })).getByRole('button', { name: 'Excluir grupo' }))
+    await waitFor(() => expect(calls.some((url) => url.endsWith('/groups/g1/delete'))).toBe(true))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+  })
 })
 
 describe('Tags da legislação', () => {
@@ -247,14 +276,22 @@ describe('Acervo por tag e formatação', () => {
     expect(String(apiFetch.mock.calls[0]![0])).toContain('tag=theme.presumed_credit')
   })
 
-  it('keeps existing panel state when handing a tag to the Acervo', () => {
-    sessionStorage.setItem('tribusca.panel.state', JSON.stringify({ screen: 'inicio', uf: 'SP' }))
+  it('keeps unrelated panel state but clears other Acervo filters when handing a tag over', () => {
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({ screen: 'inicio', uf: 'SP', query: 'icms', archivePage: 4, selectedCompanyId: 'c1' }),
+    )
+    sessionStorage.setItem('tribusca.archive.date', JSON.stringify({ from: '2026-01-01' }))
     setArchiveTagState({ code: 'product.urea', label: 'Ureia' })
     expect(JSON.parse(sessionStorage.getItem('tribusca.panel.state')!)).toMatchObject({
       screen: 'acervo',
-      uf: 'SP',
+      uf: '',
+      query: '',
+      archivePage: 1,
+      selectedCompanyId: 'c1',
       archiveTag: { code: 'product.urea', label: 'Ureia' },
     })
+    expect(sessionStorage.getItem('tribusca.archive.date')).toBeNull()
   })
 
   it('formats official codes for display', () => {

@@ -106,11 +106,19 @@ export function PublicationTaxonomySection({
   const addOptions = useMemo(() => {
     const query = adding.trim().toLocaleLowerCase('pt-BR')
     if (query.length < 2 || !releaseQuery.data) return []
-    return releaseQuery.data.concepts
+    const data = releaseQuery.data
+    // Only concepts that have a section on the legislation page can be shown.
+    const hasSection = (concept: (typeof data.concepts)[number]) =>
+      Boolean(
+        data.groups.find((group) => group.id === concept.groupId)?.detailSection ??
+          data.dimensions.find((dimension) => dimension.code === concept.dimensionCode)?.detailSection,
+      )
+    return data.concepts
       .filter(
         (concept) =>
           concept.membershipStatus === 'INCLUDED' &&
           !tagged.has(concept.code) &&
+          hasSection(concept) &&
           concept.label.toLocaleLowerCase('pt-BR').includes(query),
       )
       .slice(0, 8)
