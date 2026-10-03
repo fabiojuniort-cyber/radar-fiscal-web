@@ -7,6 +7,7 @@ import {
 export type LegalPresentationTemplateId =
   | 'CONVENIO_ICMS'
   | 'ATO_COTEPE_PMPF'
+  | 'ATO_COTEPE_ICMS'
 
 export type LegalPresentationVariant =
   | 'standard'
@@ -14,6 +15,7 @@ export type LegalPresentationVariant =
   | 'consolidated'
   | 'preserved-text'
   | 'pmpf-table'
+  | 'historical-declaration'
 
 export type LegalPresentationInput = {
   agency: string | null
@@ -273,6 +275,160 @@ function convenioVariant(
   return 'standard'
 }
 
+
+function prepareAtoCotepeIcmsSource(html: string): {
+  html: string
+  historical: boolean
+  hasTable: boolean
+} {
+  const historicalText =
+    /ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(html) ||
+    />\s*DECLARA\s*</i.test(html)
+
+  if (typeof DOMParser === 'undefined') {
+    return {
+      html,
+      historical: historicalText,
+      hasTable: /<table\b/i.test(html),
+    }
+  }
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const paragraphs = Array.from(doc.body.querySelectorAll('p'))
+  let historical = historicalText
+
+  for (const paragraph of paragraphs) {
+    const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+
+    if (/^ATO\s+COTEPE\s*\/\s*ICMS?\b/i.test(text)) {
+      paragraph.classList.add('TituloAcordo')
+    }
+
+    if (/^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(text)) {
+      historical = true
+      paragraph.classList.add('AtoCotepeTituloHistorico')
+
+      if (/\(DOU\s+[^)]+\)/i.test(text)) {
+        const firstBreak = paragraph.querySelector('br')
+        if (firstBreak) {
+          const note = doc.createElement('span')
+          note.className = 'AtoCotepeDouHistorico'
+          let node = firstBreak.nextSibling
+          while (node) {
+            const next = node.nextSibling
+            note.append(node)
+            node = next
+          }
+          firstBreak.after(note)
+        } else if (paragraph.childElementCount === 0) {
+          const match = /^(.*?)(\s*\(DOU\s+[^)]+\)\s*)$/i.exec(text)
+          if (match?.[1] && match[2]) {
+            paragraph.textContent = match[1].trim()
+            paragraph.append(doc.createElement('br'))
+            const note = doc.createElement('span')
+            note.className = 'AtoCotepeDouHistorico'
+            note.textContent = match[2].trim()
+            paragraph.append(note)
+          }
+        }
+      }
+    }
+
+    if (/^DECLARA\s*:?\s*$/i.test(text)) {
+      historical = true
+      paragraph.classList.add('AtoCotepeDeclara')
+    }
+
+    if (/^Anexo\s+[úu]nico\s*$/i.test(text)) {
+      paragraph.classList.add('AtoCotepeAnexoTitulo')
+    }
+  }
+
+  for (const row of Array.from(doc.body.querySelectorAll('table tr'))) {
+    const cells = Array.from(row.children).filter((element) =>
+      element.matches('td, th'),
+    )
+    if (cells.length !== 1) continue
+    const cell = cells[0] as HTMLTableCellElement
+    const label = (cell.textContent ?? '').replace(/\s+/g, ' ').trim()
+    if (
+      cell.colSpan > 1 &&
+      !label.includes(':') &&
+      /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{2,}$/.test(label)
+    ) {
+      cell.classList.add('AtoCotepeUfHeader')
+    }
+  }
+
+  return {
+    html: doc.body.innerHTML,
+    historical,
+    hasTable: doc.body.querySelector('table') !== null,
+  }
+}
+
+const atoCotepeIcmsTemplate: LegalPresentationTemplate = {
+  id: 'ATO_COTEPE_ICMS',
+  version: '1.0.0',
+  matches: ({ actType }) => {
+    const code = normalizeCode(actType)
+    return code === 'ATO_COTEPE_ICMS' || code === 'ATO_COTEPE_ICM'
+  },
+  render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const prepared = prepareAtoCotepeIcmsSource(input.html)
+    const hasInlineHistoricalDou =
+      prepared.historical && /\(DOU\s+[^)]+\)/i.test(prepared.html)
+
+    const view = confazDisplayHtml({
+      html: prepared.html,
+      text: null,
+      ementa: input.ementa,
+      publishedOn:
+        input.sourceCodes.includes('dou') && !hasInlineHistoricalDou
+          ? input.publishedOn
+          : null,
+    })
+
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: prepared.historical
+          ? 'historical-declaration'
+          : prepared.hasTable
+            ? 'annex-structured'
+            : 'standard',
+      }
+    }
+
+    return {
+      html: wrapLegalTables(view.html),
+      inferredStructure: view.inferred,
+      variant: prepared.historical
+        ? 'historical-declaration'
+        : prepared.hasTable
+          ? 'annex-structured'
+          : 'standard',
+    }
+  },
+}
+
 const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   id: 'ATO_COTEPE_PMPF',
   version: '1.0.0',
@@ -371,6 +527,7 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
   convenioIcmsTemplate,
+  atoCotepeIcmsTemplate,
   atoCotepePmpfTemplate,
 ]
 
