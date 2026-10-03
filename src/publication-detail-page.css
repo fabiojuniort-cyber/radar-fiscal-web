@@ -350,3 +350,47 @@
     overflow-x: auto;
   }
 }
+
+/* CONFAZ: same text style as the official portal (measured on the portal's
+   own stylesheet): Open Sans 13.7px, black, line-height 1.8, one-line gap
+   between paragraphs, blue links without underline. */
+.publication-preserved-html[data-source-style='confaz'] {
+  font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+  font-size: 13.728px;
+  line-height: 1.8;
+  color: #000;
+}
+
+.publication-preserved-html[data-source-style='confaz'] > * {
+  max-width: 766px;
+}
+
+.publication-preserved-html[data-source-style='confaz'] p,
+.publication-preserved-html[data-source-style='confaz'] li,
+.publication-preserved-html[data-source-style='confaz'] td {
+  margin: 0 0 1em;
+  color: #000;
+  font-size: 13.728px;
+  line-height: 1.8;
+}
+
+.publication-preserved-html[data-source-style='confaz'] a,
+.publication-preserved-html[data-source-style='confaz'] a:visited {
+  color: #2c67cd;
+  text-decoration: none;
+  border-bottom: 0;
+}
+
+.publication-preserved-html[data-source-style='confaz'] a:hover {
+  color: #75ad0a;
+}
+
+.publication-preserved-html[data-source-style='confaz'] b,
+.publication-preserved-html[data-source-style='confaz'] strong {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-source-style='confaz'] i,
+.publication-preserved-html[data-source-style='confaz'] em {
+  font-style: italic;
+}

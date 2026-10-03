@@ -16,6 +16,10 @@ import {
   fetchProductPublicationDetail,
   type ProductApiFetch,
 } from './product-api'
+import '@fontsource/open-sans/400.css'
+import '@fontsource/open-sans/400-italic.css'
+import '@fontsource/open-sans/700.css'
+import '@fontsource/open-sans/700-italic.css'
 import './publication-detail-page.css'
 import './publication-ncm.css'
 
@@ -162,6 +166,11 @@ export function PublicationDetailPage({
     origins,
   } = detailQuery.data
 
+  // CONFAZ acts keep the visual identity of the official portal.
+  const sourceStyle = origins.some((origin) => origin.sourceCode === 'confaz')
+    ? 'confaz'
+    : undefined
+
   const reference = referenceLabel(
     publication.actType,
     publication.actNumber,
@@ -277,6 +286,7 @@ export function PublicationDetailPage({
             <div
               className="publication-preserved-html"
               data-presentation-format="SANITIZED_HTML"
+              data-source-style={sourceStyle}
               dangerouslySetInnerHTML={{
                 __html:
                   version.presentation.html,
