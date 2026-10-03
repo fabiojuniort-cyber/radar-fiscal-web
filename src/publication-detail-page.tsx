@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
+import { PublicationTaxonomySection } from './publication-taxonomy'
 import {
   fetchProductPublicationDetail,
   type ProductApiFetch,
@@ -343,6 +344,11 @@ export function PublicationDetailPage({
             </div>
           )}
         </section>
+
+        <PublicationTaxonomySection
+          apiFetch={apiFetch}
+          publicationId={publicationId}
+        />
 
         {origins.length > 0 && (
           <section className="publication-origins-card">

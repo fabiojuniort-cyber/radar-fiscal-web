@@ -35,6 +35,8 @@ export type CatalogFilters = {
   /** Inclusive final official publication date (YYYY-MM-DD). */
   publishedTo?: string
   ncm?: string
+  /** TAX-11: taxonomy concept code (tag) of the latest published release. */
+  tag?: string
   page?: number
   limit?: number
 }
@@ -118,6 +120,7 @@ export async function fetchCatalogArchive(
   if (effectiveFilters.publishedFrom) params.set('publishedFrom', effectiveFilters.publishedFrom)
   if (effectiveFilters.publishedTo) params.set('publishedTo', effectiveFilters.publishedTo)
   if (ncm) params.set('ncm', ncm)
+  if (effectiveFilters.tag) params.set('tag', effectiveFilters.tag)
   params.set('page', String(effectiveFilters.page ?? 1))
   params.set('limit', String(effectiveFilters.limit ?? 25))
 

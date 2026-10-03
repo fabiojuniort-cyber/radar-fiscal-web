@@ -96,12 +96,26 @@ export type TaxonomyProfileConcept = {
   code: string
   label: string
   definition: string
+  helpText?: string | null
+  groupCode?: string | null
+  officialCodes?: string[]
+}
+
+export type TaxonomyProfileGroup = {
+  code: string
+  label: string
+  helpText: string | null
+  segmentCodes: string[]
 }
 
 export type TaxonomyProfileDimension = {
   code: string
   name: string
   description: string | null
+  helpText?: string | null
+  profileOrder?: number
+  usesGroups?: boolean
+  groups?: TaxonomyProfileGroup[]
   concepts: TaxonomyProfileConcept[]
 }
 
@@ -112,6 +126,10 @@ export type TaxonomyProfileOptions = {
     publishedAt: string | null
   } | null
   dimensions: TaxonomyProfileDimension[]
+  /** Every included code of the release (visible or hidden). */
+  conceptCodes?: string[]
+  /** Label of every included concept, visible or hidden. */
+  conceptIndex?: Array<{ code: string; label: string; dimensionCode: string }>
 }
 
 export type MonitoringRun = {

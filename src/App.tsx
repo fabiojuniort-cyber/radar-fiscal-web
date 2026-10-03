@@ -32,6 +32,7 @@ import { AuthenticatedProductPanel } from './authenticated-product-panel'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
+import { TaxonomyAdminPage } from './taxonomy-admin'
 import {
   PRIVACY_POLICY,
   TERMS_OF_USE,
@@ -141,6 +142,10 @@ function AppContent() {
     return <AuthenticatedPanel />
   }
 
+  if (location.pathname === '/admin/taxonomia') {
+    return <AuthenticatedTaxonomyAdmin />
+  }
+
   return (
     <div className="app-shell">
       <PublicExperience onAuth={openAuth} />
@@ -187,6 +192,20 @@ function AuthenticatedPanel() {
       }}
     />
   )
+}
+
+function AuthenticatedTaxonomyAdmin() {
+  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return <TaxonomyAdminPage apiFetch={apiFetch} />
 }
 
 function AuthenticatedPublicationDetail({

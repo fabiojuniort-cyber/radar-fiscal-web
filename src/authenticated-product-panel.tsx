@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
   Trash2,
 } from 'lucide-react'
 import {
@@ -26,6 +27,10 @@ import { Link } from 'react-router-dom'
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
 import { ProductNcmProfiles } from './product-ncm-profiles'
+import {
+  fetchAdminMe,
+  fetchTaxonomySuggestions,
+} from './taxonomy-api'
 import {
   formatLastSuccessAt,
   formatPublicDate,
@@ -167,6 +172,7 @@ function readPanelState() {
       uf?: string
       source?: string
       actType?: string
+      archiveTag?: { code: string; label: string } | null
       orgTab?: OrgTab
       selectedCompanyId?: string
     }
@@ -420,6 +426,10 @@ export function AuthenticatedProductPanel({
   const [uf, setUf] = useState(persisted?.uf ?? '')
   const [source, setSource] = useState(persisted?.source ?? '')
   const [actType, setActType] = useState(persisted?.actType ?? '')
+  // TAX-11: tag filter handed over from a legislation page.
+  const [archiveTag, setArchiveTag] = useState<{ code: string; label: string } | null>(
+    persisted?.archiveTag ?? null,
+  )
   const [orgTab, setOrgTab] = useState<OrgTab>(persisted?.orgTab ?? 'empresa')
   const [userMenu, setUserMenu] = useState(false)
   const [tenantMenu, setTenantMenu] = useState(false)
@@ -440,6 +450,7 @@ export function AuthenticatedProductPanel({
         uf,
         source,
         actType,
+        archiveTag,
         orgTab,
         selectedCompanyId,
       }),
@@ -454,6 +465,7 @@ export function AuthenticatedProductPanel({
     uf,
     source,
     actType,
+    archiveTag,
     orgTab,
     selectedCompanyId,
   ])
@@ -517,6 +529,7 @@ export function AuthenticatedProductPanel({
       uf,
       source,
       actType,
+      archiveTag?.code,
       archivePage,
     ],
     queryFn: () =>
@@ -532,10 +545,18 @@ export function AuthenticatedProductPanel({
         uf: uf || undefined,
         source: source || undefined,
         actType: actType || undefined,
+        tag: archiveTag?.code,
         page: archivePage,
         limit: 25,
       }),
     retry: false,
+  })
+
+  const adminMeQuery = useQuery({
+    queryKey: ['admin', 'me'],
+    queryFn: () => fetchAdminMe(apiFetch),
+    retry: false,
+    staleTime: 5 * 60_000,
   })
 
   const accountQuery = useQuery({
@@ -552,7 +573,7 @@ export function AuthenticatedProductPanel({
     ? facetsQuery.data?.sources.find((item) => item.code === source)?.name ?? source
     : ''
   const archiveHasNarrowing = Boolean(
-    appliedQuery.trim() || jurisdiction || uf || source || actType,
+    appliedQuery.trim() || jurisdiction || uf || source || actType || archiveTag,
   )
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
@@ -622,6 +643,7 @@ export function AuthenticatedProductPanel({
     setUf('')
     setSource('')
     setActType('')
+    setArchiveTag(null)
     setArchivePage(1)
   }
 
@@ -770,6 +792,12 @@ export function AuthenticatedProductPanel({
                     <Settings size={16} />
                     Abrir configurações
                   </button>
+                  {adminMeQuery.data?.taxonomyCurator && (
+                    <Link to="/admin/taxonomia" className="tp-user-admin-link">
+                      <ShieldCheck size={16} />
+                      Curadoria da taxonomia
+                    </Link>
+                  )}
                   <button type="button" onClick={() => void onExit()}>
                     <LogOut size={16} />
                     Sair da conta
@@ -967,6 +995,20 @@ export function AuthenticatedProductPanel({
               />
               Buscar também no texto completo (ex.: NCM ou trecho do ato)
             </label>
+            {archiveTag && (
+              <p className="tp-acervo-active-search" role="status">
+                Legislações com a tag <strong>“{archiveTag.label}”</strong>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setArchiveTag(null)
+                    setArchivePage(1)
+                  }}
+                >
+                  Remover tag
+                </button>
+              </p>
+            )}
             {appliedQuery.trim() && (
               <p className="tp-acervo-active-search" role="status">
                 Resultados para <strong>“{appliedQuery.trim()}”</strong>
@@ -1062,6 +1104,7 @@ export function AuthenticatedProductPanel({
                           activeSourceName ? `fonte ${activeSourceName}` : '',
                           actType ? `tipo ${actType}` : '',
                           uf ? `UF ${uf}` : '',
+                          archiveTag ? `tag ${archiveTag.label}` : '',
                         ].filter(Boolean).join(' · ') +
                           '. Use “Limpar filtros” ou altere a busca.'}
                       </EmptyState>
@@ -1228,6 +1271,7 @@ export function AuthenticatedProductPanel({
               />
             ) : (
               <TaxProfileSection
+                key={selectedCompany.id}
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 company={selectedCompany}
@@ -2213,57 +2257,113 @@ function TaxonomyDimensionPicker({
   dimension,
   selected,
   onToggle,
+  onSetMany,
+  suggestions,
 }: {
   dimension: TaxonomyProfileDimension
   selected: Set<string>
   onToggle: (code: string) => void
+  onSetMany: (codes: string[], checked: boolean) => void
+  suggestions?: Map<string, 'PRIMARY' | 'SECONDARY'>
 }) {
   const [query, setQuery] = useState('')
   const normalized = query.trim().toLocaleLowerCase('pt-BR')
-  const concepts = dimension.concepts.filter(
-    (concept) =>
-      !normalized ||
-      concept.label.toLocaleLowerCase('pt-BR').includes(normalized) ||
-      concept.code.toLocaleLowerCase('pt-BR').includes(normalized),
-  )
-  const shown = normalized
+  const matches = (concept: TaxonomyProfileDimension['concepts'][number]) =>
+    !normalized || concept.label.toLocaleLowerCase('pt-BR').includes(normalized)
+  const concepts = dimension.concepts.filter(matches)
+  const selectedCount = dimension.concepts.filter((concept) => selected.has(concept.code)).length
+  const groups = dimension.usesGroups ? dimension.groups ?? [] : []
+
+  const chip = (concept: TaxonomyProfileDimension['concepts'][number]) => {
+    const suggestion = suggestions?.get(concept.code)
+    return (
+      <label
+        className={selected.has(concept.code) ? 'is-selected' : ''}
+        key={concept.code}
+        title={concept.helpText || concept.definition}
+      >
+        <input
+          type="checkbox"
+          checked={selected.has(concept.code)}
+          onChange={() => onToggle(concept.code)}
+        />
+        <span>
+          <b>{concept.label}</b>
+          {suggestion && <small className="tp-taxonomy-suggested">sugerido pelo CNAE</small>}
+        </span>
+        {selected.has(concept.code) && <Check size={15} />}
+      </label>
+    )
+  }
+
+  const flatShown = normalized
     ? concepts.slice(0, 80)
     : concepts
-        .filter((concept) => selected.has(concept.code))
-        .concat(concepts.filter((concept) => !selected.has(concept.code)).slice(0, 14))
+        .filter((concept) => selected.has(concept.code) || suggestions?.has(concept.code))
+        .concat(
+          concepts
+            .filter((concept) => !selected.has(concept.code) && !suggestions?.has(concept.code))
+            .slice(0, 14),
+        )
 
   return (
     <section className="tp-taxonomy-dimension">
       <div>
         <strong>{dimension.name}</strong>
         <span>
-          {dimension.concepts.length} opções ·{' '}
-          {dimension.concepts.filter((concept) => selected.has(concept.code)).length} selecionadas
+          {dimension.concepts.length} opções · {selectedCount} selecionadas
         </span>
       </div>
+      {dimension.helpText && <p className="tp-taxonomy-help">{dimension.helpText}</p>}
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder={'Buscar em ' + dimension.name.toLowerCase()}
         aria-label={'Buscar ' + dimension.name}
       />
-      <div className="tp-taxonomy-options">
-        {shown.map((concept) => (
-          <label
-            className={selected.has(concept.code) ? 'is-selected' : ''}
-            key={concept.code}
-            title={concept.definition}
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(concept.code)}
-              onChange={() => onToggle(concept.code)}
-            />
-            <span><b>{concept.label}</b><small>{concept.code}</small></span>
-            {selected.has(concept.code) && <Check size={15} />}
-          </label>
-        ))}
-      </div>
+      {groups.length > 0 ? (
+        <div className="tp-taxonomy-groups">
+          {[...groups, null].map((group) => {
+            const items = concepts.filter((concept) =>
+              group ? concept.groupCode === group.code : !concept.groupCode || !groups.some((g) => g.code === concept.groupCode),
+            )
+            if (items.length === 0) return null
+            const groupCodes = dimension.concepts
+              .filter((concept) =>
+                group ? concept.groupCode === group.code : !concept.groupCode,
+              )
+              .map((concept) => concept.code)
+            const groupSelected = groupCodes.filter((code) => selected.has(code)).length
+            const allSelected = groupSelected === groupCodes.length && groupCodes.length > 0
+            return (
+              <details
+                key={group?.code ?? 'outros'}
+                className="tp-taxonomy-group"
+                open={Boolean(normalized) || groupSelected > 0 || items.some((c) => suggestions?.has(c.code))}
+              >
+                <summary title={group?.helpText ?? undefined}>
+                  <b>{group ? group.label : 'Outros'}</b>
+                  <small>
+                    {groupSelected > 0 ? `${groupSelected} de ${groupCodes.length}` : `${groupCodes.length}`}
+                  </small>
+                </summary>
+                {group && (
+                  <button
+                    type="button"
+                    className="tp-taxonomy-group-all"
+                    onClick={() => onSetMany(groupCodes, !allSelected)}
+                  >
+                    {allSelected ? 'Desmarcar grupo' : 'Marcar o grupo inteiro'}
+                  </button>
+                )}
+                <div className="tp-taxonomy-options">{items.map(chip)}</div>
+              </details>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="tp-taxonomy-options">{flatShown.map(chip)}</div>
+      )}
     </section>
   )
 }
@@ -2316,16 +2416,74 @@ function TaxProfileSection({
     setSelectedCodes(new Set(profile?.personalization.taxonomy?.conceptCodes ?? []))
   }, [profile])
 
+  // TAX-11: the API returns only the dimensions the curator made visible, in
+  // the configured order. Older payloads (no profileOrder) keep the legacy set.
   const profileDimensions = useMemo(
-    () => taxonomyOptions.dimensions.filter((dimension) => PROFILE_DIMENSION_CODES.has(dimension.code)),
+    () =>
+      taxonomyOptions.dimensions
+        .filter(
+          (dimension) =>
+            dimension.profileOrder !== undefined || PROFILE_DIMENSION_CODES.has(dimension.code),
+        )
+        .sort((left, right) => (left.profileOrder ?? 0) - (right.profileOrder ?? 0)),
     [taxonomyOptions.dimensions],
   )
 
+  const suggestionsQuery = useQuery({
+    queryKey: ['launch', 'taxonomy-suggestions', tenantId, company.id],
+    queryFn: () => fetchTaxonomySuggestions(apiFetch, tenantId, company.id),
+    retry: false,
+  })
+  const suggestions = useMemo(
+    () =>
+      new Map(
+        (suggestionsQuery.data?.segments ?? []).map((segment) => [segment.conceptCode, segment.strength] as const),
+      ),
+    [suggestionsQuery.data],
+  )
+  const offeredCodes = useMemo(
+    () => new Set(profileDimensions.flatMap((dimension) => dimension.concepts.map((concept) => concept.code))),
+    [profileDimensions],
+  )
+
+  // CNAE principal pre-selects its segments while the company has never saved
+  // taxonomy markers; secondary CNAEs only show the "sugerido" badge. Runs
+  // once per company, only after the profile, the options and the
+  // suggestions are all loaded (the profile effect above resets selections).
+  const [suggestionsAppliedFor, setSuggestionsAppliedFor] = useState<string | null>(null)
+  useEffect(() => {
+    if (loading || !suggestionsQuery.data || offeredCodes.size === 0) return
+    if (suggestionsAppliedFor === company.id) return
+    setSuggestionsAppliedFor(company.id)
+    if (profile?.personalization.taxonomy) return
+    const primary = suggestionsQuery.data.segments
+      .filter((segment) => segment.strength === 'PRIMARY' && offeredCodes.has(segment.conceptCode))
+      .map((segment) => segment.conceptCode)
+    if (primary.length === 0) return
+    setSelectedCodes((current) => new Set([...current, ...primary]))
+  }, [loading, suggestionsQuery.data, offeredCodes, suggestionsAppliedFor, company.id, profile])
+
+  const setMany = (codes: string[], checked: boolean) => {
+    setSelectedCodes((current) => {
+      const next = new Set(current)
+      for (const code of codes) {
+        if (checked) next.add(code)
+        else next.delete(code)
+      }
+      return next
+    })
+  }
+
+  // Legacy label fields include hidden-but-selected concepts as well.
   const selectedLabels = (dimensionCode: string) =>
-    profileDimensions
-      .find((dimension) => dimension.code === dimensionCode)
-      ?.concepts.filter((concept) => selectedCodes.has(concept.code))
-      .map((concept) => concept.label) ?? []
+    taxonomyOptions.conceptIndex
+      ? taxonomyOptions.conceptIndex
+          .filter((concept) => concept.dimensionCode === dimensionCode && selectedCodes.has(concept.code))
+          .map((concept) => concept.label)
+      : profileDimensions
+          .find((dimension) => dimension.code === dimensionCode)
+          ?.concepts.filter((concept) => selectedCodes.has(concept.code))
+          .map((concept) => concept.label) ?? []
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -2344,11 +2502,13 @@ function TaxProfileSection({
             ? {
                 releaseId: taxonomyOptions.release.id,
                 releaseVersion: taxonomyOptions.release.version,
+                // Keep hidden-but-still-published selections; drop only codes
+                // that the current release no longer contains.
                 conceptCodes: [...selectedCodes]
                   .filter((code) =>
-                    profileDimensions.some((dimension) =>
-                      dimension.concepts.some((concept) => concept.code === code),
-                    ),
+                    taxonomyOptions.conceptCodes
+                      ? taxonomyOptions.conceptCodes.includes(code)
+                      : offeredCodes.has(code),
                   )
                   .sort(),
               }
@@ -2473,6 +2633,8 @@ function TaxProfileSection({
                 dimension={dimension}
                 selected={selectedCodes}
                 onToggle={toggleCode}
+                onSetMany={setMany}
+                suggestions={suggestions}
                 key={dimension.code}
               />
             ))}
