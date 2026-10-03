@@ -1,0 +1,135 @@
+/* DATE-01 visual composition hardening.
+   Keep the Acervo heading/search composition deterministic instead of relying
+   on implicit grid placement from the generic panel layout. */
+
+@media (min-width: 981px) {
+  .tp-app .tp-main.tp-main-acervo {
+    display: grid !important;
+    grid-template-columns: minmax(430px, 0.95fr) minmax(0, 2fr) !important;
+    grid-template-rows: auto auto auto auto auto !important;
+    column-gap: 28px !important;
+    row-gap: 8px !important;
+    align-items: start !important;
+    padding-top: 14px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-section-heading {
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+    align-self: start !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 0 6px !important;
+    text-align: left !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-section-heading h1 {
+    margin: 0 !important;
+    font-size: 34px !important;
+    line-height: 1.06 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-section-heading p {
+    max-width: 520px !important;
+    margin: 0 !important;
+    font-size: 15px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-search {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    margin: 0 !important;
+    padding: 6px 8px 6px 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-search input {
+    height: 44px !important;
+    font-size: 16px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-search button {
+    height: 46px !important;
+    min-width: 190px !important;
+    padding: 0 20px !important;
+    font-size: 15px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-fulltext {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 0 0 0 4px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-active-search {
+    grid-column: 2 !important;
+    grid-row: 3 !important;
+    margin: 0 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > [data-archive-date-host='true'] {
+    grid-column: 1 / -1 !important;
+    grid-row: 4 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-layout {
+    grid-column: 1 / -1 !important;
+    grid-row: 5 !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter {
+    margin: 0 0 10px !important;
+    padding: 12px 22px 8px !important;
+    row-gap: 5px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-single-field {
+    min-height: 50px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-ruler {
+    margin-top: 0 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-period {
+    min-height: 78px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter-foot {
+    min-height: 14px !important;
+    margin-top: -3px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .tp-app .tp-main.tp-main-acervo {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 18px !important;
+    padding-top: 18px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-section-heading,
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-search,
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-fulltext,
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-active-search,
+  .tp-app .tp-main.tp-main-acervo > [data-archive-date-host='true'],
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-layout {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
