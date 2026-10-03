@@ -16,10 +16,6 @@ import {
   fetchProductPublicationDetail,
   type ProductApiFetch,
 } from './product-api'
-import '@fontsource/open-sans/400.css'
-import '@fontsource/open-sans/400-italic.css'
-import '@fontsource/open-sans/700.css'
-import '@fontsource/open-sans/700-italic.css'
 import './publication-detail-page.css'
 import './publication-ncm.css'
 

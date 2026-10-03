@@ -39,7 +39,7 @@ function detail(sourceCode: string) {
         version: 1,
         format: 'SANITIZED_HTML',
         preservesWhitespace: true,
-        html: '<p>CONVÊNIO ICMS 100/97</p><p>Publicado no DOU de 06.11.97.</p>',
+        html: '<p class="TituloAcordo">CONVÊNIO ICMS 100/97</p><p class="DataPublicao">Publicado no DOU de 06.11.97.</p>',
       },
     },
     origins: [
@@ -74,6 +74,7 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
   it('uses the CONFAZ portal style for CONFAZ acts', async () => {
     const body = await renderDetail('confaz')
     expect(body).toHaveAttribute('data-source-style', 'confaz')
+    expect(screen.getByText('Publicado no DOU de 06.11.97.')).toHaveClass('DataPublicao')
   })
 
   it('keeps the TriBusca style for other sources', async () => {
