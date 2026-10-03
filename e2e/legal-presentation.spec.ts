@@ -143,6 +143,8 @@ const fixture = `
       <p class="TextoAcordo">Os Estados signatários resolvem celebrar o seguinte</p>
       <p class="AcordoTipo">P R O T O C O L O</p>
       <p class="TextoAcordo"><b>Cláusula primeira</b> Fica alterada a cláusula primeira.</p>
+      <p class="TextoAcordo">“Cláusula primeira Texto substitutivo citado no ato.”</p>
+      <p class="TextoAcordo">AMAZONAS — Secretário de Fazenda; RIO DE JANEIRO — Secretário de Fazenda.</p>
     </section>
 
     <section
@@ -154,7 +156,7 @@ const fixture = `
     >
       <p class="TituloAcordo">PROTOCOLO ICMS 50, DE 15 DE DEZEMBRO DE 2017</p>
       <p class="DataPublicao">Publicado no DOU de 18.12.17.</p>
-      <p class="DataPublicao">Retificação no DOU de 20.12.17.</p>
+      <p class="DataPublicao">Vide Despacho CONFAZ referente à publicação.</p>
       <p class="Ementa">Revoga protocolos que especifica.</p>
       <p class="AcordoTipo">P R O T O C O L O</p>
       <p class="TextoAcordo"><b>Cláusula primeira</b> Ficam revogados os Protocolos ICMS 1/01 e 2/02.</p>
@@ -171,10 +173,11 @@ const fixture = `
       <p class="DataPublicao">Publicado no DOU de 20.12.02</p>
       <p class="DataPublicao">Retificação no DOU de 05.02.03</p>
       <p class="Ementa ProtocoloEmentaLegacy">Altera o Protocolo ICMS 22/99 nas operações que especifica.</p>
-      <p class="TextoAcordo">Os Estados do Amazonas e do Rio de Janeiro resolvem celebrar o seguinte</p>
+      <p class="TextoAcordo ProtocoloTextoLegacy">Os Estados do Amazonas e do Rio de Janeiro resolvem celebrar o seguinte</p>
       <p class="AcordoTipo ProtocoloTipoLegacy">PROTOCOLO</p>
-      <p class="TextoAcordo"><b>Cláusula primeira</b> Passa a vigorar com a seguinte redação.</p>
-      <p class="TextoAcordo">Natal, RN, 13 de dezembro de 2002.</p>
+      <p class="TextoAcordo ProtocoloTextoLegacy ProtocoloRubricaLegacy">Cláusula primeira</p>
+      <p class="TextoAcordo ProtocoloTextoLegacy">Passa a vigorar com a seguinte redação os dispositivos indicados.</p>
+      <p class="TextoAcordo ProtocoloTextoLegacy">Natal, RN, 13 de dezembro de 2002.</p>
     </section>
 
     <section
@@ -359,9 +362,20 @@ test('DESIGN-01C — Protocolo ICMS preserva atual, legado e consolidado', async
   const legacy = page.getByTestId('protocolo-53')
   await expect(legacy.locator('.ProtocoloEmentaLegacy')).toHaveCSS('margin-left', '0px')
   await expect(legacy.locator('.ProtocoloTipoLegacy')).toHaveCSS('letter-spacing', 'normal')
+  await expect(legacy.locator('.ProtocoloTextoLegacy').first()).toHaveCSS('text-indent', '0px')
+  await expect(legacy.locator('.ProtocoloRubricaLegacy')).toHaveCSS('text-indent', '0px')
+  await expect(legacy.locator('.ProtocoloRubricaLegacy')).toHaveCSS('font-weight', '700')
+  await expect(legacy.locator('.ProtocoloTextoLegacy').last()).toHaveCSS('text-indent', '0px')
   await expect(legacy).toContainText('Natal, RN, 13 de dezembro de 2002.')
 
   const consolidated = page.getByTestId('protocolo-22')
+  const currentEmentaLeft = await current.locator('.Ementa').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).marginLeft),
+  )
+  const consolidatedEmentaLeft = await consolidated.locator('.Ementa').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).marginLeft),
+  )
+  expect(Math.abs(currentEmentaLeft - consolidatedEmentaLeft)).toBeLessThanOrEqual(1)
   await expect(consolidated.locator('.Remisso')).toHaveCSS('color', 'rgb(255, 0, 0)')
   await expect(consolidated.locator('.RedaoAnt')).toHaveCSS('color', 'rgb(0, 128, 0)')
   await expect(consolidated).toContainText('REVOGADO')
