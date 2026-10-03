@@ -85,6 +85,33 @@ Na apresentação histórica, uma nota \`(DOU ...)\` já presente junto ao títu
 impede síntese de uma segunda nota de publicação. \`DECLARA\` e o DOU inline
 são tratados apenas dentro deste template, sem ampliar o normalizador global.
 
+## AJUSTE_SINIEF — versão 1.0.0
+
+Referências de homologação inicial fornecidas pelo Product Owner:
+
+1. Ajuste SINIEF nº 33/2026 — composição moderna;
+2. Ajuste SINIEF 01/19 — consolidado com histórico de redações;
+3. Ajuste SINIEF nº 28/2024 — composição moderna.
+
+O template é selecionado pelo tipo `AJUSTE_SINIEF` (incluindo a forma
+estruturada com número no actType), nunca por menção no corpo do ato.
+
+| Variante | Sinal estrutural | Papel |
+| --- | --- | --- |
+| `standard` | ausência de redações históricas fortes | título, notas editoriais, ementa à direita e cláusulas |
+| `consolidated` | classes de redação anterior/original (`RemissoAnt`/`RedaoAnt` e aliases) | mantém redação vigente e histórica expandida |
+| `preserved-text` | conteúdo recebido como texto | degradação segura, sem interpretar marcação |
+
+Uma simples remissão vermelha (`Remisso`) ou várias notas editoriais no topo
+não tornam o ato consolidado. A nota histórica `Exclusão de ...` observada na
+referência 01/19 é protegida localmente durante a inferência para não ocupar o
+papel da ementa; o texto e links originais são reinseridos na mesma posição.
+
+Links normais e visitados usam a mesma cor canônica do padrão. As diferenças
+magenta vistas em navegação local são estado do navegador, não papel jurídico.
+Da mesma forma, vermelho/verde reproduzem edição da fonte e nunca inferem
+vigência ou status.
+
 ## ATO_COTEPE_PMPF — versão 1.0.0
 
 Referência inicial de homologação: ATO COTEPE/PMPF nº 26, de 24 de
@@ -115,11 +142,12 @@ bloco, sem criar overflow na página.
 
 ## Compatibilidade CONFAZ
 
-`confaz-presentation.ts` continua sendo o normalizador/fallback legado para
-Ato COTEPE/ICMS, Ajuste e Protocolo. Ato COTEPE/PMPF usa o template próprio
-`ATO_COTEPE_PMPF`. A introdução de `CONVENIO_ICMS` não muda
-esses documentos. Quando outra família for homologada, ela recebe novo ID,
-versão, seletor inequívoco, CSS próprio, referências de auditoria e testes.
+`confaz-presentation.ts` continua sendo o normalizador compartilhado e o
+fallback legado para famílias ainda não homologadas. Convênio ICMS, Ato
+COTEPE/ICMS, Ato COTEPE/PMPF e Ajuste SINIEF usam templates próprios.
+Protocolo ICMS será promovido em sua PR própria; tipos COTEPE não homologados
+continuam no fallback. Cada nova família recebe ID, versão, seletor inequívoco,
+CSS próprio, referências de auditoria e testes.
 
 ## Auditoria de uma alteração do padrão
 
