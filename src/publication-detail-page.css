@@ -509,3 +509,38 @@
     text-indent: 0;
   }
 }
+
+/* Tables in CONFAZ acts (e.g. Atos COTEPE): thin black grid, centered
+   cells, like the portal. */
+.publication-preserved-html[data-source-style='confaz'] table {
+  width: auto;
+  max-width: 100%;
+  margin: 10pt 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+}
+
+.publication-preserved-html[data-source-style='confaz'] th,
+.publication-preserved-html[data-source-style='confaz'] td {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #000;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: top;
+}
+
+.publication-preserved-html[data-source-style='confaz'] th,
+.publication-preserved-html[data-source-style='confaz'] tr:first-child td[colspan] {
+  font-weight: 700;
+  text-align: left;
+}
+
+.publication-preserved-html[data-source-style='confaz'] td p,
+.publication-preserved-html[data-source-style='confaz'] th p {
+  margin: 0;
+  text-align: inherit;
+  text-indent: 0;
+}
+
