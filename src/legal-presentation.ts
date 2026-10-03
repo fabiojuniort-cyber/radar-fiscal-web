@@ -1,16 +1,19 @@
 import {
   confazDisplayHtml,
   isConfazAct,
+  textToParagraphs,
 } from './confaz-presentation'
 
 export type LegalPresentationTemplateId =
   | 'CONVENIO_ICMS'
+  | 'ATO_COTEPE_PMPF'
 
 export type LegalPresentationVariant =
   | 'standard'
   | 'annex-structured'
   | 'consolidated'
   | 'preserved-text'
+  | 'pmpf-table'
 
 export type LegalPresentationInput = {
   agency: string | null
@@ -94,6 +97,162 @@ function wrapLegalTables(html: string): string {
   return doc.body.innerHTML
 }
 
+const PMPF_UFS = [
+  'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+  'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+  'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+] as const
+
+const PMPF_HEADER =
+  /ITEM\s+UF\s+QAV\s+AEHC\s+GNV\s+GNI\s+[ÓO]LEO\s+COMBUST[ÍI]VEL\s+\(R\$\/\s*litro\)\s+\(R\$\/\s*litro\)\s+\(R\$\/\s*m³\)\s+\(R\$\/\s*m³\)\s+\(R\$\/\s*litro\)\s+\(R\$\/\s*Kg\)/i
+
+function stripLegacyPmpfUnitPrefix(text: string): string {
+  return text.replace(
+    /^\s*Secretaria\s+Executiva\s+(?=ATO\s+COTEPE\s*\/\s*PMPF\b)/i,
+    '',
+  )
+}
+
+function pmpfSourceHtml(input: LegalPresentationInput): string | null {
+  if (input.presentationFormat === 'PRESERVED_TEXT') {
+    return input.text ? textToParagraphs(stripLegacyPmpfUnitPrefix(input.text)) : null
+  }
+  if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) return null
+  if (typeof DOMParser === 'undefined') return input.html
+
+  const doc = new DOMParser().parseFromString(`<body>${input.html}</body>`, 'text/html')
+  const paragraphs = Array.from(doc.body.querySelectorAll('p'))
+  const glued = paragraphs.find((paragraph, index) =>
+    index < 3 &&
+    /^\s*Secretaria\s+Executiva\s+ATO\s+COTEPE\s*\/\s*PMPF\b/i.test(
+      paragraph.textContent ?? '',
+    ),
+  )
+  if (glued && glued.childElementCount === 0) {
+    glued.textContent = stripLegacyPmpfUnitPrefix(glued.textContent ?? '')
+  }
+  return doc.body.innerHTML
+}
+
+function rebuildPmpfTable(html: string): { html: string; rebuilt: boolean } {
+  if (typeof DOMParser === 'undefined' || /<table\b/i.test(html)) {
+    return { html, rebuilt: false }
+  }
+
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+  const paragraph = Array.from(doc.body.querySelectorAll('p')).find((candidate) =>
+    PMPF_HEADER.test((candidate.textContent ?? '').replace(/\u00a0/g, ' ')),
+  )
+  if (!paragraph || paragraph.childElementCount > 0) {
+    return { html, rebuilt: false }
+  }
+
+  const text = (paragraph.textContent ?? '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const header = PMPF_HEADER.exec(text)
+  if (header?.index === undefined) return { html, rebuilt: false }
+
+  const numericValue = '\\*{0,2}(?:[-–—]|\\d{1,2},\\d{4})(?![\\d,])'
+  const rowPattern = new RegExp(
+    `(?:^|\\s)(\\d{1,2})\\s+(${PMPF_UFS.join('|')})` +
+      Array.from({ length: 6 }, () => `\\s+(${numericValue})`).join(''),
+    'g',
+  )
+  rowPattern.lastIndex = header.index + header[0].length
+
+  const matches = Array.from(text.matchAll(rowPattern))
+  const firstRowIndex = matches[0]?.index
+  const lastRow = matches.at(-1)
+  if (
+    matches.length !== PMPF_UFS.length ||
+    firstRowIndex === undefined ||
+    !lastRow ||
+    lastRow.index === undefined ||
+    matches.some((match, index) =>
+      Number(match[1]) !== index + 1 || match[2] !== PMPF_UFS[index],
+    )
+  ) {
+    return { html, rebuilt: false }
+  }
+
+  // Fail closed: nothing except whitespace may occur between the validated
+  // header and row 1, or between two rows. This prevents silently dropping an
+  // unexpected seventh value, note or malformed cell from a legacy capture.
+  let previousEnd = header.index + header[0].length
+  for (const match of matches) {
+    if (match.index === undefined || text.slice(previousEnd, match.index).trim()) {
+      return { html, rebuilt: false }
+    }
+    previousEnd = match.index + match[0].length
+  }
+
+  const prefix = text.slice(0, header.index).trim()
+  const suffix = text.slice(previousEnd).trim()
+  const recognizedSuffix =
+    !suffix ||
+    /^(?:Notas\s+Explicativas\b|[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,}){1,}\b)/.test(suffix)
+  if (!recognizedSuffix) return { html, rebuilt: false }
+
+  const makeParagraph = (value: string) => {
+    const next = doc.createElement('p')
+    next.className = paragraph.className
+    next.textContent = value
+    return next
+  }
+
+  const table = doc.createElement('table')
+  const thead = doc.createElement('thead')
+  const head1 = doc.createElement('tr')
+  const head2 = doc.createElement('tr')
+  const makeHead = (label: string) => {
+    const th = doc.createElement('th')
+    th.textContent = label
+    return th
+  }
+  const item = makeHead('ITEM')
+  const uf = makeHead('UF')
+  item.rowSpan = 2
+  uf.rowSpan = 2
+  head1.append(item, uf)
+  for (const label of ['QAV', 'AEHC', 'GNV', 'GNI']) head1.append(makeHead(label))
+  const oil = makeHead('ÓLEO COMBUSTÍVEL')
+  oil.colSpan = 2
+  head1.append(oil)
+  for (const unit of [
+    '(R$/ litro)',
+    '(R$/ litro)',
+    '(R$/ m³)',
+    '(R$/ m³)',
+    '(R$/ litro)',
+    '(R$/ Kg)',
+  ]) {
+    head2.append(makeHead(unit))
+  }
+  thead.append(head1, head2)
+
+  const tbody = doc.createElement('tbody')
+  for (const match of matches) {
+    const row = doc.createElement('tr')
+    for (const value of match.slice(1, 9)) {
+      const cell = doc.createElement('td')
+      cell.textContent = value ?? ''
+      row.append(cell)
+    }
+    tbody.append(row)
+  }
+  table.append(thead, tbody)
+
+  const replacements: Node[] = []
+  if (prefix) replacements.push(makeParagraph(prefix))
+  replacements.push(table)
+  if (suffix) replacements.push(makeParagraph(suffix))
+  paragraph.replaceWith(...replacements)
+
+  return { html: doc.body.innerHTML, rebuilt: true }
+}
+
 function convenioVariant(
   sourceHtml: string | null,
   renderedHtml: string,
@@ -112,6 +271,44 @@ function convenioVariant(
   }
 
   return 'standard'
+}
+
+const atoCotepePmpfTemplate: LegalPresentationTemplate = {
+  id: 'ATO_COTEPE_PMPF',
+  version: '1.0.0',
+  matches: ({ actType }) => normalizeCode(actType) === 'ATO_COTEPE_PMPF',
+  render: (input) => {
+    const sourceHtml = pmpfSourceHtml(input)
+    if (!sourceHtml) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: input.presentationFormat === 'PRESERVED_TEXT' ? 'preserved-text' : 'standard',
+      }
+    }
+
+    const view = confazDisplayHtml({
+      html: sourceHtml,
+      text: null,
+      ementa: input.ementa,
+      publishedOn: input.sourceCodes.includes('dou') ? input.publishedOn : null,
+    })
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const restored = rebuildPmpfTable(view.html)
+    const displayHtml = wrapLegalTables(restored.html)
+    return {
+      html: displayHtml,
+      inferredStructure: view.inferred || restored.rebuilt,
+      variant: /<table\b/i.test(displayHtml) ? 'pmpf-table' : 'standard',
+    }
+  },
 }
 
 const convenioIcmsTemplate: LegalPresentationTemplate = {
@@ -174,6 +371,7 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
   convenioIcmsTemplate,
+  atoCotepePmpfTemplate,
 ]
 
 export function selectLegalPresentationTemplate(

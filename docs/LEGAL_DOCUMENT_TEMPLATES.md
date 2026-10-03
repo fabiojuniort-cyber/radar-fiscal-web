@@ -55,10 +55,39 @@ O CSS canônico fica em `src/convenio-icms-presentation.css`. Mudanças
 aprovadas pelo Product Owner devem ser feitas nesse arquivo e acompanhadas de
 teste de regressão, em vez de criar exceções por publicationId.
 
+## ATO_COTEPE_PMPF — versão 1.0.0
+
+Referência inicial de homologação: ATO COTEPE/PMPF nº 26, de 24 de
+setembro de 2026, confrontado com a publicação oficial do CONFAZ.
+
+O template é selecionado exclusivamente pelo tipo `ATO COTEPE/PMPF`. Ele não
+altera `ATO COTEPE/ICMS`. Quando a apresentação oficial já contém
+`<table>`, a estrutura é preservada e apenas recebe o contrato visual da
+família.
+
+Capturas legadas anteriores à preservação de HTML do DOU podem ter a tabela
+achatada em texto. Nesse caso, a projeção visual só reconstrói a grade quando
+encontra o cabeçalho PMPF e valida a sequência completa de 27 itens/UFs
+(1 AC ... 27 TO), com exatamente seis valores por linha. Se qualquer elemento
+não fechar, a tabela não é inventada e o texto permanece no fallback da
+família. Todo conteúdo é criado por nós de texto do DOM; `PRESERVED_TEXT`
+nunca é interpretado como HTML de origem.
+
+A variante `pmpf-table` identifica a grade preservada ou restaurada. O
+template também remove a linha editorial “Secretaria Executiva” somente no
+caso legado em que ela ficou colada imediatamente ao título
+`ATO COTEPE/PMPF`.
+
+As regras CSS ficam isoladas por
+`data-legal-template='ATO_COTEPE_PMPF'` em
+`src/publication-detail-page.css`. Tabelas largas rolam dentro do próprio
+bloco, sem criar overflow na página.
+
 ## Compatibilidade CONFAZ
 
 `confaz-presentation.ts` continua sendo o normalizador/fallback legado para
-Ato COTEPE, Ajuste e Protocolo. A introdução de `CONVENIO_ICMS` não muda
+Ato COTEPE/ICMS, Ajuste e Protocolo. Ato COTEPE/PMPF usa o template próprio
+`ATO_COTEPE_PMPF`. A introdução de `CONVENIO_ICMS` não muda
 esses documentos. Quando outra família for homologada, ela recebe novo ID,
 versão, seletor inequívoco, CSS próprio, referências de auditoria e testes.
 
