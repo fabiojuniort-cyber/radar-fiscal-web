@@ -140,6 +140,11 @@
   max-width: 820px;
 }
 
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='annex-structured'] th,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='annex-structured'] td {
+  text-align: left;
+}
+
 /* Annexes remain official tables; wide tables scroll inside the document. */
 .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] table {
   width: auto;
