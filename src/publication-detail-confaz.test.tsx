@@ -103,6 +103,12 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
     expect(body).not.toHaveAttribute('data-source-style')
   })
 
+  it('keeps unmatched ATO COTEPE families on the generic CONFAZ fallback', async () => {
+    const body = await renderDetail('confaz', null, 'ATO COTEPE/MVA')
+    expect(body).toHaveAttribute('data-source-style', 'confaz')
+    expect(body).not.toHaveAttribute('data-legal-template')
+  })
+
   it('shows until when the act is in force, from its current wording', async () => {
     await renderDetail('confaz', { date: '2027-12-31', basis: 'CURRENT_VALIDITY_CLAUSE', amendedBy: 'Conv. ICMS 79/25' })
     const validity = screen.getByText(/Vigência:/)
