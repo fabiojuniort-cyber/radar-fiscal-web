@@ -414,7 +414,11 @@ function prepareAtoCotepeIcmsSource(
       ) as HTMLTableCellElement[]
       if (cells.length !== 2) return false
       const item = (cells[0]!.textContent ?? '').trim()
-      const details = (cells[1]!.textContent ?? '').replace(/\s+/g, ' ')
+      const detailsCell = cells[1]!.cloneNode(true) as HTMLTableCellElement
+      for (const br of Array.from(detailsCell.querySelectorAll('br'))) {
+        br.replaceWith(doc.createTextNode(' '))
+      }
+      const details = (detailsCell.textContent ?? '').replace(/\s+/g, ' ')
       return /^\d+\.?$/.test(item) && /\bCNPJ\s*:/i.test(details) && /\bIE\s*:/i.test(details)
     })
 
