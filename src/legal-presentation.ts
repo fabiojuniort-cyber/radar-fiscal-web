@@ -276,96 +276,151 @@ function convenioVariant(
 }
 
 
-function prepareAtoCotepeIcmsSource(html: string): {
+const ATO_COTEPE_UF_HEADERS = new Set([
+  'ACRE', 'ALAGOAS', 'AMAPA', 'AMAZONAS', 'BAHIA', 'CEARA',
+  'DISTRITO_FEDERAL', 'ESPIRITO_SANTO', 'GOIAS', 'MARANHAO',
+  'MATO_GROSSO', 'MATO_GROSSO_DO_SUL', 'MINAS_GERAIS', 'PARA',
+  'PARAIBA', 'PARANA', 'PERNAMBUCO', 'PIAUI', 'RIO_DE_JANEIRO',
+  'RIO_GRANDE_DO_NORTE', 'RIO_GRANDE_DO_SUL', 'RONDONIA', 'RORAIMA',
+  'SANTA_CATARINA', 'SAO_PAULO', 'SERGIPE', 'TOCANTINS',
+])
+
+function prepareAtoCotepeIcmsSource(
+  html: string,
+  historicalDouToRestore: string | null = null,
+): {
   html: string
   historical: boolean
   hasTable: boolean
+  historicalDou: string | null
 } {
   if (typeof DOMParser === 'undefined') {
     const opening = html.slice(0, 900)
+    const historical =
+      /ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(opening) ||
+      />\s*DECLARA\s*</i.test(opening)
     return {
       html,
-      historical:
-        /ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(opening) ||
-        />\s*DECLARA\s*</i.test(opening),
+      historical,
       hasTable: /<table\b/i.test(html),
+      historicalDou:
+        historicalDouToRestore ??
+        (/\(DOU\s+[^)]+\)/i.exec(opening)?.[0] ?? null),
     }
   }
 
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
   const paragraphs = Array.from(doc.body.querySelectorAll('p'))
-  const openingTexts = paragraphs.slice(0, 8).map((paragraph) =>
-    (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  const openingParagraphs = paragraphs.slice(0, 8)
+  const openingActHeading = openingParagraphs.find((paragraph) =>
+    /^ATO\s+COTEPE\s*\//i.test(
+      (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    ),
   )
-  const openingActHeading = openingTexts.find((text) =>
-    /^ATO\s+COTEPE\s*\//i.test(text),
-  )
-  let historical =
-    (openingActHeading
-      ? /^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(openingActHeading)
-      : false) ||
-    openingTexts.some((text) => /^DECLARA\s*:?\s*$/i.test(text))
+  const headingText = (openingActHeading?.textContent ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const historical =
+    /^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(headingText) ||
+    openingParagraphs.some((paragraph) =>
+      /^DECLARA\s*:?\s*$/i.test(
+        (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+    )
+
+  let historicalDou = historicalDouToRestore
+  if (historical && openingActHeading && !historicalDouToRestore) {
+    const existingNote = openingActHeading.querySelector('.AtoCotepeDouHistorico')
+    if (existingNote) {
+      historicalDou = (existingNote.textContent ?? '').trim() || null
+      const previous = existingNote.previousSibling
+      existingNote.remove()
+      if (previous?.nodeName === 'BR') previous.remove()
+    } else {
+      const firstBreak = openingActHeading.querySelector('br')
+      if (firstBreak) {
+        const childNodes = Array.from(openingActHeading.childNodes)
+        const suffix = childNodes.slice(childNodes.indexOf(firstBreak) + 1)
+        const suffixText = suffix
+          .map((node) => node.textContent ?? '')
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (/^\(DOU\s+[^)]+\)$/i.test(suffixText)) {
+          historicalDou = suffixText
+          for (const node of suffix) node.remove()
+          firstBreak.remove()
+        }
+      } else if (openingActHeading.childElementCount === 0) {
+        const rawText = openingActHeading.textContent ?? ''
+        const match = /^(.*?)(\s*\(DOU\s+[^)]+\)\s*)$/i.exec(rawText)
+        if (match?.[1] && match[2]) {
+          openingActHeading.textContent = match[1].trim()
+          historicalDou = match[2].trim()
+        }
+      }
+    }
+  }
 
   for (const paragraph of paragraphs) {
     const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
 
-    if (/^ATO\s+COTEPE\s*\/\s*ICMS?\b/i.test(text)) {
+    if (paragraph === openingActHeading) {
       paragraph.classList.add('TituloAcordo')
-    }
+      if (historical) paragraph.classList.add('AtoCotepeTituloHistorico')
 
-    if (/^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(text)) {
-      historical = true
-      paragraph.className = 'TituloAcordo AtoCotepeTituloHistorico'
-
-      if (/\(DOU\s+[^)]+\)/i.test(text)) {
-        const firstBreak = paragraph.querySelector('br')
-        if (firstBreak) {
-          const note = doc.createElement('span')
-          note.className = 'AtoCotepeDouHistorico'
-          let node = firstBreak.nextSibling
-          while (node) {
-            const next = node.nextSibling
-            note.append(node)
-            node = next
-          }
-          firstBreak.after(note)
-        } else if (paragraph.childElementCount === 0) {
-          const match = /^(.*?)(\s*\(DOU\s+[^)]+\)\s*)$/i.exec(text)
-          if (match?.[1] && match[2]) {
-            paragraph.textContent = match[1].trim()
-            paragraph.append(doc.createElement('br'))
-            const note = doc.createElement('span')
-            note.className = 'AtoCotepeDouHistorico'
-            note.textContent = match[2].trim()
-            paragraph.append(note)
-          }
-        }
+      if (
+        historical &&
+        historicalDouToRestore &&
+        !paragraph.querySelector('.AtoCotepeDouHistorico')
+      ) {
+        paragraph.append(doc.createElement('br'))
+        const note = doc.createElement('span')
+        note.className = 'AtoCotepeDouHistorico'
+        note.textContent = historicalDouToRestore
+        paragraph.append(note)
       }
     }
 
-    if (/^DECLARA\s*:?\s*$/i.test(text)) {
-      historical = true
+    if (historical && /^DECLARA\s*:?\s*$/i.test(text)) {
       paragraph.classList.add('AtoCotepeDeclara')
     }
 
-    if (/^Anexo\s+[úu]nico\s*$/i.test(text)) {
+    if (/^[“"']?Anexo\s+[úu]nico[”"']?\s*$/i.test(text)) {
       paragraph.classList.add('AtoCotepeAnexoTitulo')
     }
   }
 
-  for (const row of Array.from(doc.body.querySelectorAll('table tr'))) {
-    const cells = Array.from(row.children).filter((element) =>
-      element.matches('td, th'),
-    )
-    if (cells.length !== 1) continue
-    const cell = cells[0] as HTMLTableCellElement
-    const label = (cell.textContent ?? '').replace(/\s+/g, ' ').trim()
-    if (
-      cell.colSpan > 1 &&
-      !label.includes(':') &&
-      /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{2,}$/.test(label)
-    ) {
-      cell.classList.add('AtoCotepeUfHeader')
+  for (const table of Array.from(doc.body.querySelectorAll('table'))) {
+    const rows = Array.from(table.querySelectorAll('tr'))
+    let ufCell: HTMLTableCellElement | null = null
+
+    for (const row of rows) {
+      const cells = Array.from(row.children).filter((element) =>
+        element.matches('td, th'),
+      ) as HTMLTableCellElement[]
+      if (cells.length !== 1 || cells[0]!.colSpan <= 1) continue
+      const label = (cells[0]!.textContent ?? '').replace(/\s+/g, ' ').trim()
+      if (ATO_COTEPE_UF_HEADERS.has(normalizeCode(label))) {
+        ufCell = cells[0]!
+        break
+      }
+    }
+
+    if (!ufCell) continue
+    const hasCompanyRow = rows.some((row) => {
+      const cells = Array.from(row.children).filter((element) =>
+        element.matches('td, th'),
+      ) as HTMLTableCellElement[]
+      if (cells.length !== 2) return false
+      const item = (cells[0]!.textContent ?? '').trim()
+      const details = (cells[1]!.textContent ?? '').replace(/\s+/g, ' ')
+      return /^\d+\.?$/.test(item) && /\bCNPJ\s*:/i.test(details) && /\bIE\s*:/i.test(details)
+    })
+
+    if (hasCompanyRow) {
+      table.classList.add('AtoCotepeEmpresaTable')
+      ufCell.classList.add('AtoCotepeUfHeader')
     }
   }
 
@@ -373,6 +428,7 @@ function prepareAtoCotepeIcmsSource(html: string): {
     html: doc.body.innerHTML,
     historical,
     hasTable: doc.body.querySelector('table') !== null,
+    historicalDou,
   }
 }
 
@@ -402,7 +458,7 @@ const atoCotepeIcmsTemplate: LegalPresentationTemplate = {
 
     const prepared = prepareAtoCotepeIcmsSource(input.html)
     const hasInlineHistoricalDou =
-      prepared.historical && /\(DOU\s+[^)]+\)/i.test(prepared.html)
+      prepared.historical && Boolean(prepared.historicalDou)
 
     const view = confazDisplayHtml({
       html: prepared.html,
@@ -426,7 +482,10 @@ const atoCotepeIcmsTemplate: LegalPresentationTemplate = {
       }
     }
 
-    const decorated = prepareAtoCotepeIcmsSource(view.html)
+    const decorated = prepareAtoCotepeIcmsSource(
+      view.html,
+      prepared.historicalDou,
+    )
 
     return {
       html: wrapLegalTables(decorated.html),
