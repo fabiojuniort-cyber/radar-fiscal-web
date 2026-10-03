@@ -95,10 +95,12 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
     expect(body).not.toHaveAttribute('data-source-style', 'confaz')
   })
 
-  it('keeps Ato COTEPE on the legacy CONFAZ source style', async () => {
+  it('uses the dedicated ATO_COTEPE_ICMS family contract', async () => {
     const body = await renderDetail('confaz', null, 'ATO COTEPE/ICMS')
-    expect(body).toHaveAttribute('data-source-style', 'confaz')
-    expect(body).not.toHaveAttribute('data-legal-template')
+    expect(body).toHaveAttribute('data-legal-template', 'ATO_COTEPE_ICMS')
+    expect(body).toHaveAttribute('data-legal-template-version', '1.0.0')
+    expect(body).toHaveAttribute('data-legal-variant', 'standard')
+    expect(body).not.toHaveAttribute('data-source-style')
   })
 
   it('shows until when the act is in force, from its current wording', async () => {
