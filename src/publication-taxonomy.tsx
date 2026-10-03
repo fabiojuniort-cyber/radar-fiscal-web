@@ -90,7 +90,10 @@ export function PublicationTaxonomySection({
 
   const curate = useMutation({
     mutationFn: (input: { conceptCode: string; action: 'ADD' | 'REMOVE' | 'RESTORE' }) =>
-      curatePublicationTag(apiFetch, publicationId, { ...input, justification }),
+      curatePublicationTag(apiFetch, publicationId, {
+        ...input,
+        justification: justification.trim().length >= 3 ? justification.trim() : 'Correção de tag pela curadoria',
+      }),
     onSuccess: (data: PublicationTaxonomy) => {
       queryClient.setQueryData(['publication-taxonomy', publicationId, curator], data)
       void queryClient.invalidateQueries({ queryKey: ['publication-taxonomy', publicationId, false] })
@@ -204,7 +207,7 @@ export function PublicationTaxonomySection({
                       type="button"
                       className="publication-tag-action"
                       aria-label={tag.removed ? `Restaurar ${tag.label}` : `Remover ${tag.label}`}
-                      disabled={justification.trim().length < 3 || curate.isPending}
+                      disabled={curate.isPending}
                       onClick={() =>
                         curate.mutate({
                           conceptCode: tag.conceptCode!,
@@ -228,7 +231,7 @@ export function PublicationTaxonomySection({
           <input
             value={justification}
             onChange={(event) => setJustification(event.target.value)}
-            placeholder="Motivo da correção (obrigatório)"
+            placeholder="Motivo da correção (opcional)"
             aria-label="Motivo da correção"
           />
           <div className="publication-tags-add">
@@ -244,7 +247,7 @@ export function PublicationTaxonomySection({
                   <li key={concept.code}>
                     <button
                       type="button"
-                      disabled={justification.trim().length < 3 || curate.isPending}
+                      disabled={curate.isPending}
                       onClick={() => curate.mutate({ conceptCode: concept.code, action: 'ADD' })}
                     >
                       <Plus size={12} /> {concept.label}
