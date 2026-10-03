@@ -30,6 +30,17 @@ describe('legal presentation template registry', () => {
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/ICMS' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'CONVENIO_ICMS_X' })).toBeNull()
+  })
+
+  it('refuses HTML when the presentation contract is not SANITIZED_HTML', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      presentationFormat: null,
+      html: '<p>não autorizado como HTML</p>',
+    })
+
+    expect(result.html).toBeNull()
   })
 
   it('uses the standard Convênio ICMS contract for a current DOU act', () => {
@@ -103,8 +114,22 @@ describe('legal presentation template registry', () => {
     })
 
     expect(result.variant).toBe('annex-structured')
+    expect(result.html).toContain('class="legal-table-scroll"')
+    expect(result.html).toContain('role="region"')
     expect(result.html).toContain('rowspan="2"')
     expect(result.html).toContain('colspan="2"')
+  })
+
+  it('does not infer consolidated history from class names mentioned as text', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      html: [
+        '<p class="TituloAcordo">CONVÊNIO ICMS Nº 1, DE 2026</p>',
+        '<p class="TextoAcordo">O identificador RemissoAnt aparece apenas como texto.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
   })
 
   it('keeps PRESERVED_TEXT as text instead of interpreting markup', () => {
