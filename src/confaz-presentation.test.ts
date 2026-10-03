@@ -133,4 +133,58 @@ describe('CONFAZ acts stored without the portal classes', () => {
     expect(isConfazAct({ agency: null, actType: 'AJUSTE SINIEF', sourceCodes: [] })).toBe(true)
     expect(isConfazAct({ agency: 'RFB', actType: 'INSTRUÇÃO NORMATIVA', sourceCodes: ['dou'] })).toBe(false)
   })
+
+  it('lays out an Ato COTEPE/ICMS like the portal, keeping its table', () => {
+    const html = [
+      '<p>ATO COTEPE/ICMS Nº 105, DE 1° DE OUTUBRO DE 2026</p>',
+      '<p>Altera o Ato COTEPE/ICMS nº 23, de 27 de março de 2018, que divulga a relação dos contribuintes beneficiados.</p>',
+      '<p>O Secretário-Executivo da Secretaria-Executiva do Conselho Nacional de Política Fazendária - CONFAZ, no uso de suas atribuições, torna público:</p>',
+      '<p>CONSIDERANDO o disposto no art. 7º do Ato COTEPE/ICMS nº 20, de 25 de março de 2015,</p>',
+      '<p>Art. 1º O item 18 fica acrescido ao campo referente ao Estado de Mato Grosso do Sul, com a seguinte redação:</p>',
+      '<table><tr><td colspan="6"><p>Unidade Federada: MATO GROSSO DO SUL</p></td></tr><tr><td><p>ITEM</p></td><td><p>UF</p></td></tr><tr><td><p>18</p></td><td><p>MS</p></td></tr></table>',
+      '<p>Art. 2º Este ato entra em vigor na data da sua publicação no Diário Oficial da União.</p>',
+      '<p>CARLOS HENRIQUE DE AZEVEDO OLIVEIRA</p>',
+    ].join('')
+    const view = confazDisplayHtml({
+      html,
+      text: null,
+      ementa: 'Altera o Ato COTEPE/ICMS nº 23, de 27 de março de 2018, que divulga a relação dos contribuintes beneficiados.',
+      publishedOn: '2026-10-02',
+    })!
+    const doc = new DOMParser().parseFromString(view.html, 'text/html')
+    const outside = Array.from(doc.querySelectorAll('p')).filter((p) => !p.closest('table'))
+    expect(outside.map((p) => p.className)).toEqual([
+      'TituloAcordo',
+      'DataPublicao',
+      'Ementa',
+      'TextoAcordo',
+      'TextoAcordo',
+      'TextoAcordo',
+      'TextoAcordo',
+      'TextoAcordo',
+    ])
+    expect(outside[1]!.textContent).toBe('Publicado no DOU de 02.10.2026')
+    expect(view.html).toContain('<b>O Secretário-Executivo da Secretaria-Executiva do Conselho Nacional de Política Fazendária - CONFAZ,</b>')
+    expect(view.html).toContain('<b>Art. 1º</b> O item 18')
+    // Table cells are left as they are.
+    expect(Array.from(doc.querySelectorAll('table p')).every((p) => p.className === '')).toBe(true)
+  })
+
+  it('restores the paragraphs of an Ato COTEPE published as one block', () => {
+    const block =
+      'ATO COTEPE/ICMS Nº 105, DE 1° DE OUTUBRO DE 2026 Altera o Ato COTEPE/ICMS nº 23, de 27 de março de 2018, que divulga a relação dos contribuintes beneficiados. ' +
+      'O Secretário-Executivo da Secretaria-Executiva do Conselho Nacional de Política Fazendária - CONFAZ, no uso de suas atribuições, por este ato, ' +
+      'CONSIDERANDO o disposto no art. 7º do Ato COTEPE/ICMS nº 20, de 25 de março de 2015, CONSIDERANDO a solicitação recebida, torna público: ' +
+      'Art. 1º O item 18 fica acrescido ao campo referente ao Estado de Mato Grosso do Sul. Art. 2º Este ato entra em vigor na data da sua publicação no Diário Oficial da União. CARLOS HENRIQUE DE AZEVEDO OLIVEIRA'
+    expect(splitActBlock(block).map((p) => p.slice(0, 28))).toEqual([
+      'ATO COTEPE/ICMS Nº 105, DE 1',
+      'Altera o Ato COTEPE/ICMS nº ',
+      'O Secretário-Executivo da Se',
+      'CONSIDERANDO o disposto no a',
+      'CONSIDERANDO a solicitação r',
+      'Art. 1º O item 18 fica acres',
+      'Art. 2º Este ato entra em vi',
+      'CARLOS HENRIQUE DE AZEVEDO O',
+    ])
+  })
 })

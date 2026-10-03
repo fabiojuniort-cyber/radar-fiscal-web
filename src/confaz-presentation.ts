@@ -15,7 +15,7 @@ const TITLE =
 const ACT_KIND =
   /^(C\s*O\s*N\s*V\s*[ÊE]\s*N\s*I\s*O|A\s*J\s*U\s*S\s*T\s*E|P\s*R\s*O\s*T\s*O\s*C\s*O\s*L\s*O)$/i
 const BODY_START =
-  /^(O\s+Conselho|O\s+Ministro|O\s+Presidente|Os\s+Secret[áa]rios|A\s+Comiss[ãa]o|"?Cl[áa]usula\b|Art\.?\s*\d)/i
+  /^(O\s+Conselho|O\s+Ministro|O\s+Presidente|Os?\s+Secret[áa]rios?|A\s+Comiss[ãa]o|CONSIDERANDO\b|"?Cl[áa]usula\b|Art\.?\s*\d)/i
 const PREVIOUS_WORDING = /^(Reda[çc][ãa]o|Nova)\s+(original|anterior)\b/i
 const NOTE =
   /^(Nova\s+reda[çc][ãa]o|Reda[çc][ãa]o\s+dada|Acrescentad[oa]s?|Acrescid[oa]s?|Convalidad[oa]s?|Autorizad[oa]s?\b|Revogad[oa]s?|Renumerad[oa]s?|Inclu[íi]d[oa]s?|Alterad[oa]s?|Prorrogad[oa]s?|Vide\b|Efeitos\b|Ratifica[çc][ãa]o|Retifica[çc][ãa]o|Republica[çc][ãa]o|Publicad[oa]\b)/i
@@ -23,7 +23,12 @@ const ORDINAL =
   '(?:(?:d[ée]cima|vig[ée]sima|trig[ée]sima|quadrag[ée]sima|quinquag[ée]sima)[\\s-]+)?(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|vig[ée]sima|trig[ée]sima|quadrag[ée]sima|quinquag[ée]sima|[úu]nica)(?:-[A-Z])?'
 // "Cláusula primeira", "Cláusula décima segunda", "Cláusula terceira-A".
 const CLAUSE_HEAD = new RegExp(`^"?Cl[áa]usula\\s+${ORDINAL}(?=\\s)`)
-const COUNCIL_HEAD = /^O\s+Conselho\s+Nacional\s+de\s+Pol[íi]tica\s+Fazend[áa]ria\s*[-–]\s*CONFAZ,/
+// "O Conselho Nacional de Política Fazendária - CONFAZ," and, in Atos
+// COTEPE, "O Secretário-Executivo da Secretaria-Executiva do ... - CONFAZ,".
+const COUNCIL_HEAD =
+  /^(?:O\s+Conselho\s+Nacional|O\s+Secret[áa]rio-Executivo\s+da\s+Secretaria-Executiva\s+do\s+Conselho\s+Nacional)\s+de\s+Pol[íi]tica\s+Fazend[áa]ria\s*[-–]\s*CONFAZ,/
+// "Art. 1º", "Art. 10." (Atos COTEPE and other acts with articles).
+const ARTICLE_HEAD = /^Art\.\s*\d+(?:\s*[º°o]|\.)?(?:-[A-Z])?/
 
 const normalize = (value: string) =>
   value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -59,10 +64,13 @@ const UPPER = 'A-ZÁÉÍÓÚÂÊÔÃÕÇ'
 // pattern matches the gap (whitespace) between two paragraphs.
 const PARAGRAPH_GAPS: RegExp[] = [
   // after the title "CONVÊNIO ICMS Nº 113, DE 23 DE SETEMBRO DE 2026"
-  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO)\b[^.]{0,90}?\bDE\s+\d{4})\s+/gi,
-  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO)\b[^.]{0,60}?\d+\s*\/\s*\d{2,4})\s+/gi,
+  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO|ATO\s+COTEPE)\b[^.]{0,90}?\bDE\s+\d{4})\s+/gi,
+  /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO|ATO\s+COTEPE)\b[^.]{0,60}?\d+\s*\/\s*\d{2,4})\s+/gi,
   // before the preamble and after "resolve celebrar o seguinte"
-  /\s+(?=(?:O|Os)\s+(?:Conselho\s+Nacional|Ministro\s+de\s+Estado|Secret[áa]rios?\s+de\s+Fazenda)\b)/g,
+  /\s+(?=(?:O|Os)\s+(?:Conselho\s+Nacional|Ministro\s+de\s+Estado|Secret[áa]rios?\s+de\s+Fazenda|Secret[áa]rio-Executivo)\b)/g,
+  // Atos COTEPE: "CONSIDERANDO ..." and articles
+  /(?<=[,;.:])\s+(?=CONSIDERANDO\b)/g,
+  /(?<=[.:;"”])\s+(?=Art\.\s*\d+\s*[º°o]?\s)/g,
   /(?<=resolve[^.]{0,60}?\bseguinte)\s+/gi,
   // around the act kind ("C O N V Ê N I O") before the first clause
   /(?<=(?:C\s?O\s?N\s?V\s?[ÊE]\s?N\s?I\s?O|AJUSTE|PROTOCOLO))\s+(?=Cl[áa]usula\s)/g,
@@ -133,7 +141,7 @@ export function confazDisplayHtml(input: {
 
   // A paragraph holding a whole act (or several of its parts) is split.
   for (const paragraph of Array.from(body.querySelectorAll('p'))) {
-    if (paragraph.querySelector('table')) continue
+    if (paragraph.querySelector('table') || paragraph.closest('table')) continue
     const text = (paragraph.textContent ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
     if (text.length < 200) continue
     const pieces = splitActBlock(text)
@@ -146,7 +154,10 @@ export function confazDisplayHtml(input: {
     paragraph.remove()
   }
 
-  const paragraphs = Array.from(body.querySelectorAll('p')).filter((p) => (p.textContent ?? '').trim())
+  // Paragraphs inside tables keep the table layout.
+  const paragraphs = Array.from(body.querySelectorAll('p')).filter(
+    (p) => (p.textContent ?? '').trim() && !p.closest('table'),
+  )
   const ementaKey = normalize(input.ementa)
   let seenTitle = false
   let inBody = false
@@ -202,6 +213,7 @@ export function confazDisplayHtml(input: {
     if (className === 'TextoAcordo') {
       leadInBold(paragraph, CLAUSE_HEAD)
       leadInBold(paragraph, COUNCIL_HEAD)
+      leadInBold(paragraph, ARTICLE_HEAD)
     }
   }
 
