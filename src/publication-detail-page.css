@@ -923,6 +923,10 @@
     text-indent: 12pt;
   }
 
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.AtoCotepeDeclara {
+    text-indent: 0;
+  }
+
   .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Remisso,
   .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-1Remissao {
     margin-left: 24pt;
