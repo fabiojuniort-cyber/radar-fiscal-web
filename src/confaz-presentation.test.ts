@@ -187,4 +187,37 @@ describe('CONFAZ acts stored without the portal classes', () => {
       'CARLOS HENRIQUE DE AZEVEDO O',
     ])
   })
+
+  it('Ato COTEPE as published by the DOU: unit line dropped, preamble without hyphens', () => {
+    const html = [
+      '<p>Secretaria Executiva</p>',
+      '<p>ATO COTEPE/ICMS Nº 105, DE 1º DE OUTUBRO DE 2026</p>',
+      '<p>Altera o Ato COTEPE/ICMS nº 23, de 27 de março de 2018, que divulga a relação dos contribuintes beneficiados.</p>',
+      '<p>O Secretário Executivo da Secretaria Executiva do Conselho Nacional de Política Fazendária - CONFAZ, no uso de suas atribuições,</p>',
+      '<p>CONSIDERANDO o disposto no art. 7º do Ato COTEPE/ICMS nº 20, de 25 de março de 2015,</p>',
+      '<p><strong>Art. 1º</strong> O item 18 fica acrescido ao campo referente ao Estado de Mato Grosso do Sul:</p>',
+      '<table><tbody><tr><td colspan="6"><p>Unidade Federada: MATO GROSSO DO SUL</p></td></tr><tr><td><p>ITEM</p></td><td><p>UF</p></td></tr></tbody></table>',
+      '<p>CARLOS HENRIQUE DE AZEVEDO OLIVEIRA</p>',
+    ].join('')
+    const view = confazDisplayHtml({
+      html,
+      text: null,
+      ementa: 'Altera o Ato COTEPE/ICMS nº 23, de 27 de março de 2018, que divulga a relação dos contribuintes beneficiados.',
+      publishedOn: '2026-10-02',
+    })!
+    const doc = new DOMParser().parseFromString(view.html, 'text/html')
+    const outside = Array.from(doc.querySelectorAll('p')).filter((p) => !p.closest('table'))
+    expect(outside.map((p) => [p.className, (p.textContent ?? '').slice(0, 22)])).toEqual([
+      ['TituloAcordo', 'ATO COTEPE/ICMS Nº 105'],
+      ['DataPublicao', 'Publicado no DOU de 02'],
+      ['Ementa', 'Altera o Ato COTEPE/IC'],
+      ['TextoAcordo', 'O Secretário Executivo'],
+      ['TextoAcordo', 'CONSIDERANDO o dispost'],
+      ['TextoAcordo', 'Art. 1º O item 18 fica'],
+      ['TextoAcordo', 'CARLOS HENRIQUE DE AZE'],
+    ])
+    expect(view.html).not.toContain('Secretaria Executiva</p>')
+    expect(view.html).toContain('<b>O Secretário Executivo da Secretaria Executiva do Conselho Nacional de Política Fazendária - CONFAZ,</b>')
+    expect(doc.querySelector('td.TabelaTitulo')?.textContent).toBe('Unidade Federada: MATO GROSSO DO SUL')
+  })
 })
