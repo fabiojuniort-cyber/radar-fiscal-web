@@ -485,8 +485,8 @@
 }
 
 .publication-preserved-html[data-inferred-structure='true'] p.Ementa {
-  margin: 30pt 0 18pt min(45%, 370px);
-  max-width: min(55%, 450px);
+  margin: 30pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
 }
 
 .publication-preserved-html[data-inferred-structure='true'] p.TextoAcordo {
@@ -992,11 +992,6 @@
   font-weight: 700;
 }
 
-.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'][data-legal-variant='consolidated'] p.Ementa {
-  margin-left: min(36%, 295px);
-  max-width: min(64%, 525px);
-}
-
 .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa.ProtocoloEmentaLegacy {
   margin: 18pt 0;
   max-width: 820px;
@@ -1006,6 +1001,16 @@
 .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo,
 .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A5-1TextoAcordo {
   text-indent: 72pt;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo.ProtocoloTextoLegacy {
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.ProtocoloRubricaLegacy {
+  font-weight: 700;
+  text-align: left;
+  text-indent: 0;
 }
 
 .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.AcordoTipo {
@@ -1104,6 +1109,11 @@
   .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo,
   .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A5-1TextoAcordo {
     text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo.ProtocoloTextoLegacy,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.ProtocoloRubricaLegacy {
+    text-indent: 0;
   }
 
   .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Remisso,
