@@ -896,7 +896,6 @@ function ConceptDrawer({
               {form.aliases.map((alias, index) => (
                 <li key={`${alias.text}-${index}`}>
                   <b>{alias.text}</b>
-                  <span>{ALIAS_TYPE_LABELS[alias.aliasType] ?? alias.aliasType}</span>
                   {editable && (
                     <button
                       type="button"
@@ -917,30 +916,27 @@ function ConceptDrawer({
                   value={newAlias.text}
                   placeholder="novo sinônimo"
                   onChange={(e) => setNewAlias({ ...newAlias, text: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newAlias.text.trim()) {
+                      e.preventDefault()
+                      setForm({ ...form, aliases: [...form.aliases, { ...newAlias, text: newAlias.text.trim() }] })
+                      setNewAlias({ text: '', aliasType: 'EXACT_LEXICAL' })
+                    }
+                  }}
                 />
-                <select
-                  value={newAlias.aliasType}
-                  onChange={(e) => setNewAlias({ ...newAlias, aliasType: e.target.value as AliasType })}
-                >
-                  {Object.entries(ALIAS_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
                 <button
                   type="button"
                   disabled={!newAlias.text.trim()}
                   onClick={() => {
                     setForm({ ...form, aliases: [...form.aliases, { ...newAlias, text: newAlias.text.trim() }] })
-                    setNewAlias({ text: '', aliasType: newAlias.aliasType })
+                    setNewAlias({ text: '', aliasType: 'EXACT_LEXICAL' })
                   }}
                 >
                   Adicionar
                 </button>
               </div>
             )}
-            <small>Só “Equivalente exato” e “Sigla” marcam legislações automaticamente.</small>
+            <small>Todo sinônimo marca automaticamente as legislações em que aparece.</small>
           </fieldset>
           <label>
             Observações internas

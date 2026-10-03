@@ -150,9 +150,9 @@ describe('Curadoria da taxonomia', () => {
     expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
     expect(screen.getByDisplayValue('3102.10')).toBeInTheDocument()
     expect(screen.getByText('carbamida')).toBeInTheDocument()
-    // Every synonym type shows in the grid; search-only ones are tagged.
-    expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).toHaveClass('is-search-only')
-    expect(screen.getByText('só busca')).toBeInTheDocument()
+    // One kind of synonym: every stored synonym shows in the grid, untagged.
+    expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).not.toHaveClass('is-search-only')
+    expect(screen.queryByText('só busca')).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: /Código TriBusca/ })).toBeInTheDocument()
 
     // Edit a cell and add two synonyms at once (comma separated).

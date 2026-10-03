@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 
 import type { ProductApiFetch } from './product-api'
 import {
-  ALIAS_TYPE_LABELS,
   OFFICIAL_CODE_TYPE_LABELS,
   TaxonomyApiError,
   formatOfficialCode,
@@ -36,15 +35,6 @@ type RowDraft = {
 
 type ColumnKey = 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code'
 
-// Types that mark legislações automatically; the others only help search.
-const CLASSIFYING_ALIAS_TYPES: AliasType[] = ['EXACT_LEXICAL', 'ABBREVIATION']
-
-const ALIAS_TAGS: Partial<Record<AliasType, string>> = {
-  ABBREVIATION: 'sigla',
-  HISTORICAL_LABEL: 'nome antigo',
-  SEARCH_RELATED: 'só busca',
-  AMBIGUOUS: 'ambíguo',
-}
 
 function splitList(value: string): string[] {
   return value
@@ -564,8 +554,8 @@ export function CurationGrid({
       </div>
       <p className="tc-hint">
         {visibleRows.length} linhas · Enter, ↑ e ↓ mudam de linha · clique no título da coluna para ordenar · digite um
-        grupo novo na coluna Grupo para criá-lo ao salvar · sinônimos tracejados (só busca, nome antigo, ambíguo) não
-        marcam legislações; o tipo muda em Detalhes.
+        grupo novo na coluna Grupo para criá-lo ao salvar · todo sinônimo marca
+        automaticamente as legislações em que aparece.
       </p>
     </div>
   )
@@ -601,17 +591,8 @@ function SynonymCell({
   return (
     <div className="tc-synonyms">
       {aliases.map((alias) => (
-        <span
-          key={`${alias.aliasType}:${alias.text}`}
-          className={`tc-chip${CLASSIFYING_ALIAS_TYPES.includes(alias.aliasType) ? '' : ' is-search-only'}`}
-          title={
-            CLASSIFYING_ALIAS_TYPES.includes(alias.aliasType)
-              ? `${ALIAS_TYPE_LABELS[alias.aliasType]}: marca legislações automaticamente`
-              : `${ALIAS_TYPE_LABELS[alias.aliasType]}: ajuda a busca, não marca legislações (troque o tipo em Detalhes)`
-          }
-        >
+        <span key={`${alias.aliasType}:${alias.text}`} className="tc-chip">
           {alias.text}
-          {ALIAS_TAGS[alias.aliasType] && <em>{ALIAS_TAGS[alias.aliasType]}</em>}
           {editable && (
             <button
               type="button"

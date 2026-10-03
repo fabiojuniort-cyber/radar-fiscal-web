@@ -40,6 +40,12 @@ Issue: fabiojuniort-cyber/tribusca-control#61 · Backend: fabiojuniort-cyber/rad
   passo a passo do arquivo oficial (a API da Receita exige certificado ICP-Brasil).
 - Botões do site: removido o “✓” ao clicar; mantido o efeito de afundar.
 
+## Sinônimos: um tipo só (decisão do PO)
+
+- A grade e o Detalhes mostram todos os sinônimos sem tipo; todo sinônimo marca as
+  legislações em que aparece. Sinônimo novo é gravado como `EXACT_LEXICAL`.
+- A revisão avisa os sinônimos que o dicionário tinha como ambíguos ou “só busca”.
+
 ## Contrato usado
 
 `/api/v1/admin/me`, `/api/v1/admin/taxonomy/*`, `/api/v1/publications/:id/taxonomy`,

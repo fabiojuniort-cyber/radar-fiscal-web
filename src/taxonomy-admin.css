@@ -1249,16 +1249,3 @@
 .tc-toolbar .tc-search {
   flex: 1 1 260px;
 }
-
-.tc-chip em {
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--tp-muted);
-}
-
-.tc-chip.is-search-only {
-  background: #fff;
-  border-style: dashed;
-  color: var(--tp-copy);
-}
