@@ -392,7 +392,7 @@ describe('legal presentation template registry', () => {
         '<p class="DataPublicao">Publicação no DOU de 16.09.26.</p>',
         '<p class="Ementa">Altera relação de empresas nacionais beneficiárias.</p>',
         '<p class="TextoAcordo"><b>Art. 1º</b> O item 814 fica acrescido.</p>',
-        '<p>Anexo único</p>',
+        '<p>“Anexo único</p>',
         '<table><tbody>',
         '<tr><td colspan="2">SÃO PAULO</td></tr>',
         '<tr><td>814.</td><td>DIVISION TURBOS BRASIL LTDA<br>CNPJ: 17.524.167/0001-54<br>IE: 669.738.227.110</td></tr>',
@@ -402,7 +402,8 @@ describe('legal presentation template registry', () => {
 
     expect(result.variant).toBe('annex-structured')
     expect(result.html).toContain('class="AtoCotepeAnexoTitulo"')
-    expect(result.html).toContain('class="AtoCotepeUfHeader"')
+    expect(result.html).toContain('AtoCotepeEmpresaTable')
+    expect(result.html).toContain('AtoCotepeUfHeader')
     expect(result.html).toContain('class="legal-table-scroll"')
     expect(result.html).toContain('colspan="2"')
     expect(result.html).toContain('DIVISION TURBOS BRASIL LTDA<br>CNPJ:')
@@ -429,6 +430,8 @@ describe('legal presentation template registry', () => {
     expect(result.html).toContain('AtoCotepeTituloHistorico')
     expect(result.html).toContain('AtoCotepeDouHistorico')
     expect(result.html).toContain('AtoCotepeDeclara')
+    expect(result.html).toContain('class="Ementa"')
+    expect(result.html).toContain('Ratifica os Convênios ICM de nºs 50 a 72/87.')
     expect(result.html?.match(/DOU 30\.12\.87/g)).toHaveLength(1)
     expect(result.html).not.toContain('Publicado no DOU de 30.12.1987')
   })
@@ -455,6 +458,7 @@ describe('legal presentation template registry', () => {
         '<p class="TituloAcordo">ATO COTEPE/ICMS Nº 105, DE 1º DE OUTUBRO DE 2026</p>',
         '<table><tbody>',
         '<tr><td class="TabelaTitulo" colspan="2">Unidade Federada: SÃO PAULO</td></tr>',
+        '<tr><td colspan="2">DESCRIÇÃO DOS PRODUTOS</td></tr>',
         '<tr><td>1</td><td>Conteúdo</td></tr>',
         '</tbody></table>',
       ].join(''),
@@ -463,6 +467,7 @@ describe('legal presentation template registry', () => {
     expect(result.templateId).toBe('ATO_COTEPE_ICMS')
     expect(result.variant).toBe('annex-structured')
     expect(result.html).toContain('class="TabelaTitulo"')
-    expect(result.html).not.toContain('class="TabelaTitulo AtoCotepeUfHeader"')
+    expect(result.html).not.toContain('AtoCotepeEmpresaTable')
+    expect(result.html).not.toContain('AtoCotepeUfHeader')
   })
 })
