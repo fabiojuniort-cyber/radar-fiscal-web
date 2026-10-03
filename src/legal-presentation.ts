@@ -542,37 +542,56 @@ const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   },
 }
 
-function prepareAjusteSiniefSource(html: string): string {
-  if (typeof DOMParser === 'undefined') return html
+function repairInferredAjusteSiniefHeader(
+  html: string,
+  ementa: string,
+): string {
+  if (typeof DOMParser === 'undefined' || ementa.trim().length <= 20) return html
+
+  const normalizeText = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
 
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
-  const openingParagraphs = Array.from(doc.body.querySelectorAll('p')).slice(0, 12)
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(
+    (paragraph) => !paragraph.closest('table'),
+  )
+  const titleIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('TituloAcordo'),
+  )
+  const kindIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('AcordoTipo'),
+  )
+  if (titleIndex < 0) return html
 
-  for (const paragraph of openingParagraphs) {
+  const ementaKey = normalizeText(ementa)
+  const candidates = paragraphs
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph, index }) => {
+      if (index <= titleIndex) return false
+      if (kindIndex >= 0 && index >= kindIndex) return false
+      return normalizeText(paragraph.textContent ?? '') === ementaKey
+    })
+  if (candidates.length !== 1) return html
+
+  const ementaMatch = candidates[0]!
+  ementaMatch.paragraph.className = 'Ementa'
+
+  for (let index = titleIndex + 1; index < ementaMatch.index; index += 1) {
+    const paragraph = paragraphs[index]!
     const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
-    if (!/^(?:Exclus[ãa]o|Inclus[ãa]o)\s+de\b/i.test(text)) continue
-
-    const placeholder = doc.createElement('div')
-    placeholder.setAttribute('data-ajuste-editorial-note', '')
-    while (paragraph.firstChild) placeholder.append(paragraph.firstChild)
-    paragraph.replaceWith(placeholder)
+    if (
+      /^(?:Exclus[ãa]o|Inclus[ãa]o)\s+de\b/i.test(text) ||
+      paragraph.classList.contains('Remisso')
+    ) {
+      paragraph.className = 'DataPublicao AjusteNotaEditorial'
+    }
   }
 
-  return doc.body.innerHTML
-}
-
-function restoreAjusteSiniefEditorialNotes(html: string): string {
-  if (typeof DOMParser === 'undefined') return html
-
-  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
-  for (const placeholder of Array.from(
-    doc.body.querySelectorAll('div[data-ajuste-editorial-note]'),
-  )) {
-    const paragraph = doc.createElement('p')
-    paragraph.className = 'DataPublicao AjusteNotaEditorial'
-    while (placeholder.firstChild) paragraph.append(placeholder.firstChild)
-    placeholder.replaceWith(paragraph)
-  }
   return doc.body.innerHTML
 }
 
@@ -620,9 +639,8 @@ const ajusteSiniefTemplate: LegalPresentationTemplate = {
       }
     }
 
-    const preparedHtml = prepareAjusteSiniefSource(input.html)
     const view = confazDisplayHtml({
-      html: preparedHtml,
+      html: input.html,
       text: null,
       ementa: input.ementa,
       publishedOn: input.sourceCodes.includes('dou')
@@ -638,9 +656,10 @@ const ajusteSiniefTemplate: LegalPresentationTemplate = {
       }
     }
 
-    const displayHtml = wrapLegalTables(
-      restoreAjusteSiniefEditorialNotes(view.html),
-    )
+    const repairedHtml = view.inferred
+      ? repairInferredAjusteSiniefHeader(view.html, input.ementa)
+      : view.html
+    const displayHtml = wrapLegalTables(repairedHtml)
     return {
       html: displayHtml,
       inferredStructure: view.inferred,
