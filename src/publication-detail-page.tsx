@@ -9,10 +9,7 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import {
-  confazDisplayHtml,
-  isConfazAct,
-} from './confaz-presentation'
+import { renderLegalPresentation } from './legal-presentation'
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
 import { PublicationTaxonomySection } from './publication-taxonomy'
@@ -21,6 +18,7 @@ import {
   type ProductApiFetch,
 } from './product-api'
 import './publication-detail-page.css'
+import './convenio-icms-presentation.css'
 import './publication-ncm.css'
 
 type Props = {
@@ -166,28 +164,20 @@ export function PublicationDetailPage({
     origins,
   } = detailQuery.data
 
-  // CONFAZ acts (every convênio, ajuste and protocolo) keep the visual
-  // identity of the official portal.
-  const sourceStyle = isConfazAct({
-    agency: publication.agency,
-    actType: publication.actType,
-    sourceCodes: origins.map((origin) => origin.sourceCode),
-  })
-    ? 'confaz'
-    : undefined
   const storedHtml =
     version?.presentation.format === 'SANITIZED_HTML'
       ? (version.presentation.html ?? null)
       : null
-  const confazView = sourceStyle
-    ? confazDisplayHtml({
-        html: storedHtml,
-        text: version?.contentText ?? null,
-        ementa: publication.title,
-        publishedOn: publication.publishedOn,
-      })
-    : null
-  const displayHtml = confazView?.html ?? storedHtml
+  const legalPresentation = renderLegalPresentation({
+    agency: publication.agency,
+    actType: publication.actType,
+    sourceCodes: origins.map((origin) => origin.sourceCode),
+    html: storedHtml,
+    text: version?.contentText ?? null,
+    ementa: publication.title,
+    publishedOn: publication.publishedOn,
+  })
+  const displayHtml = legalPresentation.html
 
   const reference = referenceLabel(
     publication.actType,
@@ -326,9 +316,20 @@ export function PublicationDetailPage({
               data-presentation-format={
                 version?.presentation.format
               }
-              data-source-style={sourceStyle}
+              data-source-style={legalPresentation.sourceStyle}
+              data-legal-template={
+                legalPresentation.templateId ?? undefined
+              }
+              data-legal-template-version={
+                legalPresentation.templateVersion ?? undefined
+              }
+              data-legal-variant={
+                legalPresentation.variant ?? undefined
+              }
               data-inferred-structure={
-                confazView?.inferred ? 'true' : undefined
+                legalPresentation.inferredStructure
+                  ? 'true'
+                  : undefined
               }
               dangerouslySetInnerHTML={{
                 __html: displayHtml,
