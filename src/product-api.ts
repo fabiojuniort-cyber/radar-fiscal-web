@@ -743,6 +743,12 @@ export type ProductPublicationDetail = {
     uf: string | null
     publishedOn: string | null
     effectiveOn: string | null
+    /** Last day in force, read from the act's current wording. */
+    effectiveUntil?: {
+      date: string
+      basis: string
+      amendedBy: string | null
+    } | null
     officialUrl: string | null
     firstCollectedAt: string
     lastSeenAt: string
