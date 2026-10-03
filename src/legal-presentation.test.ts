@@ -548,6 +548,24 @@ describe('legal presentation template registry', () => {
     expect(result.html).toContain('class="Remisso"')
   })
 
+  it('does not repair an inferred Ajuste header without an unambiguous AJUSTE marker boundary', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      ementa: 'Ementa real longa o suficiente para ser reconhecida apenas com limite seguro.',
+      html: [
+        '<p>AJUSTE SINIEF Nº 9, DE 2026</p>',
+        '<p>Exclusão de SP, a partir de data futura, por ato posterior.</p>',
+        '<p>Ementa real longa o suficiente para ser reconhecida apenas com limite seguro.</p>',
+        '<p>Texto sem marcador protocolar isolado.</p>',
+        '<p>Ementa real longa o suficiente para ser reconhecida apenas com limite seguro.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('AjusteNotaEditorial')
+  })
+
   it('keeps AJUSTE_SINIEF PRESERVED_TEXT outside the HTML path', () => {
     const result = renderLegalPresentation({
       ...baseInput,
