@@ -481,11 +481,11 @@ describe('legal presentation template registry', () => {
       ...baseInput,
       actType: 'AJUSTE SINIEF',
       sourceCodes: ['dou'],
-      ementa: 'Altera o Ajuste SINIEF 19/16, que institui documento fiscal eletrônico.',
-      publishedOn: '2026-09-08',
+      ementa: 'Altera o Ajuste SINIEF 01/19, que institui documento fiscal eletrônico.',
+      publishedOn: '2026-09-14',
       html: [
         '<p>AJUSTE SINIEF Nº 33, DE 4 DE SETEMBRO DE 2026</p>',
-        '<p>Altera o Ajuste SINIEF 19/16, que institui documento fiscal eletrônico.</p>',
+        '<p>Altera o Ajuste SINIEF 01/19, que institui documento fiscal eletrônico.</p>',
         '<p>O Conselho Nacional de Política Fazendária - CONFAZ resolve celebrar o seguinte</p>',
         '<p>A J U S T E</p>',
         '<p>Cláusula primeira Fica alterada a cláusula primeira.</p>',
@@ -496,7 +496,7 @@ describe('legal presentation template registry', () => {
     expect(result.templateVersion).toBe('1.0.0')
     expect(result.variant).toBe('standard')
     expect(result.html).toContain('class="TituloAcordo"')
-    expect(result.html).toContain('Publicado no DOU de 08.09.2026')
+    expect(result.html).toContain('Publicado no DOU de 14.09.2026')
     expect(result.html).toContain('class="AcordoTipo"')
   })
 
@@ -536,8 +536,9 @@ describe('legal presentation template registry', () => {
         '<p>Retificação no DOU de 13.12.24.</p>',
         '<p>Altera procedimento fiscal na forma que especifica.</p>',
         '<p>O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>',
-        '<p>A J U S T E</p>',
+        '<p>AJUSTE</p>',
         '<p>Cláusula primeira Texto vigente.</p>',
+        '<p>“Cláusula citada com redação multilinha preservada.”</p>',
         '<p>Nova redação dada pelo Ajuste SINIEF 30/24.</p>',
       ].join(''),
     })
@@ -546,6 +547,8 @@ describe('legal presentation template registry', () => {
     expect(result.html).toContain('DataPublicao AjusteNotaEditorial')
     expect(result.html).toContain('class="Ementa"')
     expect(result.html).toContain('class="Remisso"')
+    expect(result.html).toContain('AcordoTipo AjusteTipoPlain')
+    expect(result.html).toContain('TextoAcordo AjusteCitacao')
   })
 
   it('does not repair an inferred Ajuste header without an unambiguous AJUSTE marker boundary', () => {
