@@ -55,6 +55,36 @@ O CSS canônico fica em `src/convenio-icms-presentation.css`. Mudanças
 aprovadas pelo Product Owner devem ser feitas nesse arquivo e acompanhadas de
 teste de regressão, em vez de criar exceções por publicationId.
 
+## ATO_COTEPE_ICMS — versão 1.0.0
+
+Referências de homologação inicial fornecidas pelo Product Owner:
+
+1. ATO COTEPE/ICMS nº 100/2026 — composição moderna com Anexo Único/tabela;
+2. ATO COTEPE/ICMS 68/19 — composição moderna textual;
+3. ATO COTEPE/ICM nº 05/87 — apresentação histórica declaratória.
+
+O template é selecionado exclusivamente pelos tipos normalizados
+\`ATO_COTEPE_ICMS\` e \`ATO_COTEPE_ICM\`. O alias histórico ICM preserva a
+grafia original do conteúdo; não reescreve a identidade jurídica.
+
+Variantes:
+
+| Variante | Sinal estrutural | Papel |
+| --- | --- | --- |
+| \`standard\` | ato moderno sem tabela | título, DOU, ementa à direita, texto e artigos |
+| \`annex-structured\` | tabela HTML real | preserva anexo/tabulação sem reconstruir grade a partir de texto |
+| \`historical-declaration\` | cabeçalho ICM e/ou \`DECLARA\` isolado | composição histórica com DOU preto junto ao título e ementa integral |
+| \`preserved-text\` | conteúdo recebido como texto | degradação segura, sem interpretar texto como HTML |
+
+A marcação local distingue cabeçalhos de UF de anexos modernos (por exemplo
+\`SÃO PAULO\`, centralizado) de \`.TabelaTitulo\` legado (por exemplo
+\`Unidade Federada: SÃO PAULO\`, mantido à esquerda). A regra compartilhada
+do fallback CONFAZ não é alterada.
+
+Na apresentação histórica, uma nota \`(DOU ...)\` já presente junto ao título
+impede síntese de uma segunda nota de publicação. \`DECLARA\` e o DOU inline
+são tratados apenas dentro deste template, sem ampliar o normalizador global.
+
 ## ATO_COTEPE_PMPF — versão 1.0.0
 
 Referência inicial de homologação: ATO COTEPE/PMPF nº 26, de 24 de
