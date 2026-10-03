@@ -10,11 +10,13 @@ export type LegalPresentationVariant =
   | 'standard'
   | 'annex-structured'
   | 'consolidated'
+  | 'preserved-text'
 
 export type LegalPresentationInput = {
   agency: string | null
   actType: string | null
   sourceCodes: string[]
+  presentationFormat: 'SANITIZED_HTML' | 'PRESERVED_TEXT' | null
   html: string | null
   text: string | null
   ementa: string
@@ -56,6 +58,16 @@ const OFFICIAL_EMENTA_CLASS =
 const ISOLATED_CLAUSE =
   /<p\b[^>]*>\s*(?:<(?:b|strong)\b[^>]*>\s*)?Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)(?:\s*<\/(?:b|strong)>)?\s*<\/p>/i
 
+function hasLongRichParagraph(html: string): boolean {
+  if (typeof DOMParser === 'undefined') return false
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+  return Array.from(doc.body.querySelectorAll('p')).some(
+    (paragraph) =>
+      (paragraph.textContent ?? '').trim().length >= 200 &&
+      Boolean(paragraph.querySelector('a, b, strong, i, em, sup, sub')),
+  )
+}
+
 function convenioVariant(
   sourceHtml: string | null,
   renderedHtml: string,
@@ -84,11 +96,43 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
     return code === 'CONVENIO_ICMS' || code.startsWith('CONVENIO_ICMS_')
   },
   render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (!input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    /*
+     * Structural inference must not destroy official inline markup. The legacy
+     * CONFAZ helper rebuilds long paragraphs from textContent, so a rich long
+     * paragraph is kept verbatim until a structure-preserving normalizer is
+     * available.
+     */
+    if (hasLongRichParagraph(input.html)) {
+      return {
+        html: input.html,
+        inferredStructure: false,
+        variant: convenioVariant(input.html, input.html),
+      }
+    }
+
     const view = confazDisplayHtml({
       html: input.html,
-      text: input.text,
+      text: null,
       ementa: input.ementa,
-      publishedOn: input.publishedOn,
+      publishedOn: input.sourceCodes.includes('dou')
+        ? input.publishedOn
+        : null,
     })
 
     if (!view) {
