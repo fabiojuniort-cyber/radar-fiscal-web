@@ -8,6 +8,7 @@ export type LegalPresentationTemplateId =
   | 'CONVENIO_ICMS'
   | 'ATO_COTEPE_PMPF'
   | 'ATO_COTEPE_ICMS'
+  | 'AJUSTE_SINIEF'
 
 export type LegalPresentationVariant =
   | 'standard'
@@ -541,6 +542,59 @@ const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   },
 }
 
+const ajusteSiniefTemplate: LegalPresentationTemplate = {
+  id: 'AJUSTE_SINIEF',
+  version: '1.0.0',
+  matches: ({ actType }) => {
+    const code = normalizeCode(actType)
+    return (
+      code === 'AJUSTE_SINIEF' ||
+      /^AJUSTE_SINIEF_\d{1,3}_\d{2,4}$/.test(code)
+    )
+  },
+  render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const view = confazDisplayHtml({
+      html: input.html,
+      text: null,
+      ementa: input.ementa,
+      publishedOn: input.sourceCodes.includes('dou')
+        ? input.publishedOn
+        : null,
+    })
+
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const displayHtml = wrapLegalTables(view.html)
+    return {
+      html: displayHtml,
+      inferredStructure: view.inferred,
+      variant: hasHistoryClass(displayHtml) ? 'consolidated' : 'standard',
+    }
+  },
+}
+
 const convenioIcmsTemplate: LegalPresentationTemplate = {
   id: 'CONVENIO_ICMS',
   version: '1.0.0',
@@ -601,6 +655,7 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
   convenioIcmsTemplate,
+  ajusteSiniefTemplate,
   atoCotepeIcmsTemplate,
   atoCotepePmpfTemplate,
 ]
