@@ -107,26 +107,26 @@
 }
 
 /* Current/simple acts (e.g. 114/26) use the current portal composition. */
-.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TituloAcordo {
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.TituloAcordo {
   margin: 0 0 12pt;
   font-size: 1.2em;
 }
 
-.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.DataPublicao {
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.DataPublicao {
   margin: 12pt 0 0;
 }
 
-.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.Ementa {
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.Ementa {
   margin: 30pt 0 18pt min(45%, 370px);
   max-width: min(55%, 450px);
 }
 
-.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TextoAcordo {
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.TextoAcordo {
   margin-top: 10pt;
   text-indent: 0;
 }
 
-.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.AcordoTipo {
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.AcordoTipo {
   margin: 12pt 0;
   letter-spacing: normal;
 }
@@ -185,7 +185,7 @@
 
   .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.Ementa,
   .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='consolidated'] p.Ementa,
-  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.Ementa {
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.Ementa {
     margin-left: 18%;
     max-width: none;
   }
@@ -213,7 +213,7 @@
     text-indent: 24pt;
   }
 
-  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TextoAcordo {
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'] p.TextoAcordo {
     text-indent: 0;
   }
 
