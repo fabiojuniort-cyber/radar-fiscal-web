@@ -530,17 +530,22 @@ describe('legal presentation template registry', () => {
       actType: 'AJUSTE SINIEF',
       ementa: 'Altera procedimento fiscal na forma que especifica.',
       html: [
-        '<p class="TituloAcordo">AJUSTE SINIEF Nº 28, DE 6 DE DEZEMBRO DE 2024</p>',
-        '<p class="DataPublicao">Publicado no DOU de 12.12.24.</p>',
-        '<p class="DataPublicao">Ratificação nacional publicada no DOU.</p>',
-        '<p class="DataPublicao">Retificação publicada no DOU.</p>',
-        '<p class="Ementa">Altera procedimento fiscal na forma que especifica.</p>',
-        '<p class="AcordoTipo">A J U S T E</p>',
-        '<p class="TextoAcordo">Cláusula primeira Texto vigente.</p>',
+        '<p>AJUSTE SINIEF Nº 28, DE 6 DE DEZEMBRO DE 2024</p>',
+        '<p>Publicado no DOU de 12.12.24.</p>',
+        '<p>Exclusão de SP, a partir de 04.10.23, pelo Ajuste SINIEF 20/23.</p>',
+        '<p>Retificação no DOU de 13.12.24.</p>',
+        '<p>Altera procedimento fiscal na forma que especifica.</p>',
+        '<p>O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>',
+        '<p>A J U S T E</p>',
+        '<p>Cláusula primeira Texto vigente.</p>',
+        '<p>Nova redação dada pelo Ajuste SINIEF 30/24.</p>',
       ].join(''),
     })
 
     expect(result.variant).toBe('standard')
+    expect(result.html).toContain('DataPublicao AjusteNotaEditorial')
+    expect(result.html).toContain('class="Ementa"')
+    expect(result.html).toContain('class="Remisso"')
   })
 
   it('keeps AJUSTE_SINIEF PRESERVED_TEXT outside the HTML path', () => {
