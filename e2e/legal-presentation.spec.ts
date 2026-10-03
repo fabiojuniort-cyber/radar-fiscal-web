@@ -114,7 +114,7 @@ const fixture = `
       <p class="TituloAcordo AtoCotepeTituloHistorico">ATO COTEPE/ICM Nº 05/87, DE 30 DE DEZEMBRO DE 1987<br><span class="AtoCotepeDouHistorico">(DOU 30.12.87)</span></p>
       <p class="Ementa">Ratifica os Convênios ICM de nºs 50 a 72/87.</p>
       <p class="TextoAcordo">O Presidente da Comissão Técnica Permanente do ICMS - COTEPE/ICMS, no uso da atribuição regimental,</p>
-      <p class="AtoCotepeDeclara">DECLARA</p>
+      <p class="TextoAcordo AtoCotepeDeclara">DECLARA</p>
       <p class="TextoAcordo">Ratificados os Convênios ICM 50 a 72/87.</p>
     </section>
 
@@ -245,6 +245,7 @@ test('DESIGN-01C — ATO COTEPE/ICMS preserva moderno, anexo e histórico', asyn
   await expect(historical.locator('.AtoCotepeDouHistorico')).toHaveCSS('color', 'rgb(0, 0, 0)')
   await expect(historical.locator('.Ementa')).toHaveCSS('font-weight', '400')
   await expect(historical.locator('.AtoCotepeDeclara')).toHaveCSS('text-align', 'center')
+  await expect(historical.locator('.AtoCotepeDeclara')).toHaveCSS('text-indent', '0px')
 
   const ato105Table = page.getByTestId('ato-cotepe-105').locator('table')
   await expect(ato105Table.locator('.TabelaTitulo')).toHaveCSS('text-align', 'left')
