@@ -366,6 +366,22 @@ describe('legal presentation template registry', () => {
     expect(result.html).toContain('Publicado no DOU de 23.12.2019')
   })
 
+  it('does not switch a modern ATO COTEPE/ICMS to historical because its body cites an old ICM act', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/ICMS',
+      html: [
+        '<p>ATO COTEPE/ICMS Nº 1, DE 2 DE JANEIRO DE 2026</p>',
+        '<p>Ementa moderna suficientemente longa para classificação.</p>',
+        '<p>ATO COTEPE/ICM Nº 05/87 é citado apenas como referência no corpo deste ato.</p>',
+        '<p>Art. 1º Texto normativo atual.</p>',
+      ].join(''),
+      ementa: 'Ementa moderna suficientemente longa para classificação.',
+    })
+
+    expect(result.variant).toBe('standard')
+  })
+
   it('preserves and marks the structured Annex table used by ATO COTEPE/ICMS 100/2026', () => {
     const result = renderLegalPresentation({
       ...baseInput,
