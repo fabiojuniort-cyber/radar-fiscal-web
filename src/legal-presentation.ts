@@ -281,21 +281,27 @@ function prepareAtoCotepeIcmsSource(html: string): {
   historical: boolean
   hasTable: boolean
 } {
-  const historicalText =
-    /ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(html) ||
-    />\s*DECLARA\s*</i.test(html)
-
   if (typeof DOMParser === 'undefined') {
+    const opening = html.slice(0, 900)
     return {
       html,
-      historical: historicalText,
+      historical:
+        /ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(opening) ||
+        />\s*DECLARA\s*</i.test(opening),
       hasTable: /<table\b/i.test(html),
     }
   }
 
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
   const paragraphs = Array.from(doc.body.querySelectorAll('p'))
-  let historical = historicalText
+  const openingParagraphs = paragraphs.slice(0, 8)
+  let historical = openingParagraphs.some((paragraph) => {
+    const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+    return (
+      /^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(text) ||
+      /^DECLARA\s*:?\s*$/i.test(text)
+    )
+  })
 
   for (const paragraph of paragraphs) {
     const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -306,7 +312,7 @@ function prepareAtoCotepeIcmsSource(html: string): {
 
     if (/^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(text)) {
       historical = true
-      paragraph.classList.add('AtoCotepeTituloHistorico')
+      paragraph.className = 'TituloAcordo AtoCotepeTituloHistorico'
 
       if (/\(DOU\s+[^)]+\)/i.test(text)) {
         const firstBreak = paragraph.querySelector('br')
@@ -417,8 +423,10 @@ const atoCotepeIcmsTemplate: LegalPresentationTemplate = {
       }
     }
 
+    const decorated = prepareAtoCotepeIcmsSource(view.html)
+
     return {
-      html: wrapLegalTables(view.html),
+      html: wrapLegalTables(decorated.html),
       inferredStructure: view.inferred,
       variant: prepared.historical
         ? 'historical-declaration'
