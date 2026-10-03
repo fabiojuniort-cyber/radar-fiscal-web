@@ -647,8 +647,11 @@ function DimensionEditor({
           Sinônimos · No perfil · Ordem · Classificar pelo nome · Código TriBusca. Só “Item” é obrigatório.
         </p>
         <ul>
-          <li>“Código TriBusca” pode ficar vazio: o código é gerado a partir do nome do item. Se já existir um item com o
-          mesmo nome, ele é atualizado.</li>
+          <li>Pode reimportar a planilha exportada inteira: cada linha encontra o item pelo “Código TriBusca” (ou, se
+          vazio, pelo nome) e só atualiza o que mudou; nada é duplicado.</li>
+          <li>Linha nova: deixe “Código TriBusca” vazio; o código é gerado a partir do nome do item.</li>
+          <li>Itens que não estão na planilha continuam como estão. Para excluir, use “Excluir selecionadas” na
+          tabela.</li>
           <li>“No perfil” e “Classificar pelo nome”: marque com <b>x</b> (vazio mantém o valor atual).</li>
           <li>Vários sinônimos ou códigos na mesma célula: separe com vírgula ou ponto e vírgula.</li>
           <li>Célula em branco mantém o valor atual; “—” apaga o valor. Grupo novo é criado automaticamente.</li>
