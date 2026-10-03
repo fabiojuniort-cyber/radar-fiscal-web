@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 
 import { ArchiveDateFilter } from './archive-date-filter'
 import { useArchiveDateFilterState } from './archive-date-state'
+import './archive-date-layout-fix.css'
 
 const HOST_ATTRIBUTE = 'data-archive-date-host'
 
