@@ -50,13 +50,6 @@
     0 0 0 2px rgba(49, 88, 255, .16);
 }
 
-.tp-app button:not(.tp-user-button):not(.tp-tabs button):not(.tp-org-tabs button):active::after,
-.tp-manual-dialog button:active::after {
-  content: '✓';
-  margin-left: 6px;
-  font-weight: 900;
-}
-
 .tp-app button:disabled,
 .tp-manual-dialog button:disabled {
   transform: none;

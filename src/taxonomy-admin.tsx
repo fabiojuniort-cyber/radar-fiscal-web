@@ -48,7 +48,10 @@ import {
   type ReleaseView,
 } from './taxonomy-api'
 import './panel-experience.css'
+import { CurationGrid } from './taxonomy-grid'
 import './taxonomy-admin.css'
+
+const DEFAULT_REASON = 'Curadoria da taxonomia'
 
 type Tab = 'tabelas' | 'revisar' | 'catalogos' | 'classificacao'
 
@@ -161,12 +164,13 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
   }
 
+  // The reason is optional for the curator; the audit trail always gets one.
+  const auditReason = justification.trim().length >= 3 ? justification.trim() : DEFAULT_REASON
+
   const createDraft = useMutation({
-    mutationFn: () => createCurationDraft(apiFetch, justification),
+    mutationFn: () => createCurationDraft(apiFetch, auditReason),
     onSuccess: refresh,
   })
-
-  const justified = justification.trim().length >= 3
 
   return (
     <div className="tp-app tc-app">
@@ -179,7 +183,7 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
           <h1>Curadoria da Taxonomia</h1>
         </div>
         <label className="tc-justification">
-          <span>Motivo das alterações (obrigatório, vai para a auditoria)</span>
+          <span>Motivo das alterações (opcional, vai para a auditoria)</span>
           <input
             value={justification}
             onChange={(event) => setJustification(event.target.value)}
@@ -209,7 +213,7 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
                 <strong>Nenhum</strong>
                 <button
                   type="button"
-                  disabled={!justified || createDraft.isPending || !state.published}
+                  disabled={createDraft.isPending || !state.published}
                   onClick={() => createDraft.mutate()}
                 >
                   <Plus size={14} />
@@ -233,9 +237,6 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
             </p>
           )}
           {createDraft.isError && <p className="tc-error">{errorText(createDraft.error)}</p>}
-          {!justified && (
-            <p className="tc-hint">Preencha o motivo das alterações para habilitar edições.</p>
-          )}
         </section>
       )}
 
@@ -259,20 +260,20 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
               apiFetch={apiFetch}
               view={viewQuery.data}
               editable={Boolean(state.draft) && state.curatorDatabase}
-              justification={justification}
+              justification={auditReason}
               onChanged={refresh}
             />
           ) : (
             <p className="tc-hint">{viewQuery.isError ? errorText(viewQuery.error) : 'Carregando tabelas…'}</p>
           ))}
         {tab === 'revisar' && state && (
-          <ReviewTab apiFetch={apiFetch} state={state} justification={justification} onChanged={refresh} />
+          <ReviewTab apiFetch={apiFetch} state={state} justification={auditReason} onChanged={refresh} />
         )}
         {tab === 'catalogos' && state && (
-          <CatalogsTab apiFetch={apiFetch} state={state} justification={justification} onChanged={refresh} />
+          <CatalogsTab apiFetch={apiFetch} state={state} justification={auditReason} onChanged={refresh} />
         )}
         {tab === 'classificacao' && state && (
-          <ClassificationTab apiFetch={apiFetch} state={state} justification={justification} onChanged={refresh} />
+          <ClassificationTab apiFetch={apiFetch} state={state} justification={auditReason} onChanged={refresh} />
         )}
       </main>
     </div>
@@ -297,6 +298,7 @@ function TablesTab({
   onChanged: () => Promise<void>
 }) {
   const [dimensionCode, setDimensionCode] = useState(view.dimensions[0]?.code ?? '')
+  const [gridDirty, setGridDirty] = useState(false)
   const dimension = view.dimensions.find((d) => d.code === dimensionCode) ?? view.dimensions[0]
 
   const sortedDimensions = useMemo(
@@ -320,7 +322,17 @@ function TablesTab({
             type="button"
             key={item.code}
             className={item.code === dimension.code ? 'is-selected' : ''}
-            onClick={() => setDimensionCode(item.code)}
+            onClick={() => {
+              if (
+                item.code !== dimension.code &&
+                gridDirty &&
+                !window.confirm('Há alterações não salvas nesta tabela. Sair sem salvar?')
+              ) {
+                return
+              }
+              setGridDirty(false)
+              setDimensionCode(item.code)
+            }}
           >
             <b>{item.name}</b>
             <span>
@@ -339,6 +351,7 @@ function TablesTab({
         editable={editable}
         justification={justification}
         onChanged={onChanged}
+        onDirtyChange={setGridDirty}
       />
     </div>
   )
@@ -481,6 +494,7 @@ function DimensionEditor({
   editable,
   justification,
   onChanged,
+  onDirtyChange,
 }: {
   apiFetch: ProductApiFetch
   view: ReleaseView
@@ -488,6 +502,7 @@ function DimensionEditor({
   editable: boolean
   justification: string
   onChanged: () => Promise<void>
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const [query, setQuery] = useState('')
   const [showRetired, setShowRetired] = useState(false)
@@ -500,27 +515,8 @@ function DimensionEditor({
   const groups = view.groups
     .filter((group) => group.dimensionCode === dimension.code)
     .sort((a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label, 'pt-BR'))
-  const normalized = query.trim().toLocaleLowerCase('pt-BR')
-  const concepts = view.concepts.filter(
-    (concept) =>
-      concept.dimensionCode === dimension.code &&
-      (showRetired || concept.membershipStatus === 'INCLUDED') &&
-      (!normalized ||
-        concept.label.toLocaleLowerCase('pt-BR').includes(normalized) ||
-        concept.code.includes(normalized) ||
-        concept.officialCodes.some((code) => code.includes(normalized.replace(/\D/g, '') || '§')) ||
-        concept.aliases.some((alias) => alias.text.toLocaleLowerCase('pt-BR').includes(normalized))),
-  )
-
-  const sections: Array<{ group: CurationGroup | null; items: CurationConcept[] }> = dimension.usesGroups
-    ? [
-        ...groups.map((group) => ({
-          group,
-          items: concepts.filter((concept) => concept.groupId === group.id),
-        })),
-        { group: null, items: concepts.filter((concept) => !concept.groupId) },
-      ]
-    : [{ group: null, items: concepts }]
+  const dimensionConcepts = view.concepts.filter((concept) => concept.dimensionCode === dimension.code)
+  const [gridVersion, setGridVersion] = useState(0)
 
   const exportCsv = async () => {
     setExportError(null)
@@ -547,10 +543,14 @@ function DimensionEditor({
       setImportReport(
         `${report.rows} linhas · ${report.created} criados · ${report.updated} atualizados · ${report.groupsCreated} grupos novos` +
           (report.errors.length
-            ? ` · erros: ${report.errors.map((e) => `linha ${e.line}: ${e.message}`).join('; ')}`
+            ? ` · erros (linhas não gravadas): ${report.errors.map((e) => `linha ${e.line}: ${e.message}`).join('; ')}`
+            : '') +
+          ((report.warnings ?? []).length
+            ? ` · avisos: ${(report.warnings ?? []).map((w) => `linha ${w.line}: ${w.message}`).join('; ')}`
             : ''),
       )
       await onChanged()
+      setGridVersion((value) => value + 1)
     } catch (error) {
       setImportReport(errorText(error))
     } finally {
@@ -598,95 +598,86 @@ function DimensionEditor({
           <input type="checkbox" checked={showRetired} onChange={(e) => setShowRetired(e.target.checked)} />
           Mostrar retirados
         </label>
-        <button type="button" onClick={() => void exportCsv()}>
-          <Download size={14} /> Exportar planilha
-        </button>
-        {editable && (
+        <span className="tc-spacer" />
+        {dimension.usesGroups && editable && (
           <>
-            <label className="tc-file-button">
-              <FileUp size={14} /> {importing ? 'Importando…' : 'Importar planilha'}
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                disabled={importing}
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void importCsv(file)
-                  event.target.value = ''
-                }}
-              />
-            </label>
-            {dimension.usesGroups && (
-              <button type="button" onClick={() => setGroupEditor('new')}>
-                <Plus size={14} /> Novo grupo
-              </button>
-            )}
-            <button type="button" className="is-primary" onClick={() => setDetail('new')}>
-              <Plus size={14} /> Novo item
+            <select
+              aria-label="Editar grupo"
+              value=""
+              onChange={(event) => {
+                const group = groups.find((item) => item.id === event.target.value)
+                if (group) setGroupEditor(group)
+              }}
+            >
+              <option value="">Editar grupo…</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => setGroupEditor('new')}>
+              <Plus size={14} /> Novo grupo
             </button>
           </>
         )}
+        <button type="button" onClick={() => void exportCsv()}>
+          <Download size={14} /> Exportar planilha
+        </button>
+        <label
+          className={`tc-file-button is-primary${!editable || importing ? ' is-disabled' : ''}`}
+          title={editable ? 'Carga massiva por planilha CSV' : 'Crie um rascunho para importar'}
+        >
+          <FileUp size={14} /> {importing ? 'Importando…' : 'Importar planilha (carga massiva)'}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            disabled={!editable || importing}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void importCsv(file)
+              event.target.value = ''
+            }}
+          />
+        </label>
       </div>
       {exportError && <p className="tc-error" role="alert">{exportError}</p>}
       {importReport && <p className="tc-hint">{importReport}</p>}
-      <p className="tc-hint">
-        Planilha: uma linha por item com as colunas Grupo · Item · {codeLabel} · Sinônimos · No perfil · Ordem (a coluna
-        de código também pode se chamar “Código oficial”, “NCM”, “CNAE”, “CFOP”, “NBS”, “Modelo”, “cClassTrib” ou “Item LC
-        116”). Só “Item” é obrigatório. Célula em branco mantém o valor atual; “—” apaga o valor.
-      </p>
+      <details className="tc-hint tc-import-help">
+        <summary>Como montar a planilha de carga massiva</summary>
+        <p>
+          Use o arquivo do “Exportar planilha” como modelo: uma linha por item, colunas Grupo · Item · {codeLabel} ·
+          Sinônimos · No perfil · Ordem · Classificar pelo nome · Código TriBusca. Só “Item” é obrigatório.
+        </p>
+        <ul>
+          <li><b>“Código TriBusca” preenchido</b> = atualiza esse item (pode reimportar a planilha exportada inteira;
+          só muda o que você alterou). Código que não existe na tabela é recusado.</li>
+          <li><b>“Código TriBusca” em branco</b> = cria um item novo; o código é gerado a partir do nome e aparece na
+          próxima exportação. Se já houver item com o mesmo nome, ele é criado e o relatório avisa.</li>
+          <li>Itens que não estão na planilha continuam como estão. Para excluir, use “Excluir selecionadas” na
+          tabela.</li>
+          <li>“No perfil” e “Classificar pelo nome”: marque com <b>x</b> (vazio mantém o valor atual).</li>
+          <li>Vários sinônimos ou códigos na mesma célula: separe com vírgula ou ponto e vírgula.</li>
+          <li>Célula em branco mantém o valor atual; “—” apaga o valor. Grupo novo é criado automaticamente.</li>
+          <li>A coluna de código também pode se chamar “NCM”, “CNAE”, “CFOP”, “NBS”, “Modelo”, “cClassTrib” ou “Item LC
+          116”.</li>
+        </ul>
+      </details>
 
-      <div className="tc-table" role="table" aria-label={`Itens de ${dimension.name}`}>
-        <div className="tc-row tc-row-head" role="row">
-          <span>Item</span>
-          <span>{codeLabel}</span>
-          <span>Sinônimos</span>
-          <span>No perfil</span>
-          <span>Classificar pelo nome</span>
-          <span>Ordem</span>
-          <span />
-        </div>
-        {sections.map(({ group, items }) =>
-          items.length === 0 && !group ? null : (
-            <div key={group?.id ?? 'sem-grupo'} role="rowgroup">
-              {dimension.usesGroups && (
-                <div className="tc-group-row" role="row">
-                  <strong>{group ? group.label : 'Sem grupo'}</strong>
-                  {group && (
-                    <span>
-                      {group.officialCodes.length > 0 &&
-                        `${codeLabel} ${group.officialCodes
-                          .map((code) => formatOfficialCode(dimension.officialCodeType, code))
-                          .join(', ')} · `}
-                      {group.segmentCodes.length > 0 &&
-                        `Segmentos: ${group.segmentCodes
-                          .map((code) => view.concepts.find((c) => c.code === code)?.label ?? code)
-                          .join(', ')} · `}
-                      {items.length} itens
-                    </span>
-                  )}
-                  {group && editable && (
-                    <button type="button" onClick={() => setGroupEditor(group)}>
-                      Editar grupo
-                    </button>
-                  )}
-                </div>
-              )}
-              {items.map((concept) => (
-                <ConceptRow
-                  key={`${concept.code}-${concept.label}-${concept.officialCodes.join()}-${concept.aliases.map((alias) => `${alias.aliasType}:${alias.text}`).join('|')}-${concept.profileVisible}-${concept.classifyByLabel}-${concept.displayOrder}-${concept.membershipStatus}`}
-                  apiFetch={apiFetch}
-                  concept={concept}
-                  dimension={dimension}
-                  editable={editable}
-                  justification={justification}
-                  onChanged={onChanged}
-                  onOpen={() => setDetail(concept)}
-                />
-              ))}
-            </div>
-          ),
-        )}
-      </div>
+      <CurationGrid
+        key={gridVersion}
+        apiFetch={apiFetch}
+        dimension={dimension}
+        concepts={dimensionConcepts}
+        groups={groups}
+        editable={editable}
+        justification={justification}
+        showRetired={showRetired}
+        query={query}
+        onChanged={onChanged}
+        onOpenDetail={(concept) => setDetail(concept)}
+        {...(onDirtyChange ? { onDirtyChange } : {})}
+      />
 
       {detail && (
         <ConceptDrawer
@@ -716,137 +707,6 @@ function DimensionEditor({
         />
       )}
     </section>
-  )
-}
-
-function ConceptRow({
-  apiFetch,
-  concept,
-  dimension,
-  editable,
-  justification,
-  onChanged,
-  onOpen,
-}: {
-  apiFetch: ProductApiFetch
-  concept: CurationConcept
-  dimension: CurationDimension
-  editable: boolean
-  justification: string
-  onChanged: () => Promise<void>
-  onOpen: () => void
-}) {
-  const initial = {
-    label: concept.label,
-    codes: concept.officialCodes.map((code) => formatOfficialCode(dimension.officialCodeType, code)).join(', '),
-    synonyms: concept.aliases
-      .filter((alias) => alias.aliasType === 'EXACT_LEXICAL' || alias.aliasType === 'ABBREVIATION')
-      .map((alias) => alias.text)
-      .join(', '),
-    profileVisible: concept.profileVisible,
-    classifyByLabel: concept.classifyByLabel,
-    displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
-  }
-  const [form, setForm] = useState(initial)
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial)
-
-  const save = useMutation({
-    mutationFn: () => {
-      const keptAliases = concept.aliases.filter(
-        (alias) => alias.aliasType !== 'EXACT_LEXICAL' && alias.aliasType !== 'ABBREVIATION',
-      )
-      const abbreviations = new Set(
-        concept.aliases.filter((alias) => alias.aliasType === 'ABBREVIATION').map((alias) => alias.text),
-      )
-      return patchConcept(apiFetch, concept.code, justification, {
-        label: form.label,
-        officialCodes: splitList(form.codes),
-        aliases: [
-          ...keptAliases,
-          ...splitList(form.synonyms).map((text) => ({
-            text,
-            aliasType: (abbreviations.has(text) ? 'ABBREVIATION' : 'EXACT_LEXICAL') as AliasType,
-          })),
-        ],
-        profileVisible: form.profileVisible,
-        classifyByLabel: form.classifyByLabel,
-        displayOrder: form.displayOrder === '' ? null : Number(form.displayOrder),
-      })
-    },
-    onSuccess: onChanged,
-  })
-
-  const retired = concept.membershipStatus !== 'INCLUDED'
-
-  return (
-    <div className={`tc-row${retired ? ' is-retired' : ''}${dirty ? ' is-dirty' : ''}`} role="row">
-      <span>
-        <input
-          aria-label="Nome do item"
-          disabled={!editable}
-          value={form.label}
-          onChange={(e) => setForm({ ...form, label: e.target.value })}
-        />
-        {concept.releaseNotes && <small className="tc-note">{concept.releaseNotes}</small>}
-      </span>
-      <span>
-        <input
-          aria-label="Código oficial"
-          disabled={!editable}
-          value={form.codes}
-          placeholder="—"
-          onChange={(e) => setForm({ ...form, codes: e.target.value })}
-        />
-      </span>
-      <span>
-        <input
-          aria-label="Sinônimos"
-          disabled={!editable}
-          value={form.synonyms}
-          placeholder="—"
-          onChange={(e) => setForm({ ...form, synonyms: e.target.value })}
-        />
-      </span>
-      <span>
-        <input
-          type="checkbox"
-          aria-label="Aparece no perfil"
-          disabled={!editable}
-          checked={form.profileVisible}
-          onChange={(e) => setForm({ ...form, profileVisible: e.target.checked })}
-        />
-      </span>
-      <span>
-        <input
-          type="checkbox"
-          aria-label="Classificar pelo nome"
-          disabled={!editable}
-          checked={form.classifyByLabel}
-          onChange={(e) => setForm({ ...form, classifyByLabel: e.target.checked })}
-        />
-      </span>
-      <span>
-        <input
-          aria-label="Ordem"
-          className="tc-order"
-          disabled={!editable}
-          value={form.displayOrder}
-          inputMode="numeric"
-          onChange={(e) => setForm({ ...form, displayOrder: e.target.value.replace(/\D/g, '') })}
-        />
-      </span>
-      <span className="tc-row-actions">
-        {dirty && editable && (
-          <button type="button" className="is-primary" disabled={save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? '…' : 'Salvar'}
-          </button>
-        )}
-        <button type="button" onClick={onOpen}>
-          Detalhes
-        </button>
-        {save.isError && <small className="tc-error">{errorText(save.error)}</small>}
-      </span>
-    </div>
   )
 }
 
@@ -1036,7 +896,6 @@ function ConceptDrawer({
               {form.aliases.map((alias, index) => (
                 <li key={`${alias.text}-${index}`}>
                   <b>{alias.text}</b>
-                  <span>{ALIAS_TYPE_LABELS[alias.aliasType] ?? alias.aliasType}</span>
                   {editable && (
                     <button
                       type="button"
@@ -1057,30 +916,27 @@ function ConceptDrawer({
                   value={newAlias.text}
                   placeholder="novo sinônimo"
                   onChange={(e) => setNewAlias({ ...newAlias, text: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newAlias.text.trim()) {
+                      e.preventDefault()
+                      setForm({ ...form, aliases: [...form.aliases, { ...newAlias, text: newAlias.text.trim() }] })
+                      setNewAlias({ text: '', aliasType: 'EXACT_LEXICAL' })
+                    }
+                  }}
                 />
-                <select
-                  value={newAlias.aliasType}
-                  onChange={(e) => setNewAlias({ ...newAlias, aliasType: e.target.value as AliasType })}
-                >
-                  {Object.entries(ALIAS_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
                 <button
                   type="button"
                   disabled={!newAlias.text.trim()}
                   onClick={() => {
                     setForm({ ...form, aliases: [...form.aliases, { ...newAlias, text: newAlias.text.trim() }] })
-                    setNewAlias({ text: '', aliasType: newAlias.aliasType })
+                    setNewAlias({ text: '', aliasType: 'EXACT_LEXICAL' })
                   }}
                 >
                   Adicionar
                 </button>
               </div>
             )}
-            <small>Só “Equivalente exato” e “Sigla” marcam legislações automaticamente.</small>
+            <small>Todo sinônimo marca automaticamente as legislações em que aparece.</small>
           </fieldset>
           <label>
             Observações internas
@@ -1522,7 +1378,7 @@ const CATALOG_COPY: Record<string, { title: string; source: string }> = {
   CCLASSTRIB: {
     title: 'cClassTrib (IBS/CBS)',
     source:
-      'Tabela oficial do Informe Técnico 2025.002 (Portal da NF-e). Baixe a planilha, salve como CSV e envie aqui.',
+      'A consulta automática da Receita exige certificado digital ICP-Brasil, por isso a carga é por arquivo: 1) baixe a tabela de cClassTrib no Portal da NF-e (Informe Técnico 2025.002) ou no Portal Conformidade Fácil; 2) no Excel, “Salvar como” → CSV; 3) selecione o arquivo abaixo e clique em “Conferir fonte oficial”.',
   },
 }
 
@@ -1542,10 +1398,20 @@ function CatalogCard({
   const [check, setCheck] = useState<CatalogCheck | null>(null)
   const copy = CATALOG_COPY[catalog.code]!
 
+  const [needsFile, setNeedsFile] = useState(false)
   const runCheck = useMutation({
     mutationFn: () => checkCatalog(apiFetch, catalog.code, csv ?? undefined),
     onSuccess: setCheck,
   })
+  const startCheck = () => {
+    if (catalog.source === 'UPLOAD' && !csv) {
+      setNeedsFile(true)
+      return
+    }
+    setNeedsFile(false)
+    setCheck(null)
+    runCheck.mutate()
+  }
   const runImport = useMutation({
     mutationFn: () =>
       importCatalog(apiFetch, catalog.code, {
@@ -1595,6 +1461,7 @@ function CatalogCard({
               onChange={async (event) => {
                 const file = event.target.files?.[0]
                 setCheck(null)
+                setNeedsFile(false)
                 setCsv(file ? await readCsvFile(file) : null)
               }}
             />
@@ -1606,24 +1473,34 @@ function CatalogCard({
         </div>
       )}
       <div className="tc-actions">
-        <button
-          type="button"
-          disabled={runCheck.isPending || (catalog.source === 'UPLOAD' && !csv)}
-          onClick={() => runCheck.mutate()}
-        >
-          <RefreshCw size={14} /> {runCheck.isPending ? 'Conferindo…' : 'Conferir fonte oficial'}
+        <button type="button" disabled={runCheck.isPending} onClick={startCheck}>
+          <RefreshCw size={14} /> {runCheck.isPending ? 'Conferindo… (pode levar alguns segundos)' : 'Conferir fonte oficial'}
         </button>
-        {runCheck.isError && <span className="tc-error">{errorText(runCheck.error)}</span>}
+        {needsFile && (
+          <span className="tc-error" role="alert">
+            Selecione primeiro o arquivo CSV oficial do cClassTrib.
+          </span>
+        )}
+        {runCheck.isError && (
+          <span className="tc-error" role="alert">
+            {errorText(runCheck.error)}
+          </span>
+        )}
       </div>
       {check && (
         <div className="tc-catalog-check">
           {check.diff.upToDate ? (
-            <p className="tc-ok">A edição carregada já é a mais recente.</p>
+            <p className="tc-ok">
+              Conferido: a edição carregada já é a mais recente ({check.entries.toLocaleString('pt-BR')} códigos).
+            </p>
           ) : (
             <>
               <p>
-                {check.entries.toLocaleString('pt-BR')} códigos na fonte · {check.diff.added} novos ·{' '}
-                {check.diff.removed} extintos · {check.diff.descriptionChanged} descrições alteradas
+                <b>Conferência concluída.</b>{' '}
+                {catalog.loaded ? 'Há uma edição nova na fonte oficial: ' : 'Catálogo ainda não carregado: '}
+                {check.entries.toLocaleString('pt-BR')} códigos na fonte · {check.diff.added.toLocaleString('pt-BR')} novos ·{' '}
+                {check.diff.removed.toLocaleString('pt-BR')} extintos ·{' '}
+                {check.diff.descriptionChanged.toLocaleString('pt-BR')} descrições alteradas
               </p>
               {check.diff.samples.removed.length > 0 && (
                 <small>Extintos (amostra): {check.diff.samples.removed.join(', ')}</small>
@@ -1631,10 +1508,10 @@ function CatalogCard({
               <button
                 type="button"
                 className="is-primary"
-                disabled={runImport.isPending || justification.trim().length < 3}
+                disabled={runImport.isPending}
                 onClick={() => runImport.mutate()}
               >
-                {runImport.isPending ? 'Carregando…' : 'Carregar nova edição'}
+                {runImport.isPending ? 'Carregando…' : catalog.loaded ? 'Carregar nova edição' : 'Carregar catálogo'}
               </button>
               {runImport.isError && <span className="tc-error">{errorText(runImport.error)}</span>}
             </>

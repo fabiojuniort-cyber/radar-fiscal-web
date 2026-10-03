@@ -26,6 +26,26 @@ Issue: fabiojuniort-cyber/tribusca-control#61 · Backend: fabiojuniort-cyber/rad
   pelo CNAE (o principal pré-marca enquanto o perfil nunca foi salvo); seleções de itens
   ocultos são preservadas ao salvar.
 
+## Ajustes TAX-11b
+
+- Tabelas em grade estilo ALV (`src/taxonomy-grid.tsx`): edição na célula, inserir linha,
+  excluir selecionadas, desfazer, salvar tudo de uma vez, ordenação e filtro por coluna,
+  cabeçalho fixo ao rolar, Enter/↑/↓ entre linhas, sinônimos como etiquetas (vários por
+  linha; vírgula, ponto e vírgula ou Enter separam).
+- “Importar planilha (carga massiva)” sempre visível (desabilitado sem rascunho), com guia
+  de preenchimento; “x” nas colunas de marcação; “Código TriBusca” opcional.
+- Motivo das alterações opcional (padrão “Curadoria da taxonomia”); criar rascunho não
+  depende mais dele.
+- Catálogos: conferência mostra o resultado e libera “Carregar”; cClassTrib explica o
+  passo a passo do arquivo oficial (a API da Receita exige certificado ICP-Brasil).
+- Botões do site: removido o “✓” ao clicar; mantido o efeito de afundar.
+
+## Sinônimos: um tipo só (decisão do PO)
+
+- A grade e o Detalhes mostram todos os sinônimos sem tipo; todo sinônimo marca as
+  legislações em que aparece. Sinônimo novo é gravado como `EXACT_LEXICAL`.
+- A revisão avisa os sinônimos que o dicionário tinha como ambíguos ou “só busca”.
+
 ## Contrato usado
 
 `/api/v1/admin/me`, `/api/v1/admin/taxonomy/*`, `/api/v1/publications/:id/taxonomy`,

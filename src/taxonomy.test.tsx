@@ -94,7 +94,10 @@ const view = {
       helpText: null,
       classifyByLabel: true,
       officialCodes: ['310210'],
-      aliases: [{ text: 'carbamida', aliasType: 'EXACT_LEXICAL' }],
+      aliases: [
+        { text: 'carbamida', aliasType: 'EXACT_LEXICAL' },
+        { text: 'adubo nitrogenado', aliasType: 'SEARCH_RELATED' },
+      ],
     },
   ],
 }
@@ -125,7 +128,7 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText('Acesso restrito')).toBeInTheDocument()
   })
 
-  it('shows the configurable table with groups, NCM and synonyms and saves a row with justification', async () => {
+  it('edits the table like a spreadsheet: change cells, add synonyms, insert and delete rows, save all at once', async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = []
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
@@ -133,7 +136,9 @@ describe('Curadoria da taxonomia', () => {
       if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(view)
-      if (url.endsWith('/concepts/product.urea')) return new Response(null, { status: 204 })
+      if (url.endsWith('/dimensions/product/rows')) {
+        return json({ created: ['product.gesso'], updated: 1, retired: 0, groupsCreated: 0 })
+      }
       return json({ error: 'not_found' }, 404)
     }) as unknown as ProductApiFetch
 
@@ -141,25 +146,71 @@ describe('Curadoria da taxonomia', () => {
 
     expect(await screen.findByText('Curadoria da Taxonomia')).toBeInTheDocument()
     expect(await screen.findByText('Desligada')).toBeInTheDocument()
-    expect(await screen.findByText('Fertilizantes e corretivos')).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('Fertilizantes e corretivos')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
     expect(screen.getByDisplayValue('3102.10')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('carbamida')).toBeInTheDocument()
+    expect(screen.getByText('carbamida')).toBeInTheDocument()
+    // One kind of synonym: every stored synonym shows in the grid, untagged.
+    expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).not.toHaveClass('is-search-only')
+    expect(screen.queryByText('só busca')).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Código TriBusca/ })).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText(/Motivo das alterações/), {
-      target: { value: 'Revisão de fertilizantes' },
-    })
+    // Edit a cell and add two synonyms at once (comma separated).
     fireEvent.change(screen.getByDisplayValue('3102.10'), { target: { value: '3102.10, 3102.90' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia granulada;' } })
+    fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia agrícola' } })
+    fireEvent.keyDown(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { key: 'Enter' })
+    expect(screen.getByText('ureia granulada')).toBeInTheDocument()
 
-    await waitFor(() =>
-      expect(calls.some((call) => call.url.endsWith('/concepts/product.urea') && call.init?.method === 'PATCH')).toBe(true),
-    )
-    const patch = calls.find((call) => call.url.endsWith('/concepts/product.urea'))!
-    const body = JSON.parse(String(patch.init!.body))
-    expect(body.justification).toBe('Revisão de fertilizantes')
-    expect(body.officialCodes).toEqual(['3102.10', '3102.90'])
-    expect(body.aliases).toEqual([{ text: 'carbamida', aliasType: 'EXACT_LEXICAL' }])
+    // Insert a row (code is generated on save) and an empty one that is deleted.
+    fireEvent.click(screen.getByRole('button', { name: /Inserir linha/ }))
+    fireEvent.change(screen.getByPlaceholderText('nome do item'), { target: { value: 'Gesso' } })
+    expect(screen.getByText('gerado ao salvar')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Inserir linha/ }))
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'Selecionar nova linha' })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: /Excluir selecionadas/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: /Salvar alterações \(2\)/ }))
+
+    await waitFor(() => expect(calls.some((call) => call.url.endsWith('/dimensions/product/rows'))).toBe(true))
+    const body = JSON.parse(String(calls.find((call) => call.url.endsWith('/rows'))!.init!.body))
+    expect(body.justification).toBe('Curadoria da taxonomia')
+    expect(body.retire).toEqual([])
+    expect(body.rows).toHaveLength(2)
+    expect(body.rows[0]).toMatchObject({ code: null, label: 'Gesso', group: null })
+    expect(body.rows[1]).toMatchObject({
+      code: 'product.urea',
+      group: 'Fertilizantes e corretivos',
+      officialCodes: ['3102.10', '3102.90'],
+      aliases: [
+        { text: 'carbamida', aliasType: 'EXACT_LEXICAL' },
+        { text: 'adubo nitrogenado', aliasType: 'SEARCH_RELATED' },
+        { text: 'ureia granulada', aliasType: 'EXACT_LEXICAL' },
+        { text: 'ureia agrícola', aliasType: 'EXACT_LEXICAL' },
+      ],
+    })
+    expect(await screen.findByText(/Salvo no rascunho: 1 novos · 1 alterados/)).toBeInTheDocument()
+  })
+
+  it('creates the draft without requiring a reason', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ url, ...(init ? { init } : {}) })
+      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/taxonomy/state') return json({ ...state, draft: null })
+      if (url === '/api/v1/admin/taxonomy/releases/rel-11') return json({ ...view, release: state.published })
+      if (url === '/api/v1/admin/taxonomy/drafts') return json({ releaseId: 'rel-12', version: 'v1.2.0' })
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+
+    renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
+    const create = await screen.findByRole('button', { name: /Criar rascunho a partir da v1.1.0/ })
+    expect(create).toBeEnabled()
+    fireEvent.click(create)
+    await waitFor(() => expect(calls.some((call) => call.url === '/api/v1/admin/taxonomy/drafts')).toBe(true))
+    const body = JSON.parse(String(calls.find((call) => call.url === '/api/v1/admin/taxonomy/drafts')!.init!.body))
+    expect(body.justification).toBe('Curadoria da taxonomia')
   })
 
   it('asks for confirmation before deleting a group and only then calls the API', async () => {
@@ -175,7 +226,7 @@ describe('Curadoria da taxonomia', () => {
     }) as unknown as ProductApiFetch
 
     renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Editar grupo' }))
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Editar grupo' }), { target: { value: 'g1' } })
     fireEvent.click(screen.getByRole('button', { name: /Excluir grupo/ }))
 
     const dialog = screen.getByRole('dialog', { name: 'Excluir grupo?' })

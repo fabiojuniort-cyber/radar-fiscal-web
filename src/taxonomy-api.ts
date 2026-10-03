@@ -389,6 +389,31 @@ export async function patchConcept(
   )
 }
 
+export type GridRowInput = {
+  code: string | null
+  group?: string | null
+  label: string
+  officialCodes: string[]
+  aliases: Array<{ text: string; aliasType: AliasType }>
+  profileVisible: boolean
+  classifyByLabel: boolean
+  displayOrder: number | null
+}
+
+export async function saveDimensionRows(
+  apiFetch: ProductApiFetch,
+  dimensionCode: string,
+  justification: string,
+  input: { rows: GridRowInput[]; retire: string[] },
+) {
+  return readJson<{ created: string[]; updated: number; retired: number; groupsCreated: number }>(
+    await apiFetch(
+      `${ADMIN}/drafts/current/dimensions/${dimensionCode}/rows`,
+      jsonInit('POST', { justification, ...input }),
+    ),
+  )
+}
+
 export async function importDimensionCsv(
   apiFetch: ProductApiFetch,
   dimensionCode: string,
@@ -401,6 +426,7 @@ export async function importDimensionCsv(
     updated: number
     groupsCreated: number
     errors: Array<{ line: number; message: string }>
+    warnings?: Array<{ line: number; message: string }>
   }>(
     await apiFetch(
       `${ADMIN}/drafts/current/dimensions/${dimensionCode}/import`,
