@@ -26,7 +26,7 @@ const CLAUSE_HEAD = new RegExp(`^"?Cl[áa]usula\\s+${ORDINAL}(?=\\s)`)
 // "O Conselho Nacional de Política Fazendária - CONFAZ," and, in Atos
 // COTEPE, "O Secretário-Executivo da Secretaria-Executiva do ... - CONFAZ,".
 const COUNCIL_HEAD =
-  /^(?:O\s+Conselho\s+Nacional|O\s+Secret[áa]rio-Executivo\s+da\s+Secretaria-Executiva\s+do\s+Conselho\s+Nacional)\s+de\s+Pol[íi]tica\s+Fazend[áa]ria\s*[-–]\s*CONFAZ,/
+  /^(?:O\s+Conselho\s+Nacional|O\s+Secret[áa]rio[-\s]Executivo\s+da\s+Secretaria[-\s]Executiva\s+do\s+Conselho\s+Nacional)\s+de\s+Pol[íi]tica\s+Fazend[áa]ria\s*[-–]\s*CONFAZ,/
 // "Art. 1º", "Art. 10." (Atos COTEPE and other acts with articles).
 const ARTICLE_HEAD = /^Art\.\s*\d+(?:\s*[º°o]|\.)?(?:-[A-Z])?/
 
@@ -67,7 +67,7 @@ const PARAGRAPH_GAPS: RegExp[] = [
   /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO|ATO\s+COTEPE)\b[^.]{0,90}?\bDE\s+\d{4})\s+/gi,
   /(?<=^(?:CONV[ÊE]NIO|AJUSTE|PROTOCOLO|ATO\s+COTEPE)\b[^.]{0,60}?\d+\s*\/\s*\d{2,4})\s+/gi,
   // before the preamble and after "resolve celebrar o seguinte"
-  /\s+(?=(?:O|Os)\s+(?:Conselho\s+Nacional|Ministro\s+de\s+Estado|Secret[áa]rios?\s+de\s+Fazenda|Secret[áa]rio-Executivo)\b)/g,
+  /\s+(?=(?:O|Os)\s+(?:Conselho\s+Nacional|Ministro\s+de\s+Estado|Secret[áa]rios?\s+de\s+Fazenda|Secret[áa]rio[-\s]Executivo)\b)/g,
   // Atos COTEPE: "CONSIDERANDO ..." and articles
   /(?<=[,;.:])\s+(?=CONSIDERANDO\b)/g,
   /(?<=[.:;"”])\s+(?=Art\.\s*\d+\s*[º°o]?\s)/g,
@@ -155,9 +155,32 @@ export function confazDisplayHtml(input: {
   }
 
   // Paragraphs inside tables keep the table layout.
-  const paragraphs = Array.from(body.querySelectorAll('p')).filter(
+  let paragraphs = Array.from(body.querySelectorAll('p')).filter(
     (p) => (p.textContent ?? '').trim() && !p.closest('table'),
   )
+  // The DOU opens some acts with the issuing unit ("Secretaria Executiva")
+  // before the act title; the portal does not show it.
+  const titleIndex = paragraphs.findIndex((p, index) => {
+    const text = (p.textContent ?? '').trim()
+    return index < 5 && text.length < 140 && TITLE.test(text)
+  })
+  if (titleIndex > 0) {
+    const unitLines = paragraphs
+      .slice(0, titleIndex)
+      .filter((p) => (p.textContent ?? '').trim().length < 100 && !NOTE.test((p.textContent ?? '').trim()))
+    for (const line of unitLines) line.remove()
+    paragraphs = paragraphs.filter((p) => !unitLines.includes(p))
+  }
+
+  // A first table row made of one spanning cell is the table's title
+  // ("Unidade Federada: MATO GROSSO DO SUL").
+  for (const table of Array.from(body.querySelectorAll('table'))) {
+    const firstRow = table.querySelector('tr')
+    const cells = firstRow ? Array.from(firstRow.children) : []
+    if (cells.length === 1 && Number(cells[0]!.getAttribute('colspan') ?? '1') > 1) {
+      cells[0]!.classList.add('TabelaTitulo')
+    }
+  }
   const ementaKey = normalize(input.ementa)
   let seenTitle = false
   let inBody = false

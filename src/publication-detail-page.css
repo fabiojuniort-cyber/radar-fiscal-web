@@ -531,8 +531,7 @@
   vertical-align: top;
 }
 
-.publication-preserved-html[data-source-style='confaz'] th,
-.publication-preserved-html[data-source-style='confaz'] tr:first-child td[colspan] {
+.publication-preserved-html[data-source-style='confaz'] .TabelaTitulo {
   font-weight: 700;
   text-align: left;
 }
