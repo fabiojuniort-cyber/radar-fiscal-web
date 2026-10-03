@@ -27,13 +27,20 @@ describe('legal presentation template registry', () => {
       'CONVENIO_ICMS',
     )
 
-    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/ICMS' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/ICMS' })?.id).toBe(
+      'ATO_COTEPE_ICMS',
+    )
+    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/ICM' })?.id).toBe(
+      'ATO_COTEPE_ICMS',
+    )
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/PMPF' })?.id).toBe(
       'ATO_COTEPE_PMPF',
     )
     expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'CONVENIO_ICMS_X' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/MVA' })).toBeNull()
   })
 
   it('refuses HTML when the presentation contract is not SANITIZED_HTML', () => {
@@ -337,14 +344,109 @@ describe('legal presentation template registry', () => {
     expect(result.html).not.toContain('<table')
   })
 
-  it('keeps Ato COTEPE on the existing CONFAZ fallback', () => {
+  it('uses the standard ATO COTEPE/ICMS contract for a modern text act', () => {
     const result = renderLegalPresentation({
       ...baseInput,
       actType: 'ATO COTEPE/ICMS',
-      html: '<p>ATO COTEPE/ICMS Nº 105, DE 1º DE OUTUBRO DE 2026</p>',
+      sourceCodes: ['dou'],
+      ementa: 'Altera o Ato COTEPE/ICMS 06/12.',
+      html: [
+        '<p>ATO COTEPE/ICMS 68/19, DE 20 DE DEZEMBRO DE 2019</p>',
+        '<p>Altera o Ato COTEPE/ICMS 06/12.</p>',
+        '<p>O Diretor do Conselho Nacional de Política Fazendária - CONFAZ resolve tornar público:</p>',
+        '<p>Art. 1º Fica alterado o §1º do art. 1º.</p>',
+      ].join(''),
+      publishedOn: '2019-12-23',
     })
 
-    expect(result.templateId).toBeNull()
-    expect(result.sourceStyle).toBe('confaz')
+    expect(result.templateId).toBe('ATO_COTEPE_ICMS')
+    expect(result.templateVersion).toBe('1.0.0')
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('class="TituloAcordo"')
+    expect(result.html).toContain('Publicado no DOU de 23.12.2019')
+  })
+
+  it('preserves and marks the structured Annex table used by ATO COTEPE/ICMS 100/2026', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/ICMS',
+      ementa: 'Altera relação de empresas nacionais beneficiárias.',
+      html: [
+        '<p class="TituloAcordo">ATO COTEPE/ICMS Nº 100, DE 15 DE SETEMBRO DE 2026</p>',
+        '<p class="DataPublicao">Publicação no DOU de 16.09.26.</p>',
+        '<p class="Ementa">Altera relação de empresas nacionais beneficiárias.</p>',
+        '<p class="TextoAcordo"><b>Art. 1º</b> O item 814 fica acrescido.</p>',
+        '<p>Anexo único</p>',
+        '<table><tbody>',
+        '<tr><td colspan="2">SÃO PAULO</td></tr>',
+        '<tr><td>814.</td><td>DIVISION TURBOS BRASIL LTDA<br>CNPJ: 17.524.167/0001-54<br>IE: 669.738.227.110</td></tr>',
+        '</tbody></table>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('annex-structured')
+    expect(result.html).toContain('class="AtoCotepeAnexoTitulo"')
+    expect(result.html).toContain('class="AtoCotepeUfHeader"')
+    expect(result.html).toContain('class="legal-table-scroll"')
+    expect(result.html).toContain('colspan="2"')
+    expect(result.html).toContain('DIVISION TURBOS BRASIL LTDA<br>CNPJ:')
+  })
+
+  it('preserves the historical ICM declaration and does not duplicate its inline DOU note', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/ICM',
+      sourceCodes: ['dou'],
+      ementa: 'Ratifica os Convênios ICM de nºs 50 a 72/87.',
+      publishedOn: '1987-12-30',
+      html: [
+        '<p>ATO COTEPE/ICM Nº 05/87, DE 30 DE DEZEMBRO DE 1987<br>(DOU 30.12.87)</p>',
+        '<p>Ratifica os Convênios ICM de nºs 50 a 72/87.</p>',
+        '<p>O Presidente da Comissão Técnica Permanente do ICMS - COTEPE/ICMS, no uso da atribuição regimental,</p>',
+        '<p>DECLARA</p>',
+        '<p>Ratificados os Convênios ICM 50 a 72/87.</p>',
+      ].join(''),
+    })
+
+    expect(result.templateId).toBe('ATO_COTEPE_ICMS')
+    expect(result.variant).toBe('historical-declaration')
+    expect(result.html).toContain('AtoCotepeTituloHistorico')
+    expect(result.html).toContain('AtoCotepeDouHistorico')
+    expect(result.html).toContain('AtoCotepeDeclara')
+    expect(result.html?.match(/DOU 30\.12\.87/g)).toHaveLength(1)
+    expect(result.html).not.toContain('Publicado no DOU de 30.12.1987')
+  })
+
+  it('keeps ATO COTEPE/ICMS PRESERVED_TEXT outside the HTML path', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/ICMS',
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text: '<script>alert("não executar")</script>',
+    })
+
+    expect(result.templateId).toBe('ATO_COTEPE_ICMS')
+    expect(result.variant).toBe('preserved-text')
+    expect(result.html).toBeNull()
+  })
+
+  it('keeps the approved ATO COTEPE 105 table-title class without reclassifying it as a UF header', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'ATO COTEPE/ICMS',
+      html: [
+        '<p class="TituloAcordo">ATO COTEPE/ICMS Nº 105, DE 1º DE OUTUBRO DE 2026</p>',
+        '<table><tbody>',
+        '<tr><td class="TabelaTitulo" colspan="2">Unidade Federada: SÃO PAULO</td></tr>',
+        '<tr><td>1</td><td>Conteúdo</td></tr>',
+        '</tbody></table>',
+      ].join(''),
+    })
+
+    expect(result.templateId).toBe('ATO_COTEPE_ICMS')
+    expect(result.variant).toBe('annex-structured')
+    expect(result.html).toContain('class="TabelaTitulo"')
+    expect(result.html).not.toContain('class="TabelaTitulo AtoCotepeUfHeader"')
   })
 })
