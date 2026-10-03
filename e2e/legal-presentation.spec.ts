@@ -72,6 +72,11 @@ test('DESIGN-01B — Convênio ICMS mantém as três variantes e overflow local'
   await page.evaluate((html) => {
     document.body.innerHTML = html
   }, fixture)
+  // Stress fixture only: force an intrinsically wide annex so the test proves
+  // that overflow stays inside the table region even on desktop.
+  await page.addStyleTag({
+    content: '[data-testid="annex"] table { white-space: nowrap; }',
+  })
 
   const standard = page.getByTestId('standard')
   const standardEmenta = standard.locator('.Ementa')
