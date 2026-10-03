@@ -172,6 +172,7 @@ export function PublicationDetailPage({
     agency: publication.agency,
     actType: publication.actType,
     sourceCodes: origins.map((origin) => origin.sourceCode),
+    presentationFormat: version?.presentation.format ?? null,
     html: storedHtml,
     text: version?.contentText ?? null,
     ementa: publication.title,
@@ -340,6 +341,15 @@ export function PublicationDetailPage({
               className="publication-preserved-text"
               data-presentation-format={
                 version.presentation.format
+              }
+              data-legal-template={
+                legalPresentation.templateId ?? undefined
+              }
+              data-legal-template-version={
+                legalPresentation.templateVersion ?? undefined
+              }
+              data-legal-variant={
+                legalPresentation.variant ?? undefined
               }
             >
               {version.contentText}
