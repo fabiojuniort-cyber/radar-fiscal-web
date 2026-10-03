@@ -294,14 +294,17 @@ function prepareAtoCotepeIcmsSource(html: string): {
 
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
   const paragraphs = Array.from(doc.body.querySelectorAll('p'))
-  const openingParagraphs = paragraphs.slice(0, 8)
-  let historical = openingParagraphs.some((paragraph) => {
-    const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
-    return (
-      /^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(text) ||
-      /^DECLARA\s*:?\s*$/i.test(text)
-    )
-  })
+  const openingTexts = paragraphs.slice(0, 8).map((paragraph) =>
+    (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  )
+  const openingActHeading = openingTexts.find((text) =>
+    /^ATO\s+COTEPE\s*\//i.test(text),
+  )
+  let historical =
+    (openingActHeading
+      ? /^ATO\s+COTEPE\s*\/\s*ICM(?!S)\b/i.test(openingActHeading)
+      : false) ||
+    openingTexts.some((text) => /^DECLARA\s*:?\s*$/i.test(text))
 
   for (const paragraph of paragraphs) {
     const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
