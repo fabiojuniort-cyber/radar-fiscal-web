@@ -595,6 +595,27 @@ function repairInferredAjusteSiniefHeader(
   return doc.body.innerHTML
 }
 
+function decorateAjusteSiniefView(html: string): string {
+  if (typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const actKinds = Array.from(doc.body.querySelectorAll('p.AcordoTipo')).filter(
+    (paragraph) => !paragraph.closest('table, blockquote'),
+  )
+  if (actKinds.length === 1) {
+    const text = (actKinds[0]!.textContent ?? '').replace(/\s+/g, ' ').trim()
+    if (/^AJUSTE$/i.test(text)) actKinds[0]!.classList.add('AjusteTipoPlain')
+  }
+
+  for (const paragraph of Array.from(doc.body.querySelectorAll('p.TextoAcordo'))) {
+    if (paragraph.closest('table, blockquote')) continue
+    const text = (paragraph.textContent ?? '').trim()
+    if (/^[“"]/u.test(text)) paragraph.classList.add('AjusteCitacao')
+  }
+
+  return doc.body.innerHTML
+}
+
 function ajusteSiniefHasHistoricalWording(html: string): boolean {
   if (typeof DOMParser !== 'undefined') {
     const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
@@ -659,7 +680,7 @@ const ajusteSiniefTemplate: LegalPresentationTemplate = {
     const repairedHtml = view.inferred
       ? repairInferredAjusteSiniefHeader(view.html, input.ementa)
       : view.html
-    const displayHtml = wrapLegalTables(repairedHtml)
+    const displayHtml = wrapLegalTables(decorateAjusteSiniefView(repairedHtml))
     return {
       html: displayHtml,
       inferredStructure: view.inferred,
