@@ -1,0 +1,218 @@
+/*
+ * CONVENIO_ICMS visual contract — v1.0.0
+ *
+ * This file is the executable visual standard for every Convênio ICMS.
+ * Adjustments approved by the Product Owner belong here and therefore
+ * propagate to the whole family. Colors reproduce presentation roles from
+ * the official source; they must never be interpreted as legal status.
+ */
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+  line-height: 1.2;
+  color: #000;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] > * {
+  max-width: 820px;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p {
+  margin: 6pt 0 0;
+  color: #000;
+  font-size: 13.33px;
+  line-height: 1.2;
+  text-align: justify;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] a,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] a:visited {
+  color: #0000ee;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+  border-bottom: 0;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] a:focus-visible {
+  outline: 2px solid #0f5f9a;
+  outline-offset: 2px;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] b,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] strong {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] i,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] em {
+  font-style: italic;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.TituloAcordo {
+  margin: 0 0 6pt;
+  font-weight: 700;
+  color: #000;
+  text-align: center;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.DataPublicao,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A2DataPublicacao {
+  margin: 0;
+  font-weight: 700;
+  color: #f00;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.Ementa {
+  margin: 18pt 0;
+  max-width: 820px;
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.TextoAcordo,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A5-1TextoAcordo {
+  text-indent: 72pt;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.AcordoTipo {
+  margin: 18pt 0;
+  text-align: center;
+  letter-spacing: 0.35em;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.Remisso,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-1Remissao {
+  margin-left: 88pt;
+  color: #f00;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.RemissoAnt,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-2RemissaoAnt {
+  margin-left: 128pt;
+  font-weight: 700;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.RedaoAnt,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-3RedacaoAnt {
+  margin-left: 128pt;
+  text-indent: 36pt;
+  color: #008000;
+}
+
+/* Consolidated acts (e.g. 100/97) use the portal's right-column ementa. */
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='consolidated'] p.Ementa {
+  margin: 36pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
+}
+
+/* Current/simple acts (e.g. 114/26) use the current portal composition. */
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TituloAcordo {
+  margin: 0 0 12pt;
+  font-size: 1.2em;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.DataPublicao {
+  margin: 12pt 0 0;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.Ementa {
+  margin: 30pt 0 18pt min(45%, 370px);
+  max-width: min(55%, 450px);
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TextoAcordo {
+  margin-top: 10pt;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.AcordoTipo {
+  margin: 12pt 0;
+  letter-spacing: normal;
+}
+
+/*
+ * Legacy structured annexes (reference: 22/02) keep their full-width ementa.
+ * The variant is selected by document structure, never by publication year.
+ */
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='annex-structured'] p.Ementa {
+  margin: 18pt 0;
+  max-width: 820px;
+}
+
+/* Annexes remain official tables; wide tables scroll inside the document. */
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] table {
+  width: auto;
+  max-width: 100%;
+  margin: 10pt 0;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] th,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] td {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #000;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: top;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] .TabelaTitulo {
+  font-weight: 700;
+  text-align: left;
+}
+
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] td p,
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] th p {
+  margin: 0;
+  text-align: inherit;
+  text-indent: 0;
+}
+
+@media (max-width: 680px) {
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] {
+    overflow-x: auto;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.Ementa,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='consolidated'] p.Ementa,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.Ementa {
+    margin-left: 18%;
+    max-width: none;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='annex-structured'] p.Ementa {
+    margin-left: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.Remisso,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-1Remissao {
+    margin-left: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.RemissoAnt,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-2RemissaoAnt,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.RedaoAnt,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-3RedacaoAnt {
+    margin-left: 36pt;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.TextoAcordo,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A5-1TextoAcordo,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.RedaoAnt,
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p.A8-3RedacaoAnt {
+    text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='standard'][data-inferred-structure='true'] p.TextoAcordo {
+    text-indent: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='CONVENIO_ICMS'] table {
+    max-width: none;
+  }
+}
