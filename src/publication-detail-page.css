@@ -998,9 +998,20 @@
 
 .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.AcordoTipo {
   margin: 18pt 0;
-  font-weight: 700;
+  font-weight: 400;
   text-align: center;
   letter-spacing: normal;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.AcordoTipo.AjusteTipoPlain {
+  letter-spacing: 0.35em;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo.AjusteCitacao,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] blockquote {
+  margin-left: 56pt;
+  margin-right: 0;
   text-indent: 0;
 }
 
@@ -1083,6 +1094,12 @@
   .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo,
   .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A5-1TextoAcordo {
     text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo.AjusteCitacao,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] blockquote {
+    margin-left: 24pt;
+    text-indent: 0;
   }
 
   .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Remisso,
