@@ -548,25 +548,65 @@ function decorateProtocoloIcmsView(html: string): {
   legacy: boolean
 } {
   if (typeof DOMParser === 'undefined') {
-    return {
-      html,
-      legacy: /<p\b[^>]*>\s*PROTOCOLO\s*<\/p>/i.test(html),
-    }
+    return { html, legacy: false }
   }
 
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
-  const kind = Array.from(doc.body.querySelectorAll('p')).find((paragraph) =>
-    /^P\s*R\s*O\s*T\s*O\s*C\s*O\s*L\s*O$/i.test(
-      (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
-    ),
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(
+    (paragraph) => !paragraph.closest('table, blockquote'),
   )
-  const kindText = (kind?.textContent ?? '').replace(/\s+/g, ' ').trim()
-  const legacy = /^PROTOCOLO$/i.test(kindText)
+  const titleIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('TituloAcordo'),
+  )
+  const ementaIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('Ementa'),
+  )
+  const kindCandidates = paragraphs
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph, index }) => {
+      if (titleIndex >= 0 && index <= titleIndex) return false
+      if (ementaIndex >= 0 && index <= ementaIndex) return false
+      return paragraph.classList.contains('AcordoTipo')
+    })
 
-  if (legacy) {
-    const ementa = doc.body.querySelector('p.Ementa')
-    ementa?.classList.add('ProtocoloEmentaLegacy')
-    kind?.classList.add('ProtocoloTipoLegacy')
+  let legacy = false
+  let legacyKind: HTMLParagraphElement | null = null
+
+  if (kindCandidates.length === 1) {
+    const candidate = kindCandidates[0]!
+    const kindText = (candidate.paragraph.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const following = paragraphs.slice(candidate.index + 1)
+    const firstClause = following.find((paragraph) =>
+      /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+        (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+    )
+
+    legacy =
+      /^PROTOCOLO$/i.test(kindText) &&
+      Boolean(firstClause) &&
+      following.indexOf(firstClause!) <= 2
+    if (legacy) legacyKind = candidate.paragraph
+  }
+
+  if (legacy && legacyKind) {
+    doc.body.querySelector('p.Ementa')?.classList.add('ProtocoloEmentaLegacy')
+    legacyKind.classList.add('ProtocoloTipoLegacy')
+
+    for (const paragraph of Array.from(doc.body.querySelectorAll('p.TextoAcordo'))) {
+      if (paragraph.closest('table, blockquote')) continue
+      paragraph.classList.add('ProtocoloTextoLegacy')
+      const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+      if (
+        /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+          text,
+        )
+      ) {
+        paragraph.classList.add('ProtocoloRubricaLegacy')
+      }
+    }
   }
 
   return { html: doc.body.innerHTML, legacy }
