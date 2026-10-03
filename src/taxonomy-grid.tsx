@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 
 import type { ProductApiFetch } from './product-api'
 import {
+  ALIAS_TYPE_LABELS,
   OFFICIAL_CODE_TYPE_LABELS,
   TaxonomyApiError,
   formatOfficialCode,
@@ -35,7 +36,15 @@ type RowDraft = {
 
 type ColumnKey = 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code'
 
-const GRID_ALIAS_TYPES: AliasType[] = ['EXACT_LEXICAL', 'ABBREVIATION']
+// Types that mark legislações automatically; the others only help search.
+const CLASSIFYING_ALIAS_TYPES: AliasType[] = ['EXACT_LEXICAL', 'ABBREVIATION']
+
+const ALIAS_TAGS: Partial<Record<AliasType, string>> = {
+  ABBREVIATION: 'sigla',
+  HISTORICAL_LABEL: 'nome antigo',
+  SEARCH_RELATED: 'só busca',
+  AMBIGUOUS: 'ambíguo',
+}
 
 function splitList(value: string): string[] {
   return value
@@ -51,7 +60,7 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     group: groupLabel,
     label: concept.label,
     codes: concept.officialCodes.map((code) => formatOfficialCode(dimension.officialCodeType, code)).join(', '),
-    aliases: concept.aliases.filter((alias) => GRID_ALIAS_TYPES.includes(alias.aliasType)),
+    aliases: concept.aliases,
     profileVisible: concept.profileVisible,
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
@@ -263,14 +272,12 @@ export function CurationGrid({
 
   const save = async () => {
     const toInput = (row: RowDraft): GridRowInput => {
-      const concept = row.code ? conceptByCode.get(row.code) : undefined
-      const otherAliases = (concept?.aliases ?? []).filter((alias) => !GRID_ALIAS_TYPES.includes(alias.aliasType))
       return {
         code: row.code,
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
-        aliases: [...otherAliases, ...row.aliases],
+        aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
         displayOrder: row.displayOrder === '' ? null : Number(row.displayOrder),
@@ -557,7 +564,8 @@ export function CurationGrid({
       </div>
       <p className="tc-hint">
         {visibleRows.length} linhas · Enter, ↑ e ↓ mudam de linha · clique no título da coluna para ordenar · digite um
-        grupo novo na coluna Grupo para criá-lo ao salvar.
+        grupo novo na coluna Grupo para criá-lo ao salvar · sinônimos tracejados (só busca, nome antigo, ambíguo) não
+        marcam legislações; o tipo muda em Detalhes.
       </p>
     </div>
   )
@@ -593,8 +601,17 @@ function SynonymCell({
   return (
     <div className="tc-synonyms">
       {aliases.map((alias) => (
-        <span key={`${alias.aliasType}:${alias.text}`} className="tc-chip" title={alias.aliasType === 'ABBREVIATION' ? 'Sigla' : 'Equivalente exato'}>
+        <span
+          key={`${alias.aliasType}:${alias.text}`}
+          className={`tc-chip${CLASSIFYING_ALIAS_TYPES.includes(alias.aliasType) ? '' : ' is-search-only'}`}
+          title={
+            CLASSIFYING_ALIAS_TYPES.includes(alias.aliasType)
+              ? `${ALIAS_TYPE_LABELS[alias.aliasType]}: marca legislações automaticamente`
+              : `${ALIAS_TYPE_LABELS[alias.aliasType]}: ajuda a busca, não marca legislações (troque o tipo em Detalhes)`
+          }
+        >
           {alias.text}
+          {ALIAS_TAGS[alias.aliasType] && <em>{ALIAS_TAGS[alias.aliasType]}</em>}
           {editable && (
             <button
               type="button"

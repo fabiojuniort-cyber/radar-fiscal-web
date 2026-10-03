@@ -94,7 +94,10 @@ const view = {
       helpText: null,
       classifyByLabel: true,
       officialCodes: ['310210'],
-      aliases: [{ text: 'carbamida', aliasType: 'EXACT_LEXICAL' }],
+      aliases: [
+        { text: 'carbamida', aliasType: 'EXACT_LEXICAL' },
+        { text: 'adubo nitrogenado', aliasType: 'SEARCH_RELATED' },
+      ],
     },
   ],
 }
@@ -147,6 +150,9 @@ describe('Curadoria da taxonomia', () => {
     expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
     expect(screen.getByDisplayValue('3102.10')).toBeInTheDocument()
     expect(screen.getByText('carbamida')).toBeInTheDocument()
+    // Every synonym type shows in the grid; search-only ones are tagged.
+    expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).toHaveClass('is-search-only')
+    expect(screen.getByText('só busca')).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: /Código TriBusca/ })).toBeInTheDocument()
 
     // Edit a cell and add two synonyms at once (comma separated).
@@ -178,6 +184,7 @@ describe('Curadoria da taxonomia', () => {
       officialCodes: ['3102.10', '3102.90'],
       aliases: [
         { text: 'carbamida', aliasType: 'EXACT_LEXICAL' },
+        { text: 'adubo nitrogenado', aliasType: 'SEARCH_RELATED' },
         { text: 'ureia granulada', aliasType: 'EXACT_LEXICAL' },
         { text: 'ureia agrícola', aliasType: 'EXACT_LEXICAL' },
       ],
