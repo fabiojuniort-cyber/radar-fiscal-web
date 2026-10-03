@@ -566,14 +566,14 @@ function repairInferredAjusteSiniefHeader(
   const kindIndex = paragraphs.findIndex((paragraph) =>
     paragraph.classList.contains('AcordoTipo'),
   )
-  if (titleIndex < 0) return html
+  if (titleIndex < 0 || kindIndex < 0 || kindIndex <= titleIndex) return html
 
   const ementaKey = normalizeText(ementa)
   const candidates = paragraphs
     .map((paragraph, index) => ({ paragraph, index }))
     .filter(({ paragraph, index }) => {
       if (index <= titleIndex) return false
-      if (kindIndex >= 0 && index >= kindIndex) return false
+      if (index >= kindIndex) return false
       return normalizeText(paragraph.textContent ?? '') === ementaKey
     })
   if (candidates.length !== 1) return html
