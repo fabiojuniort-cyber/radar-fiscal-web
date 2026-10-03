@@ -135,7 +135,11 @@ export function confazDisplayHtml(input: {
 
   const doc = new DOMParser().parseFromString(`<body>${source}</body>`, 'text/html')
   const body = doc.body
-  if (!body.querySelector('p') && body.textContent?.trim()) {
+  if (
+    !body.querySelector('p') &&
+    body.childElementCount === 0 &&
+    body.textContent?.trim()
+  ) {
     body.innerHTML = textToParagraphs(body.textContent)
   }
 
