@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  HelpCircle,
   LogOut,
   Pencil,
   RefreshCw,
@@ -22,6 +23,7 @@ import {
   useMemo,
   useState,
 } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Link } from 'react-router-dom'
 
 import { BrandMark } from './brand-mark'
@@ -86,6 +88,9 @@ type OrgTab =
   | 'empresa'
   | 'estabelecimentos'
   | 'perfil'
+
+type AcervoView = 'pesquisa' | 'navegacao'
+type ArchiveBrowseAxis = 'actType' | 'source' | 'uf' | 'jurisdiction'
 
 type Props = {
   identity: PanelIdentity
@@ -174,6 +179,7 @@ function readPanelState() {
       source?: string
       actType?: string
       archiveTag?: { code: string; label: string } | null
+      archiveView?: AcervoView
       orgTab?: OrgTab
       selectedCompanyId?: string
     }
@@ -427,6 +433,8 @@ export function AuthenticatedProductPanel({
   const [uf, setUf] = useState(persisted?.uf ?? '')
   const [source, setSource] = useState(persisted?.source ?? '')
   const [actType, setActType] = useState(persisted?.actType ?? '')
+  const [archiveView, setArchiveView] = useState<AcervoView>(persisted?.archiveView ?? 'pesquisa')
+  const [archiveBrowseAxis, setArchiveBrowseAxis] = useState<ArchiveBrowseAxis>('actType')
   // TAX-11: tag filter handed over from a legislation page.
   const [archiveTag, setArchiveTag] = useState<{ code: string; label: string } | null>(
     persisted?.archiveTag ?? null,
@@ -452,6 +460,7 @@ export function AuthenticatedProductPanel({
         source,
         actType,
         archiveTag,
+        archiveView,
         orgTab,
         selectedCompanyId,
       }),
@@ -467,6 +476,7 @@ export function AuthenticatedProductPanel({
     source,
     actType,
     archiveTag,
+    archiveView,
     orgTab,
     selectedCompanyId,
   ])
@@ -633,6 +643,7 @@ export function AuthenticatedProductPanel({
     event.preventDefault()
     setAppliedQuery(query.trim())
     setArchivePage(1)
+    setArchiveView('pesquisa')
     setScreen('acervo')
   }
 
@@ -647,6 +658,28 @@ export function AuthenticatedProductPanel({
     setArchiveTag(null)
     setArchivePage(1)
   }
+
+  const applyArchiveBrowse = (axis: ArchiveBrowseAxis, value: string) => {
+    resetArchiveFilters()
+    if (axis === 'actType') setActType(value)
+    if (axis === 'source') setSource(value)
+    if (axis === 'uf') setUf(value)
+    if (axis === 'jurisdiction') setJurisdiction(value)
+    setArchivePage(1)
+    setArchiveView('pesquisa')
+  }
+
+  const archiveBrowseOptions: Array<{ value: string; label: string }> =
+    archiveBrowseAxis === 'actType'
+      ? (facetsQuery.data?.actTypes ?? []).map((item) => ({ value: item, label: item }))
+      : archiveBrowseAxis === 'source'
+        ? (facetsQuery.data?.sources ?? []).map((item) => ({ value: item.code, label: item.name }))
+        : archiveBrowseAxis === 'uf'
+          ? (facetsQuery.data?.ufs ?? []).map((item) => ({ value: item, label: item }))
+          : [
+              { value: 'FEDERAL', label: 'Federal' },
+              { value: 'STATE', label: 'Estadual' },
+            ]
 
   const unavailable = sources.filter((item) => item.status === 'UNAVAILABLE').length
   const unstable = sources.filter((item) => item.status === 'UNSTABLE').length
@@ -825,7 +858,10 @@ export function AuthenticatedProductPanel({
         </div>
       )}
 
-      <main className={'tp-main tp-main-' + screen}>
+      <main
+        className={'tp-main tp-main-' + screen}
+        data-acervo-view={screen === 'acervo' ? archiveView : undefined}
+      >
         {screen === 'inicio' && (
           <>
             <div className="tp-welcome-row">
@@ -965,6 +1001,27 @@ export function AuthenticatedProductPanel({
 
         {screen === 'acervo' && (
           <>
+            <div className="tp-acervo-pages" role="tablist" aria-label="Modos do Acervo">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archiveView === 'pesquisa'}
+                onClick={() => setArchiveView('pesquisa')}
+              >
+                Pesquisa
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archiveView === 'navegacao'}
+                onClick={() => setArchiveView('navegacao')}
+              >
+                Navegação
+              </button>
+            </div>
+
+            {archiveView === 'pesquisa' ? (
+              <>
             <SectionHeading
               eyebrow="Pesquisa"
               title="Acervo"
@@ -1153,6 +1210,99 @@ export function AuthenticatedProductPanel({
                 )}
               </section>
             </div>
+              </>
+            ) : (
+              <>
+                <div className="tp-acervo-navigation-heading">
+                  <SectionHeading
+                    eyebrow="Descoberta"
+                    title="Navegue pelo Acervo"
+                    description="Escolha uma categoria e refine o caminho até as publicações."
+                  />
+                  <Dialog.Root>
+                    <Dialog.Trigger asChild>
+                      <button className="tp-acervo-help" type="button">
+                        <HelpCircle size={15} aria-hidden="true" />
+                        Ajuda
+                      </button>
+                    </Dialog.Trigger>
+                    <Dialog.Portal>
+                      <Dialog.Overlay className="tp-acervo-help-overlay" />
+                      <Dialog.Content className="tp-acervo-help-dialog">
+                        <Dialog.Title>Farol de navegação</Dialog.Title>
+                        <Dialog.Description>
+                          A ideia é reduzir o Acervo em etapas claras. A cada clique, você troca
+                          milhares de possibilidades por um conjunto menor e mais relevante.
+                        </Dialog.Description>
+                        <ol>
+                          <li><b>1</b><span>Escolha o ponto de partida</span></li>
+                          <li><b>2</b><span>Refine por categoria</span></li>
+                          <li><b>3</b><span>Chegue à lista de documentos</span></li>
+                          <li><b>4</b><span>Abra a fonte preservada</span></li>
+                        </ol>
+                        <Dialog.Close asChild>
+                          <button type="button" className="tp-acervo-help-close">Fechar</button>
+                        </Dialog.Close>
+                      </Dialog.Content>
+                    </Dialog.Portal>
+                  </Dialog.Root>
+                </div>
+
+                <section className="tp-acervo-navigation" aria-label="Navegação por categorias">
+                  <div className="tp-acervo-gateways" role="group" aria-label="Ponto de partida">
+                    {[
+                      { key: 'actType', label: 'Tipo de base legal', hint: 'Atos, convênios, instruções e outros tipos' },
+                      { key: 'source', label: 'Fonte / órgão', hint: 'Origem oficial da publicação' },
+                      { key: 'uf', label: 'Estado / UF', hint: 'Recorte territorial por unidade federativa' },
+                      { key: 'jurisdiction', label: 'Esfera', hint: 'Federal ou estadual' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={archiveBrowseAxis === item.key ? 'is-active' : undefined}
+                        aria-pressed={archiveBrowseAxis === item.key}
+                        onClick={() => setArchiveBrowseAxis(item.key as ArchiveBrowseAxis)}
+                      >
+                        <strong>{item.label}</strong>
+                        <span>{item.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="tp-acervo-browse-options">
+                    <div className="tp-acervo-browse-title">
+                      <span>Refine por</span>
+                      <strong>
+                        {archiveBrowseAxis === 'actType'
+                          ? 'Tipo de base legal'
+                          : archiveBrowseAxis === 'source'
+                            ? 'Fonte / órgão'
+                            : archiveBrowseAxis === 'uf'
+                              ? 'Estado / UF'
+                              : 'Esfera'}
+                      </strong>
+                    </div>
+                    {facetsQuery.isPending ? (
+                      <LoadingState text="Carregando opções…" />
+                    ) : facetsQuery.isError ? (
+                      <ErrorState title="Não foi possível carregar as categorias" />
+                    ) : (
+                      <div className="tp-acervo-option-grid">
+                        {archiveBrowseOptions.map((item) => (
+                          <button
+                            type="button"
+                            key={item.value}
+                            onClick={() => applyArchiveBrowse(archiveBrowseAxis, item.value)}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
           </>
         )}
 

@@ -195,6 +195,53 @@ test('DATE-01: dates, requests, pagination, detail return, open ranges and clear
     .toMatchObject({ singleDate: '', from: '', to: '' })
 })
 
+
+test('DESIGN-02: Pesquisa/Navegação, ajuda e filtro de data preservado', async ({ page }) => {
+  await openArchive(page)
+
+  const pesquisaTab = page.getByRole('tab', { name: 'Pesquisa', exact: true })
+  const navegacaoTab = page.getByRole('tab', { name: 'Navegação', exact: true })
+  const dateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+
+  await expect(pesquisaTab).toHaveAttribute('aria-selected', 'true')
+  await enableRange(page)
+  await expect(dateFilter.getByText(/Régua ajusta/)).toHaveCount(0)
+
+  await navegacaoTab.click()
+  await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
+  await expect(dateFilter).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Navegue pelo Acervo' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Ajuda', exact: true }).click()
+  const help = page.getByRole('dialog')
+  await expect(help.getByRole('heading', { name: 'Farol de navegação' })).toBeVisible()
+  await expect(help).toContainText(
+    'A ideia é reduzir o Acervo em etapas claras. A cada clique, você troca milhares de possibilidades por um conjunto menor e mais relevante.',
+  )
+  for (const step of [
+    'Escolha o ponto de partida',
+    'Refine por categoria',
+    'Chegue à lista de documentos',
+    'Abra a fonte preservada',
+  ]) {
+    await expect(help.getByText(step, { exact: true })).toBeVisible()
+  }
+  await help.getByRole('button', { name: 'Fechar', exact: true }).click()
+
+  const filtered = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return url.pathname === '/api/v2/archive' &&
+      url.searchParams.get('limit') === '25' &&
+      url.searchParams.get('actType') === 'IN'
+  }, { timeout: 8_000 })
+  await page.getByRole('button', { name: 'IN', exact: true }).click()
+  expect((await filtered).status()).toBe(200)
+
+  await expect(pesquisaTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByLabel('Tipo de base legal')).toHaveValue('IN')
+  await expect(page.getByRole('region', { name: 'Filtro por data de publicação' })).toBeVisible()
+})
+
 for (const mode of ['single', 'range'] as const) {
   test(`DATE-01: active ${mode} date filters do not leak into Publicações`, async ({ page }) => {
     await openArchive(page)

@@ -181,3 +181,91 @@
 .tp-acervo-fulltext input{width:16px;height:16px;accent-color:var(--tp-blue)}
 .tp-acervo-active-search{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:-4px 0 0;font-size:14px;color:var(--tp-copy)}
 .tp-acervo-active-search button{border:0;background:none;padding:0;color:var(--tp-blue);font-weight:700;cursor:pointer;text-decoration:underline}
+
+
+/* DESIGN-02 — denser authenticated chrome leaves more vertical room for data. */
+.tp-app[data-panel-mode='authenticated'] .tp-header-primary {
+  min-height: 52px;
+  gap: 10px;
+  padding: 5px 20px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-header-primary .tf-brand--compact .tf-brand__image {
+  width: 136px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-company-button {
+  width: 252px;
+  gap: 7px;
+  padding: 4px 9px;
+  border-radius: 8px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-company-copy small {
+  font-size: 9px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-company-copy strong {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-company-copy span {
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-global-search {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-global-search input {
+  font-size: 12px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-user-button > span {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-tabs {
+  padding: 0 18px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-tabs button {
+  padding: 7px 9px 6px;
+  font-size: 12px;
+}
+
+.tp-app[data-panel-mode='authenticated'] .tp-main {
+  padding: 18px 24px 24px;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .tp-app[data-panel-mode='authenticated'] .tp-header-primary {
+    padding-inline: 14px;
+  }
+
+  .tp-app[data-panel-mode='authenticated'] .tp-company-button {
+    width: 220px;
+  }
+
+  .tp-app[data-panel-mode='authenticated'] .tp-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 700px) {
+  .tp-app[data-panel-mode='authenticated'] .tp-header-primary .tf-brand--compact .tf-brand__image {
+    width: 126px;
+  }
+
+  .tp-app[data-panel-mode='authenticated'] .tp-company-button {
+    width: auto;
+    max-width: 190px;
+  }
+}
