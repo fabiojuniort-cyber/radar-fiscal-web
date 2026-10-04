@@ -9,7 +9,6 @@ import '@fontsource/inter/800.css'
 import '@fontsource/inter/900.css'
 
 import App from './App'
-import { ArchiveDateBridge } from './archive-date-bridge'
 import { ManualRegistrationHost } from './manual-registration-host'
 import './styles.css'
 import './header-alignment.css'
@@ -33,7 +32,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
-        <ArchiveDateBridge />
         <ManualRegistrationHost />
       </BrowserRouter>
     </QueryClientProvider>
