@@ -9,7 +9,7 @@ import './archive-date-layout-fix.css'
 const HOST_ATTRIBUTE = 'data-archive-date-host'
 
 function findArchiveMain(): HTMLElement | null {
-  return document.querySelector<HTMLElement>('.tp-main-acervo')
+  return document.querySelector<HTMLElement>(".tp-main-acervo[data-acervo-view='pesquisa']")
 }
 
 function ensureArchiveDateHost(main: HTMLElement): HTMLElement {
