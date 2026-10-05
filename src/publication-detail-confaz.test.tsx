@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -119,5 +119,43 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
   it('keeps only the start date when the end is unknown', async () => {
     await renderDetail('confaz')
     expect(screen.getByText(/Vigência:/)).toHaveTextContent(/^Vigência: 06\/11\/1997$/)
+  })
+})
+
+describe('NCMs identificados na legislação', () => {
+  it('shows only the codes, together, as chips that search the Acervo', async () => {
+    const mention = (code: string, description: string) => ({
+      code,
+      description,
+      verificationStatus: 'VERIFIED',
+      method: { type: 'REGEX', detectorKey: 'ncm', detectorVersion: '1' },
+      confidence: 1,
+      excerpt: 'Silos de matéria plástica artificial ou de lona plastificada, com capacidade superior a 300 litros',
+    })
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/publications/pub-1') return json(detail('confaz'))
+      if (url === '/api/v1/publications/pub-1/ncms') {
+        return json({ items: [mention('39173290', 'Outros'), mention('39251000', 'Reservatórios, cisternas')] })
+      }
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <PublicationDetailPage publicationId="pub-1" apiFetch={apiFetch} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    const list = await screen.findByRole('list')
+    const chips = within(list).getAllByRole('listitem')
+    expect(chips.map((chip) => chip.textContent)).toEqual(['3917.32.90', '3925.10.00'])
+    // Description and excerpt are not printed; the description stays as a hint.
+    expect(screen.queryByText(/Silos de matéria plástica/)).not.toBeInTheDocument()
+    expect(chips[1]).toHaveAttribute('title', 'Reservatórios, cisternas · buscar no Acervo')
+    expect(screen.getByText(/2 códigos · clique para buscar no Acervo/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('listitem', { name: 'Buscar NCM 3917.32.90 no Acervo' }))
   })
 })
