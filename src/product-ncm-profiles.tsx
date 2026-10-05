@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   createCompanyProductProfile,
@@ -28,9 +28,10 @@ type EditorState = {
   profileId: string | null
   cnaeCode: string
   cnaeDescription: string
+  /** "table": item of the Produtos table; "manual": product typed by the user. */
+  mode: 'table' | 'manual'
   productCode: string | null
-  /** Label of a legacy profile not linked to the Produtos table. */
-  legacyLabel: string | null
+  manualLabel: string
   ncms: NcmCatalogItem[]
 }
 
@@ -105,13 +106,15 @@ export function ProductNcmProfiles({
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [productSearch, setProductSearch] = useState('')
   const [ncmFilter, setNcmFilter] = useState('')
+  const [ncmSearch, setNcmSearch] = useState('')
 
   const productByCode = useMemo(() => new Map(products.map((item) => [item.code, item])), [products])
   const segmentLabel = useMemo(
     () => new Map(segmentOptions.map((item) => [item.code, item.label])),
     [segmentOptions],
   )
-  const selectedProduct = editor?.productCode ? productByCode.get(editor.productCode) : undefined
+  const selectedProduct =
+    editor?.mode === 'table' && editor.productCode ? productByCode.get(editor.productCode) : undefined
 
   const profilesQuery = useQuery({
     queryKey: ['product-ncm-profiles', tenantId, companyId],
@@ -127,10 +130,29 @@ export function ProductNcmProfiles({
     retry: false,
   })
 
-  const closeEditor = () => {
+  // Manual product: any NCM of the official catalog.
+  const ncmSearchQuery = useQuery({
+    queryKey: ['ncm-catalog-search', ncmSearch.trim()],
+    queryFn: () => searchNcmCatalog(apiFetch, ncmSearch.trim(), 20),
+    enabled: editor?.mode === 'manual' && ncmSearch.trim().length >= 2,
+    retry: false,
+  })
+
+  // The popup closes with Escape.
+  useEffect(() => {
+    if (!editor) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeEditor()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editor])
+
+  function closeEditor() {
     setEditor(null)
     setProductSearch('')
     setNcmFilter('')
+    setNcmSearch('')
   }
 
   const refreshProfiles = async () => {
@@ -142,12 +164,21 @@ export function ProductNcmProfiles({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!editor) throw new Error('editor_required')
-      const product = editor.productCode ? productByCode.get(editor.productCode) : undefined
-      if (!product) throw new Error('product_required')
+      let productLabel: string
+      let productConceptCode: string | null = null
+      if (editor.mode === 'manual') {
+        productLabel = editor.manualLabel.trim()
+        if (!productLabel) throw new Error('product_label_required')
+      } else {
+        const product = editor.productCode ? productByCode.get(editor.productCode) : undefined
+        if (!product) throw new Error('product_required')
+        productLabel = product.label
+        productConceptCode = product.code
+      }
       const input = {
         cnaeCode: editor.cnaeCode,
-        productLabel: product.label,
-        productConceptCode: product.code,
+        productLabel,
+        productConceptCode,
         ncmCodes: editor.ncms.map((item) => item.code),
       }
 
@@ -193,12 +224,14 @@ export function ProductNcmProfiles({
     saveMutation.reset()
     setProductSearch('')
     setNcmFilter('')
+    setNcmSearch('')
     setEditor({
       profileId: null,
       cnaeCode: cnae.code,
       cnaeDescription: cnae.description,
+      mode: products.length > 0 ? 'table' : 'manual',
       productCode: null,
-      legacyLabel: null,
+      manualLabel: '',
       ncms: [],
     })
   }
@@ -207,17 +240,19 @@ export function ProductNcmProfiles({
     saveMutation.reset()
     setProductSearch('')
     setNcmFilter('')
-    // Older profiles kept a free label: link them when the name matches.
+    setNcmSearch('')
+    // A product of the table stays linked; otherwise it is a manual product.
     const linked =
       profile.productConceptCode && productByCode.has(profile.productConceptCode)
         ? profile.productConceptCode
-        : products.find((item) => normalize(item.label) === normalize(profile.productLabel))?.code ?? null
+        : null
     setEditor({
       profileId: profile.id,
       cnaeCode: profile.cnaeCode ?? '',
       cnaeDescription: profile.cnaeDescription ?? '',
+      mode: linked ? 'table' : 'manual',
       productCode: linked,
-      legacyLabel: linked ? null : profile.productLabel,
+      manualLabel: linked ? '' : profile.productLabel,
       ncms: profile.ncms.map(toCatalogItem),
     })
   }
@@ -230,7 +265,6 @@ export function ProductNcmProfiles({
         ? {
             ...current,
             productCode: product.code,
-            legacyLabel: null,
             // Keep only NCMs that belong to the chosen product.
             ncms: current.ncms.filter((item) =>
               product.officialCodes.some((prefix) => item.code.startsWith(prefix.replace(/\D/g, ''))),
@@ -419,11 +453,25 @@ export function ProductNcmProfiles({
       )}
 
       {editor && (
-        <section className="tp-product-ncm-editor" aria-label="Parametrização de produto e NCM">
+        <div
+          className="tp-product-dialog-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saveMutation.isPending) closeEditor()
+          }}
+        >
+        <section
+          className="tp-product-ncm-editor tp-product-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tp-product-dialog-title"
+        >
           <div className="tp-product-ncm-editor-head">
             <div>
               <span className="tp-eyebrow">Produto e NCM</span>
-              <h4>{editor.profileId ? 'Editar parametrização' : 'Adicionar parametrização'}</h4>
+              <h4 id="tp-product-dialog-title">
+                {editor.profileId ? 'Editar produto e NCM' : 'Adicionar produto e NCM'}
+              </h4>
               <p>
                 CNAE <b>{editor.cnaeCode}</b> · {editor.cnaeDescription || 'Atividade não informada'}
               </p>
@@ -434,13 +482,88 @@ export function ProductNcmProfiles({
             </button>
           </div>
 
+          <div className="tp-product-mode" role="tablist" aria-label="Origem do produto">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editor.mode === 'table'}
+              onClick={() => setEditor((current) => (current ? { ...current, mode: 'table', ncms: [] } : current))}
+            >
+              Da tabela de Produtos
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editor.mode === 'manual'}
+              onClick={() =>
+                setEditor((current) => (current ? { ...current, mode: 'manual', productCode: null } : current))
+              }
+            >
+              Produto novo (manual)
+            </button>
+          </div>
+
+          {editor.mode === 'manual' ? (
+            <>
+              <label className="tp-product-field">
+                Nome do produto
+                <input
+                  autoFocus
+                  value={editor.manualLabel}
+                  maxLength={160}
+                  placeholder="Ex.: Fertilizante foliar próprio"
+                  onKeyDown={keepEnterInside}
+                  onChange={(event) =>
+                    setEditor((current) => (current ? { ...current, manualLabel: event.target.value } : current))
+                  }
+                />
+                <small>Fica só no painel desta empresa; não entra na tabela de Produtos.</small>
+              </label>
+              <div className="tp-ncm-picker">
+                <span className="tp-picker-title">NCM do catálogo oficial</span>
+                <div className="tp-ncm-search-box">
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    aria-label="Pesquisar NCM oficial"
+                    value={ncmSearch}
+                    placeholder="Código ou descrição do NCM"
+                    onKeyDown={keepEnterInside}
+                    onChange={(event) => setNcmSearch(event.target.value)}
+                  />
+                </div>
+                {ncmSearch.trim().length > 0 && ncmSearch.trim().length < 2 && (
+                  <small>Digite pelo menos 2 caracteres para pesquisar.</small>
+                )}
+                {ncmSearchQuery.isFetching && <small>Pesquisando no catálogo oficial…</small>}
+                {ncmSearchQuery.isError && (
+                  <p className="auth-error" role="alert">Não foi possível pesquisar o catálogo NCM.</p>
+                )}
+                {(ncmSearchQuery.data?.items.length ?? 0) > 0 && (
+                  <div className="tp-ncm-search-results" role="group" aria-label="NCMs encontrados">
+                    {ncmSearchQuery.data!.items.map((item) => {
+                      const selected = editor.ncms.some((candidate) => candidate.code === item.code)
+                      return (
+                        <label className={selected ? 'tp-ncm-option is-selected' : 'tp-ncm-option'} key={item.entryId}>
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(event) => toggleNcm(item, event.target.checked)}
+                          />
+                          <span>
+                            <b>{item.officialCode || item.code}</b>
+                            <small>{item.description}</small>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+          <>
           <div className="tp-product-picker">
             <span className="tp-picker-title">Produto da tabela de Produtos</span>
-            {editor.legacyLabel && (
-              <p className="tp-product-legacy" role="note">
-                “{editor.legacyLabel}” não está vinculado à tabela de Produtos. Escolha o produto correspondente.
-              </p>
-            )}
             {selectedProduct ? (
               <div className="tp-product-selected">
                 <span>
@@ -463,6 +586,7 @@ export function ProductNcmProfiles({
                 <div className="tp-ncm-search-box">
                   <Search size={16} aria-hidden="true" />
                   <input
+                    autoFocus
                     id="tp-product-search"
                     aria-label="Pesquisar produto"
                     value={productSearch}
@@ -566,10 +690,13 @@ export function ProductNcmProfiles({
             </div>
           )}
 
+          </>
+          )}
+
           <div className="tp-selected-ncms">
             <strong>NCMs selecionados</strong>
             {editor.ncms.length === 0 ? (
-              <p>Nenhum NCM selecionado. Marque os NCMs do produto acima ou salve só o produto.</p>
+              <p>Nenhum NCM selecionado. Marque os NCMs acima ou salve só o produto.</p>
             ) : (
               <div className="tp-selected-ncm-list">
                 {editor.ncms.map((item) => (
@@ -592,7 +719,9 @@ export function ProductNcmProfiles({
             <p className="auth-error" role="alert">
               {saveMutation.error.message === 'product_required'
                 ? 'Escolha o produto na tabela de Produtos.'
-                : profileErrorMessage(saveMutation.error)}
+                : saveMutation.error.message === 'product_label_required'
+                  ? 'Informe o nome do produto.'
+                  : profileErrorMessage(saveMutation.error)}
             </p>
           )}
 
@@ -600,7 +729,10 @@ export function ProductNcmProfiles({
             <button
               className="btn"
               type="button"
-              disabled={saveMutation.isPending || !selectedProduct}
+              disabled={
+                saveMutation.isPending ||
+                (editor.mode === 'manual' ? !editor.manualLabel.trim() : !selectedProduct)
+              }
               onClick={() => saveMutation.mutate()}
             >
               {saveMutation.isPending ? 'Salvando…' : 'Salvar produto e NCM'}
@@ -611,10 +743,11 @@ export function ProductNcmProfiles({
               disabled={saveMutation.isPending}
               onClick={closeEditor}
             >
-              Cancelar edição
+              Cancelar
             </button>
           </div>
         </section>
+        </div>
       )}
     </div>
   )
