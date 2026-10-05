@@ -5,11 +5,15 @@ import {
 } from '@tanstack/react-query'
 import {
   Building2,
+  CalendarDays,
+  CalendarRange,
   Check,
   ChevronDown,
   FileText,
   HelpCircle,
+  Landmark,
   LogOut,
+  MapPin,
   Pencil,
   RefreshCw,
   Search,
@@ -1408,6 +1412,14 @@ export function AuthenticatedProductPanel({
                             setArchiveNavigationPage(1)
                           }}
                         >
+                          <i className="tp-acervo-path-icon" aria-hidden="true">
+                            {item.group === 'jurisdiction' ? <Landmark size={22} /> :
+                              item.group === 'uf' ? <MapPin size={22} /> :
+                                item.group === 'source' ? <Building2 size={22} /> :
+                                  item.group === 'actType' ? <FileText size={22} /> :
+                                    item.group === 'year' ? <CalendarDays size={22} /> :
+                                      <CalendarRange size={22} />}
+                          </i>
                           <small>{archiveNavigationGroupLabels[item.group]}</small>
                           <strong>{item.label}</strong>
                           <span>
