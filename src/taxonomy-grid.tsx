@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 
 import type { ProductApiFetch } from './product-api'
 import {
@@ -33,7 +33,7 @@ type RowDraft = {
   displayOrder: string
 }
 
-type ColumnKey = 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code'
+type ColumnKey = 'segment' | 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code'
 
 
 function splitList(value: string): string[] {
@@ -66,8 +66,10 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro inesperado.'
 }
 
-function cellText(row: RowDraft, column: ColumnKey): string {
+function cellText(row: RowDraft, column: ColumnKey, segmentOf: (group: string) => string): string {
   switch (column) {
+    case 'segment':
+      return segmentOf(row.group)
     case 'aliases':
       return row.aliases.map((alias) => alias.text).join(' ')
     case 'profileVisible':
@@ -95,6 +97,7 @@ export function CurationGrid({
   dimension,
   concepts,
   groups,
+  segments = [],
   editable,
   justification,
   showRetired,
@@ -107,6 +110,8 @@ export function CurationGrid({
   dimension: CurationDimension
   concepts: CurationConcept[]
   groups: CurationGroup[]
+  /** Segment concepts: a group's segments show in the first column. */
+  segments?: CurationConcept[]
   editable: boolean
   justification: string
   showRetired: boolean
@@ -118,6 +123,24 @@ export function CurationGrid({
   const groupLabel = useMemo(() => new Map(groups.map((group) => [group.id, group.label])), [groups])
   const groupOrder = useMemo(() => new Map(groups.map((group) => [group.label, group.displayOrder])), [groups])
   const conceptByCode = useMemo(() => new Map(concepts.map((concept) => [concept.code, concept])), [concepts])
+  // Segment comes from the group (edited in the group form), never per item.
+  const segmentByGroup = useMemo(() => {
+    const segmentLabel = new Map(segments.map((segment) => [segment.code, segment.label]))
+    return new Map(
+      groups.map((group) => [
+        normalize(group.label.trim()),
+        group.segmentCodes
+          .map((code) => segmentLabel.get(code) ?? code)
+          .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          .join(', '),
+      ]),
+    )
+  }, [groups, segments])
+  const segmentOf = useCallback(
+    (group: string) => segmentByGroup.get(normalize(group.trim())) ?? '',
+    [segmentByGroup],
+  )
+  const showSegment = dimension.usesGroups && segments.length > 0
 
   const [edits, setEdits] = useState<Record<string, RowDraft>>({})
   const [newRows, setNewRows] = useState<RowDraft[]>([])
@@ -158,6 +181,7 @@ export function CurationGrid({
   }, [dirty])
 
   const columns: Array<{ key: ColumnKey; label: string; className?: string }> = [
+    ...(showSegment ? [{ key: 'segment' as const, label: 'Segmento', className: 'is-segment' }] : []),
     ...(dimension.usesGroups ? [{ key: 'group' as const, label: 'Grupo', className: 'is-group' }] : []),
     { key: 'label', label: 'Item', className: 'is-label' },
     {
@@ -186,13 +210,13 @@ export function CurationGrid({
       }
       return Object.entries(filters).every(([column, value]) => {
         const needle = normalize((value ?? '').trim())
-        return !needle || normalize(cellText(row, column as ColumnKey)).includes(needle)
+        return !needle || normalize(cellText(row, column as ColumnKey, segmentOf)).includes(needle)
       })
     })
     const sorted = [...filtered].sort((left, right) => {
       if (sort) {
-        const a = cellText(left, sort.column)
-        const b = cellText(right, sort.column)
+        const a = cellText(left, sort.column, segmentOf)
+        const b = cellText(right, sort.column, segmentOf)
         const numeric = sort.column === 'displayOrder'
         const result = numeric
           ? (Number(a || 99999) - Number(b || 99999))
@@ -207,7 +231,7 @@ export function CurationGrid({
       )
     })
     return [...newRows, ...sorted]
-  }, [baseRows, edits, filters, groupOrder, newRows, normalizedQuery, sort])
+  }, [baseRows, edits, filters, groupOrder, newRows, normalizedQuery, segmentOf, sort])
 
   const updateRow = (row: RowDraft, patch: Partial<RowDraft>) => {
     setMessage(null)
@@ -448,6 +472,11 @@ export function CurationGrid({
                     )}
                     {status && <span className={`tc-grid-status is-${status.toLowerCase()}`}>{status}</span>}
                   </td>
+                  {showSegment && (
+                    <td className="is-segment" title="O segmento vem do grupo: altere em Editar grupo.">
+                      {segmentOf(row.group) || <span className="tc-grid-muted">—</span>}
+                    </td>
+                  )}
                   {dimension.usesGroups && (
                     <td className="is-group">
                       <input

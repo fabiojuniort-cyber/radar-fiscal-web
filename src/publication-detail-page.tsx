@@ -13,6 +13,7 @@ import { BrandMark } from './brand-mark'
 import { renderLegalPresentation } from './legal-presentation'
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
+import { PublicationAffinityBadge } from './publication-affinity'
 import { PublicationTaxonomySection } from './publication-taxonomy'
 import {
   fetchProductPublicationDetail,
@@ -25,6 +26,8 @@ import './publication-ncm.css'
 type Props = {
   publicationId: string
   apiFetch: ProductApiFetch
+  /** Tenant of the signed-in user: enables the affinity with its company. */
+  tenantId?: string
 }
 
 function referenceLabel(
@@ -86,6 +89,7 @@ function setArchiveNcmState(code: string) {
 export function PublicationDetailPage({
   publicationId,
   apiFetch,
+  tenantId,
 }: Props) {
   const navigate = useNavigate()
   const detailQuery = useQuery({
@@ -285,6 +289,14 @@ export function PublicationDetailPage({
               </span>
             )}
           </div>
+
+          {tenantId && (
+            <PublicationAffinityBadge
+              apiFetch={apiFetch}
+              tenantId={tenantId}
+              publicationId={publicationId}
+            />
+          )}
 
           <div className="publication-document-actions">
             {publication.officialUrl && (

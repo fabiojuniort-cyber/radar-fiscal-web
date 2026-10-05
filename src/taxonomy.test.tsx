@@ -192,6 +192,56 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText(/Salvo no rascunho: 1 novos · 1 alterados/)).toBeInTheDocument()
   })
 
+  it('shows the segment of each item first, taken from its group', async () => {
+    const withSegment = {
+      ...view,
+      dimensions: [
+        ...view.dimensions,
+        {
+          ...view.dimensions[0]!,
+          id: 'd2',
+          code: 'sector',
+          name: 'Segmento',
+          detailSection: 'Segmentos',
+          detailOrder: 1,
+          usesGroups: false,
+          officialCodeType: 'CNAE',
+          conceptCount: 1,
+        },
+      ],
+      groups: [{ ...view.groups[0]!, segmentCodes: ['sector.agribusiness'] }],
+      concepts: [
+        ...view.concepts,
+        {
+          ...view.concepts[0]!,
+          releaseConceptId: 'rc2',
+          code: 'sector.agribusiness',
+          dimensionCode: 'sector',
+          label: 'Agronegócio',
+          groupId: null,
+          groupCode: null,
+          officialCodes: ['01'],
+          aliases: [],
+        },
+      ],
+    }
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/taxonomy/state') return json(state)
+      if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(withSegment)
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+
+    renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
+
+    expect(await screen.findByDisplayValue('Ureia')).toBeInTheDocument()
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
+    expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
+    const row = screen.getByDisplayValue('Ureia').closest('tr')!
+    expect(within(row).getByText('Agronegócio')).toHaveClass('is-segment')
+  })
+
   it('creates the draft without requiring a reason', async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = []
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -309,6 +359,9 @@ describe('Tags da legislação', () => {
     expect(reasonText({ ...base, reason: { type: 'NCM', term: '31021010', excerpt: 'NCM 31021010 citado na legislação' } })).toBe(
       'NCM 31021010 citado na legislação',
     )
+    expect(
+      reasonText({ ...base, reason: { type: 'PRODUCTS', term: 'Ureia', excerpt: 'Pelos produtos citados: Ureia' } }),
+    ).toBe('Pelos produtos citados: Ureia')
     expect(reasonText({ ...base, reason: { type: 'SYNONYM', term: 'ISSQN', excerpt: null } })).toBe(
       'Sinônimo encontrado: “ISSQN”',
     )

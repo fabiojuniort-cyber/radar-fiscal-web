@@ -516,6 +516,11 @@ function DimensionEditor({
     .filter((group) => group.dimensionCode === dimension.code)
     .sort((a, b) => a.displayOrder - b.displayOrder || a.label.localeCompare(b.label, 'pt-BR'))
   const dimensionConcepts = view.concepts.filter((concept) => concept.dimensionCode === dimension.code)
+  const segments = view.concepts.filter(
+    (c) =>
+      view.dimensions.find((d) => d.code === c.dimensionCode)?.officialCodeType === 'CNAE' &&
+      c.membershipStatus === 'INCLUDED',
+  )
   const [gridVersion, setGridVersion] = useState(0)
 
   const exportCsv = async () => {
@@ -674,6 +679,7 @@ function DimensionEditor({
         dimension={dimension}
         concepts={dimensionConcepts}
         groups={groups}
+        segments={segments}
         editable={editable}
         justification={justification}
         showRetired={showRetired}
@@ -700,11 +706,7 @@ function DimensionEditor({
           apiFetch={apiFetch}
           group={groupEditor === 'new' ? null : groupEditor}
           dimension={dimension}
-          segments={view.concepts.filter(
-            (c) =>
-              view.dimensions.find((d) => d.code === c.dimensionCode)?.officialCodeType === 'CNAE' &&
-              c.membershipStatus === 'INCLUDED',
-          )}
+          segments={segments}
           justification={justification}
           onClose={() => setGroupEditor(null)}
           onChanged={onChanged}
