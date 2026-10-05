@@ -8,6 +8,8 @@ export type LegalPresentationTemplateId =
   | 'CONVENIO_ICMS'
   | 'ATO_COTEPE_PMPF'
   | 'ATO_COTEPE_ICMS'
+  | 'PROTOCOLO_ICMS'
+  | 'AJUSTE_SINIEF'
 
 export type LegalPresentationVariant =
   | 'standard'
@@ -16,6 +18,7 @@ export type LegalPresentationVariant =
   | 'preserved-text'
   | 'pmpf-table'
   | 'historical-declaration'
+  | 'legacy'
 
 export type LegalPresentationInput = {
   agency: string | null
@@ -541,6 +544,283 @@ const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   },
 }
 
+function decorateProtocoloIcmsView(html: string): {
+  html: string
+  legacy: boolean
+} {
+  if (typeof DOMParser === 'undefined') {
+    return { html, legacy: false }
+  }
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(
+    (paragraph) => !paragraph.closest('table, blockquote'),
+  )
+  const titleIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('TituloAcordo'),
+  )
+  const ementaIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('Ementa'),
+  )
+  const kindCandidates = paragraphs
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph, index }) => {
+      if (titleIndex >= 0 && index <= titleIndex) return false
+      if (ementaIndex >= 0 && index <= ementaIndex) return false
+      return paragraph.classList.contains('AcordoTipo')
+    })
+
+  let legacy = false
+  let legacyKind: HTMLParagraphElement | null = null
+
+  if (kindCandidates.length === 1) {
+    const candidate = kindCandidates[0]!
+    const kindText = (candidate.paragraph.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const following = paragraphs.slice(candidate.index + 1)
+    const firstClause = following.find((paragraph) =>
+      /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+        (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+    )
+
+    legacy =
+      /^PROTOCOLO$/i.test(kindText) &&
+      Boolean(firstClause) &&
+      following.indexOf(firstClause!) <= 2
+    if (legacy) legacyKind = candidate.paragraph
+  }
+
+  if (legacy && legacyKind) {
+    doc.body.querySelector('p.Ementa')?.classList.add('ProtocoloEmentaLegacy')
+    legacyKind.classList.add('ProtocoloTipoLegacy')
+
+    for (const paragraph of Array.from(doc.body.querySelectorAll('p.TextoAcordo'))) {
+      if (paragraph.closest('table, blockquote')) continue
+      paragraph.classList.add('ProtocoloTextoLegacy')
+      const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+      if (
+        /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+          text,
+        )
+      ) {
+        paragraph.classList.add('ProtocoloRubricaLegacy')
+      }
+    }
+  }
+
+  return { html: doc.body.innerHTML, legacy }
+}
+
+const protocoloIcmsTemplate: LegalPresentationTemplate = {
+  id: 'PROTOCOLO_ICMS',
+  version: '1.0.0',
+  matches: ({ actType }) => {
+    const code = normalizeCode(actType)
+    return (
+      code === 'PROTOCOLO_ICMS' ||
+      /^PROTOCOLO_ICMS_\d{1,3}_\d{2,4}$/.test(code)
+    )
+  },
+  render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const view = confazDisplayHtml({
+      html: input.html,
+      text: null,
+      ementa: input.ementa,
+      publishedOn: input.sourceCodes.includes('dou')
+        ? input.publishedOn
+        : null,
+    })
+
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const decorated = decorateProtocoloIcmsView(view.html)
+    const displayHtml = wrapLegalTables(decorated.html)
+
+    return {
+      html: displayHtml,
+      inferredStructure: view.inferred,
+      variant: hasHistoryClass(displayHtml)
+        ? 'consolidated'
+        : decorated.legacy
+          ? 'legacy'
+          : 'standard',
+    }
+  },
+}
+
+function repairInferredAjusteSiniefHeader(
+  html: string,
+  ementa: string,
+): string {
+  if (typeof DOMParser === 'undefined' || ementa.trim().length <= 20) return html
+
+  const normalizeText = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(
+    (paragraph) => !paragraph.closest('table'),
+  )
+  const titleIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('TituloAcordo'),
+  )
+  const kindIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('AcordoTipo'),
+  )
+  if (titleIndex < 0 || kindIndex < 0 || kindIndex <= titleIndex) return html
+
+  const ementaKey = normalizeText(ementa)
+  const candidates = paragraphs
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph, index }) => {
+      if (index <= titleIndex) return false
+      if (index >= kindIndex) return false
+      return normalizeText(paragraph.textContent ?? '') === ementaKey
+    })
+  if (candidates.length !== 1) return html
+
+  const ementaMatch = candidates[0]!
+  ementaMatch.paragraph.className = 'Ementa'
+
+  for (let index = titleIndex + 1; index < ementaMatch.index; index += 1) {
+    const paragraph = paragraphs[index]!
+    const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+    if (
+      /^(?:Exclus[ãa]o|Inclus[ãa]o)\s+de\b/i.test(text) ||
+      paragraph.classList.contains('Remisso')
+    ) {
+      paragraph.className = 'DataPublicao AjusteNotaEditorial'
+    }
+  }
+
+  return doc.body.innerHTML
+}
+
+function decorateAjusteSiniefView(html: string): string {
+  if (typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const actKinds = Array.from(doc.body.querySelectorAll('p.AcordoTipo')).filter(
+    (paragraph) => !paragraph.closest('table, blockquote'),
+  )
+  if (actKinds.length === 1) {
+    const text = (actKinds[0]!.textContent ?? '').replace(/\s+/g, ' ').trim()
+    if (/^AJUSTE$/i.test(text)) actKinds[0]!.classList.add('AjusteTipoPlain')
+  }
+
+  for (const paragraph of Array.from(doc.body.querySelectorAll('p.TextoAcordo'))) {
+    if (paragraph.closest('table, blockquote')) continue
+    const text = (paragraph.textContent ?? '').trim()
+    if (/^[“"]/u.test(text)) paragraph.classList.add('AjusteCitacao')
+  }
+
+  return doc.body.innerHTML
+}
+
+function ajusteSiniefHasHistoricalWording(html: string): boolean {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+    return Array.from(doc.body.querySelectorAll('[class]')).some((element) =>
+      Array.from(element.classList).some((className) =>
+        ['RemissoAnt', 'RedaoAnt', 'A8-2RemissaoAnt', 'A8-3RedacaoAnt'].includes(
+          className,
+        ),
+      ),
+    )
+  }
+
+  return /\bclass=["'][^"']*\b(?:RemissoAnt|RedaoAnt|A8-2RemissaoAnt|A8-3RedacaoAnt)\b[^"']*["']/i.test(
+    html,
+  )
+}
+
+const ajusteSiniefTemplate: LegalPresentationTemplate = {
+  id: 'AJUSTE_SINIEF',
+  version: '1.0.0',
+  matches: ({ actType }) => {
+    const code = normalizeCode(actType)
+    return (
+      code === 'AJUSTE_SINIEF' ||
+      /^AJUSTE_SINIEF_\d{1,3}_\d{2,4}$/.test(code)
+    )
+  },
+  render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const view = confazDisplayHtml({
+      html: input.html,
+      text: null,
+      ementa: input.ementa,
+      publishedOn: input.sourceCodes.includes('dou')
+        ? input.publishedOn
+        : null,
+    })
+
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const repairedHtml = view.inferred
+      ? repairInferredAjusteSiniefHeader(view.html, input.ementa)
+      : view.html
+    const displayHtml = wrapLegalTables(decorateAjusteSiniefView(repairedHtml))
+    return {
+      html: displayHtml,
+      inferredStructure: view.inferred,
+      variant: ajusteSiniefHasHistoricalWording(displayHtml)
+        ? 'consolidated'
+        : 'standard',
+    }
+  },
+}
+
 const convenioIcmsTemplate: LegalPresentationTemplate = {
   id: 'CONVENIO_ICMS',
   version: '1.0.0',
@@ -601,6 +881,8 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
   convenioIcmsTemplate,
+  protocoloIcmsTemplate,
+  ajusteSiniefTemplate,
   atoCotepeIcmsTemplate,
   atoCotepePmpfTemplate,
 ]

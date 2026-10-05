@@ -85,6 +85,68 @@ Na apresentação histórica, uma nota \`(DOU ...)\` já presente junto ao títu
 impede síntese de uma segunda nota de publicação. \`DECLARA\` e o DOU inline
 são tratados apenas dentro deste template, sem ampliar o normalizador global.
 
+## PROTOCOLO_ICMS — versão 1.0.0
+
+Referências de homologação inicial fornecidas pelo Product Owner:
+
+1. Protocolo ICMS nº 119/2026 — composição moderna;
+2. Protocolo ICMS 50/2017 — moderna, com notas editoriais;
+3. Protocolo ICMS 53/02 — composição legada com ementa em largura integral;
+4. Protocolo ICMS 22/99 — texto consolidado com declaração literal de
+   revogação e histórico de redações.
+
+Referências oficiais complementares:
+
+- https://www.confaz.fazenda.gov.br/legislacao/protocolos/2002/pt053_02
+- https://www.confaz.fazenda.gov.br/legislacao/protocolos/1999/pt022_99
+
+O seletor usa apenas o tipo `PROTOCOLO_ICMS` (admitindo a forma estruturada
+com número no próprio actType). Menções a protocolos dentro de outro ato não
+selecionam a família.
+
+| Variante | Sinal estrutural | Papel |
+| --- | --- | --- |
+| `standard` | marcador protocolar espaçado/atual | título, DOU e ementa à direita |
+| `legacy` | marcador isolado `PROTOCOLO`, sem espaçamento | ementa integral e marcador legado |
+| `consolidated` | classes reais de remissão/redação histórica | preserva o histórico expandido e suas cores editoriais |
+| `preserved-text` | conteúdo recebido como texto | degradação segura, sem interpretar marcação |
+
+`consolidated` descreve conteúdo, não geometria. Quando um consolidado também
+trouxer a estrutura legada, a classe local da ementa mantém o layout legado
+sem inferir pelo ano ou número.
+
+Vermelho/verde reproduzem papéis editoriais do CONFAZ. O template não cria
+status jurídico a partir de cor nem de palavras encontradas em citações. Uma
+declaração literal como `REVOGADO`, quando já integra a fonte, é preservada
+em sua posição original; sua ausência nunca produz um status `vigente`.
+
+## AJUSTE_SINIEF — versão 1.0.0
+
+Referências de homologação inicial fornecidas pelo Product Owner:
+
+1. Ajuste SINIEF nº 33/2026 — composição moderna;
+2. Ajuste SINIEF 01/19 — consolidado com histórico de redações;
+3. Ajuste SINIEF nº 28/2024 — composição moderna.
+
+O template é selecionado pelo tipo `AJUSTE_SINIEF` (incluindo a forma
+estruturada com número no actType), nunca por menção no corpo do ato.
+
+| Variante | Sinal estrutural | Papel |
+| --- | --- | --- |
+| `standard` | ausência de redações históricas fortes | título, notas editoriais, ementa à direita e cláusulas |
+| `consolidated` | classes de redação anterior/original (`RemissoAnt`/`RedaoAnt` e aliases) | mantém redação vigente e histórica expandida |
+| `preserved-text` | conteúdo recebido como texto | degradação segura, sem interpretar marcação |
+
+Uma simples remissão vermelha (`Remisso`) ou várias notas editoriais no topo
+não tornam o ato consolidado. A nota histórica `Exclusão de ...` observada na
+referência 01/19 é protegida localmente durante a inferência para não ocupar o
+papel da ementa; o texto e links originais são reinseridos na mesma posição.
+
+Links normais e visitados usam a mesma cor canônica do padrão. As diferenças
+magenta vistas em navegação local são estado do navegador, não papel jurídico.
+Da mesma forma, vermelho/verde reproduzem edição da fonte e nunca inferem
+vigência ou status.
+
 ## ATO_COTEPE_PMPF — versão 1.0.0
 
 Referência inicial de homologação: ATO COTEPE/PMPF nº 26, de 24 de
@@ -115,11 +177,12 @@ bloco, sem criar overflow na página.
 
 ## Compatibilidade CONFAZ
 
-`confaz-presentation.ts` continua sendo o normalizador/fallback legado para
-Ato COTEPE/ICMS, Ajuste e Protocolo. Ato COTEPE/PMPF usa o template próprio
-`ATO_COTEPE_PMPF`. A introdução de `CONVENIO_ICMS` não muda
-esses documentos. Quando outra família for homologada, ela recebe novo ID,
-versão, seletor inequívoco, CSS próprio, referências de auditoria e testes.
+`confaz-presentation.ts` continua sendo o normalizador compartilhado e o
+fallback legado para famílias ainda não homologadas. Convênio ICMS, Ato
+COTEPE/ICMS, Ato COTEPE/PMPF, Protocolo ICMS e Ajuste SINIEF usam templates
+próprios. Tipos COTEPE não homologados permanecem no fallback até receberem seu
+contrato versionado. Cada nova família recebe ID, versão, seletor inequívoco,
+CSS próprio, referências de auditoria e testes.
 
 ## Auditoria de uma alteração do padrão
 

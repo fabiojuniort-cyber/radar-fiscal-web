@@ -944,6 +944,195 @@
   }
 }
 
+
+/*
+ * PROTOCOLO_ICMS visual contract — v1.0.0
+ *
+ * One family contract covers current, legacy and consolidated protocols.
+ * Layout is inferred from presentation structure (for example the isolated
+ * PROTOCOLO marker), never from act number/year. Colors only reproduce the
+ * official CONFAZ editorial roles; they never imply legal status by themselves.
+ */
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+  line-height: 1.2;
+  color: #000;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] > * {
+  max-width: 820px;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p {
+  margin: 6pt 0 0;
+  color: #000;
+  font-size: 13.33px;
+  line-height: 1.2;
+  text-align: justify;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TituloAcordo {
+  margin: 0 0 12pt;
+  font-size: 1.2em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.DataPublicao,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A2DataPublicacao {
+  margin: 6pt 0 0;
+  color: #f00;
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa {
+  margin: 30pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa.ProtocoloEmentaLegacy {
+  margin: 18pt 0;
+  max-width: 820px;
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A5-1TextoAcordo {
+  text-indent: 72pt;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo.ProtocoloTextoLegacy {
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.ProtocoloRubricaLegacy {
+  font-weight: 700;
+  text-align: left;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.AcordoTipo {
+  margin: 18pt 0;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: normal;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.AcordoTipo.ProtocoloTipoLegacy {
+  font-size: 1.1em;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Remisso,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-1Remissao {
+  margin-left: 88pt;
+  color: #f00;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.RemissoAnt,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-2RemissaoAnt {
+  margin-left: 128pt;
+  font-weight: 700;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.RedaoAnt,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-3RedacaoAnt {
+  margin-left: 128pt;
+  text-indent: 36pt;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] a,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] a:visited {
+  color: #0000ee;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+  border-bottom: 0;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] a:focus-visible {
+  outline: 2px solid #0f5f9a;
+  outline-offset: 2px;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] b,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] strong {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] .legal-table-scroll {
+  width: 100%;
+  max-width: 820px;
+  margin: 10pt 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] table {
+  width: auto;
+  max-width: 100%;
+  margin: 10pt 0;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+}
+
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] th,
+.publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] td {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #000;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: top;
+}
+
+@media (max-width: 680px) {
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] {
+    overflow-x: visible;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'][data-legal-variant='consolidated'] p.Ementa {
+    margin-left: 18%;
+    max-width: none;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Ementa.ProtocoloEmentaLegacy {
+    margin-left: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A5-1TextoAcordo {
+    text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.TextoAcordo.ProtocoloTextoLegacy,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.ProtocoloRubricaLegacy {
+    text-indent: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.Remisso,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-1Remissao {
+    margin-left: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.RemissoAnt,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-2RemissaoAnt,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.RedaoAnt,
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] p.A8-3RedacaoAnt {
+    margin-left: 36pt;
+  }
+
+  .publication-preserved-html[data-legal-template='PROTOCOLO_ICMS'] .legal-table-scroll {
+    max-width: 100%;
+  }
+}
+
 /* TAX-11: affinity between the act and the selected company's profile. */
 .publication-affinity {
   margin-top: 18px;
@@ -1082,5 +1271,179 @@
 
   .publication-affinity-dimension {
     grid-column: 1 / -1;
+  }
+}
+
+/*
+ * AJUSTE_SINIEF visual contract — v1.0.0
+ *
+ * Standard and consolidated adjustments share the official CONFAZ geometry.
+ * Consolidation is selected only by actual editorial-history classes; color
+ * and the amount of publication notes never determine legal status/variant.
+ */
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+  line-height: 1.2;
+  color: #000;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] > * {
+  max-width: 820px;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p {
+  margin: 6pt 0 0;
+  color: #000;
+  font-size: 13.33px;
+  line-height: 1.2;
+  text-align: justify;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TituloAcordo {
+  margin: 0 0 12pt;
+  font-size: 1.4em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.DataPublicao,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A2DataPublicacao {
+  margin: 6pt 0 0;
+  color: #f00;
+  font-weight: 400;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Ementa {
+  margin: 30pt 0 18pt min(35%, 287px);
+  max-width: min(65%, 533px);
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A5-1TextoAcordo {
+  text-indent: 56pt;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.AcordoTipo {
+  margin: 18pt 0;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: normal;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.AcordoTipo.AjusteTipoPlain {
+  letter-spacing: 0.35em;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo.AjusteCitacao,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] blockquote {
+  margin-left: 56pt;
+  margin-right: 0;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Remisso,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-1Remissao {
+  margin-left: 72pt;
+  color: #f00;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.RemissoAnt,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-2RemissaoAnt {
+  margin-left: 113pt;
+  font-weight: 700;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.RedaoAnt,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-3RedacaoAnt {
+  margin-left: 113pt;
+  text-indent: 36pt;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] a,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] a:visited {
+  color: #0000ee;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+  border-bottom: 0;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] a:focus-visible {
+  outline: 2px solid #0f5f9a;
+  outline-offset: 2px;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] b,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] strong {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] .legal-table-scroll {
+  width: 100%;
+  max-width: 820px;
+  margin: 10pt 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] table {
+  width: auto;
+  max-width: 100%;
+  margin: 10pt 0;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+}
+
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] th,
+.publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] td {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #000;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: top;
+}
+
+@media (max-width: 680px) {
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] {
+    overflow-x: visible;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Ementa {
+    margin-left: 18%;
+    max-width: none;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A5-1TextoAcordo {
+    text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.TextoAcordo.AjusteCitacao,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] blockquote {
+    margin-left: 24pt;
+    text-indent: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.Remisso,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-1Remissao {
+    margin-left: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.RemissoAnt,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-2RemissaoAnt,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.RedaoAnt,
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] p.A8-3RedacaoAnt {
+    margin-left: 36pt;
+  }
+
+  .publication-preserved-html[data-legal-template='AJUSTE_SINIEF'] .legal-table-scroll {
+    max-width: 100%;
   }
 }
