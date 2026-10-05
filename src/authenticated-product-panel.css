@@ -1847,13 +1847,13 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 164px;
+  min-height: 144px;
   margin-top: 2px;
   border: 1px solid rgba(0, 212, 255, .2);
   border-radius: 16px;
   background:
     linear-gradient(108deg, rgba(5, 35, 77, .98) 0%, rgba(8, 48, 107, .94) 48%, rgba(7, 57, 100, .86) 100%);
-  padding: 22px 24px;
+  padding: 18px 22px;
   color: #fff;
   box-shadow: 0 14px 34px rgba(8, 48, 107, .12);
 }
