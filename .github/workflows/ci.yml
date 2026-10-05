@@ -76,8 +76,7 @@ jobs:
 
       - name: Upload WEB-14 browser evidence
         if: always()
-        # Diagnostic evidence only: a full GitHub artifact quota must not
-        # turn an otherwise valid frontend build into a failed release gate.
+        # Evidence only: a full artifact quota must not fail a green run.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
