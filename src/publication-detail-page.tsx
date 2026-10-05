@@ -206,22 +206,24 @@ export function PublicationDetailPage({
   return (
     <div className="publication-detail-app">
       <header className="publication-detail-header">
-        <Link
-          to="/painel"
-          className="publication-detail-brand"
-          aria-label="Abrir painel TriFaros"
-        >
-          <BrandMark surface="dark" compact />
-        </Link>
+        <div className="publication-detail-header-inner">
+          <Link
+            to="/"
+            className="publication-detail-brand"
+            aria-label="TriFaros — página inicial"
+          >
+            <BrandMark surface="dark" variant="reverse" compact />
+          </Link>
 
-        <button
-          type="button"
-          className="publication-back-link"
-          onClick={goBack}
-        >
-          <ArrowLeft size={16} />
-          Voltar
-        </button>
+          <button
+            type="button"
+            className="publication-back-link"
+            onClick={goBack}
+          >
+            <ArrowLeft size={16} />
+            Voltar
+          </button>
+        </div>
       </header>
 
       <main className="publication-detail-main">

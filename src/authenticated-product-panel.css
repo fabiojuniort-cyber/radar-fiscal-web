@@ -2621,3 +2621,17 @@
   grid-area: count;
   width: fit-content;
 }
+
+
+.tp-home-brand-link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.tp-home-brand-link:focus-visible {
+  outline: 3px solid var(--tp-blue);
+  outline-offset: 3px;
+}

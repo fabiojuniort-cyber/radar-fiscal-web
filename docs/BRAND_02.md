@@ -22,6 +22,8 @@ O master já contém símbolo, farol, livro, feixe de luz e wordmark. Não recon
 
 Sobre superfícies claras, usar o PNG transparente diretamente. Sobre superfícies escuras, o produto pode usar uma placa clara neutra atrás do mesmo master para preservar a assinatura sem alterar seus pixels.
 
+Em 05/10/2026, o Product Owner aprovou uma variante reversa derivada exclusivamente para o cabeçalho navy do leitor de legislação: `public/brand/trifaros-logo-horizontal-reverse.png`, PNG RGBA 2048×682, SHA-256 `b88df4e216fb64821a28c6c990906520c01554ff6a9c2b1279b827db76175926`. Ela preserva geometria, proporção e transparência do master; a estrutura/wordmark passam a branco e os acentos de luz teal são preservados. A variante deve ser servida como ativo pronto, nunca obtida por filtro CSS. Esta aprovação não substitui o master em superfícies claras nem migra automaticamente outras superfícies escuras.
+
 O arquivo `public/brand/trifaros-icon.png` foi preservado como artefato anterior desta frente, mas não é a fonte de verdade da assinatura oficial e não deve substituir o master horizontal sem nova aprovação.
 
 ## Direção visual
@@ -40,6 +42,6 @@ O rebrand não modifica atos oficiais, HTML jurídico, formatter CONFAZ, datas, 
 
 ## Verificação
 
-O teste de integridade do PNG valida dimensões, estrutura, CRC/IEND e SHA-256 do master oficial. Manter também testes de truncamento/corrupção dos PNGs legados enquanto esses ativos permanecerem no repositório.
+O teste de integridade do PNG valida dimensões, estrutura, CRC/IEND e SHA-256 do master oficial e da variante reversa aprovada. Manter também testes de truncamento/corrupção dos PNGs legados enquanto esses ativos permanecerem no repositório.
 
 Validar typecheck, unitários, build, browser e acessibilidade. Verificar nome acessível, proporção, contraste, mobile e ausência de referências ativas aos logos antigos. Ocorrências de TriBusca são aceitas apenas quando forem legadas, históricas, jurídicas ou parte de dados recebidos da API.

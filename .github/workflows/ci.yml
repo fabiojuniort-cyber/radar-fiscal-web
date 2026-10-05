@@ -42,7 +42,8 @@ jobs:
           node scripts/validate-png.mjs \
             public/brand/tribusca-logo-horizontal-dark.png \
             public/brand/tribusca-icon.png \
-            public/brand/trifaros-logo-horizontal.png | tee playwright-artifacts/PNG_INTEGRITY.txt
+            public/brand/trifaros-logo-horizontal.png \
+            public/brand/trifaros-logo-horizontal-reverse.png | tee playwright-artifacts/PNG_INTEGRITY.txt
           node --test scripts/validate-png.test.mjs | tee playwright-artifacts/PNG_NEGATIVE_TESTS.txt
           printf '%s  %s\n' \
             'c541566c88a53d4dac0e473f430c4d9a26bb40c9ecaa47d96ae8a8998e37da99' \
@@ -51,6 +52,8 @@ jobs:
             'public/brand/tribusca-icon.png' \
             'a9e4dab1392861c1927629bd181a60c462c32514e9427cc2ef8e3da0e2a64b4f' \
             'public/brand/trifaros-logo-horizontal.png' \
+            'b88df4e216fb64821a28c6c990906520c01554ff6a9c2b1279b827db76175926' \
+            'public/brand/trifaros-logo-horizontal-reverse.png' \
             | tee playwright-artifacts/BRAND_ASSETS.sha256 \
             | sha256sum --check --strict
 

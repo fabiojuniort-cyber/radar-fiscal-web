@@ -97,6 +97,7 @@ async function openArchive(page: Page) {
   await page.route(`**/api/v1/publications/${publicationId}/ncms`, (route) => route.fulfill({ json: { items: [] } }))
 
   await page.goto('/painel')
+  await expect(page.getByRole('link', { name: 'TriFaros — página inicial' })).toHaveAttribute('href', '/')
   await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Filtro por data de publicação' })).toBeVisible()
@@ -141,8 +142,167 @@ async function enableRange(page: Page) {
 
 async function visitDetailAndReturn(page: Page, expectedUrl: Record<string, string>, dates: DateParams) {
   await page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' }).click()
-  await expect(page).toHaveURL(new RegExp(`/painel/publicacoes/${publicationId}$`))
+  await expect(page).toHaveURL(new RegExp(`/painel/publicacoes/${publicationId}import { expect, test, type Page } from '@playwright/test'
+
+const publicationId = '55555555-5555-4555-8555-555555555555'
+const tenantId = '11111111-1111-4111-8111-111111111111'
+const today = '2026-10-01'
+const singleDate = '2026-09-28'
+const from = '2026-09-25'
+const to = '2026-09-30'
+const dateKeys = ['publishedOn', 'publishedFrom', 'publishedTo'] as const
+type DateParams = Partial<Record<typeof dateKeys[number], string>>
+
+// Contract fixtures only: the browser exercises the built frontend and its
+// actual requests. Backend date filtering is covered in backend PR #127.
+const publication = {
+  id: publicationId,
+  title: 'Publicação de teste DATE-01',
+  actType: 'IN',
+  actNumber: '99/2026',
+  agency: 'Receita Federal',
+  jurisdictionLevel: 'FEDERAL',
+  uf: null,
+  publishedOn: singleDate,
+  effectiveOn: null,
+  officialUrl: 'https://example.test/date-01',
+  sourceCode: 'dou',
+  sourceName: 'DOU',
+  excerpt: 'Conteúdo usado exclusivamente no teste de navegação.',
+}
+
+async function openArchive(page: Page) {
+  // UTC is already Oct 2, but Sao Paulo is still Oct 1. Timers keep running.
+  await page.clock.setFixedTime(new Date('2026-10-02T02:30:00Z'))
+  await page.route('**/auth/refresh', (route) => route.fulfill({ json: {
+    accessToken: 'date-01-test-access', tokenType: 'Bearer', expiresIn: 900,
+  } }))
+  await page.route('**/auth/me', (route) => route.fulfill({ json: {
+    user: { id: 'date-01-user', email: 'date-01@example.test', name: 'Teste DATE-01' },
+    memberships: [{ tenantId, tenantName: 'Teste DATE-01', tenantSlug: 'date-01', role: 'OWNER' }],
+  } }))
+  await page.route('**/public/v2/stats', (route) => route.fulfill({ json: {
+    totalPublications: 75, totalSources: 1, activeSources: 1, importedToday: 0,
+    generatedAt: '2026-10-01T12:00:00Z',
+  } }))
+  await page.route('**/public/v2/sources', (route) => route.fulfill({ json: {
+    generatedAt: '2026-10-01T12:00:00Z', items: [],
+  } }))
+  await page.route('**/api/v1/monitoring/runs', (route) => route.fulfill({ json: {
+    generatedAt: '2026-10-01T12:00:00Z', windowHours: 24, items: [],
+  } }))
+  await page.route('**/api/v1/account', (route) => route.fulfill({ json: {
+    tenant: { id: tenantId, name: 'Teste DATE-01', slug: 'date-01', status: 'ACTIVE' },
+    onboarding: null, companies: [],
+  } }))
+  await page.route('**/api/v1/establishment-types', (route) => route.fulfill({ json: { items: [] } }))
+  await page.route('**/api/v1/taxonomy/profile-options', (route) => route.fulfill({ json: {
+    release: null, dimensions: [],
+  } }))
+  await page.route('**/api/v2/archive/facets', (route) => route.fulfill({ json: {
+    ufs: ['GO'], sources: [{ code: 'dou', name: 'DOU' }], actTypes: ['IN'],
+  } }))
+  await page.route('**/api/v2/archive/navigation?*', (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
+    const params = new URL(route.request().url()).searchParams
+    const groupBy = params.get('groupBy')
+    const items = groupBy === 'jurisdiction'
+      ? [{ value: 'FEDERAL', label: 'Federal', count: 75 }]
+      : groupBy === 'source'
+        ? [{ value: 'dou', label: 'DOU', count: 75 }]
+        : groupBy === 'actType'
+          ? [{ value: 'IN', label: 'IN', count: 75 }]
+          : groupBy === 'year'
+            ? [{ value: '2026', label: '2026', count: 75 }]
+            : groupBy === 'month'
+              ? [{ value: '9', label: '9', count: 75 }]
+              : []
+    return route.fulfill({ json: { groupBy, items } })
+  })
+  await page.route('**/api/v2/archive?*', (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
+    const params = new URL(route.request().url()).searchParams
+    const pageNumber = Number(params.get('page'))
+    const limit = Number(params.get('limit'))
+    return route.fulfill({ json: {
+      page: pageNumber, limit, totalItems: 75, totalPages: Math.ceil(75 / limit),
+      totalIsCapped: false, hasMore: pageNumber < Math.ceil(75 / limit), items: [publication],
+    } })
+  })
+  await page.route(`**/api/v1/publications/${publicationId}`, (route) => route.fulfill({ json: {
+    publication: { ...publication, firstCollectedAt: '2026-09-28T12:00:00Z', lastSeenAt: '2026-09-28T12:00:00Z' },
+    version: {
+      id: '66666666-6666-4666-8666-666666666666', versionNo: 1, versionCount: 1,
+      contentText: publication.excerpt, excerpt: null, capturedAt: '2026-09-28T12:00:00Z',
+      presentation: { version: 1, format: 'PRESERVED_TEXT', preservesWhitespace: true },
+    },
+    origins: [],
+  } }))
+  await page.route(`**/api/v1/publications/${publicationId}/ncms`, (route) => route.fulfill({ json: { items: [] } }))
+
+  await page.goto('/painel')
+  await expect(page.getByRole('link', { name: 'TriFaros — página inicial' })).toHaveAttribute('href', '/')
+  await page.getByRole('button', { name: 'Acervo', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Acervo', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Filtro por data de publicação' })).toBeVisible()
+  await expect(page.locator('.tp-page-numbers [aria-current="page"]')).toHaveText('1')
+}
+
+async function expectArchiveRequest(
+  page: Page,
+  action: () => Promise<unknown>,
+  dates: DateParams,
+  pageNumber = 1,
+  filters: Record<string, string> = {},
+) {
+  // Arm before the action: cached/earlier requests cannot satisfy the assertion.
+  const pending = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return url.pathname === '/api/v2/archive' &&
+      url.searchParams.get('limit') === '25' &&
+      url.searchParams.get('page') === String(pageNumber) &&
+      dateKeys.every((key) => url.searchParams.get(key) === (dates[key] ?? null)) &&
+      Object.entries(filters).every(([key, value]) => url.searchParams.get(key) === value)
+  }, { timeout: 8_000 })
+  const [response] = await Promise.all([pending, action()])
+  expect(response.status()).toBe(200)
+  await expect(page.locator('.tp-page-numbers [aria-current="page"]')).toHaveText(String(pageNumber))
+}
+
+async function expectDateUrl(page: Page, expected: Record<string, string>) {
+  await expect(page).toHaveURL((url) =>
+    url.pathname === '/painel' &&
+    ['date', 'range', 'from', 'to'].every((key) => url.searchParams.get(key) === (expected[key] ?? null)),
+  )
+}
+
+async function enableRange(page: Page) {
+  const dateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+  // The styled switch uses a label over a pointer-events:none native input.
+  // Click its visible label, as a user would, then assert the native state.
+  await dateFilter.getByText('Intervalo', { exact: true }).click()
+  await expect(dateFilter.getByRole('checkbox', { name: 'Intervalo' })).toBeChecked()
+}
+
+async function visitDetailAndReturn(page: Page, expectedUrl: Record<string, string>, dates: DateParams) {
+  await page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' }).click()
+))
   await expect(page.getByRole('heading', { name: publication.title })).toBeVisible()
+
+  const homeLink = page.getByRole('link', { name: 'TriFaros — página inicial' })
+  await expect(homeLink).toHaveAttribute('href', '/')
+  await expect(homeLink.locator('img')).toHaveAttribute(
+    'src',
+    '/brand/trifaros-logo-horizontal-reverse.png',
+  )
+
+  const headerBox = await page.locator('.publication-detail-header-inner').boundingBox()
+  const mainBox = await page.locator('.publication-detail-main').boundingBox()
+  expect(headerBox).not.toBeNull()
+  expect(mainBox).not.toBeNull()
+  expect(Math.abs(headerBox!.x - mainBox!.x)).toBeLessThan(1.5)
+  expect(Math.abs(headerBox!.width - mainBox!.width)).toBeLessThan(1.5)
+
   await expectArchiveRequest(page, () => page.getByRole('button', { name: 'Voltar', exact: true }).click(), dates, 2, { q: 'tributário' })
   await expectDateUrl(page, expectedUrl)
   await expect(page.getByLabel('Pesquisar no Acervo')).toHaveValue('tributário')

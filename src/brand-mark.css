@@ -40,3 +40,22 @@
   .tf-brand[data-surface='dark'] .tf-brand__image { width: 144px; }
   .tf-brand[data-surface='dark'].tf-brand--compact .tf-brand__image { width: 132px; }
 }
+
+
+.tf-brand[data-variant='reverse'] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tf-brand[data-variant='reverse'].tf-brand--compact .tf-brand__image {
+  width: 154px;
+}
+
+@media (max-width: 760px) {
+  .tf-brand[data-variant='reverse'].tf-brand--compact .tf-brand__image {
+    width: 138px;
+  }
+}
