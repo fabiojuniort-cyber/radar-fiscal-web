@@ -709,6 +709,241 @@
   }
 }
 
+
+/*
+ * ATO_COTEPE_ICMS visual contract — v1.0.0
+ *
+ * Covers modern ATO COTEPE/ICMS and the historical ATO COTEPE/ICM
+ * presentation without changing the shared CONFAZ fallback.
+ */
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+  line-height: 1.2;
+  color: #000;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] > * {
+  max-width: 820px;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p {
+  margin: 6pt 0 0;
+  color: #000;
+  font-size: 13.33px;
+  line-height: 1.2;
+  text-align: justify;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.TituloAcordo {
+  margin: 0 0 12pt;
+  font-size: 1.4em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.DataPublicao,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A2DataPublicacao {
+  margin: 12pt 0 0;
+  color: #f00;
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Ementa {
+  margin: 30pt 0 18pt min(36%, 295px);
+  max-width: min(64%, 525px);
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.TextoAcordo,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A5-1TextoAcordo {
+  text-indent: 72pt;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] a,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] a:visited {
+  color: #0000ee;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+  border-bottom: 0;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] b,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] strong {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Remisso,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-1Remissao {
+  margin-left: 88pt;
+  color: #f00;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.RemissoAnt,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-2RemissaoAnt {
+  margin-left: 128pt;
+  font-weight: 700;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.RedaoAnt,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-3RedacaoAnt {
+  margin-left: 128pt;
+  text-indent: 36pt;
+  color: #008000;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.AtoCotepeAnexoTitulo,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.AtoCotepeDeclara {
+  text-align: center;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.AtoCotepeAnexoTitulo {
+  font-weight: 700;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.TituloAcordo {
+  margin-bottom: 6pt;
+  font-size: 14px;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .AtoCotepeDouHistorico {
+  color: #000;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.Ementa {
+  margin: 6pt 0 12pt;
+  max-width: none;
+  font-weight: 400;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.TextoAcordo,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.A5-1TextoAcordo {
+  text-indent: 18pt;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.AtoCotepeDeclara {
+  text-align: center;
+  text-indent: 0;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .legal-table-scroll {
+  width: 100%;
+  max-width: 820px;
+  margin: 10pt 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .legal-table-scroll:focus-visible {
+  outline: 2px solid #0f5f9a;
+  outline-offset: 2px;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] table {
+  width: auto;
+  max-width: 100%;
+  margin: 10pt 0;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.33px;
+  line-height: 1.2;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] th,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] td {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: #000;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: top;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] table.AtoCotepeEmpresaTable {
+  width: 80%;
+  min-width: 560px;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] table.AtoCotepeEmpresaTable th,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] table.AtoCotepeEmpresaTable td {
+  border-color: #999;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] table.AtoCotepeEmpresaTable td:nth-child(2) {
+  text-align: left;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .TabelaTitulo {
+  font-weight: 700;
+  text-align: left;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .AtoCotepeUfHeader,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='annex-structured'] .AtoCotepeUfHeader {
+  font-weight: 700;
+  text-align: center;
+}
+
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] td p,
+.publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] th p {
+  margin: 0;
+  text-align: inherit;
+  text-indent: 0;
+}
+
+@media (max-width: 680px) {
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] {
+    overflow-x: visible;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Ementa {
+    margin-left: 18%;
+    max-width: none;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.Ementa {
+    margin-left: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.TextoAcordo,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A5-1TextoAcordo {
+    text-indent: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.TextoAcordo,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.A5-1TextoAcordo {
+    text-indent: 12pt;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'][data-legal-variant='historical-declaration'] p.AtoCotepeDeclara {
+    text-indent: 0;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.Remisso,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-1Remissao {
+    margin-left: 24pt;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.RemissoAnt,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-2RemissaoAnt,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.RedaoAnt,
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] p.A8-3RedacaoAnt {
+    margin-left: 36pt;
+  }
+
+  .publication-preserved-html[data-legal-template='ATO_COTEPE_ICMS'] .legal-table-scroll {
+    max-width: 100%;
+  }
+}
+
 /* TAX-11: affinity between the act and the selected company's profile. */
 .publication-affinity {
   margin-top: 18px;
