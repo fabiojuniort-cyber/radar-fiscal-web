@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { fetchCatalogArchive } from './catalog-api'
+import { fetchCatalogArchive, fetchCatalogNavigation } from './catalog-api'
 import type { ProductApiFetch } from './product-api'
 
 function okFetch() {
@@ -64,5 +64,27 @@ describe('fetchCatalogArchive', () => {
     expect(range.searchParams.get('publishedOn')).toBeNull()
     expect(range.searchParams.get('publishedFrom')).toBe('2023-06-01')
     expect(range.searchParams.get('publishedTo')).toBe('2026-06-30')
+  })
+})
+
+describe('fetchCatalogNavigation', () => {
+  it('sends the selected path and requested grouping', async () => {
+    const apiFetch = okFetch()
+
+    await fetchCatalogNavigation(apiFetch, {
+      groupBy: 'month',
+      jurisdiction: 'FEDERAL',
+      source: 'confaz',
+      actType: 'Convênio ICMS',
+      year: 2026,
+    })
+
+    const url = new URL(String(apiFetch.mock.calls[0]?.[0]), 'http://x')
+    expect(url.pathname).toBe('/api/v2/archive/navigation')
+    expect(url.searchParams.get('groupBy')).toBe('month')
+    expect(url.searchParams.get('jurisdiction')).toBe('FEDERAL')
+    expect(url.searchParams.get('source')).toBe('confaz')
+    expect(url.searchParams.get('actType')).toBe('Convênio ICMS')
+    expect(url.searchParams.get('year')).toBe('2026')
   })
 })

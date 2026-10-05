@@ -58,6 +58,23 @@ async function openArchive(page: Page) {
   await page.route('**/api/v2/archive/facets', (route) => route.fulfill({ json: {
     ufs: ['GO'], sources: [{ code: 'dou', name: 'DOU' }], actTypes: ['IN'],
   } }))
+  await page.route('**/api/v2/archive/navigation?*', (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
+    const params = new URL(route.request().url()).searchParams
+    const groupBy = params.get('groupBy')
+    const items = groupBy === 'jurisdiction'
+      ? [{ value: 'FEDERAL', label: 'Federal', count: 75 }]
+      : groupBy === 'source'
+        ? [{ value: 'dou', label: 'DOU', count: 75 }]
+        : groupBy === 'actType'
+          ? [{ value: 'IN', label: 'IN', count: 75 }]
+          : groupBy === 'year'
+            ? [{ value: '2026', label: '2026', count: 75 }]
+            : groupBy === 'month'
+              ? [{ value: '9', label: '9', count: 75 }]
+              : []
+    return route.fulfill({ json: { groupBy, items } })
+  })
   await page.route('**/api/v2/archive?*', (route) => {
     expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
     const params = new URL(route.request().url()).searchParams
@@ -196,7 +213,7 @@ test('DATE-01: dates, requests, pagination, detail return, open ranges and clear
 })
 
 
-test('DESIGN-02: Pesquisa/Navegação, ajuda e filtro de data preservado', async ({ page }) => {
+test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de data', async ({ page }) => {
   await openArchive(page)
 
   const pesquisaTab = page.getByRole('tab', { name: 'Pesquisa', exact: true })
@@ -228,19 +245,38 @@ test('DESIGN-02: Pesquisa/Navegação, ajuda e filtro de data preservado', async
   }
   await help.getByRole('button', { name: 'Fechar', exact: true }).click()
 
-  const filtered = page.waitForResponse((response) => {
+  const options = page.locator('.tp-acervo-option-grid')
+  await options.getByRole('button', { name: /Federal/ }).click()
+  await options.getByRole('button', { name: /DOU/ }).click()
+  await options.getByRole('button', { name: /IN/ }).click()
+  await options.getByRole('button', { name: /2026/ }).click()
+
+  const finalActs = page.waitForResponse((response) => {
     const url = new URL(response.url())
     return url.pathname === '/api/v2/archive' &&
       url.searchParams.get('limit') === '25' &&
-      url.searchParams.get('actType') === 'IN'
+      url.searchParams.get('jurisdiction') === 'FEDERAL' &&
+      url.searchParams.get('source') === 'dou' &&
+      url.searchParams.get('actType') === 'IN' &&
+      url.searchParams.get('publishedFrom') === '2026-09-01' &&
+      url.searchParams.get('publishedTo') === '2026-09-30'
   }, { timeout: 8_000 })
-  await page.getByRole('button', { name: 'IN', exact: true }).click()
-  expect((await filtered).status()).toBe(200)
+  await options.getByRole('button', { name: /Setembro/ }).click()
+  expect((await finalActs).status()).toBe(200)
 
-  await expect(pesquisaTab).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByLabel('Tipo de base legal')).toHaveValue('IN')
-  await expect(page.getByRole('region', { name: 'Filtro por data de publicação' })).toBeVisible()
+  await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' })).toBeVisible()
+  const breadcrumb = page.getByRole('navigation', { name: 'Caminho atual' })
+  for (const label of ['Federal', 'DOU', 'IN', '2026', 'Setembro']) {
+    await expect(breadcrumb.getByRole('button', { name: label, exact: true })).toBeVisible()
+  }
+
+  await pesquisaTab.click()
+  const restoredDateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+  await expect(restoredDateFilter).toBeVisible()
+  await expect(restoredDateFilter.getByRole('checkbox', { name: 'Intervalo' })).toBeChecked()
 })
+
 
 for (const mode of ['single', 'range'] as const) {
   test(`DATE-01: active ${mode} date filters do not leak into Publicações`, async ({ page }) => {

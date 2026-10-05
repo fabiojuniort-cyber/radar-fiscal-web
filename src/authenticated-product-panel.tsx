@@ -46,6 +46,9 @@ import {
 import {
   fetchCatalogArchive,
   fetchCatalogFacets,
+  fetchCatalogNavigation,
+  type CatalogNavigationFilters,
+  type CatalogNavigationGroup,
 } from './catalog-api'
 import { paginationTokens } from './pagination'
 import {
@@ -90,7 +93,62 @@ type OrgTab =
   | 'perfil'
 
 type AcervoView = 'pesquisa' | 'navegacao'
-type ArchiveBrowseAxis = 'actType' | 'source' | 'uf' | 'jurisdiction'
+type ArchiveNavigationRoute = 'jurisdiction' | 'actType' | 'source' | 'period'
+type ArchiveNavigationCrumb = {
+  group: CatalogNavigationGroup
+  value: string
+  label: string
+  count: number
+}
+
+const ARCHIVE_MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+const archiveNavigationGroupLabels: Record<CatalogNavigationGroup, string> = {
+  jurisdiction: 'Esfera',
+  uf: 'Estado / UF',
+  source: 'Órgão / Fonte',
+  actType: 'Tipo de legislação',
+  year: 'Ano',
+  month: 'Mês',
+}
+
+function nextArchiveNavigationGroup(
+  route: ArchiveNavigationRoute,
+  path: ArchiveNavigationCrumb[],
+): CatalogNavigationGroup | null {
+  const has = (group: CatalogNavigationGroup) => path.some((item) => item.group === group)
+  const isState = path.find((item) => item.group === 'jurisdiction')?.value === 'STATE'
+
+  const routeSteps: CatalogNavigationGroup[] =
+    route === 'jurisdiction'
+      ? ['jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'actType', 'year', 'month']
+      : route === 'actType'
+        ? ['actType', 'jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'year', 'month']
+        : route === 'source'
+          ? ['source', 'actType', 'year', 'month']
+          : ['year', 'month', 'jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'actType']
+
+  return routeSteps.find((group) => !has(group)) ?? null
+}
+
+function archiveNavigationDateRange(path: ArchiveNavigationCrumb[]) {
+  const year = Number(path.find((item) => item.group === 'year')?.value)
+  const month = Number(path.find((item) => item.group === 'month')?.value)
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null
+  }
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const monthPart = String(month).padStart(2, '0')
+  return {
+    from: `${year}-${monthPart}-01`,
+    to: `${year}-${monthPart}-${String(lastDay).padStart(2, '0')}`,
+    year,
+    month,
+  }
+}
 
 type Props = {
   identity: PanelIdentity
@@ -434,7 +492,11 @@ export function AuthenticatedProductPanel({
   const [source, setSource] = useState(persisted?.source ?? '')
   const [actType, setActType] = useState(persisted?.actType ?? '')
   const [archiveView, setArchiveView] = useState<AcervoView>(persisted?.archiveView ?? 'pesquisa')
-  const [archiveBrowseAxis, setArchiveBrowseAxis] = useState<ArchiveBrowseAxis>('actType')
+  const [archiveNavigationRoute, setArchiveNavigationRoute] =
+    useState<ArchiveNavigationRoute>('jurisdiction')
+  const [archiveNavigationPath, setArchiveNavigationPath] =
+    useState<ArchiveNavigationCrumb[]>([])
+  const [archiveNavigationPage, setArchiveNavigationPage] = useState(1)
   // TAX-11: tag filter handed over from a legislation page.
   const [archiveTag, setArchiveTag] = useState<{ code: string; label: string } | null>(
     persisted?.archiveTag ?? null,
@@ -563,6 +625,86 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
+  const archiveNavigationSelection = useMemo(() => {
+    const selected: Partial<Record<CatalogNavigationGroup, string>> = {}
+    for (const item of archiveNavigationPath) selected[item.group] = item.value
+    return selected
+  }, [archiveNavigationPath])
+
+  const archiveNavigationGroup = useMemo(
+    () => nextArchiveNavigationGroup(archiveNavigationRoute, archiveNavigationPath),
+    [archiveNavigationRoute, archiveNavigationPath],
+  )
+
+  const archiveNavigationFilters: Omit<CatalogNavigationFilters, 'groupBy'> = {
+    jurisdiction:
+      archiveNavigationSelection.jurisdiction === 'FEDERAL' ||
+      archiveNavigationSelection.jurisdiction === 'STATE'
+        ? archiveNavigationSelection.jurisdiction
+        : undefined,
+    uf: archiveNavigationSelection.uf,
+    source: archiveNavigationSelection.source,
+    actType: archiveNavigationSelection.actType,
+    year: archiveNavigationSelection.year
+      ? Number(archiveNavigationSelection.year)
+      : undefined,
+    month: archiveNavigationSelection.month
+      ? Number(archiveNavigationSelection.month)
+      : undefined,
+  }
+
+  const archiveNavigationOptionsQuery = useQuery({
+    queryKey: [
+      'launch',
+      'archive-navigation',
+      archiveNavigationRoute,
+      archiveNavigationGroup,
+      archiveNavigationPath.map((item) => [item.group, item.value]),
+    ],
+    queryFn: () =>
+      fetchCatalogNavigation(apiFetch, {
+        groupBy: archiveNavigationGroup ?? 'jurisdiction',
+        ...archiveNavigationFilters,
+      }),
+    enabled:
+      screen === 'acervo' &&
+      archiveView === 'navegacao' &&
+      archiveNavigationGroup !== null,
+    retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
+  })
+
+  const archiveNavigationRange = useMemo(
+    () => archiveNavigationDateRange(archiveNavigationPath),
+    [archiveNavigationPath],
+  )
+
+  const archiveNavigationArchiveQuery = useQuery({
+    queryKey: [
+      'launch',
+      'archive-navigation-results',
+      archiveNavigationPath.map((item) => [item.group, item.value]),
+      archiveNavigationPage,
+    ],
+    queryFn: () =>
+      fetchCatalogArchive(apiFetch, {
+        jurisdiction: archiveNavigationFilters.jurisdiction,
+        uf: archiveNavigationFilters.uf,
+        source: archiveNavigationFilters.source,
+        actType: archiveNavigationFilters.actType,
+        publishedFrom: archiveNavigationRange?.from,
+        publishedTo: archiveNavigationRange?.to,
+        page: archiveNavigationPage,
+        limit: 25,
+      }),
+    enabled:
+      screen === 'acervo' &&
+      archiveView === 'navegacao' &&
+      archiveNavigationGroup === null &&
+      archiveNavigationRange !== null,
+    retry: false,
+  })
+
   const adminMeQuery = useQuery({
     queryKey: ['admin', 'me'],
     queryFn: () => fetchAdminMe(apiFetch),
@@ -658,28 +800,6 @@ export function AuthenticatedProductPanel({
     setArchiveTag(null)
     setArchivePage(1)
   }
-
-  const applyArchiveBrowse = (axis: ArchiveBrowseAxis, value: string) => {
-    resetArchiveFilters()
-    if (axis === 'actType') setActType(value)
-    if (axis === 'source') setSource(value)
-    if (axis === 'uf') setUf(value)
-    if (axis === 'jurisdiction') setJurisdiction(value)
-    setArchivePage(1)
-    setArchiveView('pesquisa')
-  }
-
-  const archiveBrowseOptions: Array<{ value: string; label: string }> =
-    archiveBrowseAxis === 'actType'
-      ? (facetsQuery.data?.actTypes ?? []).map((item) => ({ value: item, label: item }))
-      : archiveBrowseAxis === 'source'
-        ? (facetsQuery.data?.sources ?? []).map((item) => ({ value: item.code, label: item.name }))
-        : archiveBrowseAxis === 'uf'
-          ? (facetsQuery.data?.ufs ?? []).map((item) => ({ value: item, label: item }))
-          : [
-              { value: 'FEDERAL', label: 'Federal' },
-              { value: 'STATE', label: 'Estadual' },
-            ]
 
   const unavailable = sources.filter((item) => item.status === 'UNAVAILABLE').length
   const unstable = sources.filter((item) => item.status === 'UNSTABLE').length
@@ -1217,7 +1337,7 @@ export function AuthenticatedProductPanel({
                   <SectionHeading
                     eyebrow="Descoberta"
                     title="Navegue pelo Acervo"
-                    description="Escolha uma categoria e refine o caminho até as publicações."
+                    description="Escolha um caminho e avance etapa por etapa até os atos, sem sair desta tela."
                   />
                   <Dialog.Root>
                     <Dialog.Trigger asChild>
@@ -1249,19 +1369,23 @@ export function AuthenticatedProductPanel({
                 </div>
 
                 <section className="tp-acervo-navigation" aria-label="Navegação por categorias">
-                  <div className="tp-acervo-gateways" role="group" aria-label="Ponto de partida">
+                  <div className="tp-acervo-gateways" role="group" aria-label="Forma de navegação">
                     {[
-                      { key: 'actType', label: 'Tipo de base legal', hint: 'Atos, convênios, instruções e outros tipos' },
-                      { key: 'source', label: 'Fonte / órgão', hint: 'Origem oficial da publicação' },
-                      { key: 'uf', label: 'Estado / UF', hint: 'Recorte territorial por unidade federativa' },
-                      { key: 'jurisdiction', label: 'Esfera', hint: 'Federal ou estadual' },
+                      { key: 'jurisdiction', label: 'Esfera', hint: 'Federal ou estadual, depois órgão e legislação' },
+                      { key: 'actType', label: 'Tipo de ato', hint: 'Comece pela espécie de legislação' },
+                      { key: 'source', label: 'Órgão / Fonte', hint: 'Comece pela origem oficial' },
+                      { key: 'period', label: 'Período', hint: 'Comece por ano e mês de publicação' },
                     ].map((item) => (
                       <button
                         key={item.key}
                         type="button"
-                        className={archiveBrowseAxis === item.key ? 'is-active' : undefined}
-                        aria-pressed={archiveBrowseAxis === item.key}
-                        onClick={() => setArchiveBrowseAxis(item.key as ArchiveBrowseAxis)}
+                        className={archiveNavigationRoute === item.key ? 'is-active' : undefined}
+                        aria-pressed={archiveNavigationRoute === item.key}
+                        onClick={() => {
+                          setArchiveNavigationRoute(item.key as ArchiveNavigationRoute)
+                          setArchiveNavigationPath([])
+                          setArchiveNavigationPage(1)
+                        }}
                       >
                         <strong>{item.label}</strong>
                         <span>{item.hint}</span>
@@ -1270,33 +1394,120 @@ export function AuthenticatedProductPanel({
                   </div>
 
                   <div className="tp-acervo-browse-options">
-                    <div className="tp-acervo-browse-title">
-                      <span>Refine por</span>
-                      <strong>
-                        {archiveBrowseAxis === 'actType'
-                          ? 'Tipo de base legal'
-                          : archiveBrowseAxis === 'source'
-                            ? 'Fonte / órgão'
-                            : archiveBrowseAxis === 'uf'
-                              ? 'Estado / UF'
-                              : 'Esfera'}
-                      </strong>
-                    </div>
-                    {facetsQuery.isPending ? (
-                      <LoadingState text="Carregando opções…" />
-                    ) : facetsQuery.isError ? (
-                      <ErrorState title="Não foi possível carregar as categorias" />
-                    ) : (
-                      <div className="tp-acervo-option-grid">
-                        {archiveBrowseOptions.map((item) => (
+                    <nav className="tp-acervo-breadcrumb" aria-label="Caminho atual">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setArchiveNavigationPath([])
+                          setArchiveNavigationPage(1)
+                        }}
+                      >
+                        Início
+                      </button>
+                      {archiveNavigationPath.map((item, index) => (
+                        <span key={item.group}>
+                          <i aria-hidden="true">/</i>
                           <button
                             type="button"
-                            key={item.value}
-                            onClick={() => applyArchiveBrowse(archiveBrowseAxis, item.value)}
+                            onClick={() => {
+                              setArchiveNavigationPath(archiveNavigationPath.slice(0, index + 1))
+                              setArchiveNavigationPage(1)
+                            }}
                           >
                             {item.label}
                           </button>
-                        ))}
+                        </span>
+                      ))}
+                    </nav>
+
+                    {archiveNavigationGroup !== null ? (
+                      <>
+                        <div className="tp-acervo-browse-title">
+                          <span>Agora escolha</span>
+                          <strong>{archiveNavigationGroupLabels[archiveNavigationGroup]}</strong>
+                        </div>
+                        {archiveNavigationOptionsQuery.isPending ? (
+                          <LoadingState text="Carregando opções…" />
+                        ) : archiveNavigationOptionsQuery.isError ? (
+                          <ErrorState title="Não foi possível carregar esta etapa" />
+                        ) : archiveNavigationOptionsQuery.data?.items.length === 0 ? (
+                          <EmptyState title="Nenhuma opção encontrada">
+                            Não há atos neste caminho. Volte uma etapa e tente outro recorte.
+                          </EmptyState>
+                        ) : (
+                          <div className="tp-acervo-option-grid">
+                            {(archiveNavigationOptionsQuery.data?.items ?? []).map((item) => {
+                              const displayLabel = archiveNavigationGroup === 'month'
+                                ? ARCHIVE_MONTHS[Number(item.value) - 1] ?? item.label
+                                : item.label
+                              return (
+                                <button
+                                  type="button"
+                                  key={item.value}
+                                  onClick={() => {
+                                    setArchiveNavigationPath((current) => [
+                                      ...current,
+                                      {
+                                        group: archiveNavigationGroup,
+                                        value: item.value,
+                                        label: displayLabel,
+                                        count: item.count,
+                                      },
+                                    ])
+                                    setArchiveNavigationPage(1)
+                                  }}
+                                >
+                                  <strong>{displayLabel}</strong>
+                                  <span>
+                                    {item.count.toLocaleString('pt-BR')}{' '}
+                                    {item.count === 1 ? 'ato' : 'atos'}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="tp-acervo-navigation-results">
+                        <div className="tp-acervo-browse-title">
+                          <span>Resultado do caminho</span>
+                          <strong>
+                            {archiveNavigationRange
+                              ? `${ARCHIVE_MONTHS[archiveNavigationRange.month - 1]} de ${archiveNavigationRange.year}`
+                              : 'Atos encontrados'}
+                          </strong>
+                        </div>
+                        {archiveNavigationArchiveQuery.isPending ? (
+                          <LoadingState text="Carregando atos…" />
+                        ) : archiveNavigationArchiveQuery.isError ? (
+                          <ErrorState title="Não foi possível carregar os atos" />
+                        ) : (
+                          <>
+                            <PublicationList items={archiveNavigationArchiveQuery.data?.items ?? []} />
+                            <div className="tp-acervo-navigation-pagination">
+                              <button
+                                type="button"
+                                disabled={archiveNavigationPage <= 1}
+                                onClick={() => setArchiveNavigationPage((page) => Math.max(1, page - 1))}
+                              >
+                                Página anterior
+                              </button>
+                              <span>
+                                Página {archiveNavigationPage} ·{' '}
+                                {(archiveNavigationArchiveQuery.data?.totalItems ?? 0).toLocaleString('pt-BR')}{' '}
+                                atos
+                              </span>
+                              <button
+                                type="button"
+                                disabled={!archiveNavigationArchiveQuery.data?.hasMore}
+                                onClick={() => setArchiveNavigationPage((page) => page + 1)}
+                              >
+                                Próxima página
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
