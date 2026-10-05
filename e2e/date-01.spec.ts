@@ -227,8 +227,8 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
   await navegacaoTab.click()
   await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
   await expect(dateFilter).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Navegue pelo Acervo' })).toBeVisible()
-  await expect(page.getByText('A Biblioteca Tributária', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'A Biblioteca Tributária' })).toBeVisible()
+  await expect(page.getByText('Acervo · Biblioteca Viva', { exact: true })).toBeVisible()
   await expect(page.getByText(/Conhecimento organizado para ser encontrado/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Ajuda', exact: true }).click()
@@ -272,6 +272,10 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
   for (const label of ['Federal', 'DOU', 'IN', '2026', 'Setembro']) {
     await expect(breadcrumb.getByRole('button', { name: label, exact: true })).toBeVisible()
   }
+  const pathRail = page.locator('.tp-acervo-path-rail')
+  await expect(pathRail).toContainText('Federal')
+  await expect(pathRail).toContainText('75 atos')
+  await expect(pathRail).toContainText('Setembro')
 
   await pesquisaTab.click()
   const restoredDateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })

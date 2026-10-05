@@ -1334,15 +1334,14 @@ export function AuthenticatedProductPanel({
               </>
             ) : (
               <>
+                <div className="tp-acervo-library-stage">
                 <div className="tp-acervo-navigation-heading tp-acervo-library-hero">
                   <div className="tp-acervo-library-copy">
-                    <span className="tp-acervo-library-kicker">Acervo TriFaros · Biblioteca Viva</span>
-                    <strong className="tp-acervo-library-title">A Biblioteca Tributária</strong>
-                    <SectionHeading
-                      eyebrow="Descoberta"
-                      title="Navegue pelo Acervo"
-                      description="Conhecimento organizado para ser encontrado. Escolha um caminho e avance etapa por etapa até os atos, sem sair desta tela."
-                    />
+                    <span className="tp-acervo-library-kicker">Acervo · Biblioteca Viva</span>
+                    <h1 className="tp-acervo-library-title">A Biblioteca Tributária</h1>
+                    <p className="tp-acervo-library-subtitle">
+                      Conhecimento organizado para ser encontrado.
+                    </p>
                   </div>
                   <Dialog.Root>
                     <Dialog.Trigger asChild>
@@ -1397,6 +1396,27 @@ export function AuthenticatedProductPanel({
                       </button>
                     ))}
                   </div>
+
+                  {archiveNavigationPath.length > 0 && (
+                    <div className="tp-acervo-path-rail" aria-label="Etapas selecionadas">
+                      {archiveNavigationPath.map((item, index) => (
+                        <button
+                          type="button"
+                          key={item.group}
+                          onClick={() => {
+                            setArchiveNavigationPath(archiveNavigationPath.slice(0, index + 1))
+                            setArchiveNavigationPage(1)
+                          }}
+                        >
+                          <small>{archiveNavigationGroupLabels[item.group]}</small>
+                          <strong>{item.label}</strong>
+                          <span>
+                            {item.count.toLocaleString('pt-BR')} {item.count === 1 ? 'ato' : 'atos'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="tp-acervo-browse-options">
                     <nav className="tp-acervo-breadcrumb" aria-label="Caminho atual">
@@ -1517,6 +1537,7 @@ export function AuthenticatedProductPanel({
                     )}
                   </div>
                 </section>
+                </div>
               </>
             )}
           </>
