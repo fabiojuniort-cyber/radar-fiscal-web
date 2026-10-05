@@ -97,11 +97,17 @@ async function openArchive(page: Page) {
   await page.route(`**/api/v1/publications/${publicationId}/ncms`, (route) => route.fulfill({ json: { items: [] } }))
 
   await page.goto('/painel')
-  await expect(page.getByRole('link', { name: 'TriFaros — página inicial' })).toHaveAttribute('href', '/')
+  const homeButton = page.getByRole('button', { name: 'TriFaros — Início' })
+  await expect(homeButton).toBeVisible()
   await page.getByRole('button', { name: 'Acervo', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Acervo', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Filtro por data de publicação' })).toBeVisible()
   await expect(page.locator('.tp-page-numbers [aria-current="page"]')).toHaveText('1')
+
+  await homeButton.click()
+  await expect(page.getByRole('button', { name: 'Início', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: 'Acervo', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Acervo', exact: true })).toBeVisible()
 }
 
 async function expectArchiveRequest(
@@ -145,8 +151,8 @@ async function visitDetailAndReturn(page: Page, expectedUrl: Record<string, stri
   await expect(page).toHaveURL(new RegExp(`/painel/publicacoes/${publicationId}$`))
   await expect(page.getByRole('heading', { name: publication.title })).toBeVisible()
 
-  const homeLink = page.getByRole('link', { name: 'TriFaros — página inicial' })
-  await expect(homeLink).toHaveAttribute('href', '/')
+  const homeLink = page.getByRole('link', { name: 'TriFaros — Início' })
+  await expect(homeLink).toHaveAttribute('href', '/painel')
   await expect(homeLink.locator('img')).toHaveAttribute(
     'src',
     '/brand/trifaros-logo-horizontal-reverse.png',

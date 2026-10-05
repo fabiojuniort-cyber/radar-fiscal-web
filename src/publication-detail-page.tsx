@@ -52,6 +52,28 @@ function formatNcmCode(value: string) {
   )
 }
 
+function setPanelHomeState() {
+  try {
+    const raw = sessionStorage.getItem('tribusca.panel.state')
+    const current = raw
+      ? JSON.parse(raw) as Record<string, unknown>
+      : {}
+
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({
+        ...current,
+        screen: 'inicio',
+      }),
+    )
+  } catch {
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({ screen: 'inicio' }),
+    )
+  }
+}
+
 function setArchiveNcmState(code: string) {
   const normalized = code.replace(/\D/g, '')
   if (normalized.length !== 8) return
@@ -208,9 +230,10 @@ export function PublicationDetailPage({
       <header className="publication-detail-header">
         <div className="publication-detail-header-inner">
           <Link
-            to="/"
+            to="/painel"
             className="publication-detail-brand"
-            aria-label="TriFaros — página inicial"
+            aria-label="TriFaros — Início"
+            onClick={setPanelHomeState}
           >
             <BrandMark surface="dark" variant="reverse" compact />
           </Link>
