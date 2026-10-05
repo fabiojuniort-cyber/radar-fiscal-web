@@ -460,11 +460,13 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       const payload = route.request().postDataJSON() as {
         taxRegime: string
         personalization: {
+          ncmCodes?: string[]
           taxonomy: { conceptCodes: string[]; cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }> } | null
         }
       }
       expect(payload.taxRegime).toBe('LUCRO_REAL')
       expect(payload.personalization.taxonomy?.conceptCodes).toContain('tax.icms')
+      expect(payload.personalization.ncmCodes).toEqual([])
       // The user changed the CNAE's segment in the CNAE table.
       expect(payload.personalization.taxonomy?.cnaeSegments).toEqual([
         { cnaeCode: '4683400', segmentCode: 'sector.agri_inputs' },
@@ -606,6 +608,20 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const cnaeSegment = page.getByRole('combobox', { name: 'Segmento do CNAE 4683400' })
   await expect(cnaeSegment).toHaveValue('sector.wholesale')
   await cnaeSegment.selectOption('sector.agri_inputs')
+  // The CNAE segment shows as selected in the Segmento card, marked as from the CNAE.
+  const segmentCard = page.getByRole('region', { name: 'Setor', exact: true })
+  const segmentSelected = segmentCard.getByLabel('Selecionados')
+  await expect(segmentSelected).toContainText('Insumos agrícolas')
+  await expect(segmentSelected).toContainText('do CNAE 4683400')
+  // Removing it there asks first and clears the CNAE row.
+  await segmentSelected.getByRole('button', { name: 'Remover Insumos agrícolas' }).click()
+  await expect(page.getByRole('dialog', { name: 'Remover segmento?' })).toBeVisible()
+  await page.getByRole('dialog', { name: 'Remover segmento?' }).getByRole('button', { name: 'Remover', exact: true }).click()
+  await expect(cnaeSegment).toHaveValue('')
+  await expect(segmentSelected).not.toContainText('Insumos agrícolas')
+  await cnaeSegment.selectOption('sector.agri_inputs')
+  // Card NCM between Produto and the next card.
+  await expect(page.getByRole('region', { name: 'NCM', exact: true })).toBeVisible()
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {

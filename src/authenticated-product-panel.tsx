@@ -35,6 +35,8 @@ import { BrandMark } from './brand-mark'
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
 import { ProductNcmProfiles } from './product-ncm-profiles'
+import { fetchCompanyCnaeNcms, fetchCompanyProductProfiles } from './product-ncm-api'
+import { NcmProfileCard, TaxonomyDimensionPicker, type DerivedTag } from './profile-taxonomy-cards'
 import {
   fetchAdminMe,
   fetchTaxonomySuggestions,
@@ -2660,121 +2662,6 @@ function EstablishmentSection({
   )
 }
 
-function TaxonomyDimensionPicker({
-  dimension,
-  selected,
-  onToggle,
-  onSetMany,
-  suggestions,
-}: {
-  dimension: TaxonomyProfileDimension
-  selected: Set<string>
-  onToggle: (code: string) => void
-  onSetMany: (codes: string[], checked: boolean) => void
-  suggestions?: Map<string, 'PRIMARY' | 'SECONDARY'>
-}) {
-  const [query, setQuery] = useState('')
-  const normalized = query.trim().toLocaleLowerCase('pt-BR')
-  const matches = (concept: TaxonomyProfileDimension['concepts'][number]) =>
-    !normalized || concept.label.toLocaleLowerCase('pt-BR').includes(normalized)
-  const concepts = dimension.concepts.filter(matches)
-  const selectedCount = dimension.concepts.filter((concept) => selected.has(concept.code)).length
-  const groups = dimension.usesGroups ? dimension.groups ?? [] : []
-
-  const chip = (concept: TaxonomyProfileDimension['concepts'][number]) => {
-    const suggestion = suggestions?.get(concept.code)
-    return (
-      <label
-        className={selected.has(concept.code) ? 'is-selected' : ''}
-        key={concept.code}
-        title={concept.helpText || concept.definition}
-      >
-        <input
-          type="checkbox"
-          checked={selected.has(concept.code)}
-          onChange={() => onToggle(concept.code)}
-        />
-        <span>
-          <b>{concept.label}</b>
-          {suggestion && <small className="tp-taxonomy-suggested">sugerido pelo CNAE</small>}
-        </span>
-        {selected.has(concept.code) && <Check size={15} />}
-      </label>
-    )
-  }
-
-  const flatShown = normalized
-    ? concepts.slice(0, 80)
-    : concepts
-        .filter((concept) => selected.has(concept.code) || suggestions?.has(concept.code))
-        .concat(
-          concepts
-            .filter((concept) => !selected.has(concept.code) && !suggestions?.has(concept.code))
-            .slice(0, 14),
-        )
-
-  return (
-    <section className="tp-taxonomy-dimension">
-      <div>
-        <strong>{dimension.name}</strong>
-        <span>
-          {dimension.concepts.length} opções · {selectedCount} selecionadas
-        </span>
-      </div>
-      {dimension.helpText && <p className="tp-taxonomy-help">{dimension.helpText}</p>}
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={'Buscar em ' + dimension.name.toLowerCase()}
-        aria-label={'Buscar ' + dimension.name}
-      />
-      {groups.length > 0 ? (
-        <div className="tp-taxonomy-groups">
-          {[...groups, null].map((group) => {
-            const items = concepts.filter((concept) =>
-              group ? concept.groupCode === group.code : !concept.groupCode || !groups.some((g) => g.code === concept.groupCode),
-            )
-            if (items.length === 0) return null
-            const groupCodes = dimension.concepts
-              .filter((concept) =>
-                group ? concept.groupCode === group.code : !concept.groupCode,
-              )
-              .map((concept) => concept.code)
-            const groupSelected = groupCodes.filter((code) => selected.has(code)).length
-            const allSelected = groupSelected === groupCodes.length && groupCodes.length > 0
-            return (
-              <details
-                key={group?.code ?? 'outros'}
-                className="tp-taxonomy-group"
-                open={Boolean(normalized) || groupSelected > 0 || items.some((c) => suggestions?.has(c.code))}
-              >
-                <summary title={group?.helpText ?? undefined}>
-                  <b>{group ? group.label : 'Outros'}</b>
-                  <small>
-                    {groupSelected > 0 ? `${groupSelected} de ${groupCodes.length}` : `${groupCodes.length}`}
-                  </small>
-                </summary>
-                {group && (
-                  <button
-                    type="button"
-                    className="tp-taxonomy-group-all"
-                    onClick={() => onSetMany(groupCodes, !allSelected)}
-                  >
-                    {allSelected ? 'Desmarcar grupo' : 'Marcar o grupo inteiro'}
-                  </button>
-                )}
-                <div className="tp-taxonomy-options">{items.map(chip)}</div>
-              </details>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="tp-taxonomy-options">{flatShown.map(chip)}</div>
-      )}
-    </section>
-  )
-}
-
 function TaxProfileSection({
   apiFetch,
   tenantId,
@@ -2802,11 +2689,14 @@ function TaxProfileSection({
     () => new Set(profile?.personalization.taxonomy?.conceptCodes ?? []),
   )
   // Segment chosen by the user for each CNAE; absent = the CNAE's own.
+  // '' = the user removed the CNAE's segment.
   const savedCnaeSegments = () =>
     Object.fromEntries(
-      (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode]),
+      (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode ?? '']),
     ) as Record<string, string>
   const [cnaeSegments, setCnaeSegments] = useState<Record<string, string>>(savedCnaeSegments)
+  const [profileNcms, setProfileNcms] = useState<string[]>(() => profile?.personalization.ncmCodes ?? [])
+  const [segmentRemoval, setSegmentRemoval] = useState<DerivedTag | null>(null)
 
   useEffect(() => {
     setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
@@ -2814,9 +2704,10 @@ function TaxProfileSection({
     setSelectedCodes(new Set(profile?.personalization.taxonomy?.conceptCodes ?? []))
     setCnaeSegments(
       Object.fromEntries(
-        (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode]),
+        (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode ?? '']),
       ),
     )
+    setProfileNcms(profile?.personalization.ncmCodes ?? [])
   }, [profile])
 
   // TAX-11: the API returns only the dimensions the curator made visible, in
@@ -2881,23 +2772,6 @@ function TaxProfileSection({
     [profileDimensions],
   )
 
-  // CNAE principal pre-selects its segments while the company has never saved
-  // taxonomy markers; secondary CNAEs only show the "sugerido" badge. Runs
-  // once per company, only after the profile, the options and the
-  // suggestions are all loaded (the profile effect above resets selections).
-  const [suggestionsAppliedFor, setSuggestionsAppliedFor] = useState<string | null>(null)
-  useEffect(() => {
-    if (loading || !suggestionsQuery.data || offeredCodes.size === 0) return
-    if (suggestionsAppliedFor === company.id) return
-    setSuggestionsAppliedFor(company.id)
-    if (profile?.personalization.taxonomy) return
-    const primary = suggestionsQuery.data.segments
-      .filter((segment) => segment.strength === 'PRIMARY' && offeredCodes.has(segment.conceptCode))
-      .map((segment) => segment.conceptCode)
-    if (primary.length === 0) return
-    setSelectedCodes((current) => new Set([...current, ...primary]))
-  }, [loading, suggestionsQuery.data, offeredCodes, suggestionsAppliedFor, company.id, profile])
-
   const setMany = (codes: string[], checked: boolean) => {
     setSelectedCodes((current) => {
       const next = new Set(current)
@@ -2927,11 +2801,74 @@ function TaxProfileSection({
     [establishments],
   )
 
+  // Segments set on the CNAE table show as selected in the Segmento card.
+  const segmentLabelOf = useMemo(() => new Map(segmentOptions.map((option) => [option.code, option.label])), [segmentOptions])
+  const derivedSegments = useMemo(() => {
+    const byCode = new Map<string, string[]>()
+    for (const cnaeCode of profileCnaeCodes) {
+      const code = segmentFor(cnaeCode).code
+      if (!code || !segmentLabelOf.has(code)) continue
+      byCode.set(code, [...(byCode.get(code) ?? []), cnaeCode])
+    }
+    return [...byCode.entries()]
+      .map(([code, cnaeCodes]): DerivedTag => ({
+        code,
+        label: segmentLabelOf.get(code)!,
+        source: cnaeCodes.length === 1 ? `do CNAE ${cnaeCodes[0]}` : `dos CNAEs ${cnaeCodes.join(', ')}`,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
+  }, [profileCnaeCodes, segmentFor, segmentLabelOf])
+
+  // Removing a CNAE segment in the card leaves those CNAEs without a segment.
+  const removeSegment = (code: string) => {
+    setCnaeSegments((current) => {
+      const next = { ...current }
+      for (const cnaeCode of profileCnaeCodes) if (segmentFor(cnaeCode).code === code) next[cnaeCode] = ''
+      return next
+    })
+    setSelectedCodes((current) => {
+      const next = new Set(current)
+      next.delete(code)
+      return next
+    })
+  }
+
+  // NCMs set on the CNAE table (shared cache with the CNAE table).
+  const cnaeNcmsQuery = useQuery({
+    queryKey: ['cnae-ncms', tenantId, company.id],
+    queryFn: () => fetchCompanyCnaeNcms(apiFetch, tenantId, company.id),
+    retry: false,
+  })
+  const productProfilesQuery = useQuery({
+    queryKey: ['product-ncm-profiles', tenantId, company.id],
+    queryFn: () => fetchCompanyProductProfiles(apiFetch, tenantId, company.id),
+    retry: false,
+  })
+  const derivedNcms = useMemo(() => {
+    const items = new Map<string, { code: string; officialCode: string; description: string; source: string }>()
+    for (const ncm of cnaeNcmsQuery.data ?? []) {
+      items.set(ncm.code, { code: ncm.code, officialCode: ncm.officialCode, description: ncm.description, source: `do CNAE ${ncm.cnaeCode}` })
+    }
+    for (const product of productProfilesQuery.data ?? []) {
+      for (const ncm of product.ncms) {
+        if (!items.has(ncm.code)) {
+          items.set(ncm.code, { code: ncm.code, officialCode: ncm.officialCode, description: ncm.description, source: `de ${product.productLabel}` })
+        }
+      }
+    }
+    return [...items.values()].sort((a, b) => a.code.localeCompare(b.code))
+  }, [cnaeNcmsQuery.data, productProfilesQuery.data])
+
+  // Chosen tags plus those from the CNAE table (segments and NCMs).
+  const markerCount =
+    new Set([...selectedCodes, ...derivedSegments.map((tag) => tag.code)]).size +
+    new Set([...profileNcms, ...derivedNcms.map((item) => item.code)]).size
+
   const mutation = useMutation({
     mutationFn: () =>
       saveTaxProfile(apiFetch, tenantId, company.id, {
         taxRegime,
-        segments: selectedLabels('sector'),
+        segments: [...new Set([...derivedSegments.map((tag) => tag.label), ...selectedLabels('sector')])],
         activities: selectedLabels('operation'),
         personalization: {
           taxes: selectedLabels('tax'),
@@ -2940,6 +2877,7 @@ function TaxProfileSection({
           documents: selectedLabels('document'),
           obligations: selectedLabels('obligation'),
           keywords: splitCsv(keywords),
+          ncmCodes: profileNcms,
           taxonomy: taxonomyOptions.release
             ? {
                 releaseId: taxonomyOptions.release.id,
@@ -2954,9 +2892,12 @@ function TaxProfileSection({
                   )
                   .sort(),
                 // Effective segment of every company CNAE (suggested or chosen).
-                cnaeSegments: profileCnaeCodes
-                  .map((cnaeCode) => ({ cnaeCode, segmentCode: segmentFor(cnaeCode).code }))
-                  .filter((item) => segmentOptions.some((option) => option.code === item.segmentCode)),
+                // Effective segment of every company CNAE; null when removed.
+                cnaeSegments: profileCnaeCodes.flatMap((cnaeCode): Array<{ cnaeCode: string; segmentCode: string | null }> => {
+                  const code = segmentFor(cnaeCode).code
+                  if (segmentOptions.some((option) => option.code === code)) return [{ cnaeCode, segmentCode: code }]
+                  return cnaeSegments[cnaeCode] === '' ? [{ cnaeCode, segmentCode: null }] : []
+                }),
               }
             : null,
         },
@@ -3079,16 +3020,34 @@ function TaxProfileSection({
 
         {taxonomyOptions.release ? (
           <div className="tp-taxonomy-grid">
-            {profileDimensions.map((dimension) => (
-              <TaxonomyDimensionPicker
-                dimension={dimension}
-                selected={selectedCodes}
-                onToggle={toggleCode}
-                onSetMany={setMany}
-                suggestions={suggestions}
-                key={dimension.code}
-              />
-            ))}
+            {profileDimensions.flatMap((dimension, index) => {
+              const isSegment = dimension.code === 'sector' || dimension.officialCodeType === 'CNAE'
+              const card = (
+                <TaxonomyDimensionPicker
+                  dimension={dimension}
+                  selected={selectedCodes}
+                  onToggle={toggleCode}
+                  onSetMany={setMany}
+                  suggestions={suggestions}
+                  {...(isSegment ? { derived: derivedSegments, onRemoveDerived: setSegmentRemoval } : {})}
+                  key={dimension.code}
+                />
+              )
+              // Card NCM right after Produto (or first, without Produto).
+              const ncmCard = (
+                <NcmProfileCard
+                  key="ncm"
+                  apiFetch={apiFetch}
+                  codes={profileNcms}
+                  onChange={setProfileNcms}
+                  derived={derivedNcms}
+                />
+              )
+              const hasProduct = profileDimensions.some((item) => item.code === 'product')
+              if (dimension.code === 'product') return [card, ncmCard]
+              if (!hasProduct && index === 0) return [ncmCard, card]
+              return [card]
+            })}
           </div>
         ) : (
           <div className="tp-taxonomy-unavailable">
@@ -3097,12 +3056,26 @@ function TaxProfileSection({
         )}
       </section>
 
+      {segmentRemoval && (
+        <DangerConfirmDialog
+          title="Remover segmento?"
+          description={`“${segmentRemoval.label}” veio ${segmentRemoval.source}. Ao remover, esses CNAEs ficam sem segmento na tabela de CNAEs. A alteração vale ao salvar o perfil.`}
+          confirmLabel="Remover"
+          pending={false}
+          onCancel={() => setSegmentRemoval(null)}
+          onConfirm={() => {
+            removeSegment(segmentRemoval.code)
+            setSegmentRemoval(null)
+          }}
+        />
+      )}
+
       {mutation.isError && (
         <p className="auth-error" role="alert">Não foi possível salvar o perfil: {mutation.error.message}</p>
       )}
 
       <div className="tp-profile-save">
-        <div><strong>{selectedCodes.size} marcador(es)</strong></div>
+        <div><strong>{markerCount} marcador(es)</strong></div>
         <button className="btn" type="submit" disabled={mutation.isPending}>
           {mutation.isPending ? 'Salvando…' : 'Salvar Perfil Tributário'}
         </button>
