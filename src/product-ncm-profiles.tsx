@@ -3,7 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import {
@@ -32,8 +32,14 @@ type ProductDialog = {
   profileId: string | null
   cnae: Cnae
   mode: 'table' | 'manual'
+  /** Editing: the product of the table. */
   productCode: string | null
+  /** Editing: the manual name. Adding: the name being typed. */
   manualLabel: string
+  /** Adding: products of the table picked at once. */
+  picked: string[]
+  /** Adding: manual products typed at once. */
+  manualLabels: string[]
   /** NCMs already linked to the product (kept when it is edited). */
   ncmCodes: string[]
 }
@@ -62,6 +68,9 @@ type Props = {
 const PRODUCT_LIST_LIMIT = 60
 
 function profileErrorMessage(error: Error) {
+  if (error.message.startsWith('products_failed:')) {
+    return `Não foi possível adicionar: ${error.message.slice('products_failed:'.length)}. Os demais foram salvos.`
+  }
   switch (error.message) {
     case 'product_required':
       return 'Escolha o produto na tabela de Produtos.'
@@ -243,9 +252,53 @@ export function ProductNcmProfiles({
     setProductSearch('')
   }
 
+  // Products of the table already in the CNAE being edited.
+  const addedCodes = new Set(
+    productDialog
+      ? (profilesByCnae.get(productDialog.cnae.code) ?? []).flatMap((profile) =>
+          profile.productConceptCode ? [profile.productConceptCode] : [],
+        )
+      : [],
+  )
+
+  // Adding: everything picked or typed, saved at once.
+  const pendingProducts = productDialog && !productDialog.profileId
+    ? [
+        ...productDialog.picked.flatMap((code) => {
+          const product = productByCode.get(code)
+          return product ? [{ productLabel: product.label, productConceptCode: product.code as string | null }] : []
+        }),
+        ...[...productDialog.manualLabels, productDialog.manualLabel]
+          .map((label) => label.trim())
+          .filter((label, index, all) => label && all.indexOf(label) === index)
+          .map((label) => ({ productLabel: label, productConceptCode: null as string | null })),
+      ]
+    : []
+
   const saveProduct = useMutation({
     mutationFn: async () => {
       if (!productDialog) throw new Error('editor_required')
+      if (!productDialog.profileId) {
+        if (pendingProducts.length === 0) throw new Error('product_required')
+        const failed: string[] = []
+        for (const item of pendingProducts) {
+          try {
+            await createCompanyProductProfile(apiFetch, tenantId, companyId, {
+              cnaeCode: productDialog.cnae.code,
+              ...item,
+              ncmCodes: [],
+            })
+          } catch (error) {
+            // Already in this CNAE: nothing to add.
+            if (!(error instanceof Error && error.message === 'product_profile_exists')) failed.push(item.productLabel)
+          }
+        }
+        if (failed.length > 0) {
+          await refresh()
+          throw new Error(`products_failed:${failed.join(', ')}`)
+        }
+        return
+      }
       let productLabel: string
       let productConceptCode: string | null = null
       if (productDialog.mode === 'manual') {
@@ -263,9 +316,7 @@ export function ProductNcmProfiles({
         productConceptCode,
         ncmCodes: productDialog.ncmCodes,
       }
-      return productDialog.profileId
-        ? updateCompanyProductProfile(apiFetch, tenantId, companyId, productDialog.profileId, input)
-        : createCompanyProductProfile(apiFetch, tenantId, companyId, input)
+      await updateCompanyProductProfile(apiFetch, tenantId, companyId, productDialog.profileId, input)
     },
     onSuccess: async () => {
       await refresh()
@@ -291,9 +342,34 @@ export function ProductNcmProfiles({
       mode: linked || (!profile && products.length > 0) ? 'table' : 'manual',
       productCode: linked,
       manualLabel: profile && !linked ? profile.productLabel : '',
+      picked: [],
+      manualLabels: [],
       ncmCodes: profile?.ncms.map((ncm) => ncm.code) ?? [],
     })
   }
+
+  const togglePicked = (code: string) =>
+    setProductDialog((current) =>
+      current
+        ? {
+            ...current,
+            picked: current.picked.includes(code)
+              ? current.picked.filter((item) => item !== code)
+              : [...current.picked, code],
+          }
+        : current,
+    )
+
+  const addManualLabel = () =>
+    setProductDialog((current) => {
+      const label = current?.manualLabel.trim()
+      if (!current || !label) return current
+      return {
+        ...current,
+        manualLabel: '',
+        manualLabels: current.manualLabels.includes(label) ? current.manualLabels : [...current.manualLabels, label],
+      }
+    })
 
   // Product list: the CNAE's segment first, then the rest of the table.
   const productSections = useMemo(() => {
@@ -591,17 +667,31 @@ export function ProductNcmProfiles({
           {productDialog.mode === 'manual' ? (
             <label className="tp-product-field">
               Nome do produto
-              <input
-                autoFocus
-                value={productDialog.manualLabel}
-                maxLength={160}
-                placeholder="Ex.: Fertilizante foliar próprio"
-                onKeyDown={keepEnterInside}
-                onChange={(event) =>
-                  setProductDialog((current) => (current ? { ...current, manualLabel: event.target.value } : current))
-                }
-              />
-              <small>Fica só no painel desta empresa; não entra na tabela de Produtos.</small>
+              <span className="tp-manual-product-row">
+                <input
+                  autoFocus
+                  value={productDialog.manualLabel}
+                  maxLength={160}
+                  placeholder="Ex.: Fertilizante foliar próprio"
+                  onKeyDown={(event) => {
+                    keepEnterInside(event)
+                    if (event.key === 'Enter' && !productDialog.profileId) addManualLabel()
+                  }}
+                  onChange={(event) =>
+                    setProductDialog((current) => (current ? { ...current, manualLabel: event.target.value } : current))
+                  }
+                />
+                {!productDialog.profileId && (
+                  <button type="button" disabled={!productDialog.manualLabel.trim()} onClick={addManualLabel}>
+                    <Plus size={14} /> Incluir
+                  </button>
+                )}
+              </span>
+              <small>
+                {productDialog.profileId
+                  ? 'Fica só no painel desta empresa; não entra na tabela de Produtos.'
+                  : 'Inclua um ou mais nomes. Ficam só no painel desta empresa; não entram na tabela de Produtos.'}
+              </small>
             </label>
           ) : (
             <div className="tp-product-picker">
@@ -643,16 +733,23 @@ export function ProductNcmProfiles({
                     {productSections.map((section) => (
                       <div className="tp-product-option-group" key={section.title}>
                         <small>{section.title}</small>
-                        {section.items.slice(0, PRODUCT_LIST_LIMIT).map((item) => (
+                        {section.items.slice(0, PRODUCT_LIST_LIMIT).map((item) => {
+                          const already = !productDialog.profileId && addedCodes.has(item.code)
+                          const picked = productDialog.picked.includes(item.code)
+                          return (
                           <button
                             type="button"
                             role="option"
-                            aria-selected={false}
+                            aria-selected={picked}
+                            className={picked ? 'is-picked' : undefined}
+                            disabled={already}
                             key={item.code}
                             onClick={() =>
-                              setProductDialog((current) =>
-                                current ? { ...current, productCode: item.code } : current,
-                              )
+                              productDialog.profileId
+                                ? setProductDialog((current) =>
+                                    current ? { ...current, productCode: item.code } : current,
+                                  )
+                                : togglePicked(item.code)
                             }
                           >
                             <span>
@@ -666,9 +763,10 @@ export function ProductNcmProfiles({
                                   .join(' · ')}
                               </small>
                             </span>
-                            <Plus size={15} />
+                            {already ? <small>Já adicionado</small> : picked ? <Check size={15} /> : <Plus size={15} />}
                           </button>
-                        ))}
+                          )
+                        })}
                         {section.items.length > PRODUCT_LIST_LIMIT && (
                           <p className="tp-parameter-empty">
                             Mais {section.items.length - PRODUCT_LIST_LIMIT} produtos: refine a pesquisa.
@@ -678,6 +776,42 @@ export function ProductNcmProfiles({
                     ))}
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {!productDialog.profileId && (
+            <div className="tp-selected-ncms">
+              <strong>Produtos a adicionar ({pendingProducts.length})</strong>
+              {pendingProducts.length === 0 ? (
+                <p>Marque um ou mais produtos da tabela e/ou inclua produtos manuais.</p>
+              ) : (
+                <div className="tp-selected-ncm-list">
+                  {productDialog.picked.map((code) => (
+                    <span key={code}>
+                      <b>{productByCode.get(code)?.label ?? code}</b>
+                      <button type="button" aria-label={'Desmarcar ' + (productByCode.get(code)?.label ?? code)} onClick={() => togglePicked(code)}>
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                  {productDialog.manualLabels.map((label) => (
+                    <span key={'manual:' + label}>
+                      <b>{label}</b> (manual)
+                      <button
+                        type="button"
+                        aria-label={'Retirar ' + label}
+                        onClick={() =>
+                          setProductDialog((current) =>
+                            current ? { ...current, manualLabels: current.manualLabels.filter((item) => item !== label) } : current,
+                          )
+                        }
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -694,11 +828,19 @@ export function ProductNcmProfiles({
               type="button"
               disabled={
                 saveProduct.isPending ||
-                (productDialog.mode === 'manual' ? !productDialog.manualLabel.trim() : !selectedProduct)
+                (productDialog.profileId
+                  ? productDialog.mode === 'manual'
+                    ? !productDialog.manualLabel.trim()
+                    : !selectedProduct
+                  : pendingProducts.length === 0)
               }
               onClick={() => saveProduct.mutate()}
             >
-              {saveProduct.isPending ? 'Salvando…' : 'Salvar produto'}
+              {saveProduct.isPending
+                ? 'Salvando…'
+                : productDialog.profileId
+                  ? 'Salvar produto'
+                  : `Salvar ${pendingProducts.length > 1 ? `${pendingProducts.length} produtos` : 'produto'}`}
             </button>
             <button
               className="launch-secondary-button"

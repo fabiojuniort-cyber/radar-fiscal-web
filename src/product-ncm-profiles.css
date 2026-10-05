@@ -583,6 +583,14 @@
   cursor: pointer;
 }
 
+/* Tabs, not tactile buttons (the panel styles every button). */
+.tp-product-ncm-profiles .tp-product-mode button,
+.tp-product-ncm-profiles .tp-product-mode button:hover,
+.tp-product-ncm-profiles .tp-product-mode button:active {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .tp-product-ncm-profiles .tp-product-mode button[aria-selected='true'] {
   border-bottom-color: var(--tp-blue);
   color: var(--tp-navy);
@@ -634,6 +642,55 @@
   font: inherit;
   font-weight: 500;
   padding: 0 10px;
+}
+
+/* Several products at once. */
+.tp-manual-product-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tp-manual-product-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tp-product-ncm-profiles .tp-manual-product-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 0;
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--tp-blue);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.tp-product-ncm-profiles .tp-manual-product-row button:disabled {
+  color: var(--tp-copy);
+  cursor: default;
+  opacity: .6;
+}
+
+.tp-product-ncm-profiles .tp-product-option-group button.is-picked {
+  border-color: var(--tp-blue);
+  background: var(--tp-pale);
+}
+
+.tp-product-ncm-profiles .tp-product-option-group button:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
+.tp-product-ncm-profiles .tp-product-option-group button > small {
+  color: var(--tp-copy);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 @media (max-width: 760px) {

@@ -114,25 +114,33 @@ describe('ProductNcmProfiles', () => {
     expect(onSegmentChange).toHaveBeenCalledWith('0111301', 'sector.trifaros_ali')
   })
 
-  it('adds a product of the Produtos table in its own popup, without NCM', async () => {
-    const { calls, body } = setup()
+  it('adds one or more products of the Produtos table in its own popup, without NCM', async () => {
+    const { calls } = setup({ profiles: [profile({ id: '77777777-7777-4777-8777-777777777777', productLabel: 'Cerveja', productConceptCode: 'product.cerveja' })] })
     fireEvent.click(await screen.findByRole('button', { name: 'Adicionar produto' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Adicionar produto' })
     expect(within(dialog).queryByText(/NCM do catálogo|Pesquisar NCM/)).not.toBeInTheDocument()
     const options = within(dialog).getByRole('listbox', { name: 'Produtos disponíveis' })
     expect(options).toHaveTextContent(/Do segmento Agropecuária.*Arroz beneficiado.*Outros produtos.*Cerveja/)
-    expect(within(dialog).getByRole('button', { name: 'Salvar produto' })).toBeDisabled()
-    fireEvent.click(within(dialog).getByRole('option', { name: /Arroz beneficiado/ }))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar produto' }))
+    // Already in this CNAE: shown but not offered again.
+    expect(within(dialog).getByRole('option', { name: /Cerveja/ })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: /Salvar/ })).toBeDisabled()
 
-    await waitFor(() => expect(calls.some((call) => call.init?.method === 'POST')).toBe(true))
-    expect(body('POST', profilesUrl)).toEqual({
-      cnaeCode: '0111301',
-      productLabel: 'Arroz beneficiado',
-      productConceptCode: 'product.arroz_beneficiado',
-      ncmCodes: [],
-    })
+    fireEvent.click(within(dialog).getByRole('option', { name: /Arroz beneficiado/ }))
+    expect(within(dialog).getByRole('option', { name: /Arroz beneficiado/ })).toHaveAttribute('aria-selected', 'true')
+    // ...and a manual one in the same go.
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Produto novo (manual)' }))
+    fireEvent.change(within(dialog).getByLabelText(/Nome do produto/), { target: { value: 'Adubo próprio' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: /Incluir/ }))
+    expect(within(dialog).getByText(/Produtos a adicionar \(2\)/)).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar 2 produtos' }))
+
+    await waitFor(() => expect(calls.filter((call) => call.init?.method === 'POST')).toHaveLength(2))
+    const posts = calls.filter((call) => call.init?.method === 'POST').map((call) => JSON.parse(String(call.init!.body)))
+    expect(posts).toEqual([
+      { cnaeCode: '0111301', productLabel: 'Arroz beneficiado', productConceptCode: 'product.arroz_beneficiado', ncmCodes: [] },
+      { cnaeCode: '0111301', productLabel: 'Adubo próprio', productConceptCode: null, ncmCodes: [] },
+    ])
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
