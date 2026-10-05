@@ -36,7 +36,12 @@ describe('legal presentation template registry', () => {
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/PMPF' })?.id).toBe(
       'ATO_COTEPE_PMPF',
     )
-    expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF' })?.id).toBe(
+      'AJUSTE_SINIEF',
+    )
+    expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF 33/26' })?.id).toBe(
+      'AJUSTE_SINIEF',
+    )
     expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })?.id).toBe(
       'PROTOCOLO_ICMS',
     )
@@ -619,6 +624,114 @@ describe('legal presentation template registry', () => {
     })
 
     expect(result.templateId).toBe('PROTOCOLO_ICMS')
+    expect(result.variant).toBe('preserved-text')
+    expect(result.html).toBeNull()
+  })
+
+  it('uses the standard AJUSTE_SINIEF contract for a current adjustment', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      sourceCodes: ['dou'],
+      ementa: 'Altera o Ajuste SINIEF 01/19, que institui documento fiscal eletrônico.',
+      publishedOn: '2026-09-14',
+      html: [
+        '<p>AJUSTE SINIEF Nº 33, DE 4 DE SETEMBRO DE 2026</p>',
+        '<p>Altera o Ajuste SINIEF 01/19, que institui documento fiscal eletrônico.</p>',
+        '<p>O Conselho Nacional de Política Fazendária - CONFAZ resolve celebrar o seguinte</p>',
+        '<p>A J U S T E</p>',
+        '<p>Cláusula primeira Fica alterada a cláusula primeira.</p>',
+      ].join(''),
+    })
+
+    expect(result.templateId).toBe('AJUSTE_SINIEF')
+    expect(result.templateVersion).toBe('1.0.0')
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('class="TituloAcordo"')
+    expect(result.html).toContain('Publicado no DOU de 14.09.2026')
+    expect(result.html).toContain('class="AcordoTipo"')
+  })
+
+  it('detects AJUSTE_SINIEF consolidation only from real history classes', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      ementa: 'Institui regime especial para a emissão de documento fiscal eletrônico.',
+      html: [
+        '<p class="TituloAcordo">AJUSTE SINIEF 01/19, DE 5 DE ABRIL DE 2019</p>',
+        '<p class="DataPublicao">Publicado no DOU de 09.04.19.</p>',
+        '<p class="DataPublicao">Alterado pelos Ajustes SINIEF 10/20, 20/21 e 30/22.</p>',
+        '<p class="Ementa">Institui regime especial para a emissão de documento fiscal eletrônico.</p>',
+        '<p class="TextoAcordo">O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>',
+        '<p class="AcordoTipo">A J U S T E</p>',
+        '<p class="TextoAcordo">Cláusula primeira Texto vigente.</p>',
+        '<p class="Remisso">Nova redação dada pelo Ajuste SINIEF 10/20.</p>',
+        '<p class="RemissoAnt">Redação original.</p>',
+        '<p class="RedaoAnt">Cláusula primeira Texto original.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('consolidated')
+    expect(result.html).toContain('class="Remisso"')
+    expect(result.html).toContain('class="RedaoAnt"')
+  })
+
+  it('does not classify AJUSTE_SINIEF as consolidated merely because it has many editorial notes', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      ementa: 'Altera procedimento fiscal na forma que especifica.',
+      html: [
+        '<p>AJUSTE SINIEF Nº 28, DE 6 DE DEZEMBRO DE 2024</p>',
+        '<p>Publicado no DOU de 12.12.24.</p>',
+        '<p>Exclusão de SP, a partir de 04.10.23, pelo Ajuste SINIEF 20/23.</p>',
+        '<p>Retificação no DOU de 13.12.24.</p>',
+        '<p>Altera procedimento fiscal na forma que especifica.</p>',
+        '<p>O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>',
+        '<p>AJUSTE</p>',
+        '<p>Cláusula primeira Texto vigente.</p>',
+        '<p>“Cláusula citada com redação multilinha preservada.”</p>',
+        '<p>Nova redação dada pelo Ajuste SINIEF 30/24.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('DataPublicao AjusteNotaEditorial')
+    expect(result.html).toContain('class="Ementa"')
+    expect(result.html).toContain('class="Remisso"')
+    expect(result.html).toContain('AcordoTipo AjusteTipoPlain')
+    expect(result.html).toContain('TextoAcordo AjusteCitacao')
+  })
+
+  it('does not repair an inferred Ajuste header without an unambiguous AJUSTE marker boundary', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      ementa: 'Ementa real longa o suficiente para ser reconhecida apenas com limite seguro.',
+      html: [
+        '<p>AJUSTE SINIEF Nº 9, DE 2026</p>',
+        '<p>Exclusão de SP, a partir de data futura, por ato posterior.</p>',
+        '<p>Texto de preâmbulo sem marcador protocolar isolado.</p>',
+        '<p>Nova redação dada por ajuste posterior.</p>',
+        '<p>Ementa real longa o suficiente para ser reconhecida apenas com limite seguro.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('AjusteNotaEditorial')
+    expect(result.html).toContain('class="Remisso"')
+  })
+
+  it('keeps AJUSTE_SINIEF PRESERVED_TEXT outside the HTML path', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'AJUSTE SINIEF',
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text: '<script>alert("não executar")</script>',
+    })
+
+    expect(result.templateId).toBe('AJUSTE_SINIEF')
     expect(result.variant).toBe('preserved-text')
     expect(result.html).toBeNull()
   })

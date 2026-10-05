@@ -201,6 +201,57 @@ const fixture = `
 
     <section
       class="publication-preserved-html"
+      data-legal-template="AJUSTE_SINIEF"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="standard"
+      data-testid="ajuste-33"
+    >
+      <p class="TituloAcordo">AJUSTE SINIEF Nº 33, DE 4 DE SETEMBRO DE 2026</p>
+      <p class="DataPublicao">Publicado no DOU de 14.09.26, pelo Despacho 42/26.</p>
+      <p class="Ementa">Altera o Ajuste SINIEF 01/19 na forma que especifica.</p>
+      <p class="TextoAcordo">O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>
+      <p class="AcordoTipo">A J U S T E</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Fica alterada a cláusula primeira.</p>
+      <p class="TextoAcordo AjusteCitacao">“Cláusula primeira Fica o contribuinte obrigado a observar a redação substitutiva prevista neste ajuste.”</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
+      data-legal-template="AJUSTE_SINIEF"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="consolidated"
+      data-testid="ajuste-01"
+    >
+      <p class="TituloAcordo">AJUSTE SINIEF 01/19, DE 5 DE ABRIL DE 2019</p>
+      <p class="DataPublicao">Publicado no DOU de 09.04.19.</p>
+      <p class="DataPublicao">Alterado por ajustes posteriores, com efeitos nas datas neles indicadas.</p>
+      <p class="DataPublicao AjusteNotaEditorial">Exclusão de SP, a partir de 04.10.23, pelo Ajuste SINIEF 36/23.</p>
+      <p class="Ementa">Institui regime especial para emissão de documento fiscal eletrônico.</p>
+      <p class="AcordoTipo">A J U S T E</p>
+      <p class="TextoAcordo">Cláusula primeira Texto vigente com <a href="#ref">referência</a>.</p>
+      <p class="Remisso">Nova redação dada por ajuste posterior, com efeitos a partir de 01.11.26.</p>
+      <p class="RemissoAnt">Redação anterior, mantida para histórico.</p>
+      <p class="RedaoAnt">Cláusula primeira Texto original.</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
+      data-legal-template="AJUSTE_SINIEF"
+      data-legal-template-version="1.0.0"
+      data-legal-variant="standard"
+      data-testid="ajuste-28"
+    >
+      <p class="TituloAcordo">AJUSTE SINIEF Nº 28, DE 6 DE DEZEMBRO DE 2024</p>
+      <p class="DataPublicao">Publicado no DOU de 12.12.24.</p>
+      <p class="Ementa">Altera procedimento fiscal na forma que especifica.</p>
+      <p class="TextoAcordo">O Conselho Nacional de Política Fazendária resolve celebrar o seguinte</p>
+      <p class="AcordoTipo AjusteTipoPlain">AJUSTE</p>
+      <p class="TextoAcordo"><b>Cláusula primeira</b> Texto vigente.</p>
+      <p class="TextoAcordo AjusteCitacao">“Cláusula segunda A redação citada permanece integralmente visível para auditoria.”</p>
+    </section>
+
+    <section
+      class="publication-preserved-html"
       data-legal-template="ATO_COTEPE_PMPF"
       data-legal-template-version="1.0.0"
       data-legal-variant="pmpf-table"
@@ -389,6 +440,69 @@ test('DESIGN-01C — Protocolo ICMS preserva atual, legado e consolidado', async
   const evidenceDir = path.join('playwright-artifacts', 'screenshots')
   await mkdir(evidenceDir, { recursive: true })
   for (const reference of ['protocolo-119', 'protocolo-50', 'protocolo-53', 'protocolo-22'] as const) {
+    await page.getByTestId(reference).screenshot({
+      path: path.join(evidenceDir, testInfo.project.name + '-' + reference + '.png'),
+    })
+  }
+})
+
+
+test('DESIGN-01C — Ajuste SINIEF preserva padrão e histórico consolidado', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate((html) => {
+    document.body.innerHTML = html
+  }, fixture)
+
+  for (const reference of ['ajuste-33', 'ajuste-28'] as const) {
+    const current = page.getByTestId(reference)
+    await expect(current.locator('.TituloAcordo')).toHaveCSS('text-align', 'center')
+    await expect(current.locator('.DataPublicao')).toHaveCSS('color', 'rgb(255, 0, 0)')
+    await expect(current.locator('.AcordoTipo')).toHaveCSS('text-align', 'center')
+    await expect(current.locator('.AcordoTipo')).toHaveCSS('text-indent', '0px')
+    await expect(current.locator('.DataPublicao').first()).toHaveCSS('font-weight', '400')
+    expect(
+      await current.locator('.TituloAcordo').evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).fontSize),
+      ),
+    ).toBeGreaterThan(18)
+    expect(
+      await current.locator('.Ementa').evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).marginLeft),
+      ),
+    ).toBeGreaterThan(0)
+  }
+
+  const consolidated = page.getByTestId('ajuste-01')
+  await expect(consolidated.locator('.AjusteNotaEditorial')).toHaveCSS('color', 'rgb(255, 0, 0)')
+  await expect(consolidated.locator('.Remisso')).toHaveCSS('color', 'rgb(255, 0, 0)')
+  await expect(consolidated.locator('.RedaoAnt')).toHaveCSS('color', 'rgb(0, 128, 0)')
+  await expect(consolidated.locator('a')).toHaveCSS('color', 'rgb(0, 0, 238)')
+
+  const plainMarker = page.getByTestId('ajuste-28').locator('.AjusteTipoPlain')
+  expect(
+    await plainMarker.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).letterSpacing),
+    ),
+  ).toBeGreaterThan(0)
+  const quoted = page.getByTestId('ajuste-28').locator('.AjusteCitacao')
+  await expect(quoted).toHaveCSS('text-indent', '0px')
+  expect(
+    await quoted.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).marginLeft),
+    ),
+  ).toBeGreaterThan(0)
+
+  const viewportOverflow = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }))
+  expect(viewportOverflow.scrollWidth).toBeLessThanOrEqual(viewportOverflow.clientWidth + 1)
+
+  const evidenceDir = path.join('playwright-artifacts', 'screenshots')
+  await mkdir(evidenceDir, { recursive: true })
+  for (const reference of ['ajuste-33', 'ajuste-01', 'ajuste-28'] as const) {
     await page.getByTestId(reference).screenshot({
       path: path.join(evidenceDir, testInfo.project.name + '-' + reference + '.png'),
     })
