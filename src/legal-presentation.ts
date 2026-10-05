@@ -8,6 +8,7 @@ export type LegalPresentationTemplateId =
   | 'CONVENIO_ICMS'
   | 'ATO_COTEPE_PMPF'
   | 'ATO_COTEPE_ICMS'
+  | 'PROTOCOLO_ICMS'
 
 export type LegalPresentationVariant =
   | 'standard'
@@ -16,6 +17,7 @@ export type LegalPresentationVariant =
   | 'preserved-text'
   | 'pmpf-table'
   | 'historical-declaration'
+  | 'legacy'
 
 export type LegalPresentationInput = {
   agency: string | null
@@ -541,6 +543,134 @@ const atoCotepePmpfTemplate: LegalPresentationTemplate = {
   },
 }
 
+function decorateProtocoloIcmsView(html: string): {
+  html: string
+  legacy: boolean
+} {
+  if (typeof DOMParser === 'undefined') {
+    return { html, legacy: false }
+  }
+
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(
+    (paragraph) => !paragraph.closest('table, blockquote'),
+  )
+  const titleIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('TituloAcordo'),
+  )
+  const ementaIndex = paragraphs.findIndex((paragraph) =>
+    paragraph.classList.contains('Ementa'),
+  )
+  const kindCandidates = paragraphs
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph, index }) => {
+      if (titleIndex >= 0 && index <= titleIndex) return false
+      if (ementaIndex >= 0 && index <= ementaIndex) return false
+      return paragraph.classList.contains('AcordoTipo')
+    })
+
+  let legacy = false
+  let legacyKind: HTMLParagraphElement | null = null
+
+  if (kindCandidates.length === 1) {
+    const candidate = kindCandidates[0]!
+    const kindText = (candidate.paragraph.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const following = paragraphs.slice(candidate.index + 1)
+    const firstClause = following.find((paragraph) =>
+      /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+        (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+    )
+
+    legacy =
+      /^PROTOCOLO$/i.test(kindText) &&
+      Boolean(firstClause) &&
+      following.indexOf(firstClause!) <= 2
+    if (legacy) legacyKind = candidate.paragraph
+  }
+
+  if (legacy && legacyKind) {
+    doc.body.querySelector('p.Ementa')?.classList.add('ProtocoloEmentaLegacy')
+    legacyKind.classList.add('ProtocoloTipoLegacy')
+
+    for (const paragraph of Array.from(doc.body.querySelectorAll('p.TextoAcordo'))) {
+      if (paragraph.closest('table, blockquote')) continue
+      paragraph.classList.add('ProtocoloTextoLegacy')
+      const text = (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim()
+      if (
+        /^Cl[áa]usula\s+(?:primeira|segunda|terceira|quarta|quinta|sexta|s[ée]tima|oitava|nona|d[ée]cima|[úu]nica)\s*$/i.test(
+          text,
+        )
+      ) {
+        paragraph.classList.add('ProtocoloRubricaLegacy')
+      }
+    }
+  }
+
+  return { html: doc.body.innerHTML, legacy }
+}
+
+const protocoloIcmsTemplate: LegalPresentationTemplate = {
+  id: 'PROTOCOLO_ICMS',
+  version: '1.0.0',
+  matches: ({ actType }) => {
+    const code = normalizeCode(actType)
+    return (
+      code === 'PROTOCOLO_ICMS' ||
+      /^PROTOCOLO_ICMS_\d{1,3}_\d{2,4}$/.test(code)
+    )
+  },
+  render: (input) => {
+    if (input.presentationFormat === 'PRESERVED_TEXT') {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'preserved-text',
+      }
+    }
+
+    if (input.presentationFormat !== 'SANITIZED_HTML' || !input.html) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const view = confazDisplayHtml({
+      html: input.html,
+      text: null,
+      ementa: input.ementa,
+      publishedOn: input.sourceCodes.includes('dou')
+        ? input.publishedOn
+        : null,
+    })
+
+    if (!view) {
+      return {
+        html: null,
+        inferredStructure: false,
+        variant: 'standard',
+      }
+    }
+
+    const decorated = decorateProtocoloIcmsView(view.html)
+    const displayHtml = wrapLegalTables(decorated.html)
+
+    return {
+      html: displayHtml,
+      inferredStructure: view.inferred,
+      variant: hasHistoryClass(displayHtml)
+        ? 'consolidated'
+        : decorated.legacy
+          ? 'legacy'
+          : 'standard',
+    }
+  },
+}
+
 const convenioIcmsTemplate: LegalPresentationTemplate = {
   id: 'CONVENIO_ICMS',
   version: '1.0.0',
@@ -601,6 +731,7 @@ const convenioIcmsTemplate: LegalPresentationTemplate = {
  */
 export const LEGAL_PRESENTATION_TEMPLATES: readonly LegalPresentationTemplate[] = [
   convenioIcmsTemplate,
+  protocoloIcmsTemplate,
   atoCotepeIcmsTemplate,
   atoCotepePmpfTemplate,
 ]
