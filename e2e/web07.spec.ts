@@ -615,9 +615,21 @@ test('WEB-19 — Sonar cycles through 25 target combinations and keeps half-turn
     fadeProfile.some(
       (frame) =>
         frame.offset === 0 &&
+        frame.opacity === '0',
+    ),
+  ).toBe(true)
+  expect(
+    fadeProfile.some(
+      (frame) =>
+        frame.offset !== null &&
+        frame.offset > 0 &&
+        frame.offset <= 0.1 &&
         frame.opacity === '1',
     ),
   ).toBe(true)
+  expect(
+    fadeProfile.filter((frame) => frame.opacity === '1').length,
+  ).toBeGreaterThanOrEqual(2)
   expect(
     fadeProfile.some(
       (frame) =>
