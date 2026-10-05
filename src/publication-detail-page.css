@@ -1118,3 +1118,144 @@
     max-width: 100%;
   }
 }
+
+/* TAX-11: affinity between the act and the selected company's profile. */
+.publication-affinity {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid #dbe6f2;
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.publication-affinity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.publication-affinity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #e9eef4;
+  color: #3d4f63;
+  font-size: 13px;
+}
+
+.publication-affinity-pill strong {
+  font-weight: 800;
+}
+
+.publication-affinity[data-level='HIGH'] .publication-affinity-pill {
+  background: #dff3e6;
+  color: #17643a;
+}
+
+.publication-affinity[data-level='MEDIUM'] .publication-affinity-pill {
+  background: #fff1d6;
+  color: #8a5300;
+}
+
+.publication-affinity[data-level='LOW'] .publication-affinity-pill {
+  background: #edf4fb;
+  color: #315f8f;
+}
+
+.publication-affinity-company {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5a6f87;
+  font-size: 13px;
+}
+
+.publication-affinity-company select {
+  max-width: 260px;
+  min-height: 30px;
+  padding: 2px 8px;
+  border: 1px solid #c9d6e4;
+  border-radius: 8px;
+  background: #fff;
+  color: #20354d;
+  font: inherit;
+}
+
+.publication-affinity-why {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 2px 6px;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  color: #1f5f9e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.publication-affinity-why[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.publication-affinity-note {
+  margin: 8px 0 0;
+  color: #5a6f87;
+  font-size: 13px;
+}
+
+.publication-affinity-matches {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.publication-affinity-matches li {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  color: #20354d;
+}
+
+.publication-affinity-matches small {
+  color: #5a6f87;
+}
+
+.publication-affinity-dimension {
+  color: #5a6f87;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.publication-affinity-weight {
+  color: #5a6f87;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .publication-affinity-matches {
+    gap: 10px;
+  }
+
+  .publication-affinity-matches li {
+    grid-template-columns: 1fr auto;
+    gap: 2px 10px;
+  }
+
+  .publication-affinity-dimension {
+    grid-column: 1 / -1;
+  }
+}
