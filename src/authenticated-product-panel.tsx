@@ -814,7 +814,18 @@ export function AuthenticatedProductPanel({
     <div className="tp-app" data-panel-mode="authenticated">
       <header className="tp-header">
         <div className="tp-header-primary">
-          <BrandMark compact />
+          <button
+            type="button"
+            className="tp-home-brand-link"
+            aria-label="TriFaros — Início"
+            onClick={() => {
+              setScreen('inicio')
+              setTenantMenu(false)
+              setUserMenu(false)
+            }}
+          >
+            <BrandMark compact />
+          </button>
 
           <div className="tp-pop-wrap">
             <button

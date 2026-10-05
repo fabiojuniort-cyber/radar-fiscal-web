@@ -52,6 +52,28 @@ function formatNcmCode(value: string) {
   )
 }
 
+function setPanelHomeState() {
+  try {
+    const raw = sessionStorage.getItem('tribusca.panel.state')
+    const current = raw
+      ? JSON.parse(raw) as Record<string, unknown>
+      : {}
+
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({
+        ...current,
+        screen: 'inicio',
+      }),
+    )
+  } catch {
+    sessionStorage.setItem(
+      'tribusca.panel.state',
+      JSON.stringify({ screen: 'inicio' }),
+    )
+  }
+}
+
 function setArchiveNcmState(code: string) {
   const normalized = code.replace(/\D/g, '')
   if (normalized.length !== 8) return
@@ -206,22 +228,25 @@ export function PublicationDetailPage({
   return (
     <div className="publication-detail-app">
       <header className="publication-detail-header">
-        <Link
-          to="/painel"
-          className="publication-detail-brand"
-          aria-label="Abrir painel TriFaros"
-        >
-          <BrandMark surface="dark" compact />
-        </Link>
+        <div className="publication-detail-header-inner">
+          <Link
+            to="/painel"
+            className="publication-detail-brand"
+            aria-label="TriFaros — Início"
+            onClick={setPanelHomeState}
+          >
+            <BrandMark surface="dark" variant="reverse" compact />
+          </Link>
 
-        <button
-          type="button"
-          className="publication-back-link"
-          onClick={goBack}
-        >
-          <ArrowLeft size={16} />
-          Voltar
-        </button>
+          <button
+            type="button"
+            className="publication-back-link"
+            onClick={goBack}
+          >
+            <ArrowLeft size={16} />
+            Voltar
+          </button>
+        </div>
       </header>
 
       <main className="publication-detail-main">
