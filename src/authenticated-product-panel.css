@@ -1930,11 +1930,11 @@
   gap: 2px;
 }
 
-.tp-acervo-library-hero .tp-section-heading .eyebrow {
+.tp-acervo-library-hero .tp-section-heading .tp-eyebrow {
   color: #8eeeff;
 }
 
-.tp-acervo-library-hero .tp-section-heading h2 {
+.tp-acervo-library-hero .tp-section-heading h1 {
   margin-top: 4px;
   color: #fff;
   font-size: 14px;
