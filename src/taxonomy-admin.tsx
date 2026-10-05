@@ -49,6 +49,7 @@ import {
 } from './taxonomy-api'
 import './panel-experience.css'
 import { CurationGrid } from './taxonomy-grid'
+import { importSegmentPackage, parseSegmentPackage } from './segment-import'
 import './taxonomy-admin.css'
 
 const DEFAULT_REASON = 'Curadoria da taxonomia'
@@ -519,7 +520,8 @@ function DimensionEditor({
   const segments = view.concepts.filter(
     (c) =>
       view.dimensions.find((d) => d.code === c.dimensionCode)?.officialCodeType === 'CNAE' &&
-      c.membershipStatus === 'INCLUDED',
+      c.membershipStatus === 'INCLUDED' &&
+      !c.officialCodes.some(code => /^\d{7}$/.test(code)),
   )
   const [gridVersion, setGridVersion] = useState(0)
 
@@ -544,6 +546,15 @@ function DimensionEditor({
     setImporting(true)
     setImportReport(null)
     try {
+      if (file.name.toLowerCase().endsWith('.json')) {
+        if (dimension.code !== 'sector') throw new Error('O arquivo de segmentos deve ser importado na tabela Segmento.')
+        const data = parseSegmentPackage(await file.text())
+        const result = await importSegmentPackage(apiFetch, view, justification, data, setImportReport)
+        setImportReport(`Conferido no rascunho: ${result.cnaes} CNAEs · ${result.segments} segmentos · ${result.subsegments} subsegmentos · ${result.synonyms} sinônimos · ${result.created} criados · ${result.updated} atualizados.`)
+        await onChanged()
+        setGridVersion(value => value + 1)
+        return
+      }
       const report = await importDimensionCsv(apiFetch, dimension.code, justification, await readCsvFile(file))
       setImportReport(
         `${report.rows} linhas · ${report.created} criados · ${report.updated} atualizados · ${report.groupsCreated} grupos novos` +
@@ -557,7 +568,9 @@ function DimensionEditor({
       await onChanged()
       setGridVersion((value) => value + 1)
     } catch (error) {
-      setImportReport(errorText(error))
+      setImportReport(`${errorText(error)} ${file.name.toLowerCase().endsWith('.json') ? 'Lotes anteriores, se houver, ficaram no rascunho. Reimporte o mesmo arquivo para retomar.' : ''}`)
+      await onChanged()
+      setGridVersion(value => value + 1)
     } finally {
       setImporting(false)
     }
@@ -573,7 +586,7 @@ function DimensionEditor({
         <div>
           <h2>{dimension.name}</h2>
           <p>
-            {dimension.conceptCount} itens · {groups.length} grupos ·{' '}
+            {dimension.conceptCount} itens · {groups.length} {dimension.code === 'sector' ? 'subsegmentos' : 'grupos'} ·{' '}
             {dimension.profileVisible ? 'aparece no Perfil Tributário' : 'não aparece no perfil'} ·{' '}
             {dimension.detailSection ? `seção “${dimension.detailSection}” na legislação` : 'oculta na legislação'}
           </p>
@@ -607,14 +620,14 @@ function DimensionEditor({
         {dimension.usesGroups && editable && (
           <>
             <select
-              aria-label="Editar grupo"
+              aria-label={dimension.code === 'sector' ? 'Editar subsegmento' : 'Editar grupo'}
               value=""
               onChange={(event) => {
                 const group = groups.find((item) => item.id === event.target.value)
                 if (group) setGroupEditor(group)
               }}
             >
-              <option value="">Editar grupo…</option>
+              <option value="">{dimension.code === 'sector' ? 'Editar subsegmento…' : 'Editar grupo…'}</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.label}
@@ -622,7 +635,7 @@ function DimensionEditor({
               ))}
             </select>
             <button type="button" onClick={() => setGroupEditor('new')}>
-              <Plus size={14} /> Novo grupo
+              <Plus size={14} /> {dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}
             </button>
           </>
         )}
@@ -636,7 +649,7 @@ function DimensionEditor({
           <FileUp size={14} /> {importing ? 'Importando…' : 'Importar planilha (carga massiva)'}
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept={dimension.code === 'sector' ? '.csv,.json,text/csv,application/json' : '.csv,text/csv'}
             disabled={!editable || importing}
             onChange={(event) => {
               const file = event.target.files?.[0]
@@ -650,6 +663,7 @@ function DimensionEditor({
       {importReport && <p className="tc-hint">{importReport}</p>}
       <details className="tc-hint tc-import-help">
         <summary>Como montar a planilha de carga massiva</summary>
+        {dimension.code === 'sector' && <p>Para carregar Segmento → Subsegmento → CNAE e sinônimos juntos, importe o arquivo JSON de segmentos. A carga usa o rascunho e pode ser retomada com o mesmo arquivo. A planilha CSV mantém os cabeçalhos compatíveis “Grupo” e “Item”.</p>}
         <p>
           Na tabela, o campo aparece como <b>“Código TriFaros”</b>. Nas planilhas de importação e exportação,
           o cabeçalho legado <b>“Código TriBusca”</b> é mantido para preservar a compatibilidade dos arquivos.
@@ -1108,13 +1122,13 @@ function GroupDrawer({
       <aside
         className="tc-drawer"
         role="dialog"
-        aria-label={group ? `Grupo ${group.label}` : 'Novo grupo'}
+        aria-label={group ? `${dimension.code === 'sector' ? 'Subsegmento' : 'Grupo'} ${group.label}` : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
           <div>
             <small>{dimension.name}</small>
-            <h3>{group ? group.label : 'Novo grupo'}</h3>
+            <h3>{group ? group.label : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}</h3>
           </div>
           <button type="button" aria-label="Fechar" onClick={onClose}>
             <X size={18} />
@@ -1122,7 +1136,7 @@ function GroupDrawer({
         </header>
         <div className="tc-drawer-body">
           <label>
-            Nome do grupo
+            Nome do {dimension.code === 'sector' ? 'subsegmento' : 'grupo'}
             <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
           </label>
           <div className="tc-two">
@@ -1154,7 +1168,7 @@ function GroupDrawer({
           </label>
           {segments.length > 0 && (
             <fieldset>
-              <legend>Segmentos atendidos por este grupo</legend>
+              <legend>{dimension.code === 'sector' ? 'Segmento deste subsegmento' : 'Segmentos atendidos por este grupo'}</legend>
               <div className="tc-segment-grid">
                 {segments.map((segment) => (
                   <label key={segment.code} className="tc-check">
@@ -1191,7 +1205,7 @@ function GroupDrawer({
             disabled={save.isPending || !form.label.trim()}
             onClick={() => save.mutate()}
           >
-            <Save size={14} /> {save.isPending ? 'Salvando…' : 'Salvar grupo'}
+            <Save size={14} /> {save.isPending ? 'Salvando…' : dimension.code === 'sector' ? 'Salvar subsegmento' : 'Salvar grupo'}
           </button>
         </footer>
       </aside>

@@ -141,6 +141,11 @@ export function CurationGrid({
     [segmentByGroup],
   )
   const showSegment = dimension.usesGroups && segments.length > 0
+  const isCnae = dimension.code === 'sector' && dimension.officialCodeType === 'CNAE'
+  const [rowKind, setRowKind] = useState<'cnae' | 'general' | 'all'>(() =>
+    isCnae && concepts.some(c => c.officialCodes.some(code => /^\d{7}$/.test(code))) ? 'cnae' : 'all',
+  )
+  const [page, setPage] = useState(0)
 
   const [edits, setEdits] = useState<Record<string, RowDraft>>({})
   const [newRows, setNewRows] = useState<RowDraft[]>([])
@@ -182,13 +187,14 @@ export function CurationGrid({
 
   const columns: Array<{ key: ColumnKey; label: string; className?: string }> = [
     ...(showSegment ? [{ key: 'segment' as const, label: 'Segmento', className: 'is-segment' }] : []),
-    ...(dimension.usesGroups ? [{ key: 'group' as const, label: 'Grupo', className: 'is-group' }] : []),
-    { key: 'label', label: 'Item', className: 'is-label' },
+    ...(dimension.usesGroups ? [{ key: 'group' as const, label: isCnae ? 'Subsegmento' : 'Grupo', className: 'is-group' }] : []),
+    ...(!isCnae ? [{ key: 'label' as const, label: 'Item', className: 'is-label' }] : []),
     {
       key: 'codes',
       label: dimension.officialCodeType ? OFFICIAL_CODE_TYPE_LABELS[dimension.officialCodeType] : 'Código oficial',
       className: 'is-codes',
     },
+    ...(isCnae ? [{ key: 'label' as const, label: 'Descrição do CNAE', className: 'is-label' }] : []),
     { key: 'aliases', label: 'Sinônimos', className: 'is-synonyms' },
     { key: 'profileVisible', label: 'No perfil', className: 'is-narrow' },
     { key: 'classifyByLabel', label: 'Classificar pelo nome', className: 'is-narrow' },
@@ -200,9 +206,11 @@ export function CurationGrid({
   const visibleRows = useMemo(() => {
     const current = baseRows.map((row) => edits[row.key] ?? row)
     const filtered = current.filter((row) => {
+      const exact = splitList(row.codes).some(code => /^\d{7}$/.test(code.replace(/[.\-/\s]/g, '')))
+      if (isCnae && (rowKind === 'cnae' && !exact || rowKind === 'general' && exact)) return false
       if (
         normalizedQuery &&
-        ![row.label, row.codes, row.group, row.code ?? '', ...row.aliases.map((alias) => alias.text)].some((value) =>
+        ![row.label, row.codes, row.group, segmentOf(row.group), row.code ?? '', ...row.aliases.map((alias) => alias.text)].some((value) =>
           normalize(value).includes(normalizedQuery),
         )
       ) {
@@ -223,6 +231,7 @@ export function CurationGrid({
           : a.localeCompare(b, 'pt-BR', { numeric: true })
         if (result !== 0) return result * sort.direction
       }
+      if (isCnae && rowKind === 'cnae') return left.codes.localeCompare(right.codes, 'pt-BR', { numeric: true })
       return (
         (groupOrder.get(left.group) ?? 99999) - (groupOrder.get(right.group) ?? 99999) ||
         (left.group || '~').localeCompare(right.group || '~', 'pt-BR') ||
@@ -231,7 +240,12 @@ export function CurationGrid({
       )
     })
     return [...newRows, ...sorted]
-  }, [baseRows, edits, filters, groupOrder, newRows, normalizedQuery, segmentOf, sort])
+  }, [baseRows, edits, filters, groupOrder, isCnae, newRows, normalizedQuery, rowKind, segmentOf, sort])
+  useEffect(() => { setPage(0) }, [query, filters, sort, rowKind])
+  const paginated = isCnae && visibleRows.length > 50
+  const lastPage = paginated ? Math.ceil(visibleRows.length / 50) - 1 : 0
+  const currentPage = Math.min(page, lastPage)
+  const pageRows = paginated ? visibleRows.slice(currentPage * 50, (currentPage + 1) * 50) : visibleRows
 
   const updateRow = (row: RowDraft, patch: Partial<RowDraft>) => {
     setMessage(null)
@@ -243,6 +257,7 @@ export function CurationGrid({
   }
 
   const insertRow = () => {
+    setPage(0)
     newRowCounter += 1
     const row: RowDraft = {
       key: `new-${newRowCounter}`,
@@ -340,18 +355,25 @@ export function CurationGrid({
   const moveFocus = (event: KeyboardEvent<HTMLInputElement>, rowIndex: number, column: ColumnKey) => {
     const step = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' || event.key === 'Enter' ? 1 : 0
     if (!step) return
-    const target = visibleRows[rowIndex + step]
+    const target = pageRows[rowIndex + step]
     if (!target) return
     event.preventDefault()
     document.querySelector<HTMLInputElement>(`[data-cell="${target.key}:${column}"]`)?.focus()
   }
 
-  const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.key))
+  const allVisibleSelected = pageRows.length > 0 && pageRows.every((row) => selected.has(row.key))
   const groupOptions = groups.map((group) => group.label).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const datalistId = `tc-groups-${dimension.code}`
 
   return (
     <div className="tc-grid-block">
+      {isCnae && <label className="tc-grid-view">Exibir
+        <select aria-label="Exibir atividades ou segmentos gerais" value={rowKind} onChange={event => setRowKind(event.target.value as typeof rowKind)}>
+          <option value="cnae">Atividades por CNAE</option>
+          <option value="general">Segmentos gerais e itens legados</option>
+          <option value="all">Todos os itens</option>
+        </select>
+      </label>}
       {editable && (
         <div className="tc-grid-toolbar" role="toolbar" aria-label="Edição da tabela">
           <button type="button" onClick={insertRow}>
@@ -391,7 +413,7 @@ export function CurationGrid({
                     aria-label="Selecionar todas as linhas visíveis"
                     checked={allVisibleSelected}
                     onChange={(event) =>
-                      setSelected(event.target.checked ? new Set(visibleRows.map((row) => row.key)) : new Set())
+                      setSelected(event.target.checked ? new Set([...selected, ...pageRows.map(row => row.key)]) : new Set([...selected].filter(key => !pageRows.some(row => row.key === key))))
                     }
                   />
                 )}
@@ -430,7 +452,7 @@ export function CurationGrid({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((row, rowIndex) => {
+            {pageRows.map((row, rowIndex) => {
               const concept = row.code ? conceptByCode.get(row.code) : undefined
               const retired = concept ? concept.membershipStatus !== 'INCLUDED' : false
               const toRetire = row.code !== null && retire.has(row.code)
@@ -473,7 +495,7 @@ export function CurationGrid({
                     {status && <span className={`tc-grid-status is-${status.toLowerCase()}`}>{status}</span>}
                   </td>
                   {showSegment && (
-                    <td className="is-segment" title="O segmento vem do grupo: altere em Editar grupo.">
+                    <td className="is-segment" title={isCnae ? 'O segmento vem do subsegmento: altere em Editar subsegmento.' : 'O segmento vem do grupo: altere em Editar grupo.'}>
                       {segmentOf(row.group) || <span className="tc-grid-muted">—</span>}
                     </td>
                   )}
@@ -481,33 +503,34 @@ export function CurationGrid({
                     <td className="is-group">
                       <input
                         {...cellProps('group')}
-                        aria-label="Grupo"
+                        aria-label={isCnae ? 'Subsegmento' : 'Grupo'}
                         list={datalistId}
                         value={row.group}
-                        placeholder="sem grupo"
+                        placeholder={isCnae ? 'sem subsegmento' : 'sem grupo'}
+                        title={row.group}
                         onChange={(event) => updateRow(row, { group: event.target.value })}
                       />
                     </td>
                   )}
-                  <td className="is-label">
+                  {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
                     <input
                       {...cellProps('label')}
-                      aria-label="Item"
+                      aria-label={isCnae ? 'Descrição do CNAE' : 'Item'}
+                      title={row.label}
                       value={row.label}
                       placeholder={isNew ? 'nome do item' : ''}
                       onChange={(event) => updateRow(row, { label: event.target.value })}
                     />
                     {concept?.releaseNotes && <small className="tc-note">{concept.releaseNotes}</small>}
-                  </td>
-                  <td className="is-codes">
+                  </td> : <td key="codes" className="is-codes">
                     <input
                       {...cellProps('codes')}
-                      aria-label="Código oficial"
+                      aria-label={isCnae ? 'CNAE' : 'Código oficial'}
                       value={row.codes}
                       placeholder="—"
                       onChange={(event) => updateRow(row, { codes: event.target.value })}
                     />
-                  </td>
+                  </td>)}
                   <td className="is-synonyms">
                     <SynonymCell
                       aliases={row.aliases}
@@ -581,9 +604,14 @@ export function CurationGrid({
           ))}
         </datalist>
       </div>
+      {paginated && <nav className="tc-grid-pagination" aria-label="Páginas da tabela">
+        <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Página anterior</button>
+        <span>Página {currentPage + 1} de {lastPage + 1} · {visibleRows.length} linhas</span>
+        <button type="button" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>Próxima página</button>
+      </nav>}
       <p className="tc-hint">
         {visibleRows.length} linhas · Enter, ↑ e ↓ mudam de linha · clique no título da coluna para ordenar · digite um
-        grupo novo na coluna Grupo para criá-lo ao salvar · todo sinônimo marca
+        {isCnae ? 'subsegmento novo na coluna Subsegmento' : 'grupo novo na coluna Grupo'} para criá-lo ao salvar · todo sinônimo marca
         automaticamente as legislações em que aparece.
       </p>
     </div>

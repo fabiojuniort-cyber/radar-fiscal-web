@@ -347,6 +347,7 @@ export async function deleteGroup(apiFetch: ProductApiFetch, groupId: string, ju
 }
 
 export type ConceptInput = Partial<{
+  code: string
   label: string
   definition: string
   positiveExample: string | null
