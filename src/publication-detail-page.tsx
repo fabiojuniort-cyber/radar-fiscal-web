@@ -5,7 +5,6 @@ import {
   FileText,
   History,
   Landmark,
-  Search,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -409,6 +408,7 @@ export function PublicationDetailPage({
           <h2>NCMs identificados nesta legislação</h2>
           <p>
             Códigos confirmados no catálogo oficial e extraídos do conteúdo armazenado.
+            {ncms.length > 0 && ` ${ncms.length} ${ncms.length === 1 ? 'código' : 'códigos'} · clique para buscar no Acervo.`}
           </p>
 
           {ncmQuery.isPending ? (
@@ -422,22 +422,19 @@ export function PublicationDetailPage({
               Nenhum NCM do catálogo oficial foi identificado nesta versão.
             </p>
           ) : (
-            <div className="publication-ncm-list">
+            <div className="publication-ncm-list" role="list">
               {ncms.map((ncm) => (
-                <article className="publication-ncm-item" key={ncm.code}>
-                  <div>
-                    <strong>{formatNcmCode(ncm.code)}</strong>
-                    {ncm.description && <span>{ncm.description}</span>}
-                    {ncm.excerpt && <small>{ncm.excerpt}</small>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openNcmInArchive(ncm.code)}
-                  >
-                    <Search size={15} />
-                    Buscar este NCM no Acervo
-                  </button>
-                </article>
+                <button
+                  type="button"
+                  role="listitem"
+                  className="publication-ncm-chip"
+                  key={ncm.code}
+                  title={ncm.description ? `${ncm.description} · buscar no Acervo` : 'Buscar no Acervo'}
+                  aria-label={`Buscar NCM ${formatNcmCode(ncm.code)} no Acervo`}
+                  onClick={() => openNcmInArchive(ncm.code)}
+                >
+                  {formatNcmCode(ncm.code)}
+                </button>
               ))}
             </div>
           )}

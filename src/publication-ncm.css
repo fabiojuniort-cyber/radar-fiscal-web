@@ -21,98 +21,36 @@
 }
 
 .publication-ncm-list {
-  display: grid;
-  gap: 12px;
-}
-
-.publication-ncm-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 16px;
-  border: 1px solid #dfe7f0;
-  border-radius: 14px;
-  background: #fbfdff;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.publication-ncm-item > div {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.publication-ncm-item strong {
-  color: #173a61;
-  font-size: 16px;
-  letter-spacing: .02em;
-}
-
-.publication-ncm-item span {
-  color: #435f7c;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.publication-ncm-item small {
-  max-width: 760px;
-  color: #71849a;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.publication-ncm-item button {
-  flex: 0 0 auto;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 13px;
-  border: 1px solid #b8c9da;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fff 0%, #edf4fb 100%);
-  color: #173a61;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .95),
-    0 3px 0 #c7d4e1,
-    0 7px 14px rgba(15, 43, 77, .08);
+/* One compact chip per code; the description shows on hover. */
+.publication-ncm-list .publication-ncm-chip {
+  min-height: 0;
+  padding: 4px 10px;
+  border: 1px solid #d6e6f7;
+  border-radius: 999px;
+  background: #f3f8ff;
+  color: #08306b;
+  box-shadow: none !important;
+  transform: none !important;
   cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.5;
+  transition: border-color .15s ease, background .15s ease;
 }
 
-.publication-ncm-item button:hover {
+.publication-ncm-list .publication-ncm-chip:hover {
   border-color: #5f91bc;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    0 3px 0 #b9cbda,
-    0 0 0 3px rgba(65, 132, 184, .12),
-    0 8px 16px rgba(15, 43, 77, .1);
+  background: #e6f0fb;
 }
 
-.publication-ncm-item button:focus-visible {
+.publication-ncm-list .publication-ncm-chip:focus-visible {
   outline: 3px solid rgba(65, 132, 184, .22);
   outline-offset: 2px;
-}
-
-.publication-ncm-item button:active {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 1px 3px rgba(15, 43, 77, .12),
-    0 1px 0 #c7d4e1;
-}
-
-@media (max-width: 720px) {
-  .publication-ncm-item {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .publication-ncm-item button {
-    width: 100%;
-  }
 }
