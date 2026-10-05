@@ -2816,11 +2816,17 @@ function TaxProfileSection({
   const segmentFor = useCallback(
     (cnaeCode: string) => {
       const digits = cnaeCode.replace(/\D/g, '')
-      const chosen = cnaeSegments[digits]
       const suggested = cnaeSuggestions.get(digits)?.[0]?.code ?? ''
+      // A segment saved under an older taxonomy that the published Segmento
+      // table no longer has gives way to the CNAE's current segment.
+      const saved = cnaeSegments[digits]
+      const chosen =
+        saved && segmentOptions.length > 0 && !segmentOptions.some((option) => option.code === saved)
+          ? undefined
+          : saved
       return chosen !== undefined ? { code: chosen, suggested: chosen === suggested } : { code: suggested, suggested: true }
     },
-    [cnaeSegments, cnaeSuggestions],
+    [cnaeSegments, cnaeSuggestions, segmentOptions],
   )
   const offeredCodes = useMemo(
     () => new Set(profileDimensions.flatMap((dimension) => dimension.concepts.map((concept) => concept.code))),
