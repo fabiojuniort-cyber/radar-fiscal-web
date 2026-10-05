@@ -115,6 +115,7 @@ export type TaxonomyProfileDimension = {
   helpText?: string | null
   profileOrder?: number
   usesGroups?: boolean
+  officialCodeType?: string | null
   groups?: TaxonomyProfileGroup[]
   concepts: TaxonomyProfileConcept[]
 }
@@ -130,6 +131,18 @@ export type TaxonomyProfileOptions = {
   conceptCodes?: string[]
   /** Label of every included concept, visible or hidden. */
   conceptIndex?: Array<{ code: string; label: string; dimensionCode: string }>
+  /** Segmento table (CNAE activities excluded). */
+  segments?: Array<{ code: string; label: string }>
+  /** Produtos table items a company can parametrize. */
+  products?: TaxonomyProductOption[]
+}
+
+export type TaxonomyProductOption = {
+  code: string
+  label: string
+  groupLabel: string | null
+  segmentCodes: string[]
+  officialCodes: string[]
 }
 
 export type MonitoringRun = {
@@ -173,6 +186,8 @@ export type TaxProfile = {
       releaseId: string
       releaseVersion: string
       conceptCodes: string[]
+      /** Segment of each company CNAE (suggested by the CNAE, user-editable). */
+      cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }>
     } | null
   }
   validFrom: string | null
@@ -662,6 +677,7 @@ export async function saveTaxProfile(
         releaseId: string
         releaseVersion: string
         conceptCodes: string[]
+        cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }>
       } | null
     }
   },

@@ -33,7 +33,7 @@
 .tp-product-ncm-profiles .tp-cnae-profile-row {
   min-width: 980px;
   display: grid;
-  grid-template-columns: 105px minmax(210px, 1.35fr) 150px minmax(250px, 1.2fr) minmax(230px, 1fr);
+  grid-template-columns: 105px minmax(210px, 1.35fr) 220px minmax(250px, 1.2fr) minmax(230px, 1fr);
   gap: 12px;
   align-items: start;
   padding: 12px 14px;
@@ -349,6 +349,197 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* Segment of each CNAE: drop-down of the Segmento table. */
+.tp-cnae-segment-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tp-cnae-segment-cell select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--tp-navy);
+  font: inherit;
+  font-size: 12px;
+  padding: 0 6px;
+}
+
+.tp-cnae-segment-cell select:focus {
+  border-color: var(--tp-blue);
+  outline: none;
+}
+
+.tp-cnae-segment-cell small {
+  color: var(--tp-copy);
+  font-size: 10px;
+}
+
+/* Product and NCM pickers bound to the Produtos table. */
+.tp-product-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tp-picker-title {
+  color: var(--tp-navy);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tp-product-legacy {
+  margin: 0;
+  border-radius: 8px;
+  background: #fff6e5;
+  color: #8a5300;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.tp-product-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--tp-blue);
+  border-radius: 10px;
+  background: var(--tp-pale);
+  padding: 9px 10px;
+}
+
+.tp-product-selected > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--tp-navy);
+  font-size: 12px;
+}
+
+.tp-product-selected small {
+  color: var(--tp-copy);
+  font-size: 10px;
+}
+
+.tp-product-selected button {
+  border: 0;
+  background: none;
+  color: var(--tp-blue);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tp-product-options {
+  display: grid;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.tp-product-option-group {
+  display: grid;
+  gap: 6px;
+}
+
+.tp-product-option-group > small {
+  color: var(--tp-copy);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.tp-product-option-group button,
+.tp-ncm-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--tp-navy);
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tp-product-option-group button:hover,
+.tp-ncm-option:hover {
+  border-color: var(--tp-blue);
+}
+
+.tp-ncm-option {
+  justify-content: flex-start;
+  font-weight: 500;
+}
+
+.tp-ncm-option.is-selected {
+  background: var(--tp-pale);
+}
+
+.tp-ncm-option > span {
+  flex: 1;
+}
+
+.tp-product-option-group button > span,
+.tp-ncm-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-product-option-group button b,
+.tp-ncm-option b {
+  font-size: 12px;
+}
+
+.tp-product-option-group button small,
+.tp-ncm-option small {
+  color: var(--tp-copy);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* The profile form styles every span/input: keep the pickers' layout. */
+.tp-product-ncm-profiles .tp-product-option-group button > span,
+.tp-product-ncm-profiles .tp-ncm-option > span,
+.tp-product-ncm-profiles .tp-product-selected > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+
+.tp-product-ncm-profiles .tp-ncm-option input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.tp-product-ncm-profiles .tp-product-selected button {
+  min-height: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.tp-product-ncm-profiles .tp-cnae-segment-cell select {
+  min-height: 34px;
+  padding: 0 6px;
+  font-size: 12px;
 }
 
 @media (max-width: 760px) {

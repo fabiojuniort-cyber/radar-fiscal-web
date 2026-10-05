@@ -15,7 +15,7 @@ afterEach(() => {
   cleanup()
 })
 
-function renderProfiles(apiFetch: ProductApiFetch) {
+function renderProfiles(apiFetch: ProductApiFetch, onSegmentChange = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -33,7 +33,28 @@ function renderProfiles(apiFetch: ProductApiFetch) {
           code: '0111301',
           description: 'Cultivo de arroz',
         }]}
-        sectorLabel={() => 'Agronegócio'}
+        segmentOptions={[
+          { code: 'sector.trifaros_agro', label: 'Agropecuária, pesca e insumos agrícolas' },
+          { code: 'sector.trifaros_ali', label: 'Alimentos, bebidas e tabaco' },
+        ]}
+        segmentFor={() => ({ code: 'sector.trifaros_agro', suggested: true })}
+        onSegmentChange={onSegmentChange}
+        products={[
+          {
+            code: 'product.arroz_beneficiado',
+            label: 'Arroz beneficiado',
+            groupLabel: 'Grãos',
+            segmentCodes: ['sector.trifaros_agro'],
+            officialCodes: ['100630'],
+          },
+          {
+            code: 'product.cerveja',
+            label: 'Cerveja',
+            groupLabel: 'Bebidas',
+            segmentCodes: ['sector.trifaros_ali'],
+            officialCodes: ['2203'],
+          },
+        ]}
       />
     </QueryClientProvider>,
   )
@@ -122,29 +143,30 @@ describe('ProductNcmProfiles', () => {
       throw new Error(`Unexpected request: ${url}`)
     }) as ProductApiFetch
 
-    renderProfiles(apiFetch)
+    const onSegmentChange = vi.fn()
+    renderProfiles(apiFetch, onSegmentChange)
 
     expect(await screen.findByText('Cultivo de arroz')).toBeInTheDocument()
-    expect(screen.getByText('Agronegócio')).toBeInTheDocument()
+    // Segment of the CNAE comes from the Segmento table and can be changed.
+    const segment = screen.getByRole('combobox', { name: 'Segmento do CNAE 0111301' })
+    expect(segment).toHaveValue('sector.trifaros_agro')
+    expect(screen.getByText('Pelo CNAE')).toBeInTheDocument()
+    fireEvent.change(segment, { target: { value: 'sector.trifaros_ali' } })
+    expect(onSegmentChange).toHaveBeenCalledWith('0111301', 'sector.trifaros_ali')
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Adicionar produto e NCM' }),
     )
 
-    fireEvent.change(
-      screen.getByPlaceholderText('Ex.: Arroz, soja, fertilizante NPK'),
-      { target: { value: 'Arroz beneficiado' } },
-    )
+    // Products come from the Produtos table, the CNAE's segment first.
+    const options = screen.getByRole('listbox', { name: 'Produtos disponíveis' })
+    expect(options).toHaveTextContent(/Do segmento Agropecuária.*Arroz beneficiado.*Outros produtos.*Cerveja/)
+    expect(screen.getByRole('button', { name: 'Salvar produto e NCM' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('option', { name: /Arroz beneficiado/ }))
 
-    fireEvent.change(
-      screen.getByLabelText('Pesquisar NCM oficial'),
-      { target: { value: '10063011' } },
-    )
-
-    const ncmResult = await screen.findByRole('button', {
-      name: /1006\.30\.11.*Arroz semibranqueado/i,
-    })
-    fireEvent.click(ncmResult)
+    // NCMs offered are the catalog NCMs under the product's codes.
+    const ncm = await screen.findByRole('checkbox', { name: /1006\.30\.11.*Arroz semibranqueado/i })
+    fireEvent.click(ncm)
 
     expect(
       screen.getByRole('button', { name: 'Remover NCM 1006.30.11' }),
@@ -160,6 +182,9 @@ describe('ProductNcmProfiles', () => {
       ).toBeInTheDocument()
     })
 
+    const ncmCall = calls.find((call) => call.url.startsWith('/api/v1/ncm?'))
+    expect(new URLSearchParams(ncmCall!.url.split('?')[1]).get('prefixes')).toBe('100630')
+
     const postCall = calls.find(
       (call) => call.url.endsWith('/product-profiles') && call.init?.method === 'POST',
     )
@@ -173,6 +198,7 @@ describe('ProductNcmProfiles', () => {
     expect(JSON.parse(String(postCall?.init?.body))).toEqual({
       cnaeCode: '0111301',
       productLabel: 'Arroz beneficiado',
+      productConceptCode: 'product.arroz_beneficiado',
       ncmCodes: ['10063011'],
     })
   })

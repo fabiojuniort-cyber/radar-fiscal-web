@@ -405,9 +405,9 @@ export async function saveDimensionRows(
   apiFetch: ProductApiFetch,
   dimensionCode: string,
   justification: string,
-  input: { rows: GridRowInput[]; retire: string[] },
+  input: { rows: GridRowInput[]; retire: string[]; groupSegments?: Array<{ group: string; segmentCodes: string[] }> },
 ) {
-  return readJson<{ created: string[]; updated: number; retired: number; groupsCreated: number }>(
+  return readJson<{ created: string[]; updated: number; retired: number; groupsCreated: number; groupsUpdated?: number }>(
     await apiFetch(
       `${ADMIN}/drafts/current/dimensions/${dimensionCode}/rows`,
       jsonInit('POST', { justification, ...input }),
@@ -540,7 +540,13 @@ export async function fetchTaxonomySuggestions(
   const response = await apiFetch(`/api/v1/companies/${companyId}/taxonomy-suggestions`, {
     headers: { Accept: 'application/json', 'X-Tenant-Id': tenantId },
   })
-  return readJson<{ segments: SegmentSuggestion[] }>(response)
+  return readJson<{ segments: SegmentSuggestion[]; cnaes?: CnaeSegments[] }>(response)
+}
+
+export type CnaeSegments = {
+  cnaeCode: string
+  isPrimary: boolean
+  segments: Array<{ code: string; label: string }>
 }
 
 /* ------------------------------------------------------------------ */

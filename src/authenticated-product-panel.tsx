@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import {
   FormEvent,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -2726,21 +2727,6 @@ function TaxonomyDimensionPicker({
   )
 }
 
-function cnaeSector(code: string): string {
-  const division = Number(code.slice(0, 2))
-  if (division >= 1 && division <= 3) return 'Agronegócio'
-  if (division >= 5 && division <= 9) return 'Indústria extrativa'
-  if (division >= 10 && division <= 33) return 'Indústria'
-  if (division >= 35 && division <= 39) return 'Energia e saneamento'
-  if (division >= 41 && division <= 43) return 'Construção'
-  if (division >= 45 && division <= 47) return 'Comércio'
-  if (division >= 49 && division <= 53) return 'Transporte e logística'
-  if (division >= 55 && division <= 56) return 'Alimentação e hospedagem'
-  if (division >= 58 && division <= 63) return 'Informação e comunicação'
-  if (division >= 64 && division <= 66) return 'Serviços financeiros'
-  return 'Serviços / Outros'
-}
-
 function TaxProfileSection({
   apiFetch,
   tenantId,
@@ -2767,21 +2753,44 @@ function TaxProfileSection({
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(
     () => new Set(profile?.personalization.taxonomy?.conceptCodes ?? []),
   )
+  // Segment chosen by the user for each CNAE; absent = the CNAE's own.
+  const savedCnaeSegments = () =>
+    Object.fromEntries(
+      (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode]),
+    ) as Record<string, string>
+  const [cnaeSegments, setCnaeSegments] = useState<Record<string, string>>(savedCnaeSegments)
 
   useEffect(() => {
     setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
     setKeywords(profile?.personalization.keywords?.join(', ') ?? '')
     setSelectedCodes(new Set(profile?.personalization.taxonomy?.conceptCodes ?? []))
+    setCnaeSegments(
+      Object.fromEntries(
+        (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode]),
+      ),
+    )
   }, [profile])
 
   // TAX-11: the API returns only the dimensions the curator made visible, in
   // the configured order. Older payloads (no profileOrder) keep the legacy set.
+  // CNAE activities (7-digit items) are not markers: the segment of each
+  // CNAE is chosen in the CNAE table instead.
   const profileDimensions = useMemo(
     () =>
       taxonomyOptions.dimensions
         .filter(
           (dimension) =>
             dimension.profileOrder !== undefined || PROFILE_DIMENSION_CODES.has(dimension.code),
+        )
+        .map((dimension) =>
+          dimension.officialCodeType === 'CNAE'
+            ? {
+                ...dimension,
+                concepts: dimension.concepts.filter(
+                  (concept) => !(concept.officialCodes ?? []).some((code) => /^\d{7}$/.test(code.replace(/\D/g, ''))),
+                ),
+              }
+            : dimension,
         )
         .sort((left, right) => (left.profileOrder ?? 0) - (right.profileOrder ?? 0)),
     [taxonomyOptions.dimensions],
@@ -2798,6 +2807,20 @@ function TaxProfileSection({
         (suggestionsQuery.data?.segments ?? []).map((segment) => [segment.conceptCode, segment.strength] as const),
       ),
     [suggestionsQuery.data],
+  )
+  const cnaeSuggestions = useMemo(
+    () => new Map((suggestionsQuery.data?.cnaes ?? []).map((item) => [item.cnaeCode, item.segments] as const)),
+    [suggestionsQuery.data],
+  )
+  const segmentOptions = useMemo(() => taxonomyOptions.segments ?? [], [taxonomyOptions.segments])
+  const segmentFor = useCallback(
+    (cnaeCode: string) => {
+      const digits = cnaeCode.replace(/\D/g, '')
+      const chosen = cnaeSegments[digits]
+      const suggested = cnaeSuggestions.get(digits)?.[0]?.code ?? ''
+      return chosen !== undefined ? { code: chosen, suggested: chosen === suggested } : { code: suggested, suggested: true }
+    },
+    [cnaeSegments, cnaeSuggestions],
   )
   const offeredCodes = useMemo(
     () => new Set(profileDimensions.flatMap((dimension) => dimension.concepts.map((concept) => concept.code))),
@@ -2843,6 +2866,13 @@ function TaxProfileSection({
           ?.concepts.filter((concept) => selectedCodes.has(concept.code))
           .map((concept) => concept.label) ?? []
 
+  const profileCnaeCodes = useMemo(
+    () => [...new Set(establishments.flatMap((item) => item.cnaes).map((cnae) => cnae.code.replace(/\D/g, '')))]
+      .filter((code) => code.length === 7)
+      .sort(),
+    [establishments],
+  )
+
   const mutation = useMutation({
     mutationFn: () =>
       saveTaxProfile(apiFetch, tenantId, company.id, {
@@ -2869,6 +2899,10 @@ function TaxProfileSection({
                       : offeredCodes.has(code),
                   )
                   .sort(),
+                // Effective segment of every company CNAE (suggested or chosen).
+                cnaeSegments: profileCnaeCodes
+                  .map((cnaeCode) => ({ cnaeCode, segmentCode: segmentFor(cnaeCode).code }))
+                  .filter((item) => segmentOptions.some((option) => option.code === item.segmentCode)),
               }
             : null,
         },
@@ -2943,7 +2977,12 @@ function TaxProfileSection({
               tenantId={tenantId}
               companyId={company.id}
               cnaes={cnaes}
-              sectorLabel={cnaeSector}
+              segmentOptions={segmentOptions}
+              segmentFor={segmentFor}
+              onSegmentChange={(cnaeCode, segmentCode) =>
+                setCnaeSegments((current) => ({ ...current, [cnaeCode.replace(/\D/g, '')]: segmentCode }))
+              }
+              products={taxonomyOptions.products ?? []}
             />
           ) : (
             <p>Nenhum CNAE cadastrado.</p>

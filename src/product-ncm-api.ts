@@ -35,6 +35,8 @@ export type CompanyProductProfile = {
     sectorConceptId: string | null
     productConceptId: string | null
   }
+  /** Item of the taxonomy Produtos table, when linked. */
+  productConceptCode?: string | null
   ncms: CompanyProductNcm[]
   createdAt: string | null
   updatedAt: string | null
@@ -43,6 +45,7 @@ export type CompanyProductProfile = {
 export type ProductProfileInput = {
   cnaeCode: string | null
   productLabel: string
+  productConceptCode: string | null
   ncmCodes: string[]
 }
 
@@ -86,11 +89,14 @@ export async function searchNcmCatalog(
   apiFetch: ProductApiFetch,
   q: string,
   limit = 20,
+  /** Only NCMs under these codes (a product's codes in the Produtos table). */
+  prefixes: string[] = [],
 ): Promise<NcmCatalogSearch> {
   const params = new URLSearchParams({
     q: q.trim(),
     limit: String(limit),
   })
+  if (prefixes.length > 0) params.set('prefixes', prefixes.join(','))
   const response = await apiFetch(`/api/v1/ncm?${params.toString()}`, {
     headers: { Accept: 'application/json' },
   })

@@ -92,6 +92,59 @@ function normalize(value: string): string {
 
 let newRowCounter = 0
 
+/** Segmento cell: drop-down of the Segmento table, applied to the row's group. */
+function SegmentCell({
+  group,
+  codes,
+  options,
+  labelOf,
+  disabled,
+  groupNoun,
+  onChange,
+}: {
+  group: string
+  codes: string[]
+  options: CurationConcept[]
+  labelOf: (code: string) => string | undefined
+  disabled: boolean
+  groupNoun: string
+  onChange: (codes: string[]) => void
+}) {
+  const unknown = codes.filter((code) => !labelOf(code))
+  const value = codes.length === 1 ? codes[0]! : codes.length > 1 ? '__many__' : ''
+  return (
+    <select
+      aria-label="Segmento"
+      className={unknown.length ? 'is-invalid' : undefined}
+      value={value}
+      disabled={disabled}
+      title={
+        !group.trim()
+          ? `Informe o ${groupNoun} para escolher o segmento.`
+          : `Segmento do ${groupNoun} “${group.trim()}”: vale para todos os itens dele.`
+      }
+      onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
+    >
+      <option value="">— sem segmento —</option>
+      {codes.length > 1 && (
+        <option value="__many__" disabled>
+          {codes.map((code) => labelOf(code) ?? code).join(', ')}
+        </option>
+      )}
+      {unknown.length === 1 && codes.length === 1 && (
+        <option value={unknown[0]} disabled>
+          {unknown[0]} (fora da tabela Segmento)
+        </option>
+      )}
+      {options.map((segment) => (
+        <option key={segment.code} value={segment.code}>
+          {segment.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export function CurationGrid({
   apiFetch,
   dimension,
@@ -123,22 +176,35 @@ export function CurationGrid({
   const groupLabel = useMemo(() => new Map(groups.map((group) => [group.id, group.label])), [groups])
   const groupOrder = useMemo(() => new Map(groups.map((group) => [group.label, group.displayOrder])), [groups])
   const conceptByCode = useMemo(() => new Map(concepts.map((concept) => [concept.code, concept])), [concepts])
-  // Segment comes from the group (edited in the group form), never per item.
-  const segmentByGroup = useMemo(() => {
-    const segmentLabel = new Map(segments.map((segment) => [segment.code, segment.label]))
-    return new Map(
-      groups.map((group) => [
-        normalize(group.label.trim()),
-        group.segmentCodes
-          .map((code) => segmentLabel.get(code) ?? code)
-          .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-          .join(', '),
-      ]),
-    )
-  }, [groups, segments])
+  // The segment belongs to the group: choosing it on one row sets it for
+  // every item of that group. Only items of the Segmento table are offered.
+  const segmentLabel = useMemo(() => new Map(segments.map((segment) => [segment.code, segment.label])), [segments])
+  const segmentOptions = useMemo(
+    () => [...segments].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
+    [segments],
+  )
+  const baseSegmentCodes = useMemo(
+    () => new Map(groups.map((group) => [normalize(group.label.trim()), group.segmentCodes])),
+    [groups],
+  )
+  const [segmentEdits, setSegmentEdits] = useState<Record<string, { group: string; codes: string[] }>>({})
+  const segmentCodesOf = useCallback(
+    (group: string): string[] => {
+      const key = normalize(group.trim())
+      return segmentEdits[key]?.codes ?? baseSegmentCodes.get(key) ?? []
+    },
+    [baseSegmentCodes, segmentEdits],
+  )
   const segmentOf = useCallback(
-    (group: string) => segmentByGroup.get(normalize(group.trim())) ?? '',
-    [segmentByGroup],
+    (group: string) =>
+      segmentCodesOf(group)
+        .map((code) => segmentLabel.get(code) ?? code)
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .join(', '),
+    [segmentCodesOf, segmentLabel],
+  )
+  const changedSegments = Object.entries(segmentEdits).filter(
+    ([key, edit]) => JSON.stringify(edit.codes) !== JSON.stringify(baseSegmentCodes.get(key) ?? []),
   )
   const showSegment = dimension.usesGroups && segments.length > 0
   const isCnae = dimension.code === 'sector' && dimension.officialCodeType === 'CNAE'
@@ -169,7 +235,7 @@ export function CurationGrid({
     const base = baseByKey.get(key)
     return base && !sameDraft(base, edits[key]!)
   })
-  const pending = editedKeys.length + newRows.length + retire.size
+  const pending = editedKeys.length + newRows.length + retire.size + changedSegments.length
   const dirty = pending > 0
 
   useEffect(() => {
@@ -292,6 +358,7 @@ export function CurationGrid({
   }
 
   const undoAll = () => {
+    setSegmentEdits({})
     setEdits({})
     setNewRows([])
     setRetire(new Set())
@@ -322,7 +389,9 @@ export function CurationGrid({
       const result = await saveDimensionRows(apiFetch, dimension.code, justification, {
         rows,
         retire: [...retire],
+        groupSegments: changedSegments.map(([, edit]) => ({ group: edit.group.trim(), segmentCodes: edit.codes })),
       })
+      setSegmentEdits({})
       setEdits({})
       setNewRows([])
       setRetire(new Set())
@@ -332,7 +401,8 @@ export function CurationGrid({
         kind: 'ok',
         text:
           `Salvo no rascunho: ${result.created.length} novos · ${result.updated} alterados · ${result.retired} excluídos` +
-          (result.groupsCreated ? ` · ${result.groupsCreated} grupos novos` : ''),
+          (result.groupsCreated ? ` · ${result.groupsCreated} grupos novos` : '') +
+          (result.groupsUpdated ? ` · segmento de ${result.groupsUpdated} grupo(s)` : ''),
       })
     } catch (error) {
       setMessage({ kind: 'error', text: `Nada foi salvo. ${errorText(error)}` })
@@ -495,8 +565,22 @@ export function CurationGrid({
                     {status && <span className={`tc-grid-status is-${status.toLowerCase()}`}>{status}</span>}
                   </td>
                   {showSegment && (
-                    <td className="is-segment" title={isCnae ? 'O segmento vem do subsegmento: altere em Editar subsegmento.' : 'O segmento vem do grupo: altere em Editar grupo.'}>
-                      {segmentOf(row.group) || <span className="tc-grid-muted">—</span>}
+                    <td className="is-segment">
+                      <SegmentCell
+                        group={row.group}
+                        codes={segmentCodesOf(row.group)}
+                        options={segmentOptions}
+                        labelOf={(code) => segmentLabel.get(code)}
+                        disabled={!rowEditable || !row.group.trim()}
+                        groupNoun={isCnae ? 'subsegmento' : 'grupo'}
+                        onChange={(codes) => {
+                          setMessage(null)
+                          setSegmentEdits((current) => ({
+                            ...current,
+                            [normalize(row.group.trim())]: { group: row.group, codes },
+                          }))
+                        }}
+                      />
                     </td>
                   )}
                   {dimension.usesGroups && (
