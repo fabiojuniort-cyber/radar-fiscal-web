@@ -58,6 +58,23 @@ async function openArchive(page: Page) {
   await page.route('**/api/v2/archive/facets', (route) => route.fulfill({ json: {
     ufs: ['GO'], sources: [{ code: 'dou', name: 'DOU' }], actTypes: ['IN'],
   } }))
+  await page.route('**/api/v2/archive/navigation?*', (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
+    const params = new URL(route.request().url()).searchParams
+    const groupBy = params.get('groupBy')
+    const items = groupBy === 'jurisdiction'
+      ? [{ value: 'FEDERAL', label: 'Federal', count: 75 }]
+      : groupBy === 'source'
+        ? [{ value: 'dou', label: 'DOU', count: 75 }]
+        : groupBy === 'actType'
+          ? [{ value: 'IN', label: 'IN', count: 75 }]
+          : groupBy === 'year'
+            ? [{ value: '2026', label: '2026', count: 75 }]
+            : groupBy === 'month'
+              ? [{ value: '9', label: '9', count: 75 }]
+              : []
+    return route.fulfill({ json: { groupBy, items } })
+  })
   await page.route('**/api/v2/archive?*', (route) => {
     expect(route.request().headers().authorization).toBe('Bearer date-01-test-access')
     const params = new URL(route.request().url()).searchParams
@@ -194,6 +211,72 @@ test('DATE-01: dates, requests, pagination, detail return, open ranges and clear
   expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('tribusca.archive.date') ?? '{}')))
     .toMatchObject({ singleDate: '', from: '', to: '' })
 })
+
+
+test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de data', async ({ page }) => {
+  await openArchive(page)
+
+  const pesquisaTab = page.getByRole('tab', { name: 'Pesquisa', exact: true })
+  const navegacaoTab = page.getByRole('tab', { name: 'Navegação', exact: true })
+  const dateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+
+  await expect(pesquisaTab).toHaveAttribute('aria-selected', 'true')
+  await enableRange(page)
+  await expect(dateFilter.getByText(/Régua ajusta/)).toHaveCount(0)
+
+  await navegacaoTab.click()
+  await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
+  await expect(dateFilter).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Navegue pelo Acervo' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Ajuda', exact: true }).click()
+  const help = page.getByRole('dialog')
+  await expect(help.getByRole('heading', { name: 'Farol de navegação' })).toBeVisible()
+  await expect(help).toContainText(
+    'A ideia é reduzir o Acervo em etapas claras. A cada clique, você troca milhares de possibilidades por um conjunto menor e mais relevante.',
+  )
+  for (const step of [
+    'Escolha o ponto de partida',
+    'Refine por categoria',
+    'Chegue à lista de documentos',
+    'Abra a fonte preservada',
+  ]) {
+    await expect(help.getByText(step, { exact: true })).toBeVisible()
+  }
+  await help.getByRole('button', { name: 'Fechar', exact: true }).click()
+
+  const options = page.locator('.tp-acervo-option-grid')
+  await options.getByRole('button', { name: /Federal/ }).click()
+  await options.getByRole('button', { name: /DOU/ }).click()
+  await options.getByRole('button', { name: /IN/ }).click()
+  await options.getByRole('button', { name: /2026/ }).click()
+
+  const finalActs = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return url.pathname === '/api/v2/archive' &&
+      url.searchParams.get('limit') === '25' &&
+      url.searchParams.get('jurisdiction') === 'FEDERAL' &&
+      url.searchParams.get('source') === 'dou' &&
+      url.searchParams.get('actType') === 'IN' &&
+      url.searchParams.get('publishedFrom') === '2026-09-01' &&
+      url.searchParams.get('publishedTo') === '2026-09-30'
+  }, { timeout: 8_000 })
+  await options.getByRole('button', { name: /Setembro/ }).click()
+  expect((await finalActs).status()).toBe(200)
+
+  await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' })).toBeVisible()
+  const breadcrumb = page.getByRole('navigation', { name: 'Caminho atual' })
+  for (const label of ['Federal', 'DOU', 'IN', '2026', 'Setembro']) {
+    await expect(breadcrumb.getByRole('button', { name: label, exact: true })).toBeVisible()
+  }
+
+  await pesquisaTab.click()
+  const restoredDateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
+  await expect(restoredDateFilter).toBeVisible()
+  await expect(restoredDateFilter.getByRole('checkbox', { name: 'Intervalo' })).toBeChecked()
+})
+
 
 for (const mode of ['single', 'range'] as const) {
   test(`DATE-01: active ${mode} date filters do not leak into Publicações`, async ({ page }) => {

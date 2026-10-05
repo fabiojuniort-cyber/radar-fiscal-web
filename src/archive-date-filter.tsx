@@ -424,9 +424,6 @@ export function ArchiveDateFilter({
               onChange={(event) => updateTo(event.target.value)}
             />
           </label>
-          <span className="tp-date-endpoint-hint">
-            Régua ajusta: <b>{activeEndpoint === 'from' ? 'De' : 'Até'}</b>
-          </span>
         </div>
       )}
 

@@ -798,3 +798,38 @@ export async function fetchProductPublicationDetail(
 
   return requireJson<ProductPublicationDetail>(response)
 }
+
+export type AffinityLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+
+export type PublicationAffinity = {
+  company: { id: string; name: string }
+  status: 'OK' | 'NO_PROFILE' | 'NOT_CLASSIFIED'
+  level: AffinityLevel | null
+  score: number
+  matches: Array<{
+    code: string
+    label: string
+    dimensionCode: string
+    weight: number
+    via: 'SAME_ITEM' | 'PRODUCT_GROUP'
+  }>
+}
+
+/** How close an act is to the company's tax profile (TAX-11). */
+export async function fetchPublicationAffinity(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+  publicationId: string,
+): Promise<PublicationAffinity> {
+  const response = await apiFetch(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/publications/${encodeURIComponent(publicationId)}/affinity`,
+    {
+      headers: tenantHeaders(tenantId, {
+        Accept: 'application/json',
+      }),
+    },
+  )
+
+  return requireJson<PublicationAffinity>(response)
+}

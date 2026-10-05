@@ -76,6 +76,8 @@ jobs:
 
       - name: Upload WEB-14 browser evidence
         if: always()
+        # Evidence only: a full artifact quota must not fail a green run.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web14-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}

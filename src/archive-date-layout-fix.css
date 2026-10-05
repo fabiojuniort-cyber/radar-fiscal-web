@@ -227,3 +227,98 @@
     margin: 0 !important;
   }
 }
+
+
+/* DESIGN-02 composition: Acervo mode tabs take the first compact row. */
+@media (min-width: 981px) {
+  .tp-app .tp-main.tp-main-acervo {
+    grid-template-rows: auto auto auto auto auto auto !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-pages {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    margin: 0 0 3px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > .tp-section-heading {
+    grid-column: 1 !important;
+    grid-row: 2 / span 2 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > .tp-acervo-search {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > .tp-acervo-fulltext {
+    grid-column: 2 !important;
+    grid-row: 3 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > .tp-acervo-active-search {
+    grid-column: 2 !important;
+    grid-row: 4 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > [data-archive-date-host='true'] {
+    grid-column: 1 / -1 !important;
+    grid-row: 5 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='pesquisa'] > .tp-acervo-layout {
+    grid-column: 1 / -1 !important;
+    grid-row: 6 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='navegacao'] {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    row-gap: 10px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='navegacao'] > .tp-acervo-navigation-heading {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='navegacao'] > .tp-acervo-navigation {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='navegacao'] > [data-archive-date-host='true'] {
+    display: none !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter {
+    padding: 6px 14px 3px !important;
+    border-radius: 12px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-period {
+    min-height: 56px !important;
+    padding: 4px 5px !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-period-value {
+    font-size: 1.3rem !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo .tp-date-filter-foot {
+    margin-top: -7px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-pages,
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-navigation-heading,
+  .tp-app .tp-main.tp-main-acervo > .tp-acervo-navigation {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .tp-app .tp-main.tp-main-acervo[data-acervo-view='navegacao'] > [data-archive-date-host='true'] {
+    display: none !important;
+  }
+}

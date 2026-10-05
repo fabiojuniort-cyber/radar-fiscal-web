@@ -188,7 +188,7 @@ export type PublicationTag = {
   assertionId: string | null
   removed: boolean
   reason: {
-    type: 'TEXT' | 'SYNONYM' | 'NCM' | 'CCLASSTRIB' | 'CURATOR'
+    type: 'TEXT' | 'SYNONYM' | 'NCM' | 'CCLASSTRIB' | 'PRODUCTS' | 'CURATOR'
     term: string | null
     excerpt: string | null
   }
