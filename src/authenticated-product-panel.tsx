@@ -1334,12 +1334,16 @@ export function AuthenticatedProductPanel({
               </>
             ) : (
               <>
-                <div className="tp-acervo-navigation-heading">
-                  <SectionHeading
-                    eyebrow="Descoberta"
-                    title="Navegue pelo Acervo"
-                    description="Escolha um caminho e avance etapa por etapa até os atos, sem sair desta tela."
-                  />
+                <div className="tp-acervo-navigation-heading tp-acervo-library-hero">
+                  <div className="tp-acervo-library-copy">
+                    <span className="tp-acervo-library-kicker">Acervo TriFaros · Biblioteca Viva</span>
+                    <strong className="tp-acervo-library-title">A Biblioteca Tributária</strong>
+                    <SectionHeading
+                      eyebrow="Descoberta"
+                      title="Navegue pelo Acervo"
+                      description="Conhecimento organizado para ser encontrado. Escolha um caminho e avance etapa por etapa até os atos, sem sair desta tela."
+                    />
+                  </div>
                   <Dialog.Root>
                     <Dialog.Trigger asChild>
                       <button className="tp-acervo-help" type="button">
@@ -1407,7 +1411,7 @@ export function AuthenticatedProductPanel({
                       </button>
                       {archiveNavigationPath.map((item, index) => (
                         <span key={item.group}>
-                          <i aria-hidden="true">/</i>
+                          <i aria-hidden="true">›</i>
                           <button
                             type="button"
                             onClick={() => {
