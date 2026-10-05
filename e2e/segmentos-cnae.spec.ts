@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test('curator imports segment hierarchy and sees CNAE code before description', async ({ page }) => {
+for (const inputMethod of ['file', 'text'] as const) {
+test(`curator imports segment hierarchy by ${inputMethod} and sees CNAE code before description`, async ({ page }) => {
   const release = { id: 'draft', version: 'v1.3.0', status: 'DRAFT', createdAt: '2026-10-05T03:00:00Z', publishedAt: null, previousReleaseId: null, changeNotes: null }
   const dimension = { id: 'sector', code: 'sector', name: 'Segmento', description: null, revisionNo: 1, configured: true, profileVisible: true, profileOrder: 1, helpText: null, detailSection: 'Segmentos', detailOrder: 1, usesGroups: true, officialCodeType: 'CNAE', conceptCount: 0 }
   const concepts: Record<string, unknown>[] = [], groups: Record<string, unknown>[] = []
@@ -41,8 +42,15 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
     subsegments: [{ id: 'AGRO-PROD', name: 'Agropecuária / Produção', segmentId: 'AGRO' }],
     rows: [{ cnae: '0111301', description: 'Cultivo de arroz', segmentId: 'AGRO', subsegmentId: 'AGRO-PROD', synonyms: ['produção de arroz', 'rizicultura'] }],
   }
-  await page.locator('.tc-file-button input[type=file]').setInputFiles({ name: 'segmentos.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) })
+  if (inputMethod === 'file') {
+    await page.locator('.tc-file-button input[type=file]').setInputFiles({ name: 'segmentos.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) })
+  } else {
+    await page.getByText('Importar segmentos por texto', { exact: true }).click()
+    await page.getByLabel('Dados para importação (JSON)', { exact: true }).fill(JSON.stringify(payload))
+    await page.getByRole('button', { name: 'Importar dados colados', exact: true }).click()
+  }
   await expect(page.getByText(/Conferido no rascunho: 1 CNAEs/)).toBeVisible()
+  if (inputMethod === 'text') await expect(page.getByLabel('Dados para importação (JSON)', { exact: true })).toHaveValue('')
   const table = page.getByRole('table', { name: 'Itens de Segmento' })
   const headers = await table.getByRole('columnheader').allTextContents()
   expect(headers.indexOf('CNAE')).toBeLessThan(headers.indexOf('Descrição do CNAE'))
@@ -53,3 +61,4 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   await expect(table.getByText('rizicultura', { exact: true })).toBeVisible()
   await expect(page.getByText('Desligada', { exact: true })).toBeVisible()
 })
+}

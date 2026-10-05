@@ -511,6 +511,7 @@ function DimensionEditor({
   const [groupEditor, setGroupEditor] = useState<CurationGroup | 'new' | null>(null)
   const [importing, setImporting] = useState(false)
   const [importReport, setImportReport] = useState<string | null>(null)
+  const [importText, setImportText] = useState('')
   const [exportError, setExportError] = useState<string | null>(null)
 
   const groups = view.groups
@@ -553,6 +554,7 @@ function DimensionEditor({
         setImportReport(`Conferido no rascunho: ${result.cnaes} CNAEs · ${result.segments} segmentos · ${result.subsegments} subsegmentos · ${result.synonyms} sinônimos · ${result.created} criados · ${result.updated} atualizados.`)
         await onChanged()
         setGridVersion(value => value + 1)
+        setImportText('')
         return
       }
       const report = await importDimensionCsv(apiFetch, dimension.code, justification, await readCsvFile(file))
@@ -660,7 +662,29 @@ function DimensionEditor({
         </label>
       </div>
       {exportError && <p className="tc-error" role="alert">{exportError}</p>}
-      {importReport && <p className="tc-hint">{importReport}</p>}
+      {importReport && <p className="tc-hint" role="status">{importReport}</p>}
+      {dimension.code === 'sector' && (
+        <details className="tc-hint tc-import-help">
+          <summary>Importar segmentos por texto</summary>
+          <p>Cole o conteúdo do arquivo de segmentos. A conferência e a gravação no rascunho são as mesmas da importação por arquivo.</p>
+          <label>
+            Dados para importação (JSON)
+            <textarea
+              rows={6}
+              value={importText}
+              disabled={!editable || importing}
+              onChange={event => setImportText(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!editable || importing || !importText.trim()}
+            onClick={() => void importCsv(new File([importText], 'segmentos.json', { type: 'application/json' }))}
+          >
+            {importing ? 'Importando…' : 'Importar dados colados'}
+          </button>
+        </details>
+      )}
       <details className="tc-hint tc-import-help">
         <summary>Como montar a planilha de carga massiva</summary>
         {dimension.code === 'sector' && <p>Para carregar Segmento → Subsegmento → CNAE e sinônimos juntos, importe o arquivo JSON de segmentos. A carga usa o rascunho e pode ser retomada com o mesmo arquivo. A planilha CSV mantém os cabeçalhos compatíveis “Grupo” e “Item”.</p>}

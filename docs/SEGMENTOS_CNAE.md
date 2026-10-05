@@ -47,3 +47,6 @@ compatibilidade com o backend existente.
 Reversão: a versão publicada continua intacta. Alterações do rascunho podem
 ser corrigidas pelas tabelas de curadoria. A carga usa `retire: []` e nunca
 remove conceitos. Não publicar a release como mecanismo de rollback.
+## Entrada por texto
+
+Na tabela Segmento, “Importar segmentos por texto” aceita o conteúdo JSON do mesmo pacote de importação. Esta entrada usa a mesma validação, auditoria, gravação por lotes e conferência final, sem depender de acesso da extensão do navegador aos arquivos locais. O conteúdo é limpo somente depois da conferência bem-sucedida; em falha parcial, permanece disponível para retomar a carga.
