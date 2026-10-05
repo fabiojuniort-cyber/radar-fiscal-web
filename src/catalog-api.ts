@@ -20,6 +20,33 @@ export type CatalogFacets = {
   actTypes: string[]
 }
 
+export type CatalogNavigationGroup =
+  | 'jurisdiction'
+  | 'uf'
+  | 'source'
+  | 'actType'
+  | 'year'
+  | 'month'
+
+export type CatalogNavigationFilters = {
+  groupBy: CatalogNavigationGroup
+  jurisdiction?: 'FEDERAL' | 'STATE'
+  uf?: string
+  source?: string
+  actType?: string
+  year?: number
+  month?: number
+}
+
+export type CatalogNavigationResponse = {
+  groupBy: CatalogNavigationGroup
+  items: Array<{
+    value: string
+    label: string
+    count: number
+  }>
+}
+
 export type CatalogFilters = {
   q?: string
   /** 'full' also searches the full text of each act; default is the title. */
@@ -140,4 +167,25 @@ export async function fetchCatalogFacets(
   })
 
   return requireJson<CatalogFacets>(response)
+}
+
+export async function fetchCatalogNavigation(
+  apiFetch: ProductApiFetch,
+  filters: CatalogNavigationFilters,
+): Promise<CatalogNavigationResponse> {
+  const params = new URLSearchParams()
+  params.set('groupBy', filters.groupBy)
+  if (filters.jurisdiction) params.set('jurisdiction', filters.jurisdiction)
+  if (filters.uf) params.set('uf', filters.uf)
+  if (filters.source) params.set('source', filters.source)
+  if (filters.actType) params.set('actType', filters.actType)
+  if (filters.year) params.set('year', String(filters.year))
+  if (filters.month) params.set('month', String(filters.month))
+
+  const response = await apiFetch(
+    '/api/v2/archive/navigation?' + params.toString(),
+    { headers: { Accept: 'application/json' } },
+  )
+
+  return requireJson<CatalogNavigationResponse>(response)
 }
