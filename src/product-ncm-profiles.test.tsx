@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -15,24 +16,64 @@ afterEach(() => {
   cleanup()
 })
 
-function renderProfiles(apiFetch: ProductApiFetch, onSegmentChange = vi.fn()) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
+const companyId = '22222222-2222-4222-8222-222222222222'
+const profilesUrl = `/api/v1/companies/${companyId}/product-profiles`
+const cnaeNcmsUrl = `/api/v1/companies/${companyId}/cnae-ncms`
 
-  return render(
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+}
+
+const riceNcm = {
+  entryId: '33333333-3333-4333-8333-333333333333',
+  code: '10063011',
+  officialCode: '1006.30.11',
+  description: 'Arroz semibranqueado ou branqueado, polido ou brunido',
+}
+
+function profile(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '44444444-4444-4444-8444-444444444444',
+    companyId,
+    cnaeCode: '0111301',
+    cnaeDescription: 'Cultivo de arroz',
+    productLabel: 'Arroz beneficiado',
+    productConceptCode: 'product.arroz_beneficiado',
+    taxonomy: { releaseId: null, sectorConceptId: null, productConceptId: null },
+    ncms: [],
+    createdAt: '2026-10-01T12:00:00.000Z',
+    updatedAt: '2026-10-01T12:00:00.000Z',
+    ...overrides,
+  }
+}
+
+function setup(state: { profiles?: unknown[]; cnaeNcms?: unknown[] } = {}) {
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    calls.push({ url, init })
+    const method = init?.method ?? 'GET'
+    if (url.startsWith('/api/v1/ncm?')) return json({ items: [riceNcm], edition: null })
+    if (url === profilesUrl && method === 'GET') return json({ items: state.profiles ?? [] })
+    if (url.startsWith(profilesUrl) && (method === 'POST' || method === 'PUT')) return json(profile(), 201)
+    if (url.startsWith(profilesUrl) && method === 'DELETE') return new Response(null, { status: 204 })
+    if (url === cnaeNcmsUrl && method === 'GET') return json({ items: state.cnaeNcms ?? [] })
+    if (url === cnaeNcmsUrl && method === 'POST') return json({ items: [] }, 201)
+    if (url.startsWith(cnaeNcmsUrl) && method === 'DELETE') return new Response(null, { status: 204 })
+    throw new Error(`Unexpected request: ${method} ${url}`)
+  }) as ProductApiFetch
+
+  const onSegmentChange = vi.fn()
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  render(
     <QueryClientProvider client={queryClient}>
       <ProductNcmProfiles
         apiFetch={apiFetch}
         tenantId="11111111-1111-4111-8111-111111111111"
-        companyId="22222222-2222-4222-8222-222222222222"
-        cnaes={[{
-          code: '0111301',
-          description: 'Cultivo de arroz',
-        }]}
+        companyId={companyId}
+        cnaes={[{ code: '0111301', description: 'Cultivo de arroz' }]}
         segmentOptions={[
           { code: 'sector.trifaros_agro', label: 'Agropecuária, pesca e insumos agrícolas' },
           { code: 'sector.trifaros_ali', label: 'Alimentos, bebidas e tabaco' },
@@ -58,147 +99,92 @@ function renderProfiles(apiFetch: ProductApiFetch, onSegmentChange = vi.fn()) {
       />
     </QueryClientProvider>,
   )
+  const body = (method: string, url: string) =>
+    JSON.parse(String(calls.find((call) => call.init?.method === method && call.url === url)!.init!.body))
+  return { calls, onSegmentChange, body }
 }
 
 describe('ProductNcmProfiles', () => {
-  it('creates a product profile using an NCM selected from the official catalog', async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = []
-    let saved = false
-
-    const apiFetch = vi.fn(async (
-      input: RequestInfo | URL,
-      init?: RequestInit,
-    ) => {
-      const url = String(input)
-      calls.push({ url, init })
-
-      if (url.startsWith('/api/v1/ncm?')) {
-        return new Response(JSON.stringify({
-          items: [{
-            entryId: '33333333-3333-4333-8333-333333333333',
-            code: '10063011',
-            officialCode: '1006.30.11',
-            description: 'Arroz semibranqueado ou branqueado, polido ou brunido',
-          }],
-          edition: { code: '2026-10', validFrom: '2026-10-01' },
-        }), { status: 200, headers: { 'content-type': 'application/json' } })
-      }
-
-      if (
-        url === '/api/v1/companies/22222222-2222-4222-8222-222222222222/product-profiles' &&
-        init?.method === 'POST'
-      ) {
-        saved = true
-        return new Response(JSON.stringify({
-          id: '44444444-4444-4444-8444-444444444444',
-          companyId: '22222222-2222-4222-8222-222222222222',
-          cnaeCode: '0111301',
-          cnaeDescription: 'Cultivo de arroz',
-          productLabel: 'Arroz beneficiado',
-          taxonomy: {
-            releaseId: null,
-            sectorConceptId: null,
-            productConceptId: null,
-          },
-          ncms: [{
-            entryId: '33333333-3333-4333-8333-333333333333',
-            code: '10063011',
-            officialCode: '1006.30.11',
-            description: 'Arroz semibranqueado ou branqueado, polido ou brunido',
-            isPrimary: false,
-            assignmentSource: 'MANUAL',
-          }],
-          createdAt: '2026-10-01T12:00:00.000Z',
-          updatedAt: '2026-10-01T12:00:00.000Z',
-        }), { status: 201, headers: { 'content-type': 'application/json' } })
-      }
-
-      if (url.endsWith('/product-profiles')) {
-        return new Response(JSON.stringify({
-          items: saved ? [{
-            id: '44444444-4444-4444-8444-444444444444',
-            companyId: '22222222-2222-4222-8222-222222222222',
-            cnaeCode: '0111301',
-            cnaeDescription: 'Cultivo de arroz',
-            productLabel: 'Arroz beneficiado',
-            taxonomy: {
-              releaseId: null,
-              sectorConceptId: null,
-              productConceptId: null,
-            },
-            ncms: [{
-              entryId: '33333333-3333-4333-8333-333333333333',
-              code: '10063011',
-              officialCode: '1006.30.11',
-              description: 'Arroz semibranqueado ou branqueado, polido ou brunido',
-              isPrimary: false,
-              assignmentSource: 'MANUAL',
-            }],
-            createdAt: '2026-10-01T12:00:00.000Z',
-            updatedAt: '2026-10-01T12:00:00.000Z',
-          }] : [],
-        }), { status: 200, headers: { 'content-type': 'application/json' } })
-      }
-
-      throw new Error(`Unexpected request: ${url}`)
-    }) as ProductApiFetch
-
-    const onSegmentChange = vi.fn()
-    renderProfiles(apiFetch, onSegmentChange)
-
-    expect(await screen.findByText('Cultivo de arroz')).toBeInTheDocument()
-    // Segment of the CNAE comes from the Segmento table and can be changed.
-    const segment = screen.getByRole('combobox', { name: 'Segmento do CNAE 0111301' })
+  it('changes the CNAE segment from the Segmento table', async () => {
+    const { onSegmentChange } = setup()
+    const segment = await screen.findByRole('combobox', { name: 'Segmento do CNAE 0111301' })
     expect(segment).toHaveValue('sector.trifaros_agro')
     expect(screen.getByText('Pelo CNAE')).toBeInTheDocument()
     fireEvent.change(segment, { target: { value: 'sector.trifaros_ali' } })
     expect(onSegmentChange).toHaveBeenCalledWith('0111301', 'sector.trifaros_ali')
+  })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Adicionar produto e NCM' }),
-    )
+  it('adds a product of the Produtos table in its own popup, without NCM', async () => {
+    const { calls, body } = setup()
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar produto' }))
 
-    // The editor opens as a popup over the page.
-    expect(screen.getByRole('dialog', { name: 'Adicionar produto e NCM' })).toBeInTheDocument()
-
-    // Products come from the Produtos table, the CNAE's segment first.
-    const options = screen.getByRole('listbox', { name: 'Produtos disponíveis' })
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar produto' })
+    expect(within(dialog).queryByText(/NCM do catálogo|Pesquisar NCM/)).not.toBeInTheDocument()
+    const options = within(dialog).getByRole('listbox', { name: 'Produtos disponíveis' })
     expect(options).toHaveTextContent(/Do segmento Agropecuária.*Arroz beneficiado.*Outros produtos.*Cerveja/)
-    expect(screen.getByRole('button', { name: 'Salvar produto e NCM' })).toBeDisabled()
-    fireEvent.click(screen.getByRole('option', { name: /Arroz beneficiado/ }))
+    expect(within(dialog).getByRole('button', { name: 'Salvar produto' })).toBeDisabled()
+    fireEvent.click(within(dialog).getByRole('option', { name: /Arroz beneficiado/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar produto' }))
 
-    // NCMs offered are the catalog NCMs under the product's codes.
-    const ncm = await screen.findByRole('checkbox', { name: /1006\.30\.11.*Arroz semibranqueado/i })
-    fireEvent.click(ncm)
-
-    expect(
-      screen.getByRole('button', { name: 'Remover NCM 1006.30.11' }),
-    ).toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Salvar produto e NCM' }),
-    )
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Editar produto Arroz beneficiado' }),
-      ).toBeInTheDocument()
+    await waitFor(() => expect(calls.some((call) => call.init?.method === 'POST')).toBe(true))
+    expect(body('POST', profilesUrl)).toEqual({
+      cnaeCode: '0111301',
+      productLabel: 'Arroz beneficiado',
+      productConceptCode: 'product.arroz_beneficiado',
+      ncmCodes: [],
     })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
 
-    const ncmCall = calls.find((call) => call.url.startsWith('/api/v1/ncm?'))
-    expect(new URLSearchParams(ncmCall!.url.split('?')[1]).get('prefixes')).toBe('100630')
+  it('adds a manual product typed by the user', async () => {
+    const { calls, body } = setup()
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar produto' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Produto novo (manual)' }))
+    fireEvent.change(screen.getByLabelText(/Nome do produto/), { target: { value: 'Fertilizante foliar próprio' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar produto' }))
 
-    const postCall = calls.find(
-      (call) => call.url.endsWith('/product-profiles') && call.init?.method === 'POST',
-    )
-    expect(postCall).toBeDefined()
+    await waitFor(() => expect(calls.some((call) => call.init?.method === 'POST')).toBe(true))
+    expect(body('POST', profilesUrl)).toEqual({
+      cnaeCode: '0111301',
+      productLabel: 'Fertilizante foliar próprio',
+      productConceptCode: null,
+      ncmCodes: [],
+    })
+  })
 
-    const headers = new Headers(postCall?.init?.headers)
-    expect(headers.get('x-tenant-id')).toBe(
-      '11111111-1111-4111-8111-111111111111',
-    )
+  it('adds NCMs to the CNAE in a separate popup, from the products and the official catalog', async () => {
+    const { calls, body } = setup({ profiles: [profile()] })
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar NCM' }))
 
-    expect(JSON.parse(String(postCall?.init?.body))).toEqual({
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar NCM' })
+    // Suggested from the CNAE's products (Produtos table codes).
+    const suggested = await within(dialog).findByRole('group', { name: 'NCMs dos produtos' })
+    fireEvent.click(within(suggested).getByRole('checkbox', { name: /1006\.30\.11/ }))
+    const prefixCall = calls.find((call) => call.url.includes('prefixes='))!
+    expect(new URLSearchParams(prefixCall.url.split('?')[1]).get('prefixes')).toBe('100630')
+
+    // Not linked to a product: saved to the CNAE.
+    expect(within(dialog).getByLabelText(/Vincular a um produto/)).toHaveValue('')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar NCM' }))
+    await waitFor(() => expect(calls.some((call) => call.url === cnaeNcmsUrl && call.init?.method === 'POST')).toBe(true))
+    expect(body('POST', cnaeNcmsUrl)).toEqual({ cnaeCode: '0111301', ncmCodes: ['10063011'] })
+  })
+
+  it('can link the new NCM to one of the CNAE products', async () => {
+    const { calls, body } = setup({ profiles: [profile()] })
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar NCM' }))
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar NCM' })
+    fireEvent.change(within(dialog).getByLabelText('Pesquisar NCM oficial'), { target: { value: '10063011' } })
+    const found = await within(dialog).findByRole('group', { name: 'NCMs encontrados' })
+    fireEvent.click(within(found).getByRole('checkbox', { name: /1006\.30\.11/ }))
+    fireEvent.change(within(dialog).getByLabelText(/Vincular a um produto/), {
+      target: { value: '44444444-4444-4444-8444-444444444444' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Salvar NCM' }))
+
+    const url = `${profilesUrl}/44444444-4444-4444-8444-444444444444`
+    await waitFor(() => expect(calls.some((call) => call.url === url && call.init?.method === 'PUT')).toBe(true))
+    expect(body('PUT', url)).toEqual({
       cnaeCode: '0111301',
       productLabel: 'Arroz beneficiado',
       productConceptCode: 'product.arroz_beneficiado',
@@ -206,89 +192,20 @@ describe('ProductNcmProfiles', () => {
     })
   })
 
-  it('adds a manual product with an NCM from the official catalog, in the popup', async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = []
-    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input)
-      calls.push({ url, init })
-      if (url.startsWith('/api/v1/ncm?')) {
-        return new Response(JSON.stringify({
-          items: [{
-            entryId: '55555555-5555-4555-8555-555555555555',
-            code: '31059090',
-            officialCode: '3105.90.90',
-            description: 'Outros adubos ou fertilizantes',
-          }],
-          edition: null,
-        }), { status: 200, headers: { 'content-type': 'application/json' } })
-      }
-      if (url.endsWith('/product-profiles') && init?.method === 'POST') {
-        return new Response(JSON.stringify({ error: 'stop_here' }), { status: 500, headers: { 'content-type': 'application/json' } })
-      }
-      if (url.endsWith('/product-profiles')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'content-type': 'application/json' } })
-      }
-      throw new Error(`Unexpected request: ${url}`)
-    }) as ProductApiFetch
-
-    renderProfiles(apiFetch)
-    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar produto e NCM' }))
-    fireEvent.click(screen.getByRole('tab', { name: 'Produto novo (manual)' }))
-    fireEvent.change(screen.getByLabelText(/Nome do produto/), { target: { value: 'Fertilizante foliar próprio' } })
-    fireEvent.change(screen.getByLabelText('Pesquisar NCM oficial'), { target: { value: '310590' } })
-    fireEvent.click(await screen.findByRole('checkbox', { name: /3105\.90\.90/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar produto e NCM' }))
-
-    await waitFor(() => expect(calls.some((call) => call.init?.method === 'POST')).toBe(true))
-    const post = calls.find((call) => call.init?.method === 'POST')!
-    expect(JSON.parse(String(post.init!.body))).toEqual({
-      cnaeCode: '0111301',
-      productLabel: 'Fertilizante foliar próprio',
-      productConceptCode: null,
-      ncmCodes: ['31059090'],
+  it('lists products and NCMs of the CNAE and removes an NCM from the table', async () => {
+    const { calls } = setup({
+      profiles: [profile({ productLabel: 'Arroz', productConceptCode: null, ncms: [{ ...riceNcm, code: '10062099', officialCode: '1006.20.99', isPrimary: false, assignmentSource: 'MANUAL' }] })],
+      cnaeNcms: [{ id: '66666666-6666-4666-8666-666666666666', cnaeCode: '0111301', entryId: riceNcm.entryId, code: riceNcm.code, officialCode: riceNcm.officialCode, description: riceNcm.description }],
     })
 
-    // Escape closes the popup.
-    fireEvent.keyDown(window, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  })
-
-  it('renders existing products and NCMs for the linked CNAE', async () => {
-    const apiFetch = vi.fn(async () =>
-      new Response(JSON.stringify({
-        items: [{
-          id: '44444444-4444-4444-8444-444444444444',
-          companyId: '22222222-2222-4222-8222-222222222222',
-          cnaeCode: '0111301',
-          cnaeDescription: 'Cultivo de arroz',
-          productLabel: 'Arroz',
-          taxonomy: {
-            releaseId: null,
-            sectorConceptId: null,
-            productConceptId: null,
-          },
-          ncms: [{
-            entryId: '33333333-3333-4333-8333-333333333333',
-            code: '10062099',
-            officialCode: '1006.20.99',
-            description: 'Outros arrozes descascados',
-            isPrimary: false,
-            assignmentSource: 'MANUAL',
-          }],
-          createdAt: '2026-10-01T12:00:00.000Z',
-          updatedAt: '2026-10-01T12:00:00.000Z',
-        }],
-      }), { status: 200, headers: { 'content-type': 'application/json' } }),
-    ) as ProductApiFetch
-
-    renderProfiles(apiFetch)
-
-    expect(
-      await screen.findByRole('button', { name: 'Editar produto Arroz' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Editar produto Arroz' })).toBeInTheDocument()
+    expect(screen.getByText('Manual')).toBeInTheDocument()
     expect(screen.getByText('1006.20.99')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Remover produto Arroz' }),
-    ).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Remover NCM 1006.30.11' }))
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.url === `${cnaeNcmsUrl}/66666666-6666-4666-8666-666666666666` && call.init?.method === 'DELETE'),
+      ).toBe(true),
+    )
   })
 })

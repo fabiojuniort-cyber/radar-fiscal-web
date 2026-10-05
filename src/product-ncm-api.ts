@@ -186,3 +186,54 @@ export async function fetchPublicationNcms(
   const body = await requireJson<{ items: PublicationNcmMention[] }>(response)
   return body.items
 }
+
+/** NCM a company declares for one of its CNAEs, independent of products. */
+export type CompanyCnaeNcm = {
+  id: string
+  cnaeCode: string
+  entryId: string
+  code: string
+  officialCode: string
+  description: string
+}
+
+export async function fetchCompanyCnaeNcms(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+): Promise<CompanyCnaeNcm[]> {
+  const response = await apiFetch(`/api/v1/companies/${companyId}/cnae-ncms`, {
+    headers: tenantHeaders(tenantId, { Accept: 'application/json' }),
+  })
+  return (await requireJson<{ items: CompanyCnaeNcm[] }>(response)).items
+}
+
+export async function addCompanyCnaeNcms(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+  input: { cnaeCode: string; ncmCodes: string[] },
+): Promise<CompanyCnaeNcm[]> {
+  const response = await apiFetch(`/api/v1/companies/${companyId}/cnae-ncms`, {
+    method: 'POST',
+    headers: tenantHeaders(tenantId, {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(input),
+  })
+  return (await requireJson<{ items: CompanyCnaeNcm[] }>(response)).items
+}
+
+export async function deleteCompanyCnaeNcm(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  companyId: string,
+  ncmId: string,
+): Promise<void> {
+  const response = await apiFetch(`/api/v1/companies/${companyId}/cnae-ncms/${ncmId}`, {
+    method: 'DELETE',
+    headers: tenantHeaders(tenantId),
+  })
+  if (!response.ok) await requireJson(response)
+}

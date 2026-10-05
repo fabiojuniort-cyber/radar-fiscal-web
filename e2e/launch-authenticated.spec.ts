@@ -386,6 +386,12 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     }),
   }))
 
+  await page.route(`**/api/v1/companies/${companyId}/cnae-ncms`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ items: [] }),
+  }))
+
   await page.route(`**/api/v1/companies/${companyId}/product-profiles`, (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -595,7 +601,8 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.getByText('10.123.456-2')).toBeVisible()
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
-  await expect(page.getByRole('button', { name: 'Adicionar produto e NCM' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Adicionar produto', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Adicionar NCM', exact: true })).toBeVisible()
   const cnaeSegment = page.getByRole('combobox', { name: 'Segmento do CNAE 4683400' })
   await expect(cnaeSegment).toHaveValue('sector.wholesale')
   await cnaeSegment.selectOption('sector.agri_inputs')
