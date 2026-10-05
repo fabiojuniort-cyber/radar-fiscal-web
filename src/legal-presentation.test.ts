@@ -42,7 +42,12 @@ describe('legal presentation template registry', () => {
     expect(selectLegalPresentationTemplate({ actType: 'AJUSTE SINIEF 33/26' })?.id).toBe(
       'AJUSTE_SINIEF',
     )
-    expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })).toBeNull()
+    expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS' })?.id).toBe(
+      'PROTOCOLO_ICMS',
+    )
+    expect(selectLegalPresentationTemplate({ actType: 'PROTOCOLO ICMS 119/26' })?.id).toBe(
+      'PROTOCOLO_ICMS',
+    )
     expect(selectLegalPresentationTemplate({ actType: 'CONVENIO_ICMS_X' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE' })).toBeNull()
     expect(selectLegalPresentationTemplate({ actType: 'ATO COTEPE/MVA' })).toBeNull()
@@ -474,6 +479,153 @@ describe('legal presentation template registry', () => {
     expect(result.html).toContain('class="TabelaTitulo"')
     expect(result.html).not.toContain('AtoCotepeEmpresaTable')
     expect(result.html).not.toContain('AtoCotepeUfHeader')
+  })
+
+  it('uses the standard PROTOCOLO_ICMS contract for a current protocol', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      sourceCodes: ['dou'],
+      ementa: 'Altera protocolo anterior na forma que especifica.',
+      publishedOn: '2026-09-15',
+      html: [
+        '<p>PROTOCOLO ICMS Nº 119, DE 14 DE SETEMBRO DE 2026</p>',
+        '<p>Altera protocolo anterior na forma que especifica.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p>P R O T O C O L O</p>',
+        '<p>Cláusula primeira Fica alterada a cláusula primeira.</p>',
+      ].join(''),
+    })
+
+    expect(result.templateId).toBe('PROTOCOLO_ICMS')
+    expect(result.templateVersion).toBe('1.0.0')
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('class="TituloAcordo"')
+    expect(result.html).toContain('Publicado no DOU de 15.09.2026')
+    expect(result.html).toContain('class="AcordoTipo"')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
+  it('detects the legacy full-width ementa structure without using year or protocol number', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Altera o Protocolo ICMS 22/99, que dispõe sobre as operações realizadas pelos estabelecimentos.',
+      html: [
+        '<p>PROTOCOLO ICMS 53/02</p>',
+        '<p>Publicado no DOU de 20.12.02</p>',
+        '<p>Retificação no DOU de 05.02.03</p>',
+        '<p>Altera o Protocolo ICMS 22/99, que dispõe sobre as operações realizadas pelos estabelecimentos.</p>',
+        '<p>Os Estados do Amazonas e do Rio de Janeiro resolvem celebrar o seguinte</p>',
+        '<p>PROTOCOLO</p>',
+        '<p>Cláusula primeira</p>',
+        '<p>Passa a vigorar com a seguinte redação.</p>',
+      ].join(''),
+    })
+
+    expect(result.templateId).toBe('PROTOCOLO_ICMS')
+    expect(result.variant).toBe('legacy')
+    expect(result.html).toContain('Ementa ProtocoloEmentaLegacy')
+    expect(result.html).toContain('AcordoTipo ProtocoloTipoLegacy')
+    expect(result.html).toContain('ProtocoloTextoLegacy ProtocoloRubricaLegacy')
+  })
+
+  it('keeps consolidated history independent from the classic protocol layout', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Dispõe sobre as operações realizadas por estabelecimentos industriais.',
+      html: [
+        '<p class="DataPublicao">REVOGADO</p>',
+        '<p class="TituloAcordo">PROTOCOLO ICMS 22/99</p>',
+        '<p class="DataPublicao">Publicado no DOU de 18.11.99.</p>',
+        '<p class="DataPublicao">Alterado pelo Prot. ICMS 53/02.</p>',
+        '<p class="Ementa">Dispõe sobre as operações realizadas por estabelecimentos industriais.</p>',
+        '<p class="TextoAcordo">Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p class="AcordoTipo">P R O T O C O L O</p>',
+        '<p class="TextoAcordo">Cláusula primeira Texto vigente.</p>',
+        '<p class="Remisso">Nova redação dada pelo Prot. ICMS 61/19.</p>',
+        '<p class="RemissoAnt">Redação original.</p>',
+        '<p class="RedaoAnt">Cláusula primeira Texto original.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('consolidated')
+    expect(result.html).toContain('REVOGADO')
+    expect(result.html).toContain('class="Remisso"')
+    expect(result.html).toContain('class="RedaoAnt"')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
+  it('does not treat revocations of other acts in a current protocol as consolidated history', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Revoga protocolos que especifica sem alterar o status deste documento.',
+      html: [
+        '<p>PROTOCOLO ICMS 50, DE 15 DE DEZEMBRO DE 2017</p>',
+        '<p>Publicado no DOU de 18.12.17.</p>',
+        '<p>Revoga protocolos que especifica sem alterar o status deste documento.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p>P R O T O C O L O</p>',
+        '<p>Cláusula primeira Ficam revogados os Protocolos ICMS 1/01 e 2/02.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).toContain('Ficam revogados os Protocolos ICMS')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
+  it('does not activate legacy layout from a quoted PROTOCOLO marker', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Altera protocolo anterior na forma que especifica.',
+      html: [
+        '<p>PROTOCOLO ICMS Nº 119, DE 14 DE SETEMBRO DE 2026</p>',
+        '<p>Altera protocolo anterior na forma que especifica.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<blockquote><p>PROTOCOLO</p><p>Cláusula primeira</p></blockquote>',
+        '<p>Cláusula primeira Texto atual.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+    expect(result.html).not.toContain('ProtocoloTextoLegacy')
+  })
+
+  it('does not activate legacy layout from a plain modern marker with inline clauses', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      ementa: 'Dispõe sobre procedimento fiscal na forma que especifica.',
+      html: [
+        '<p>PROTOCOLO ICMS Nº 1, DE 2026</p>',
+        '<p>Dispõe sobre procedimento fiscal na forma que especifica.</p>',
+        '<p>Os Estados signatários resolvem celebrar o seguinte</p>',
+        '<p>PROTOCOLO</p>',
+        '<p>Cláusula primeira Texto inline moderno.</p>',
+      ].join(''),
+    })
+
+    expect(result.variant).toBe('standard')
+    expect(result.html).not.toContain('ProtocoloEmentaLegacy')
+  })
+
+  it('keeps PROTOCOLO_ICMS PRESERVED_TEXT outside the HTML path', () => {
+    const result = renderLegalPresentation({
+      ...baseInput,
+      actType: 'PROTOCOLO ICMS',
+      presentationFormat: 'PRESERVED_TEXT',
+      html: null,
+      text: '<script>alert("não executar")</script>',
+    })
+
+    expect(result.templateId).toBe('PROTOCOLO_ICMS')
+    expect(result.variant).toBe('preserved-text')
+    expect(result.html).toBeNull()
   })
 
   it('uses the standard AJUSTE_SINIEF contract for a current adjustment', () => {
