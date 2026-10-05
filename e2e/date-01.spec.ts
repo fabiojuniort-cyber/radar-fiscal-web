@@ -249,6 +249,8 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
 
   const options = page.locator('.tp-acervo-option-grid')
   await options.getByRole('button', { name: /Federal/ }).click()
+  const libraryWindowHeight = await page.locator('.tp-acervo-library-stage')
+    .evaluate((element) => getComputedStyle(element, '::before').height)
   await options.getByRole('button', { name: /DOU/ }).click()
   await options.getByRole('button', { name: /IN/ }).click()
   await options.getByRole('button', { name: /2026/ }).click()
@@ -276,6 +278,10 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
   await expect(pathRail).toContainText('Federal')
   await expect(pathRail).toContainText('75 atos')
   await expect(pathRail).toContainText('Setembro')
+  await expect(pathRail.locator('.tp-acervo-path-icon')).toHaveCount(5)
+  const finalLibraryWindowHeight = await page.locator('.tp-acervo-library-stage')
+    .evaluate((element) => getComputedStyle(element, '::before').height)
+  expect(finalLibraryWindowHeight).toBe(libraryWindowHeight)
 
   await pesquisaTab.click()
   const restoredDateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })

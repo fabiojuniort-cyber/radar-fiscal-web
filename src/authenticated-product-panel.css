@@ -2525,3 +2525,99 @@
     padding: 13px;
   }
 }
+
+
+/* DESIGN-05C — keep the Alexandria scene static while content grows. */
+.tp-acervo-library-stage {
+  background: #052a5c;
+}
+
+.tp-acervo-library-stage::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  inset: 0 0 auto;
+  height: 560px;
+  background-image:
+    linear-gradient(90deg, rgba(3, 33, 75, .44) 0%, rgba(3, 33, 75, .24) 42%, rgba(3, 33, 75, .08) 72%),
+    url('/brand/biblioteca-viva-alexandria.webp');
+  background-position: center center, center center;
+  background-size: cover, cover;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.tp-acervo-library-stage::after {
+  inset: 0 0 auto;
+  height: 560px;
+  background: linear-gradient(180deg, rgba(3, 27, 66, .05) 0%, rgba(3, 27, 66, .08) 55%, rgba(3, 27, 66, .5) 100%);
+}
+
+
+@media (max-width: 820px) {
+  .tp-acervo-library-stage::before,
+  .tp-acervo-library-stage::after {
+    height: 500px;
+  }
+
+  .tp-acervo-library-stage::before {
+    background-position: 64% center, 64% center;
+  }
+
+}
+
+@media (max-width: 560px) {
+  .tp-acervo-library-stage::before,
+  .tp-acervo-library-stage::after {
+    height: 460px;
+  }
+
+  .tp-acervo-library-stage::before {
+    background-position: 70% center, 70% center;
+  }
+
+}
+
+
+/* Iconography from the approved concept: one semantic icon per selected stage. */
+.tp-acervo-path-rail button {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-areas:
+    'icon label'
+    'icon value'
+    'icon count';
+  align-content: center;
+  column-gap: 12px;
+  row-gap: 3px;
+}
+
+.tp-acervo-path-icon {
+  grid-area: icon;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eef7ff;
+  color: #0a4a91;
+}
+
+.tp-acervo-path-rail button:last-child .tp-acervo-path-icon {
+  background: #ddf9ff;
+  color: #08769a;
+}
+
+.tp-acervo-path-rail small {
+  grid-area: label;
+}
+
+.tp-acervo-path-rail strong {
+  grid-area: value;
+}
+
+.tp-acervo-path-rail span {
+  grid-area: count;
+  width: fit-content;
+}
