@@ -266,9 +266,10 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
 
   await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('link', { name: 'Abrir legislação: IN 99/2026' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Caminho atual' })).toContainText(
-    'Federal/DOU/IN/2026/Setembro',
-  )
+  const breadcrumb = page.getByRole('navigation', { name: 'Caminho atual' })
+  for (const label of ['Federal', 'DOU', 'IN', '2026', 'Setembro']) {
+    await expect(breadcrumb.getByRole('button', { name: label, exact: true })).toBeVisible()
+  }
 
   await pesquisaTab.click()
   const restoredDateFilter = page.getByRole('region', { name: 'Filtro por data de publicação' })
