@@ -262,6 +262,36 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText(/segmento de 1 grupo/)).toBeInTheDocument()
   })
 
+  it('shows the Segmento column only in the Segmento and Produtos tables', async () => {
+    const segment = { ...view.concepts[0]!, releaseConceptId: 'rc2', code: 'sector.agribusiness', dimensionCode: 'sector', label: 'Agronegócio', groupId: null, groupCode: null, officialCodes: ['01'], aliases: [] }
+    const documents = {
+      ...view,
+      dimensions: [
+        { ...view.dimensions[0]!, id: 'd3', code: 'document', name: 'Documento', usesGroups: true, officialCodeType: null },
+        { ...view.dimensions[0]!, id: 'd2', code: 'sector', name: 'Segmento', usesGroups: false, officialCodeType: 'CNAE' },
+      ],
+      groups: [{ ...view.groups[0]!, dimensionCode: 'document', code: 'mercadorias', label: 'Mercadorias', segmentCodes: ['sector.agribusiness'] }],
+      concepts: [
+        { ...view.concepts[0]!, code: 'document.nfe', dimensionCode: 'document', label: 'NF-e', groupId: 'g1', groupCode: 'mercadorias', officialCodes: ['55'] },
+        segment,
+      ],
+    }
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/taxonomy/state') return json(state)
+      if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(documents)
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+
+    renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
+
+    expect(await screen.findByDisplayValue('NF-e')).toBeInTheDocument()
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
+    expect(headers).not.toContain('Segmento')
+    expect(headers).toContain('Grupo')
+  })
+
   it('creates the draft without requiring a reason', async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = []
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

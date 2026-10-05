@@ -90,6 +90,8 @@ function normalize(value: string): string {
     .toLocaleLowerCase('pt-BR')
 }
 
+const SEGMENT_COLUMN_DIMENSIONS = new Set(['sector', 'product'])
+
 let newRowCounter = 0
 
 /** Segmento cell: drop-down of the Segmento table, applied to the row's group. */
@@ -206,7 +208,9 @@ export function CurationGrid({
   const changedSegments = Object.entries(segmentEdits).filter(
     ([key, edit]) => JSON.stringify(edit.codes) !== JSON.stringify(baseSegmentCodes.get(key) ?? []),
   )
-  const showSegment = dimension.usesGroups && segments.length > 0
+  // Only the Segmento and Produtos tables carry the Segmento column.
+  const showSegment =
+    SEGMENT_COLUMN_DIMENSIONS.has(dimension.code) && dimension.usesGroups && segments.length > 0
   const isCnae = dimension.code === 'sector' && dimension.officialCodeType === 'CNAE'
   const [rowKind, setRowKind] = useState<'cnae' | 'general' | 'all'>(() =>
     isCnae && concepts.some(c => c.officialCodes.some(code => /^\d{7}$/.test(code))) ? 'cnae' : 'all',
