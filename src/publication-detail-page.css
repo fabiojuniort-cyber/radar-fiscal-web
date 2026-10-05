@@ -469,6 +469,10 @@
   color: #008000;
 }
 
+.publication-preserved-html[data-source-style='confaz'] p[class$='verde'] {
+  color: #008000;
+}
+
 @media (max-width: 680px) {
   .publication-preserved-html[data-source-style='confaz'] p.Ementa {
     margin-left: 18%;

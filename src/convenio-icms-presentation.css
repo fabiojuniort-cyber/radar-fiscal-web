@@ -100,6 +100,11 @@
   color: #008000;
 }
 
+/* Annex rows in a previous wording ("Tabela…verde" styles) stay green, as on the portal. */
+.publication-preserved-html[data-legal-template='CONVENIO_ICMS'] p[class$='verde'] {
+  color: #008000;
+}
+
 /* Consolidated acts (e.g. 100/97) use the portal's right-column ementa. */
 .publication-preserved-html[data-legal-template='CONVENIO_ICMS'][data-legal-variant='consolidated'] p.Ementa {
   margin: 36pt 0 18pt min(36%, 295px);
