@@ -12,7 +12,11 @@ export default defineConfig({
   plugins: [react()],
   server: { proxy: appProxy },
   preview: {
-    allowedHosts: ['web05-preview-production.up.railway.app'],
+    allowedHosts: [
+      'web05-preview-production.up.railway.app',
+      'trifaros.com.br',
+      'www.trifaros.com.br',
+    ],
     proxy: appProxy,
   },
 })

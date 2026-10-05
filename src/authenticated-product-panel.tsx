@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  HelpCircle,
   LogOut,
   Pencil,
   RefreshCw,
@@ -22,6 +23,7 @@ import {
   useMemo,
   useState,
 } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Link } from 'react-router-dom'
 
 import { BrandMark } from './brand-mark'
@@ -44,6 +46,9 @@ import {
 import {
   fetchCatalogArchive,
   fetchCatalogFacets,
+  fetchCatalogNavigation,
+  type CatalogNavigationFilters,
+  type CatalogNavigationGroup,
 } from './catalog-api'
 import { paginationTokens } from './pagination'
 import {
@@ -86,6 +91,64 @@ type OrgTab =
   | 'empresa'
   | 'estabelecimentos'
   | 'perfil'
+
+type AcervoView = 'pesquisa' | 'navegacao'
+type ArchiveNavigationRoute = 'jurisdiction' | 'actType' | 'source' | 'period'
+type ArchiveNavigationCrumb = {
+  group: CatalogNavigationGroup
+  value: string
+  label: string
+  count: number
+}
+
+const ARCHIVE_MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+const archiveNavigationGroupLabels: Record<CatalogNavigationGroup, string> = {
+  jurisdiction: 'Esfera',
+  uf: 'Estado / UF',
+  source: 'Órgão / Fonte',
+  actType: 'Tipo de legislação',
+  year: 'Ano',
+  month: 'Mês',
+}
+
+function nextArchiveNavigationGroup(
+  route: ArchiveNavigationRoute,
+  path: ArchiveNavigationCrumb[],
+): CatalogNavigationGroup | null {
+  const has = (group: CatalogNavigationGroup) => path.some((item) => item.group === group)
+  const isState = path.find((item) => item.group === 'jurisdiction')?.value === 'STATE'
+
+  const routeSteps: CatalogNavigationGroup[] =
+    route === 'jurisdiction'
+      ? ['jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'actType', 'year', 'month']
+      : route === 'actType'
+        ? ['actType', 'jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'year', 'month']
+        : route === 'source'
+          ? ['source', 'actType', 'year', 'month']
+          : ['year', 'month', 'jurisdiction', ...(isState ? ['uf' as const] : []), 'source', 'actType']
+
+  return routeSteps.find((group) => !has(group)) ?? null
+}
+
+function archiveNavigationDateRange(path: ArchiveNavigationCrumb[]) {
+  const year = Number(path.find((item) => item.group === 'year')?.value)
+  const month = Number(path.find((item) => item.group === 'month')?.value)
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null
+  }
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const monthPart = String(month).padStart(2, '0')
+  return {
+    from: `${year}-${monthPart}-01`,
+    to: `${year}-${monthPart}-${String(lastDay).padStart(2, '0')}`,
+    year,
+    month,
+  }
+}
 
 type Props = {
   identity: PanelIdentity
@@ -174,6 +237,7 @@ function readPanelState() {
       source?: string
       actType?: string
       archiveTag?: { code: string; label: string } | null
+      archiveView?: AcervoView
       orgTab?: OrgTab
       selectedCompanyId?: string
     }
@@ -427,6 +491,12 @@ export function AuthenticatedProductPanel({
   const [uf, setUf] = useState(persisted?.uf ?? '')
   const [source, setSource] = useState(persisted?.source ?? '')
   const [actType, setActType] = useState(persisted?.actType ?? '')
+  const [archiveView, setArchiveView] = useState<AcervoView>(persisted?.archiveView ?? 'pesquisa')
+  const [archiveNavigationRoute, setArchiveNavigationRoute] =
+    useState<ArchiveNavigationRoute>('jurisdiction')
+  const [archiveNavigationPath, setArchiveNavigationPath] =
+    useState<ArchiveNavigationCrumb[]>([])
+  const [archiveNavigationPage, setArchiveNavigationPage] = useState(1)
   // TAX-11: tag filter handed over from a legislation page.
   const [archiveTag, setArchiveTag] = useState<{ code: string; label: string } | null>(
     persisted?.archiveTag ?? null,
@@ -452,6 +522,7 @@ export function AuthenticatedProductPanel({
         source,
         actType,
         archiveTag,
+        archiveView,
         orgTab,
         selectedCompanyId,
       }),
@@ -467,6 +538,7 @@ export function AuthenticatedProductPanel({
     source,
     actType,
     archiveTag,
+    archiveView,
     orgTab,
     selectedCompanyId,
   ])
@@ -553,6 +625,86 @@ export function AuthenticatedProductPanel({
     retry: false,
   })
 
+  const archiveNavigationSelection = useMemo(() => {
+    const selected: Partial<Record<CatalogNavigationGroup, string>> = {}
+    for (const item of archiveNavigationPath) selected[item.group] = item.value
+    return selected
+  }, [archiveNavigationPath])
+
+  const archiveNavigationGroup = useMemo(
+    () => nextArchiveNavigationGroup(archiveNavigationRoute, archiveNavigationPath),
+    [archiveNavigationRoute, archiveNavigationPath],
+  )
+
+  const archiveNavigationFilters: Omit<CatalogNavigationFilters, 'groupBy'> = {
+    jurisdiction:
+      archiveNavigationSelection.jurisdiction === 'FEDERAL' ||
+      archiveNavigationSelection.jurisdiction === 'STATE'
+        ? archiveNavigationSelection.jurisdiction
+        : undefined,
+    uf: archiveNavigationSelection.uf,
+    source: archiveNavigationSelection.source,
+    actType: archiveNavigationSelection.actType,
+    year: archiveNavigationSelection.year
+      ? Number(archiveNavigationSelection.year)
+      : undefined,
+    month: archiveNavigationSelection.month
+      ? Number(archiveNavigationSelection.month)
+      : undefined,
+  }
+
+  const archiveNavigationOptionsQuery = useQuery({
+    queryKey: [
+      'launch',
+      'archive-navigation',
+      archiveNavigationRoute,
+      archiveNavigationGroup,
+      archiveNavigationPath.map((item) => [item.group, item.value]),
+    ],
+    queryFn: () =>
+      fetchCatalogNavigation(apiFetch, {
+        groupBy: archiveNavigationGroup ?? 'jurisdiction',
+        ...archiveNavigationFilters,
+      }),
+    enabled:
+      screen === 'acervo' &&
+      archiveView === 'navegacao' &&
+      archiveNavigationGroup !== null,
+    retry: false,
+    staleTime: CATALOG_AGGREGATE_STALE_MS,
+  })
+
+  const archiveNavigationRange = useMemo(
+    () => archiveNavigationDateRange(archiveNavigationPath),
+    [archiveNavigationPath],
+  )
+
+  const archiveNavigationArchiveQuery = useQuery({
+    queryKey: [
+      'launch',
+      'archive-navigation-results',
+      archiveNavigationPath.map((item) => [item.group, item.value]),
+      archiveNavigationPage,
+    ],
+    queryFn: () =>
+      fetchCatalogArchive(apiFetch, {
+        jurisdiction: archiveNavigationFilters.jurisdiction,
+        uf: archiveNavigationFilters.uf,
+        source: archiveNavigationFilters.source,
+        actType: archiveNavigationFilters.actType,
+        publishedFrom: archiveNavigationRange?.from,
+        publishedTo: archiveNavigationRange?.to,
+        page: archiveNavigationPage,
+        limit: 25,
+      }),
+    enabled:
+      screen === 'acervo' &&
+      archiveView === 'navegacao' &&
+      archiveNavigationGroup === null &&
+      archiveNavigationRange !== null,
+    retry: false,
+  })
+
   const adminMeQuery = useQuery({
     queryKey: ['admin', 'me'],
     queryFn: () => fetchAdminMe(apiFetch),
@@ -633,6 +785,7 @@ export function AuthenticatedProductPanel({
     event.preventDefault()
     setAppliedQuery(query.trim())
     setArchivePage(1)
+    setArchiveView('pesquisa')
     setScreen('acervo')
   }
 
@@ -825,7 +978,10 @@ export function AuthenticatedProductPanel({
         </div>
       )}
 
-      <main className={'tp-main tp-main-' + screen}>
+      <main
+        className={'tp-main tp-main-' + screen}
+        data-acervo-view={screen === 'acervo' ? archiveView : undefined}
+      >
         {screen === 'inicio' && (
           <>
             <div className="tp-welcome-row">
@@ -965,6 +1121,27 @@ export function AuthenticatedProductPanel({
 
         {screen === 'acervo' && (
           <>
+            <div className="tp-acervo-pages" role="tablist" aria-label="Modos do Acervo">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archiveView === 'pesquisa'}
+                onClick={() => setArchiveView('pesquisa')}
+              >
+                Pesquisa
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={archiveView === 'navegacao'}
+                onClick={() => setArchiveView('navegacao')}
+              >
+                Navegação
+              </button>
+            </div>
+
+            {archiveView === 'pesquisa' ? (
+              <>
             <SectionHeading
               eyebrow="Pesquisa"
               title="Acervo"
@@ -1153,6 +1330,190 @@ export function AuthenticatedProductPanel({
                 )}
               </section>
             </div>
+              </>
+            ) : (
+              <>
+                <div className="tp-acervo-navigation-heading">
+                  <SectionHeading
+                    eyebrow="Descoberta"
+                    title="Navegue pelo Acervo"
+                    description="Escolha um caminho e avance etapa por etapa até os atos, sem sair desta tela."
+                  />
+                  <Dialog.Root>
+                    <Dialog.Trigger asChild>
+                      <button className="tp-acervo-help" type="button">
+                        <HelpCircle size={15} aria-hidden="true" />
+                        Ajuda
+                      </button>
+                    </Dialog.Trigger>
+                    <Dialog.Portal>
+                      <Dialog.Overlay className="tp-acervo-help-overlay" />
+                      <Dialog.Content className="tp-acervo-help-dialog">
+                        <Dialog.Title>Farol de navegação</Dialog.Title>
+                        <Dialog.Description>
+                          A ideia é reduzir o Acervo em etapas claras. A cada clique, você troca
+                          milhares de possibilidades por um conjunto menor e mais relevante.
+                        </Dialog.Description>
+                        <ol>
+                          <li><b>1</b><span>Escolha o ponto de partida</span></li>
+                          <li><b>2</b><span>Refine por categoria</span></li>
+                          <li><b>3</b><span>Chegue à lista de documentos</span></li>
+                          <li><b>4</b><span>Abra a fonte preservada</span></li>
+                        </ol>
+                        <Dialog.Close asChild>
+                          <button type="button" className="tp-acervo-help-close">Fechar</button>
+                        </Dialog.Close>
+                      </Dialog.Content>
+                    </Dialog.Portal>
+                  </Dialog.Root>
+                </div>
+
+                <section className="tp-acervo-navigation" aria-label="Navegação por categorias">
+                  <div className="tp-acervo-gateways" role="group" aria-label="Forma de navegação">
+                    {[
+                      { key: 'jurisdiction', label: 'Esfera', hint: 'Federal ou estadual, depois órgão e legislação' },
+                      { key: 'actType', label: 'Tipo de ato', hint: 'Comece pela espécie de legislação' },
+                      { key: 'source', label: 'Órgão / Fonte', hint: 'Comece pela origem oficial' },
+                      { key: 'period', label: 'Período', hint: 'Comece por ano e mês de publicação' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={archiveNavigationRoute === item.key ? 'is-active' : undefined}
+                        aria-pressed={archiveNavigationRoute === item.key}
+                        onClick={() => {
+                          setArchiveNavigationRoute(item.key as ArchiveNavigationRoute)
+                          setArchiveNavigationPath([])
+                          setArchiveNavigationPage(1)
+                        }}
+                      >
+                        <strong>{item.label}</strong>
+                        <span>{item.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="tp-acervo-browse-options">
+                    <nav className="tp-acervo-breadcrumb" aria-label="Caminho atual">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setArchiveNavigationPath([])
+                          setArchiveNavigationPage(1)
+                        }}
+                      >
+                        Início
+                      </button>
+                      {archiveNavigationPath.map((item, index) => (
+                        <span key={item.group}>
+                          <i aria-hidden="true">/</i>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setArchiveNavigationPath(archiveNavigationPath.slice(0, index + 1))
+                              setArchiveNavigationPage(1)
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        </span>
+                      ))}
+                    </nav>
+
+                    {archiveNavigationGroup !== null ? (
+                      <>
+                        <div className="tp-acervo-browse-title">
+                          <span>Agora escolha</span>
+                          <strong>{archiveNavigationGroupLabels[archiveNavigationGroup]}</strong>
+                        </div>
+                        {archiveNavigationOptionsQuery.isPending ? (
+                          <LoadingState text="Carregando opções…" />
+                        ) : archiveNavigationOptionsQuery.isError ? (
+                          <ErrorState title="Não foi possível carregar esta etapa" />
+                        ) : archiveNavigationOptionsQuery.data?.items.length === 0 ? (
+                          <EmptyState title="Nenhuma opção encontrada">
+                            Não há atos neste caminho. Volte uma etapa e tente outro recorte.
+                          </EmptyState>
+                        ) : (
+                          <div className="tp-acervo-option-grid">
+                            {(archiveNavigationOptionsQuery.data?.items ?? []).map((item) => {
+                              const displayLabel = archiveNavigationGroup === 'month'
+                                ? ARCHIVE_MONTHS[Number(item.value) - 1] ?? item.label
+                                : item.label
+                              return (
+                                <button
+                                  type="button"
+                                  key={item.value}
+                                  onClick={() => {
+                                    setArchiveNavigationPath((current) => [
+                                      ...current,
+                                      {
+                                        group: archiveNavigationGroup,
+                                        value: item.value,
+                                        label: displayLabel,
+                                        count: item.count,
+                                      },
+                                    ])
+                                    setArchiveNavigationPage(1)
+                                  }}
+                                >
+                                  <strong>{displayLabel}</strong>
+                                  <span>
+                                    {item.count.toLocaleString('pt-BR')}{' '}
+                                    {item.count === 1 ? 'ato' : 'atos'}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="tp-acervo-navigation-results">
+                        <div className="tp-acervo-browse-title">
+                          <span>Resultado do caminho</span>
+                          <strong>
+                            {archiveNavigationRange
+                              ? `${ARCHIVE_MONTHS[archiveNavigationRange.month - 1]} de ${archiveNavigationRange.year}`
+                              : 'Atos encontrados'}
+                          </strong>
+                        </div>
+                        {archiveNavigationArchiveQuery.isPending ? (
+                          <LoadingState text="Carregando atos…" />
+                        ) : archiveNavigationArchiveQuery.isError ? (
+                          <ErrorState title="Não foi possível carregar os atos" />
+                        ) : (
+                          <>
+                            <PublicationList items={archiveNavigationArchiveQuery.data?.items ?? []} />
+                            <div className="tp-acervo-navigation-pagination">
+                              <button
+                                type="button"
+                                disabled={archiveNavigationPage <= 1}
+                                onClick={() => setArchiveNavigationPage((page) => Math.max(1, page - 1))}
+                              >
+                                Página anterior
+                              </button>
+                              <span>
+                                Página {archiveNavigationPage} ·{' '}
+                                {(archiveNavigationArchiveQuery.data?.totalItems ?? 0).toLocaleString('pt-BR')}{' '}
+                                atos
+                              </span>
+                              <button
+                                type="button"
+                                disabled={!archiveNavigationArchiveQuery.data?.hasMore}
+                                onClick={() => setArchiveNavigationPage((page) => page + 1)}
+                              >
+                                Próxima página
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
           </>
         )}
 

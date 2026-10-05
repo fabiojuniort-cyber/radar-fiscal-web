@@ -241,6 +241,7 @@ function AuthenticatedPublicationDetail({
     <PublicationDetailPage
       publicationId={publicationId}
       apiFetch={apiFetch}
+      {...(me.memberships[0] ? { tenantId: me.memberships[0].tenantId } : {})}
     />
   )
 }

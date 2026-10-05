@@ -33,6 +33,8 @@ export function reasonText(tag: PublicationTag): string {
       return `Encontrado no texto: “${reason.term ?? tag.label}”` + (reason.excerpt ? ` — ${reason.excerpt}` : '')
     case 'SYNONYM':
       return `Sinônimo encontrado: “${reason.term ?? ''}”` + (reason.excerpt ? ` — ${reason.excerpt}` : '')
+    case 'PRODUCTS':
+      return reason.excerpt ?? `Pelos produtos citados: ${reason.term ?? ''}`
     case 'NCM':
       return reason.excerpt ?? `NCM ${reason.term ?? ''} citado`
     case 'CCLASSTRIB':
