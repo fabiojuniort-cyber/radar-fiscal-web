@@ -76,6 +76,9 @@ jobs:
 
       - name: Upload WEB-14 browser evidence
         if: always()
+        # Diagnostic evidence only: a full GitHub artifact quota must not
+        # turn an otherwise valid frontend build into a failed release gate.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web14-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
