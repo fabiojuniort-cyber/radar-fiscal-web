@@ -623,16 +623,6 @@
   color: #a12626;
 }
 
-.tp-product-manual-tag {
-  width: fit-content;
-  border-radius: 999px;
-  background: #fff6e5;
-  color: #8a5300;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 7px;
-}
-
 .tp-product-ncm-profiles .tp-product-field select {
   min-height: 40px;
   border: 1px solid var(--tp-border);

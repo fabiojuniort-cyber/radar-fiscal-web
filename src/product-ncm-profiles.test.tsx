@@ -206,13 +206,20 @@ describe('ProductNcmProfiles', () => {
       cnaeNcms: [{ id: '66666666-6666-4666-8666-666666666666', cnaeCode: '0111301', entryId: riceNcm.entryId, code: riceNcm.code, officialCode: riceNcm.officialCode, description: riceNcm.description }],
     })
 
-    expect(await screen.findByRole('button', { name: 'Editar produto Arroz' })).toBeInTheDocument()
-    expect(screen.getByText('Manual')).toBeInTheDocument()
+    // Products show as chips with an x, like the NCMs.
+    expect(await screen.findByRole('button', { name: 'Remover produto Arroz' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Editar/ })).not.toBeInTheDocument()
     expect(screen.getByText('1006.20.99')).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Remover NCM 1006.30.11' }))
     await waitFor(() =>
       expect(
         calls.some((call) => call.url === `${cnaeNcmsUrl}/66666666-6666-4666-8666-666666666666` && call.init?.method === 'DELETE'),
+      ).toBe(true),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Remover produto Arroz' }))
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.url === `${profilesUrl}/44444444-4444-4444-8444-444444444444` && call.init?.method === 'DELETE'),
       ).toBe(true),
     )
   })

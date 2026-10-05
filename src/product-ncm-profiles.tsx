@@ -3,7 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import {
@@ -542,34 +542,25 @@ export function ProductNcmProfiles({
                 {profiles.length === 0 ? (
                   <span className="tp-parameter-empty">Nenhum produto</span>
                 ) : (
-                  profiles.map((profile) => (
-                    <div className="tp-product-profile-item" key={profile.id}>
-                      <strong>{profile.productLabel}</strong>
-                      {!profile.productConceptCode && <small className="tp-product-manual-tag">Manual</small>}
-                      <span className="tp-product-profile-actions">
+                  <div className="tp-ncm-chip-list">
+                    {profiles.map((profile) => (
+                      <span
+                        className="tp-ncm-chip"
+                        key={profile.id}
+                        title={profile.productConceptCode ? 'Da tabela de Produtos' : 'Produto manual'}
+                      >
+                        {profile.productLabel}
                         <button
                           type="button"
-                          title={'Editar ' + profile.productLabel}
-                          aria-label={'Editar produto ' + profile.productLabel}
-                          onClick={() => openProduct(cnae, profile)}
-                        >
-                          <Pencil size={14} />
-                          Editar
-                        </button>
-                        <button
-                          className="is-danger"
-                          type="button"
-                          title={'Remover ' + profile.productLabel}
                           aria-label={'Remover produto ' + profile.productLabel}
                           disabled={deleteProduct.isPending}
                           onClick={() => deleteProduct.mutate(profile.id)}
                         >
-                          <Trash2 size={14} />
-                          Remover
+                          <X size={12} />
                         </button>
                       </span>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
                 <button className="tp-product-add-button" type="button" onClick={() => openProduct(cnae)}>
                   <Plus size={14} />
