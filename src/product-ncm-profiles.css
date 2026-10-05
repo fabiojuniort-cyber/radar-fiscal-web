@@ -542,6 +542,58 @@
   font-size: 12px;
 }
 
+/* Product and NCM editor opens as a popup over the page. */
+.tp-product-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 31, 82, 0.46);
+  backdrop-filter: blur(4px);
+}
+
+.tp-product-ncm-profiles .tp-product-dialog {
+  width: min(100%, 720px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  margin: 0;
+  box-shadow: 0 24px 70px rgba(5, 31, 77, 0.24);
+}
+
+.tp-product-mode {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.tp-product-ncm-profiles .tp-product-mode button {
+  min-height: 0;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--tp-copy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.tp-product-ncm-profiles .tp-product-mode button[aria-selected='true'] {
+  border-bottom-color: var(--tp-blue);
+  color: var(--tp-navy);
+}
+
+.tp-product-field > small {
+  color: var(--tp-copy);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 @media (max-width: 760px) {
   .tp-product-ncm-editor-head,
   .tp-product-ncm-editor-actions {

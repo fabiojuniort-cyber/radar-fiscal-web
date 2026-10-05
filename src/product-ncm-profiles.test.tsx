@@ -158,6 +158,9 @@ describe('ProductNcmProfiles', () => {
       screen.getByRole('button', { name: 'Adicionar produto e NCM' }),
     )
 
+    // The editor opens as a popup over the page.
+    expect(screen.getByRole('dialog', { name: 'Adicionar produto e NCM' })).toBeInTheDocument()
+
     // Products come from the Produtos table, the CNAE's segment first.
     const options = screen.getByRole('listbox', { name: 'Produtos disponíveis' })
     expect(options).toHaveTextContent(/Do segmento Agropecuária.*Arroz beneficiado.*Outros produtos.*Cerveja/)
@@ -201,6 +204,53 @@ describe('ProductNcmProfiles', () => {
       productConceptCode: 'product.arroz_beneficiado',
       ncmCodes: ['10063011'],
     })
+  })
+
+  it('adds a manual product with an NCM from the official catalog, in the popup', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ url, init })
+      if (url.startsWith('/api/v1/ncm?')) {
+        return new Response(JSON.stringify({
+          items: [{
+            entryId: '55555555-5555-4555-8555-555555555555',
+            code: '31059090',
+            officialCode: '3105.90.90',
+            description: 'Outros adubos ou fertilizantes',
+          }],
+          edition: null,
+        }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      if (url.endsWith('/product-profiles') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ error: 'stop_here' }), { status: 500, headers: { 'content-type': 'application/json' } })
+      }
+      if (url.endsWith('/product-profiles')) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    }) as ProductApiFetch
+
+    renderProfiles(apiFetch)
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar produto e NCM' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Produto novo (manual)' }))
+    fireEvent.change(screen.getByLabelText(/Nome do produto/), { target: { value: 'Fertilizante foliar próprio' } })
+    fireEvent.change(screen.getByLabelText('Pesquisar NCM oficial'), { target: { value: '310590' } })
+    fireEvent.click(await screen.findByRole('checkbox', { name: /3105\.90\.90/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar produto e NCM' }))
+
+    await waitFor(() => expect(calls.some((call) => call.init?.method === 'POST')).toBe(true))
+    const post = calls.find((call) => call.init?.method === 'POST')!
+    expect(JSON.parse(String(post.init!.body))).toEqual({
+      cnaeCode: '0111301',
+      productLabel: 'Fertilizante foliar próprio',
+      productConceptCode: null,
+      ncmCodes: ['31059090'],
+    })
+
+    // Escape closes the popup.
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('renders existing products and NCMs for the linked CNAE', async () => {
