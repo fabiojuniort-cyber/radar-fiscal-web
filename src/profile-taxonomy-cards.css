@@ -1,0 +1,157 @@
+/* Tax Profile cards: selected tags on top, options to add below. */
+.tp-profile-selected,
+.tp-profile-browse {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tp-profile-selected {
+  border: 1px solid var(--tp-border);
+  border-radius: 11px;
+  background: var(--tp-pale);
+  padding: 9px 10px;
+}
+
+.tp-profile-selected > small,
+.tp-profile-browse > small {
+  color: var(--tp-copy);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.tp-profile-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.tp-profile-selected-empty {
+  color: var(--tp-copy);
+  font-size: 11px;
+}
+
+.tp-profile-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--tp-blue);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--tp-navy);
+  padding: 4px 6px 4px 10px;
+}
+
+.tp-profile-tag > span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.tp-profile-tag b {
+  font-size: 11px;
+}
+
+.tp-profile-tag small {
+  color: #1f7a3f;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.tp-profile-tag.is-derived {
+  border-color: #8fcfa6;
+  background: #f1fbf4;
+}
+
+.tp-profile-tag:not(:has(button)) {
+  padding-right: 10px;
+}
+
+.tp-app .tp-profile-tag button {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none !important;
+  transform: none !important;
+  color: var(--tp-copy);
+  padding: 0;
+  cursor: pointer;
+}
+
+.tp-app .tp-profile-tag button:hover {
+  background: #fde8e8;
+  color: #a12626;
+}
+
+.tp-profile-browse > input,
+.tp-profile-search {
+  min-height: 36px;
+}
+
+.tp-profile-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #b8cde5;
+  border-radius: 9px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--tp-copy);
+}
+
+.tp-app .tp-profile-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.tp-app .tp-profile-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--tp-border);
+  border-radius: 9px;
+  background: var(--tp-bg);
+  box-shadow: none !important;
+  transform: none !important;
+  color: var(--tp-navy);
+  padding: 6px 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tp-app .tp-profile-option:hover {
+  border-color: var(--tp-blue);
+}
+
+.tp-profile-option > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-profile-option b {
+  font-size: 11px;
+}
+
+.tp-profile-option small {
+  color: var(--tp-copy);
+  font-size: 9px;
+}
+
+.tp-profile-option svg {
+  color: var(--tp-blue);
+  flex: 0 0 auto;
+}

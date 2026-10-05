@@ -182,12 +182,14 @@ export type TaxProfile = {
     documents?: string[]
     obligations?: string[]
     keywords?: string[]
+    /** NCMs of the card NCM, compared with the NCMs that legislation mentions. */
+    ncmCodes?: string[]
     taxonomy?: {
       releaseId: string
       releaseVersion: string
       conceptCodes: string[]
-      /** Segment of each company CNAE (suggested by the CNAE, user-editable). */
-      cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }>
+      /** Segment of each company CNAE (suggested by the CNAE, user-editable; null = removed). */
+      cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string | null }>
     } | null
   }
   validFrom: string | null
@@ -673,11 +675,12 @@ export async function saveTaxProfile(
       documents: string[]
       obligations: string[]
       keywords: string[]
+      ncmCodes: string[]
       taxonomy: {
         releaseId: string
         releaseVersion: string
         conceptCodes: string[]
-        cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }>
+        cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string | null }>
       } | null
     }
   },
