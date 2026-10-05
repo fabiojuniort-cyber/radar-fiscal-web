@@ -192,7 +192,18 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText(/Salvo no rascunho: 1 novos · 1 alterados/)).toBeInTheDocument()
   })
 
-  it('shows the segment of each item first, taken from its group', async () => {
+  it('links the Segmento column to the Segmento table: drop-down per group, saved with the grid', async () => {
+    const sectorConcept = (code: string, label: string, officialCodes: string[], releaseConceptId: string) => ({
+      ...view.concepts[0]!,
+      releaseConceptId,
+      code,
+      dimensionCode: 'sector',
+      label,
+      groupId: null,
+      groupCode: null,
+      officialCodes,
+      aliases: [],
+    })
     const withSegment = {
       ...view,
       dimensions: [
@@ -206,30 +217,28 @@ describe('Curadoria da taxonomia', () => {
           detailOrder: 1,
           usesGroups: false,
           officialCodeType: 'CNAE',
-          conceptCount: 1,
+          conceptCount: 3,
         },
       ],
       groups: [{ ...view.groups[0]!, segmentCodes: ['sector.agribusiness'] }],
       concepts: [
         ...view.concepts,
-        {
-          ...view.concepts[0]!,
-          releaseConceptId: 'rc2',
-          code: 'sector.agribusiness',
-          dimensionCode: 'sector',
-          label: 'Agronegócio',
-          groupId: null,
-          groupCode: null,
-          officialCodes: ['01'],
-          aliases: [],
-        },
+        sectorConcept('sector.agribusiness', 'Agronegócio', ['01'], 'rc2'),
+        sectorConcept('sector.trifaros_agro', 'Agropecuária, pesca e insumos agrícolas', [], 'rc3'),
+        // A CNAE activity is not a segment: never offered.
+        sectorConcept('sector.cultivo_de_arroz', 'Cultivo de arroz', ['0111301'], 'rc4'),
       ],
     }
-    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      calls.push({ url, ...(init ? { init } : {}) })
       if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(withSegment)
+      if (url.endsWith('/dimensions/product/rows')) {
+        return json({ created: [], updated: 0, retired: 0, groupsCreated: 0, groupsUpdated: 1 })
+      }
       return json({ error: 'not_found' }, 404)
     }) as unknown as ProductApiFetch
 
@@ -239,7 +248,18 @@ describe('Curadoria da taxonomia', () => {
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
     const row = screen.getByDisplayValue('Ureia').closest('tr')!
-    expect(within(row).getByText('Agronegócio')).toHaveClass('is-segment')
+    const select = within(row).getByRole('combobox', { name: 'Segmento' })
+    expect(select).toHaveValue('sector.agribusiness')
+    const offered = within(select).getAllByRole('option').map((option) => option.textContent)
+    expect(offered).toEqual(['— sem segmento —', 'Agronegócio', 'Agropecuária, pesca e insumos agrícolas'])
+
+    fireEvent.change(select, { target: { value: 'sector.trifaros_agro' } })
+    fireEvent.click(screen.getByRole('button', { name: /Salvar alterações \(1\)/ }))
+
+    await waitFor(() => expect(calls.some((call) => call.url.endsWith('/dimensions/product/rows'))).toBe(true))
+    const body = JSON.parse(String(calls.find((call) => call.url.endsWith('/rows'))!.init!.body))
+    expect(body.groupSegments).toEqual([{ group: 'Fertilizantes e corretivos', segmentCodes: ['sector.trifaros_agro'] }])
+    expect(await screen.findByText(/segmento de 1 grupo/)).toBeInTheDocument()
   })
 
   it('creates the draft without requiring a reason', async () => {

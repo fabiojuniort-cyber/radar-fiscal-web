@@ -49,7 +49,8 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   await expect(table.getByLabel('CNAE', { exact: true })).toHaveValue('0111-3/01')
   await expect(table.getByLabel('Descrição do CNAE', { exact: true })).toHaveValue('Cultivo de arroz')
   await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Agropecuária / Produção')
-  await expect(table.getByText('Agropecuária', { exact: true })).toBeVisible()
+  // Segmento column: drop-down of the Segmento table, showing the subsegment's segment.
+  await expect(table.getByRole('combobox', { name: 'Segmento' }).locator('option:checked')).toHaveText('Agropecuária')
   await expect(table.getByText('rizicultura', { exact: true })).toBeVisible()
   await expect(page.getByText('Desligada', { exact: true })).toBeVisible()
 })

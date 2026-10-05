@@ -430,6 +430,21 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           { code: 'obligation.efd', label: 'EFD', definition: 'Escrituração Fiscal Digital.' },
         ] },
       ],
+      segments: [
+        { code: 'sector.wholesale', label: 'Comércio atacadista' },
+        { code: 'sector.agri_inputs', label: 'Insumos agrícolas' },
+      ],
+      products: [],
+    }),
+  }))
+
+  // Segment of each company CNAE, from the Segmento table.
+  await page.route(`**/api/v1/companies/${companyId}/taxonomy-suggestions`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      segments: [],
+      cnaes: [{ cnaeCode: '4683400', isPrimary: true, segments: [{ code: 'sector.wholesale', label: 'Comércio atacadista' }] }],
     }),
   }))
 
@@ -438,10 +453,16 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       profileSaved = true
       const payload = route.request().postDataJSON() as {
         taxRegime: string
-        personalization: { taxonomy: { conceptCodes: string[] } | null }
+        personalization: {
+          taxonomy: { conceptCodes: string[]; cnaeSegments?: Array<{ cnaeCode: string; segmentCode: string }> } | null
+        }
       }
       expect(payload.taxRegime).toBe('LUCRO_REAL')
       expect(payload.personalization.taxonomy?.conceptCodes).toContain('tax.icms')
+      // The user changed the CNAE's segment in the CNAE table.
+      expect(payload.personalization.taxonomy?.cnaeSegments).toEqual([
+        { cnaeCode: '4683400', segmentCode: 'sector.agri_inputs' },
+      ])
     }
 
     await route.fulfill({
@@ -575,6 +596,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.getByRole('tab', { name: /Perfil tributário/ }).click()
   await expect(page.getByRole('button', { name: 'Adicionar produto e NCM' })).toBeVisible()
+  const cnaeSegment = page.getByRole('combobox', { name: 'Segmento do CNAE 4683400' })
+  await expect(cnaeSegment).toHaveValue('sector.wholesale')
+  await cnaeSegment.selectOption('sector.agri_inputs')
   await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
