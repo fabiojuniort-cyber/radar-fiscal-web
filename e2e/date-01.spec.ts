@@ -228,6 +228,8 @@ test('DESIGN-03: Navegação hierárquica fica no Acervo e preserva o filtro de 
   await expect(navegacaoTab).toHaveAttribute('aria-selected', 'true')
   await expect(dateFilter).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Navegue pelo Acervo' })).toBeVisible()
+  await expect(page.getByText('A Biblioteca Tributária', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Conhecimento organizado para ser encontrado/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Ajuda', exact: true }).click()
   const help = page.getByRole('dialog')
