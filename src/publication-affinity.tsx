@@ -37,6 +37,9 @@ const DIMENSION_LABELS: Record<string, string> = {
   document: 'Documento',
   obligation: 'Obrigação',
   theme: 'Tema',
+  ncm: 'NCM',
+  product_text: 'Produto',
+  keyword: 'Palavra-chave',
 }
 
 function readPanelCompanyId(): string {
@@ -173,6 +176,7 @@ export function PublicationAffinityBadge({
                 {match.via === 'PRODUCT_GROUP' && (
                   <small> (grupo de um produto do perfil)</small>
                 )}
+                {match.via === 'TEXT' && <small> (citado no texto do ato)</small>}
               </span>
               <span className="publication-affinity-weight" title="Peso na afinidade">
                 +{match.weight}

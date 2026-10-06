@@ -88,3 +88,20 @@ describe('Afinidade da legislação com a empresa', () => {
     )
   })
 })
+
+describe('Afinidade por texto do perfil', () => {
+  it('shows products and keywords found in the text of the act', async () => {
+    renderBadge({
+      c1: {
+        company: { id: 'c1', name: 'Agro Um S.A.' },
+        status: 'OK',
+        level: 'LOW',
+        score: 2,
+        matches: [{ code: 'text:product:martelete', label: 'Martelete', dimensionCode: 'product_text', weight: 2, via: 'TEXT' }],
+      },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: /Por quê/ }))
+    const list = screen.getByRole('list', { name: 'Tags em comum com o perfil' })
+    expect(list).toHaveTextContent(/Produto.*Martelete.*citado no texto do ato.*\+2/)
+  })
+})

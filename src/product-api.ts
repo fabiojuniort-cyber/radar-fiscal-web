@@ -830,7 +830,7 @@ export type PublicationAffinity = {
     label: string
     dimensionCode: string
     weight: number
-    via: 'SAME_ITEM' | 'PRODUCT_GROUP'
+    via: 'SAME_ITEM' | 'PRODUCT_GROUP' | 'TEXT'
   }>
 }
 
