@@ -113,6 +113,7 @@ export function CollectionFilterAdminPage({
     structuredClone(EMPTY_DRAFT),
   )
   const [loadedPolicyId, setLoadedPolicyId] = useState<string | null>(null)
+  const [newTypeCanonical, setNewTypeCanonical] = useState<Record<string, string>>({})
 
   const meQuery = useQuery({
     queryKey: ['admin', 'me'],
@@ -203,10 +204,18 @@ export function CollectionFilterAdminPage({
     mutationFn: ({
       id,
       status,
+      canonicalType,
     }: {
       id: string
-      status: 'RESOLVED' | 'IGNORED'
-    }) => resolveCollectionFilterNewType(apiFetch, id, status),
+      status: 'RESOLVED' | 'MERGED'
+      canonicalType: string
+    }) =>
+      resolveCollectionFilterNewType(
+        apiFetch,
+        id,
+        status,
+        canonicalType,
+      ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -382,6 +391,63 @@ export function CollectionFilterAdminPage({
               />
             </label>
             <label>
+              Peso título
+              <input
+                aria-label="Peso título"
+                type="number"
+                min={1}
+                max={20}
+                value={draft.locationWeights.title}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    locationWeights: {
+                      ...current.locationWeights,
+                      title: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Peso ementa
+              <input
+                aria-label="Peso ementa"
+                type="number"
+                min={1}
+                max={20}
+                value={draft.locationWeights.summary}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    locationWeights: {
+                      ...current.locationWeights,
+                      summary: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Peso corpo
+              <input
+                aria-label="Peso corpo"
+                type="number"
+                min={1}
+                max={20}
+                value={draft.locationWeights.body}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    locationWeights: {
+                      ...current.locationWeights,
+                      body: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label>
               Notas da revisão
               <input
                 value={draft.changeNotes ?? ''}
@@ -449,30 +515,58 @@ export function CollectionFilterAdminPage({
                         {Number(item.occurrence_count)} ocorrência(s)
                       </span>
                     </div>
-                    <div className="cf-row-actions">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          resolveType.mutate({
-                            id: item.id,
-                            status: 'RESOLVED',
-                          })
+                    <div className="cf-new-type-resolution">
+                      <input
+                        aria-label={`Tipo canônico para ${item.sample_raw_type}`}
+                        value={
+                          newTypeCanonical[item.id] ??
+                          item.normalized_type
                         }
-                      >
-                        Classificado
-                      </button>
-                      <button
-                        type="button"
-                        className="is-danger-quiet"
-                        onClick={() =>
-                          resolveType.mutate({
-                            id: item.id,
-                            status: 'IGNORED',
-                          })
+                        onChange={(event) =>
+                          setNewTypeCanonical((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))
                         }
-                      >
-                        Ignorar
-                      </button>
+                      />
+                      <div className="cf-row-actions">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            resolveType.mutate({
+                              id: item.id,
+                              status: 'RESOLVED',
+                              canonicalType:
+                                newTypeCanonical[item.id] ??
+                                item.normalized_type,
+                            })
+                          }
+                        >
+                          Classificar
+                        </button>
+                        <button
+                          type="button"
+                          className="is-secondary-quiet"
+                          onClick={() =>
+                            resolveType.mutate({
+                              id: item.id,
+                              status: 'MERGED',
+                              canonicalType:
+                                newTypeCanonical[item.id] ??
+                                item.normalized_type,
+                            })
+                          }
+                        >
+                          Mesclar
+                        </button>
+                        <button
+                          type="button"
+                          className="is-secondary-quiet"
+                          onClick={() => setTab('terms')}
+                        >
+                          Criar termo
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))}
