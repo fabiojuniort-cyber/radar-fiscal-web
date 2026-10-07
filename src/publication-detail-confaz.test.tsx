@@ -228,8 +228,8 @@ describe('Marcações no texto da legislação', () => {
     expect(screen.getByText(/1 código marcado em verde no texto/)).toBeInTheDocument()
     // Product/item intelligence is presented as one summary tag; individual
     // product tags stay internal for affinity/highlights and curator details.
-    expect(screen.getByText('Produtos / NCMs')).toBeInTheDocument()
-    expect(screen.getByText('2 itens')).toBeInTheDocument()
+    expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
+    expect(await screen.findByText('2 itens')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Tubos plásticos/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Fertilizantes/ })).not.toBeInTheDocument()
 
