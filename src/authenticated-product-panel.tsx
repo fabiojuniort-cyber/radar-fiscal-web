@@ -970,6 +970,10 @@ export function AuthenticatedProductPanel({
                         <ShieldCheck size={16} />
                         Administradores
                       </Link>
+                      <Link to="/admin/filtro-coleta" className="tp-user-admin-link">
+                        <ShieldCheck size={16} />
+                        Filtro de Coleta
+                      </Link>
                     </>
                   )}
                   <button type="button" onClick={() => void onExit()}>
