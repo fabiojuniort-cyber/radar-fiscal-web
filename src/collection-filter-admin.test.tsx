@@ -140,8 +140,17 @@ describe('Filtro de Coleta administrativo', () => {
           })
         }
         if (url.endsWith(`/new-types/${newTypeId}/resolve`)) {
+          const body = JSON.parse(String(init?.body))
+          expect(body).toEqual({
+            status: 'RESOLVED',
+            canonicalType: 'ATO NOVO',
+          })
           resolved = true
-          return json({ id: newTypeId, status: 'RESOLVED' })
+          return json({
+            id: newTypeId,
+            status: 'RESOLVED',
+            canonicalType: 'ATO NOVO',
+          })
         }
         return json({ error: 'unexpected' }, 500)
       },
@@ -188,7 +197,7 @@ describe('Filtro de Coleta administrativo', () => {
     ).toBeInTheDocument()
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Classificado' }),
+      screen.getByRole('button', { name: 'Classificar' }),
     )
 
     await waitFor(() => {
