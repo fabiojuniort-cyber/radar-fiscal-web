@@ -15,6 +15,10 @@ Alertas mostram taxa de descarte, baseline, limiar, contagens, status, datas e e
 
 ## Validação
 
+### Isolamento de sessão
+
+A revisão independente identificou P1 no cache compartilhado após admin sair e usuário comum entrar na mesma aba. A página inteira (gate, política, simulação e trilhas) agora usa QueryClient próprio por `user.id:sessionRevision`, sem reutilizar autorização ou dados de outra sessão. O conteúdo é remontado e o cliente anterior cancelado/limpo. Login, logout e perda/troca de identidade limpam também o cache global. Respostas de API e refresh iniciadas em revisão anterior não são aceitas na sessão nova. Há regressões com AuthSessionProvider real, cache de 60 segundos e StrictMode para troca admin/membro, retorno do mesmo admin, resposta operacional tardia e refresh antigo concluído após login novo.
+
 - npm ci com o lockfile incorporado por CI-COST-01, sem alterar dependências.
 - Typecheck, 179 testes unitários e build local aprovados.
 - 9 regressões adicionais: contratos, acesso, carregamento sob demanda, sentinela/paginação, reset do filtro, erro/vazio/recuperação, URL não executável, percentuais e limite de alertas.

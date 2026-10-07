@@ -234,7 +234,7 @@ function AuthenticatedPlatformAdministrators() {
 }
 
 function AuthenticatedCollectionFilterAdmin() {
-  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+  const { me, checked, ensureSession, apiFetch, sessionRevision } = useAuthSession()
 
   useEffect(() => {
     if (!me && !checked) void ensureSession()
@@ -244,7 +244,7 @@ function AuthenticatedCollectionFilterAdmin() {
     return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
   }
 
-  return <CollectionFilterAdminPage apiFetch={apiFetch} />
+  return <CollectionFilterAdminPage sessionKey={`${me.user.id}:${sessionRevision}`} apiFetch={apiFetch} />
 }
 
 function AuthenticatedPublicationDetail({
