@@ -87,6 +87,51 @@ function state() {
 }
 
 describe('Filtro de Coleta administrativo', () => {
+  it('preserva os critérios aprovados não padrão ao criar um rascunho com os campos ocultos', async () => {
+    const current = state()
+    current.policies[0].status = 'APPROVED'
+    Object.assign(current.documents[policyId], { status:'APPROVED', contextWindowWords:27, weakScoreThreshold:8, locationWeights:{title:7,summary:5,body:2} })
+    let saved: Record<string, unknown> | undefined
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if(url === '/api/v1/admin/me') return json(adminMe)
+      if(url.endsWith('/state')) return json(current)
+      if(url.endsWith('/draft') && init?.method === 'PUT') { saved = JSON.parse(String(init.body)); return json({policyId,version:2,revision:1}) }
+      if(url.includes('/facets')) return json({sources:[{code:'dou',name:'DOU'}],actTypes:['PORTARIA'],ufs:[]})
+      return json({items:[]})
+    }) as unknown as ProductApiFetch
+    renderPage(apiFetch)
+    await screen.findByRole('cell', {name:'PORTARIA'})
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByPlaceholderText('O que mudou nesta revisão?'), {target:{value:'Só interface'}})
+    fireEvent.click(screen.getByRole('button',{name:'Salvar rascunho'}))
+    await waitFor(()=>expect(saved).toMatchObject({contextWindowWords:27,weakScoreThreshold:8,locationWeights:{title:7,summary:5,body:2},changeNotes:'Só interface'}))
+    expect(saved?.rules).toEqual(current.documents[policyId].rules)
+    expect(saved?.terms).toEqual(current.documents[policyId].terms)
+  })
+
+  it('não permite salvar antes de carregar a política nem depois de erro de leitura', async () => {
+    let finish!: (response:Response)=>void
+    const pending=new Promise<Response>(resolve=>{finish=resolve})
+    const writes:string[]=[]
+    const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      const url=String(input)
+      if(init?.method && init.method!=='GET') writes.push(url)
+      if(url==='/api/v1/admin/me')return json(adminMe)
+      if(url.endsWith('/state'))return pending
+      return json({items:[]})
+    }) as unknown as ProductApiFetch
+    renderPage(apiFetch)
+    await screen.findByText('Carregando a política…')
+    const save=screen.getByRole('button',{name:'Salvar rascunho'})
+    expect(save).toBeDisabled();fireEvent.click(save);expect(writes).toEqual([])
+    finish(json({error:'unavailable'},503))
+    await screen.findByText('Não foi possível carregar a política. Tente novamente antes de editar.')
+    expect(screen.getByRole('button',{name:'Salvar rascunho'})).toBeDisabled()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(writes).toEqual([])
+  })
+
   it('bloqueia usuário sem PLATFORM_ADMIN', async () => {
     const apiFetch = vi.fn(async () =>
       json({ ...adminMe, platformAdmin: false }),
@@ -159,7 +204,7 @@ describe('Filtro de Coleta administrativo', () => {
     renderPage(apiFetch)
 
     expect(
-      await screen.findByText('PORTARIA'),
+      await screen.findByRole('cell', { name: 'PORTARIA' }),
     ).toBeInTheDocument()
     expect(
       screen.getByLabelText('Modo PORTARIA'),
@@ -200,6 +245,9 @@ describe('Filtro de Coleta administrativo', () => {
       screen.getByRole('button', { name: 'Classificar' }),
     )
 
+    expect(screen.getByRole('dialog', { name: 'Classificar novo tipo' })).toBeInTheDocument()
+    expect(resolved).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar classificação' }))
     await waitFor(() => {
       expect(screen.queryByText('Ato Novo')).not.toBeInTheDocument()
     })
@@ -339,7 +387,7 @@ describe('Filtro de Coleta administrativo', () => {
 
     renderPage(apiFetch)
 
-    await screen.findByText('PORTARIA')
+    await screen.findByRole('cell', { name: 'PORTARIA' })
     fireEvent.click(
       screen.getByRole('button', { name: 'Simulações' }),
     )
@@ -365,3 +413,4 @@ describe('Filtro de Coleta administrativo', () => {
   })
 
 })
+
