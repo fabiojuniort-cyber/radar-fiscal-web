@@ -2,14 +2,11 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
-  CircleHelp,
   FlaskConical,
-  Plus,
   Save,
   ShieldCheck,
-  Trash2,
 } from 'lucide-react'
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
@@ -25,15 +22,13 @@ import {
   resolveCollectionFilterNewType,
   saveCollectionFilterDraft,
   saveCollectionFilterSimulationFeedback,
-  type CollectionFilterAlias,
   type CollectionFilterDocument,
-  type CollectionFilterMode,
-  type CollectionFilterRule,
   type CollectionFilterSimulation,
-  type CollectionFilterStrength,
-  type CollectionFilterTerm,
 } from './collection-filter-api'
 import './collection-filter-admin.css'
+import { fetchCatalogFacets } from './catalog-api'
+import { TypesEditor, TermsEditor, NewTypeActions, type FilterOrigins } from './collection-filter-editors'
+import { normalizeFilterText, filterTermKey } from './collection-filter-csv'
 import { CollectionFilterDiscards, CollectionFilterDiscardAlerts } from './collection-filter-discards'
 
 type Tab = 'types' | 'terms' | 'new-types' | 'simulations' | 'discarded' | 'discard-alerts'
@@ -41,19 +36,6 @@ type EditableDocument = Omit<
   CollectionFilterDocument,
   'id' | 'version' | 'revision' | 'status'
 >
-
-const MODE_LABELS: Record<CollectionFilterMode, string> = {
-  KEEP_ALWAYS: 'Manter sempre',
-  KEEP_IF_TAX_TERM: 'Manter só se tiver termo tributário',
-  EXCLUDE_UNLESS_STRONG: 'Excluir, salvo termo forte',
-  EXCLUDE_ALWAYS: 'Excluir sempre',
-}
-
-const STRENGTH_LABELS: Record<CollectionFilterStrength, string> = {
-  STRONG: 'Forte',
-  WEAK: 'Fraco',
-  NEGATIVE: 'Negativo',
-}
 
 const EMPTY_DRAFT: EditableDocument = {
   contextWindowWords: 12,
@@ -136,7 +118,6 @@ function CollectionFilterAdminContent({ apiFetch }: {
     structuredClone(EMPTY_DRAFT),
   )
   const [loadedPolicyId, setLoadedPolicyId] = useState<string | null>(null)
-  const [newTypeCanonical, setNewTypeCanonical] = useState<Record<string, string>>({})
 
   const meQuery = useQuery({
     queryKey: ['admin', 'me'],
@@ -147,6 +128,7 @@ function CollectionFilterAdminContent({ apiFetch }: {
   const stateQuery = useQuery({
     queryKey: ['collection-filter', 'state'],
     queryFn: () => fetchCollectionFilterState(apiFetch),
+    refetchInterval: 60000,
     enabled: meQuery.data?.platformAdmin === true,
     retry: false,
   })
@@ -154,9 +136,28 @@ function CollectionFilterAdminContent({ apiFetch }: {
   const newTypesQuery = useQuery({
     queryKey: ['collection-filter', 'new-types'],
     queryFn: () => fetchCollectionFilterNewTypes(apiFetch, 'OPEN'),
+    refetchInterval: 30000,
     enabled: meQuery.data?.platformAdmin === true,
     retry: false,
   })
+
+  const facetsQuery = useQuery({
+    queryKey: ['collection-filter', 'origin-facets'],
+    queryFn: () => fetchCatalogFacets(apiFetch),
+    enabled: meQuery.data?.platformAdmin === true,
+    retry: false,
+    refetchInterval: 60000,
+  })
+  const origins: FilterOrigins = useMemo(() => {
+    const rules = [...Object.values(stateQuery.data?.documents ?? {}).flatMap(d => d.rules), ...draft.rules,
+      ...(newTypesQuery.data?.items ?? []).map(item => ({ sourceCode: item.source_code, section: item.section,
+        canonicalType: item.normalized_type, mode: 'KEEP_ALWAYS' as const, helpText: null }))]
+    const sources = new Map((facetsQuery.data?.sources ?? []).map(s => [s.code, s]))
+    rules.forEach(r => { if (!sources.has(r.sourceCode)) sources.set(r.sourceCode, { code: r.sourceCode, name: r.sourceCode }) })
+    draft.terms.forEach(t => { if(t.sourceCode && !sources.has(t.sourceCode)) sources.set(t.sourceCode, {code:t.sourceCode,name:t.sourceCode}) })
+    return { rules, sources: [...sources.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')),
+      allTypes: (facetsQuery.data?.actTypes ?? []).map(normalizeFilterText) }
+  }, [stateQuery.data, draft.rules, draft.terms, newTypesQuery.data, facetsQuery.data])
 
   const draftPolicy = useMemo(() => {
     const item = stateQuery.data?.policies.find(
@@ -177,11 +178,12 @@ function CollectionFilterAdminContent({ apiFetch }: {
   }, [stateQuery.data])
 
   useEffect(() => {
-    const id = draftPolicy?.id ?? 'empty'
+    const source = draftPolicy ?? approvedPolicy
+    const id = source?.id ?? 'empty'
     if (loadedPolicyId === id) return
-    setDraft(cloneDraft(draftPolicy))
+    setDraft(cloneDraft(source))
     setLoadedPolicyId(id)
-  }, [draftPolicy, loadedPolicyId])
+  }, [draftPolicy, approvedPolicy, loadedPolicyId])
 
   const save = useMutation({
     mutationFn: () => saveCollectionFilterDraft(apiFetch, draft),
@@ -272,6 +274,14 @@ function CollectionFilterAdminContent({ apiFetch }: {
         </main>
       </div>
     )
+  }
+
+  const editablePolicyId = (draftPolicy ?? approvedPolicy)?.id ?? 'empty'
+  if (stateQuery.isError || !stateQuery.isSuccess || loadedPolicyId !== editablePolicyId) {
+    return <div className="cf-app"><main className="cf-denied"><h1>Filtro de Coleta</h1>
+      {stateQuery.isError ? <><p role="alert">Não foi possível carregar a política. Tente novamente antes de editar.</p><button type="button" onClick={() => void stateQuery.refetch()}>Tentar novamente</button></> : <p role="status">Carregando a política…</p>}
+      <button type="button" disabled>Salvar rascunho</button><Link to="/painel">Voltar ao painel</Link>
+    </main></div>
   }
 
   const dirty = true
@@ -370,120 +380,10 @@ function CollectionFilterAdminContent({ apiFetch }: {
         )}
 
         <section className="cf-settings">
-          <details>
-            <summary>
-              <CircleHelp size={16} />
-              Como a decisão funciona?
-            </summary>
-            <p>
-              O primeiro nível usa fonte + seção + tipo normalizado. O
-              segundo nível usa termos fortes, fracos e negativos. Termos
-              no título pesam mais que no corpo. CNPJ, número de processo e
-              valor, isoladamente, não preservam um ato.
-            </p>
-          </details>
-          <div className="cf-setting-fields">
-            <label>
-              Janela de contexto
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={draft.contextWindowWords}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    contextWindowWords: Number(event.target.value),
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Limiar de termo fraco
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={draft.weakScoreThreshold}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    weakScoreThreshold: Number(event.target.value),
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Peso título
-              <input
-                aria-label="Peso título"
-                type="number"
-                min={1}
-                max={20}
-                value={draft.locationWeights.title}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    locationWeights: {
-                      ...current.locationWeights,
-                      title: Number(event.target.value),
-                    },
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Peso ementa
-              <input
-                aria-label="Peso ementa"
-                type="number"
-                min={1}
-                max={20}
-                value={draft.locationWeights.summary}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    locationWeights: {
-                      ...current.locationWeights,
-                      summary: Number(event.target.value),
-                    },
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Peso corpo
-              <input
-                aria-label="Peso corpo"
-                type="number"
-                min={1}
-                max={20}
-                value={draft.locationWeights.body}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    locationWeights: {
-                      ...current.locationWeights,
-                      body: Number(event.target.value),
-                    },
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Notas da revisão
-              <input
-                value={draft.changeNotes ?? ''}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    changeNotes: event.target.value,
-                  }))
-                }
-                placeholder="O que mudou nesta revisão?"
-              />
-            </label>
-          </div>
+          <label>Notas da revisão
+            <input placeholder="O que mudou nesta revisão?" value={draft.changeNotes ?? ''}
+              onChange={event => setDraft(current => ({ ...current, changeNotes: event.target.value }))} />
+          </label>
         </section>
 
         <nav className="cf-tabs" aria-label="Configuração do filtro">
@@ -507,10 +407,10 @@ function CollectionFilterAdminContent({ apiFetch }: {
         </nav>
 
         {tab === 'types' && (
-          <TypesEditor draft={draft} setDraft={setDraft} />
+          <TypesEditor draft={draft} setDraft={setDraft} origins={origins} apiFetch={apiFetch} />
         )}
         {tab === 'terms' && (
-          <TermsEditor draft={draft} setDraft={setDraft} />
+          <TermsEditor draft={draft} setDraft={setDraft} origins={origins} apiFetch={apiFetch} />
         )}
         {tab === 'new-types' && (
           <section className="cf-card">
@@ -564,57 +464,14 @@ function CollectionFilterAdminContent({ apiFetch }: {
                       ) : null}
                     </div>
                     <div className="cf-new-type-resolution">
-                      <input
-                        aria-label={`Tipo canônico para ${item.sample_raw_type}`}
-                        value={
-                          newTypeCanonical[item.id] ??
-                          item.normalized_type
-                        }
-                        onChange={(event) =>
-                          setNewTypeCanonical((current) => ({
-                            ...current,
-                            [item.id]: event.target.value,
-                          }))
-                        }
-                      />
-                      <div className="cf-row-actions">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            resolveType.mutate({
-                              id: item.id,
-                              status: 'RESOLVED',
-                              canonicalType:
-                                newTypeCanonical[item.id] ??
-                                item.normalized_type,
-                            })
-                          }
-                        >
-                          Classificar
-                        </button>
-                        <button
-                          type="button"
-                          className="is-secondary-quiet"
-                          onClick={() =>
-                            resolveType.mutate({
-                              id: item.id,
-                              status: 'MERGED',
-                              canonicalType:
-                                newTypeCanonical[item.id] ??
-                                item.normalized_type,
-                            })
-                          }
-                        >
-                          Mesclar
-                        </button>
-                        <button
-                          type="button"
-                          className="is-secondary-quiet"
-                          onClick={() => setTab('terms')}
-                        >
-                          Criar termo
-                        </button>
-                      </div>
+                      <NewTypeActions item={item} origins={origins} mergeRules={draft.rules} apiFetch={apiFetch}
+                        pending={resolveType.isPending}
+                        error={resolveType.isError ? errorText(resolveType.error) : null}
+                        onResolve={async (status, canonicalType) => { resolveType.reset(); await resolveType.mutateAsync({id:item.id,status,canonicalType}) }}
+                        onTerm={term => setDraft(current => ({ ...current,
+                          terms: current.terms.some(t => filterTermKey(t) === filterTermKey(term))
+                            ? current.terms.map(t => filterTermKey(t) === filterTermKey(term) ? term : t)
+                            : [...current.terms, term] }))} />
                     </div>
                   </article>
                 ))}
@@ -646,344 +503,6 @@ function CollectionFilterAdminContent({ apiFetch }: {
     </div>
   )
 }
-
-function TypesEditor({
-  draft,
-  setDraft,
-}: {
-  draft: EditableDocument
-  setDraft: React.Dispatch<React.SetStateAction<EditableDocument>>
-}) {
-  const [sourceCode, setSourceCode] = useState('dou')
-  const [section, setSection] = useState('DO1')
-  const [canonicalType, setCanonicalType] = useState('')
-  const [mode, setMode] =
-    useState<CollectionFilterMode>('KEEP_ALWAYS')
-  const [alias, setAlias] = useState('')
-
-  const addRule = (event: FormEvent) => {
-    event.preventDefault()
-    const type = canonicalType.trim()
-    if (!type) return
-    const rule: CollectionFilterRule = {
-      sourceCode: sourceCode.trim(),
-      section: section.trim(),
-      canonicalType: type,
-      mode,
-      helpText: null,
-    }
-    setDraft((current) => ({
-      ...current,
-      rules: [...current.rules, rule],
-    }))
-    setCanonicalType('')
-  }
-
-  const addAlias = (event: FormEvent) => {
-    event.preventDefault()
-    if (!alias.trim() || !canonicalType.trim()) return
-    const value: CollectionFilterAlias = {
-      sourceCode: sourceCode.trim(),
-      section: section.trim(),
-      alias: alias.trim(),
-      canonicalType: canonicalType.trim(),
-    }
-    setDraft((current) => ({
-      ...current,
-      aliases: [...current.aliases, value],
-    }))
-    setAlias('')
-  }
-
-  return (
-    <section className="cf-card">
-      <div className="cf-card-title">
-        <div>
-          <h2>Tipos de ato</h2>
-          <p>
-            A chave é fonte + seção + tipo canônico. A grafia original
-            continua preservada na publicação.
-          </p>
-        </div>
-      </div>
-
-      <form className="cf-inline-form" onSubmit={addRule}>
-        <input
-          aria-label="Fonte do tipo"
-          value={sourceCode}
-          onChange={(event) => setSourceCode(event.target.value)}
-          placeholder="fonte"
-        />
-        <input
-          aria-label="Seção do tipo"
-          value={section}
-          onChange={(event) => setSection(event.target.value)}
-          placeholder="seção"
-        />
-        <input
-          aria-label="Tipo canônico"
-          value={canonicalType}
-          onChange={(event) => setCanonicalType(event.target.value)}
-          placeholder="Tipo canônico"
-        />
-        <select
-          aria-label="Modo do tipo"
-          value={mode}
-          onChange={(event) =>
-            setMode(event.target.value as CollectionFilterMode)
-          }
-        >
-          {Object.entries(MODE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <button type="submit">
-          <Plus size={15} /> Adicionar
-        </button>
-      </form>
-
-      <div className="cf-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fonte</th>
-              <th>Seção</th>
-              <th>Tipo</th>
-              <th>Modo</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {draft.rules.map((rule, index) => (
-              <tr key={`${rule.sourceCode}-${rule.section}-${rule.canonicalType}-${index}`}>
-                <td>{rule.sourceCode}</td>
-                <td>{rule.section || '—'}</td>
-                <td>{rule.canonicalType}</td>
-                <td>
-                  <select
-                    aria-label={`Modo ${rule.canonicalType}`}
-                    value={rule.mode}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        rules: current.rules.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                mode: event.target
-                                  .value as CollectionFilterMode,
-                              }
-                            : item,
-                        ),
-                      }))
-                    }
-                  >
-                    {Object.entries(MODE_LABELS).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="cf-icon-button"
-                    aria-label={`Remover ${rule.canonicalType}`}
-                    onClick={() =>
-                      setDraft((current) => ({
-                        ...current,
-                        rules: current.rules.filter(
-                          (_, itemIndex) => itemIndex !== index,
-                        ),
-                      }))
-                    }
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <details className="cf-aliases">
-        <summary>Variações de grafia ({draft.aliases.length})</summary>
-        <form className="cf-inline-form" onSubmit={addAlias}>
-          <input
-            value={sourceCode}
-            onChange={(event) => setSourceCode(event.target.value)}
-            aria-label="Fonte do alias"
-          />
-          <input
-            value={section}
-            onChange={(event) => setSection(event.target.value)}
-            aria-label="Seção do alias"
-          />
-          <input
-            value={alias}
-            onChange={(event) => setAlias(event.target.value)}
-            placeholder="Grafia encontrada"
-            aria-label="Grafia encontrada"
-          />
-          <input
-            value={canonicalType}
-            onChange={(event) => setCanonicalType(event.target.value)}
-            placeholder="Tipo canônico"
-            aria-label="Tipo canônico do alias"
-          />
-          <button type="submit">Adicionar alias</button>
-        </form>
-        <div className="cf-chip-list">
-          {draft.aliases.map((item, index) => (
-            <span key={`${item.alias}-${index}`} className="cf-chip">
-              {item.alias} → {item.canonicalType}
-              <button
-                type="button"
-                aria-label={`Remover alias ${item.alias}`}
-                onClick={() =>
-                  setDraft((current) => ({
-                    ...current,
-                    aliases: current.aliases.filter(
-                      (_, itemIndex) => itemIndex !== index,
-                    ),
-                  }))
-                }
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      </details>
-    </section>
-  )
-}
-
-function TermsEditor({
-  draft,
-  setDraft,
-}: {
-  draft: EditableDocument
-  setDraft: React.Dispatch<React.SetStateAction<EditableDocument>>
-}) {
-  const [text, setText] = useState('')
-  const [strength, setStrength] =
-    useState<CollectionFilterStrength>('WEAK')
-  const [sourceCode, setSourceCode] = useState('')
-  const [canonicalType, setCanonicalType] = useState('')
-
-  const addTerm = (event: FormEvent) => {
-    event.preventDefault()
-    if (!text.trim()) return
-    const term: CollectionFilterTerm = {
-      text: text.trim(),
-      strength,
-      sourceCode: sourceCode.trim() || undefined,
-      canonicalType: canonicalType.trim() || undefined,
-      locationScope: 'ANY',
-    }
-    setDraft((current) => ({
-      ...current,
-      terms: [...current.terms, term],
-    }))
-    setText('')
-  }
-
-  return (
-    <section className="cf-card">
-      <div className="cf-card-title">
-        <div>
-          <h2>Termos tributários</h2>
-          <p>
-            Termos do filtro são independentes da Taxonomia. Forte
-            preserva, fraco soma evidência e negativo neutraliza falso
-            positivo próximo.
-          </p>
-        </div>
-      </div>
-
-      <form className="cf-inline-form cf-term-form" onSubmit={addTerm}>
-        <input
-          aria-label="Texto do termo"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder="Termo"
-        />
-        <select
-          aria-label="Força do termo"
-          value={strength}
-          onChange={(event) =>
-            setStrength(event.target.value as CollectionFilterStrength)
-          }
-        >
-          {Object.entries(STRENGTH_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <input
-          aria-label="Fonte do termo"
-          value={sourceCode}
-          onChange={(event) => setSourceCode(event.target.value)}
-          placeholder="Fonte (opcional)"
-        />
-        <input
-          aria-label="Tipo do termo"
-          value={canonicalType}
-          onChange={(event) => setCanonicalType(event.target.value)}
-          placeholder="Tipo (opcional)"
-        />
-        <button type="submit">
-          <Plus size={15} /> Adicionar
-        </button>
-      </form>
-
-      <div className="cf-chip-list cf-term-list">
-        {draft.terms.map((term, index) => (
-          <span
-            key={`${term.text}-${term.strength}-${index}`}
-            className={`cf-chip is-${term.strength.toLowerCase()}`}
-          >
-            <strong>{STRENGTH_LABELS[term.strength]}</strong>
-            {term.text}
-            {term.sourceCode ? ` · ${term.sourceCode}` : ''}
-            {term.canonicalType ? ` · ${term.canonicalType}` : ''}
-            <button
-              type="button"
-              aria-label={`Remover termo ${term.text}`}
-              onClick={() =>
-                setDraft((current) => ({
-                  ...current,
-                  terms: current.terms.filter(
-                    (_, itemIndex) => itemIndex !== index,
-                  ),
-                }))
-              }
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-
-      <div className="cf-warning">
-        <AlertTriangle size={18} />
-        <p>
-          CNPJ, número de processo e valor não podem ser configurados como
-          termos positivos autônomos. O backend bloqueia essa combinação.
-        </p>
-      </div>
-    </section>
-  )
-}
-
 
 function SimulationReviewPanel({
   apiFetch,
