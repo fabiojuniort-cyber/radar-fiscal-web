@@ -33,6 +33,7 @@ import { BrandMark } from './brand-mark'
 import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
+import { PlatformAdministratorsPage } from './platform-admin'
 import { TaxonomyAdminPage } from './taxonomy-admin'
 import {
   PRIVACY_POLICY,
@@ -147,6 +148,10 @@ function AppContent() {
     return <AuthenticatedTaxonomyAdmin />
   }
 
+  if (location.pathname === '/admin/administradores') {
+    return <AuthenticatedPlatformAdministrators />
+  }
+
   return (
     <div className="app-shell">
       <PublicExperience onAuth={openAuth} />
@@ -207,6 +212,20 @@ function AuthenticatedTaxonomyAdmin() {
   }
 
   return <TaxonomyAdminPage apiFetch={apiFetch} />
+}
+
+function AuthenticatedPlatformAdministrators() {
+  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return <PlatformAdministratorsPage apiFetch={apiFetch} />
 }
 
 function AuthenticatedPublicationDetail({
