@@ -72,6 +72,8 @@ const ERROR_TEXT: Record<string, string> = {
     'O rascunho contém uma configuração inválida.',
   collection_filter_fresh_simulation_required:
     'É necessário concluir uma nova simulação desta revisão antes de aprovar.',
+  collection_filter_full_archive_simulation_required:
+    'A primeira aprovação exige uma simulação completa do acervo.',
   collection_filter_simulation_has_errors:
     'A simulação possui itens marcados como erro. Ajuste o filtro e simule novamente.',
   collection_filter_draft_not_found:
