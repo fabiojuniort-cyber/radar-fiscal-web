@@ -249,3 +249,82 @@ export async function resolveCollectionFilterNewType(
     ),
   )
 }
+
+
+export interface CollectionFilterSimulationItem {
+  simulation_id: string
+  publication_id: string
+  source_code: string
+  section: string
+  raw_type: string | null
+  canonical_type: string | null
+  decision: 'KEEP' | 'DISCARD'
+  reason_code: string
+  decisive_term: string | null
+  excerpt: string | null
+  title: string
+  published_on: string | null
+  official_url: string | null
+  review_sample: boolean
+  marked_error: boolean | null
+  expected_decision: 'KEEP' | 'DISCARD' | null
+  note: string | null
+}
+
+export async function fetchCollectionFilterSimulationItems(
+  apiFetch: ProductApiFetch,
+  simulationId: string,
+  options: {
+    decision?: 'KEEP' | 'DISCARD'
+    sampleOnly?: boolean
+    limit?: number
+    offset?: number
+  } = {},
+) {
+  const params = new URLSearchParams()
+  if (options.decision) params.set('decision', options.decision)
+  params.set('sampleOnly', String(options.sampleOnly ?? false))
+  params.set('limit', String(options.limit ?? 100))
+  params.set('offset', String(options.offset ?? 0))
+  return readJson<{ items: CollectionFilterSimulationItem[] }>(
+    await apiFetch(
+      `/api/v1/admin/collection-filter/simulations/${simulationId}/items?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    ),
+  )
+}
+
+export async function saveCollectionFilterSimulationFeedback(
+  apiFetch: ProductApiFetch,
+  input: {
+    simulationId: string
+    publicationId: string
+    markedError: boolean
+    expectedDecision?: 'KEEP' | 'DISCARD' | null
+    note?: string | null
+  },
+) {
+  return readJson<{
+    simulation_id: string
+    publication_id: string
+    marked_error: boolean
+    expected_decision: 'KEEP' | 'DISCARD' | null
+    note: string | null
+  }>(
+    await apiFetch(
+      `/api/v1/admin/collection-filter/simulations/${input.simulationId}/items/${input.publicationId}/feedback`,
+      {
+        method: 'PUT',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          markedError: input.markedError,
+          expectedDecision: input.expectedDecision ?? null,
+          note: input.note ?? null,
+        }),
+      },
+    ),
+  )
+}
