@@ -61,6 +61,30 @@ describe('highlightLegalHtml', () => {
     expect(result.html).toContain('<mark class="legal-mark" title="Isenção" data-mark-kind="term">Isenção</mark> vigente')
   })
 
+  it('ignores CONFAZ title, ementa, publication history and editorial amendment notes', () => {
+    const rules = buildHighlightRules(
+      taxonomy([
+        tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
+        tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] }),
+      ]),
+      [],
+    )
+    const result = highlightLegalHtml(
+      '<p class="TituloAcordo">CONVÊNIO ICMS 100/97</p>' +
+        '<p class="Ementa">Reduz a base de cálculo do ICMS para fertilizantes.</p>' +
+        '<p class="DataPublicao">Alterado pelo Convênio ICMS 26/21.</p>' +
+        '<p class="Remisso">Nova redação dada pelo Convênio ICMS 79/25.</p>' +
+        '<p class="TextoAcordo">Fica reduzida a base de cálculo do ICMS nas saídas de fertilizantes.</p>',
+      rules,
+    )
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map((mark) => mark.textContent)).toEqual([
+      'ICMS',
+      'fertilizantes',
+    ])
+    expect(result.marks).toBe(2)
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
