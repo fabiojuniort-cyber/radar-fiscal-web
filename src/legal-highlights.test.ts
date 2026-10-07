@@ -84,7 +84,7 @@ describe('highlightLegalHtml', () => {
       'ICMS',
       'fertilizantes',
     ])
-    expect(result.marks).toBe(2)
+    expect(result.marks).toBe(3)
   })
 
   it('mirrors the real CONFAZ classes used by CV100/97 and CV52/91', () => {
@@ -92,7 +92,7 @@ describe('highlightLegalHtml', () => {
       taxonomy([
         tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
         tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] }),
-        tag('Revogado', { terms: ['revogado'], ncmPrefixes: [] }),
+        tag('Revogação', { terms: ['revogada', 'revogadas'], ncmPrefixes: [] }),
       ]),
       [{ code: '84501100', description: 'Máquinas de lavar roupa' }],
     )
@@ -115,6 +115,7 @@ describe('highlightLegalHtml', () => {
     expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map((mark) => mark.textContent)).toEqual([
       'fertilizantes',
       'ICMS',
+      'revogadas',
     ])
     expect(result.markedNcms.size).toBe(0)
     expect(result.marks).toBe(2)
