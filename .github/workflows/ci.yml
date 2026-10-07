@@ -110,7 +110,7 @@ jobs:
       - name: Record CI mode
         if: ${{ !cancelled() }}
         env:
-          CI_MODE: ${{ steps.ci-plan.outputs.full_regression == 'true' && 'FULL_REGRESSION' || 'DRAFT_FAST_ONLY' }}
+          CI_MODE: ${{ steps.ci-plan.outputs.full_regression == 'true' && 'FULL_REGRESSION' || (steps.ci-plan.outputs.full_regression == 'false' && 'DRAFT_FAST_ONLY' || 'UNKNOWN') }}
         run: |
           mkdir -p playwright-artifacts
           printf '%s\n' "$CI_MODE" > playwright-artifacts/CI-MODE.txt
