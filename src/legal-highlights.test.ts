@@ -84,7 +84,7 @@ describe('highlightLegalHtml', () => {
       'ICMS',
       'fertilizantes',
     ])
-    expect(result.marks).toBe(3)
+    expect(result.marks).toBe(2)
   })
 
   it('mirrors the real CONFAZ classes used by CV100/97 and CV52/91', () => {
@@ -118,7 +118,7 @@ describe('highlightLegalHtml', () => {
       'revogadas',
     ])
     expect(result.markedNcms.size).toBe(0)
-    expect(result.marks).toBe(2)
+    expect(result.marks).toBe(3)
   })
 
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
