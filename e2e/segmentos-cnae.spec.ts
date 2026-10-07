@@ -6,7 +6,7 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   const concepts: Record<string, unknown>[] = [], groups: Record<string, unknown>[] = []
   await page.route('**/auth/refresh', route => route.fulfill({ json: { accessToken: 'test-curator-token', tokenType: 'Bearer', expiresIn: 900 } }))
   await page.route('**/auth/me', route => route.fulfill({ json: { user: { id: 'curator', email: 'owner@example.test', name: null }, memberships: [] } }))
-  await page.route('**/api/v1/admin/me', route => route.fulfill({ json: { taxonomyCurator: true, curatorDatabase: true } }))
+  await page.route('**/api/v1/admin/me', route => route.fulfill({ json: { platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true } }))
   await page.route('**/api/v1/admin/taxonomy/**', async route => {
     const url = new URL(route.request().url()).pathname
     let result: unknown
