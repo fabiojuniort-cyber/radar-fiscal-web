@@ -10,7 +10,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import type { ProductApiFetch } from './product-api'
@@ -34,8 +34,9 @@ import {
   type CollectionFilterTerm,
 } from './collection-filter-api'
 import './collection-filter-admin.css'
+import { CollectionFilterDiscards, CollectionFilterDiscardAlerts } from './collection-filter-discards'
 
-type Tab = 'types' | 'terms' | 'new-types' | 'simulations'
+type Tab = 'types' | 'terms' | 'new-types' | 'simulations' | 'discarded' | 'discard-alerts'
 type EditableDocument = Omit<
   CollectionFilterDocument,
   'id' | 'version' | 'revision' | 'status'
@@ -109,7 +110,24 @@ function cloneDraft(source?: CollectionFilterDocument): EditableDocument {
 
 export function CollectionFilterAdminPage({
   apiFetch,
+  sessionKey = 'standalone',
 }: {
+  apiFetch: ProductApiFetch
+  sessionKey?: string
+}) {
+  const parentClient = useQueryClient()
+  // All authorization, policy, simulation and operational data belong to this
+  // authenticated session. Even a late response cannot populate another client.
+  const client = useMemo(() => new QueryClient({
+    defaultOptions: parentClient.getDefaultOptions(),
+  }), [parentClient, sessionKey])
+  useEffect(() => () => client.clear(), [client])
+  return <QueryClientProvider client={client}>
+    <CollectionFilterAdminContent key={sessionKey} apiFetch={apiFetch} />
+  </QueryClientProvider>
+}
+
+function CollectionFilterAdminContent({ apiFetch }: {
   apiFetch: ProductApiFetch
 }) {
   const queryClient = useQueryClient()
@@ -474,6 +492,8 @@ export function CollectionFilterAdminPage({
             ['terms', 'Termos'],
             ['new-types', `Novos tipos (${newTypesQuery.data?.items.length ?? 0})`],
             ['simulations', 'Simulações'],
+            ['discarded', 'Desconsiderados'],
+            ['discard-alerts', 'Alertas de descarte'],
           ] as Array<[Tab, string]>).map(([value, label]) => (
             <button
               key={value}
@@ -610,6 +630,9 @@ export function CollectionFilterAdminPage({
             simulations={stateQuery.data?.simulations ?? []}
           />
         )}
+
+        {tab === 'discarded' && <CollectionFilterDiscards apiFetch={apiFetch} />}
+        {tab === 'discard-alerts' && <CollectionFilterDiscardAlerts apiFetch={apiFetch} />}
 
         <footer className="cf-footer">
           <span>

@@ -1,4 +1,5 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { ArchiveDateBridge } from './archive-date-bridge'
 import {
@@ -20,6 +21,7 @@ interface AuthMe {
 }
 
 interface AuthState {
+  sessionRevision: number
   me: AuthMe | null
   checked: boolean
   login: (email: string, password: string) => Promise<void>
@@ -151,12 +153,29 @@ async function tryBrowserCnpjFallback(
 }
 
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+  const revision = useRef(0)
+  const identityId = useRef<string | null>(null)
+  const [sessionRevision, setSessionRevision] = useState(0)
   const token = useRef<string | null>(null)
   const refreshInFlight = useRef<Promise<boolean> | null>(null)
   const [me, setMe] = useState<AuthMe | null>(null)
   const [checked, setChecked] = useState(false)
 
+  const resetSession = () => {
+    revision.current += 1
+    setSessionRevision(revision.current)
+    token.current = null
+    identityId.current = null
+    refreshInFlight.current = null
+    setMe(null)
+    // Cancel old observers/in-flight queries and remove their private data.
+    queryClient.clear()
+  }
+
   const login = async (email: string, password: string) => {
+    resetSession()
+    const expectedRevision = revision.current
     const response = await fetch('/auth/login', {
       method: 'POST',
       credentials: 'include',
@@ -165,7 +184,9 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     })
     const accessToken = await readAccessToken(response)
     const identity = await fetchMe(accessToken)
+    if (revision.current !== expectedRevision) throw new Error('session_changed')
     token.current = accessToken
+    identityId.current = identity.user.id
     setMe(identity)
     setChecked(true)
   }
@@ -173,6 +194,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const refreshAccessToken = (): Promise<boolean> => {
     if (refreshInFlight.current) return refreshInFlight.current
 
+    const expectedRevision = revision.current
     const pending = (async () => {
       try {
         const response = await fetch('/auth/refresh', {
@@ -182,20 +204,28 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         })
         const accessToken = await readAccessToken(response)
         const identity = await fetchMe(accessToken)
+        if (revision.current !== expectedRevision) return false
+        if (identityId.current && identityId.current !== identity.user.id) resetSession()
         token.current = accessToken
+        identityId.current = identity.user.id
         setMe(identity)
+        setChecked(true)
         return true
       } catch {
-        token.current = null
-        setMe(null)
+        if (revision.current === expectedRevision) {
+          resetSession()
+          setChecked(true)
+        }
         return false
       } finally {
-        setChecked(true)
+        if (revision.current === expectedRevision) setChecked(true)
       }
     })()
 
     refreshInFlight.current = pending
-    void pending.finally(() => { refreshInFlight.current = null })
+    void pending.finally(() => {
+      if (refreshInFlight.current === pending) refreshInFlight.current = null
+    })
     return pending
   }
 
@@ -212,12 +242,14 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
+    const expectedRevision = revision.current
     if (!token.current) {
       const refreshed = await refreshAccessToken()
       if (!refreshed || !token.current) throw new Error('unauthorized')
     }
 
     const execute = () => {
+      if (revision.current !== expectedRevision) throw new Error('session_changed')
       const headers = new Headers(init?.headers)
       headers.set('Authorization', `Bearer ${token.current}`)
 
@@ -229,6 +261,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     }
 
     let response = await execute()
+    if (revision.current !== expectedRevision) throw new Error('session_changed')
 
     if (response.status === 401) {
       token.current = null
@@ -250,11 +283,13 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       if (fallbackResponse) response = fallbackResponse
     }
 
+    if (revision.current !== expectedRevision) throw new Error('session_changed')
     return response
   }
 
   const logout = async () => {
     const current = token.current
+    const expectedRevision = revision.current
     if (!current) throw new Error('unauthorized')
     const response = await fetch('/auth/logout', {
       method: 'POST',
@@ -265,12 +300,12 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       },
     })
     if (!response.ok) throw new Error('logout_failed')
-    token.current = null
-    setMe(null)
+    if (revision.current !== expectedRevision) return
+    resetSession()
     setChecked(true)
   }
 
-  return <AuthContext.Provider value={{ me, checked, login, ensureSession, logout, apiFetch }}>
+  return <AuthContext.Provider value={{ me, checked, sessionRevision, login, ensureSession, logout, apiFetch }}>
     {children}
     <ArchiveDateBridge />
   </AuthContext.Provider>
