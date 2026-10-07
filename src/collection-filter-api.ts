@@ -89,7 +89,7 @@ export interface CollectionFilterNewType {
   first_seen_at: string
   last_seen_at: string
   sample_publication_ids: string[]
-  status: 'OPEN' | 'RESOLVED' | 'IGNORED'
+  status: 'OPEN' | 'RESOLVED' | 'MERGED'
   resolved_at: string | null
 }
 
@@ -205,7 +205,7 @@ export async function approveCollectionFilterDraft(
 
 export async function fetchCollectionFilterNewTypes(
   apiFetch: ProductApiFetch,
-  status: 'OPEN' | 'RESOLVED' | 'IGNORED' = 'OPEN',
+  status: 'OPEN' | 'RESOLVED' | 'MERGED' = 'OPEN',
 ) {
   return readJson<{ items: CollectionFilterNewType[] }>(
     await apiFetch(
@@ -218,7 +218,8 @@ export async function fetchCollectionFilterNewTypes(
 export async function resolveCollectionFilterNewType(
   apiFetch: ProductApiFetch,
   id: string,
-  status: 'RESOLVED' | 'IGNORED',
+  status: 'RESOLVED' | 'MERGED',
+  canonicalType: string,
 ) {
   return readJson<{ id: string; status: string }>(
     await apiFetch(
@@ -229,7 +230,7 @@ export async function resolveCollectionFilterNewType(
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, canonicalType }),
       },
     ),
   )
