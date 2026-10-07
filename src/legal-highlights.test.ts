@@ -88,4 +88,34 @@ describe('highlightLegalHtml', () => {
       markedNcms: new Set(),
     })
   })
+  it('marks only operative legal text in structured CONFAZ presentations', () => {
+    const rules = buildHighlightRules(
+      taxonomy([
+        tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
+        tag('Revogado', { terms: ['REVOGADO'], ncmPrefixes: [] }),
+      ]),
+      [],
+    )
+    const result = highlightLegalHtml(
+      '<p class="TituloAcordo">CONVÊNIO ICMS 100/97</p>' +
+        '<p class="DataPublicao">Alterado pelos Convênios ICMS 40/98 e 79/25.</p>' +
+        '<p class="Ementa">Reduz a base de cálculo do ICMS.</p>' +
+        '<p class="TextoAcordo">Cláusula primeira: ICMS vigente.</p>' +
+        '<p class="A8-1Remissao">Nova redação dada ao dispositivo do ICMS.</p>' +
+        '<p class="A5-1TextoAcordo">II - REVOGADO</p>' +
+        '<p class="A8-3RedacaoAnt">ICMS na redação anterior.</p>' +
+        '<table>' +
+          '<tr><td>ICMS no anexo vigente.</td></tr>' +
+          '<tr><td class="A8-3TabelaTextoverde">ICMS no anexo anterior.</td></tr>' +
+        '</table>',
+      rules,
+    )
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    const marks = Array.from(doc.querySelectorAll('mark.legal-mark')).map((mark) => mark.textContent)
+    expect(marks).toEqual(['ICMS', 'ICMS'])
+    expect(result.marks).toBe(2)
+    expect(result.html).toContain('II - REVOGADO')
+    expect(result.html).not.toContain('>REVOGADO</mark>')
+  })
+
 })
