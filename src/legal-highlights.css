@@ -1,9 +1,9 @@
-/* Highlighter pen: soft light green, black bold text. */
+/* Taxonomy highlighter: approved green, black bold text. */
 .publication-preserved-html mark.legal-mark,
 .publication-preserved-text mark.legal-mark {
   padding: 0 2px;
   border-radius: 6px;
-  background: #dff3e6;
+  background: #90D8A5;
   color: #000;
   font-weight: 700;
   box-decoration-break: clone;
