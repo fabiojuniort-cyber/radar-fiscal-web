@@ -37,6 +37,7 @@ const PREVIOUS_WORDING_TABLE_CLASS = /^(?:A\d+-\d+)?Tabela[A-Za-z]*verde$/
 const LEGAL_BODY_CLASSES = new Set(['TextoAcordo', 'A5-1TextoAcordo', 'AcordoTipo'])
 const NON_OPERATIVE_EDITORIAL_CLASSES = new Set([
   'TituloAcordo',
+  'AcordoTipo',
   'DataPublicao',
   'A2DataPublicacao',
   'Ementa',
