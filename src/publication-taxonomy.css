@@ -64,7 +64,8 @@
   cursor: pointer;
 }
 
-.publication-tag-chip:disabled {
+.publication-tag-chip:disabled,
+.publication-tag-chip.is-summary {
   cursor: default;
 }
 

@@ -187,15 +187,21 @@ describe('Marcações no texto da legislação', () => {
         })
       }
       if (url === '/api/v1/publications/pub-1/taxonomy') {
-        const tag = (label: string, type: string, highlight: { terms: string[]; ncmPrefixes: string[] }) => ({
-          kind: 'CONCEPT', conceptCode: `x.${label}`, groupCode: null, label, dimensionCode: 'theme', groupLabel: null,
+        const tag = (
+          label: string,
+          type: string,
+          highlight: { terms: string[]; ncmPrefixes: string[] },
+          dimensionCode = 'theme',
+        ) => ({
+          kind: 'CONCEPT', conceptCode: `x.${label}`, groupCode: null, label, dimensionCode, groupLabel: null,
           origin: 'AUTOMATIC', assertionId: null, removed: false, reason: { type, term: null, excerpt: null }, highlight,
         })
         return json({
           publicationId: 'pub-1', publicationVersionId: 'v1', release: null, status: 'CLASSIFIED', classifiedAt: null,
           sections: [{ name: 'Temas', order: 1, tags: [
             tag('Isenção', 'TEXT', { terms: ['Isenção'], ncmPrefixes: [] }),
-            tag('Tubos plásticos', 'NCM', { terms: [], ncmPrefixes: ['3917'] }),
+            tag('Tubos plásticos', 'NCM', { terms: [], ncmPrefixes: ['3917'] }, 'product'),
+            tag('Fertilizantes', 'TEXT', { terms: ['Fertilizantes'], ncmPrefixes: [] }, 'product'),
           ] }],
         })
       }
@@ -220,8 +226,12 @@ describe('Marcações no texto da legislação', () => {
     const chips = within(screen.getByRole('list')).getAllByRole('listitem')
     expect(chips.map((chip) => chip.textContent)).toEqual(['3925.10.00'])
     expect(screen.getByText(/1 código marcado em verde no texto/)).toBeInTheDocument()
-    // The product found through the NCM is not a tag chip.
+    // Product/item intelligence is presented as one summary tag; individual
+    // product tags stay internal for affinity/highlights and curator details.
+    expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
+    expect(await screen.findByText('2 itens')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Tubos plásticos/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Fertilizantes/ })).not.toBeInTheDocument()
 
     fireEvent.click(toggle)
     expect(marks()).toHaveLength(0)
