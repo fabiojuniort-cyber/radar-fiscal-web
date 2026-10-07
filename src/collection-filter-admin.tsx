@@ -514,6 +514,29 @@ export function CollectionFilterAdminPage({
                         {' · '}
                         {Number(item.occurrence_count)} ocorrência(s)
                       </span>
+                      <small>
+                        Primeira: {new Date(item.first_seen_at).toLocaleString('pt-BR')}
+                        {' · '}Última: {new Date(item.last_seen_at).toLocaleString('pt-BR')}
+                      </small>
+                      {item.examples?.length ? (
+                        <ul className="cf-example-list">
+                          {item.examples.slice(0, 3).map((example) => (
+                            <li key={example.id}>
+                              {example.officialUrl ? (
+                                <a
+                                  href={example.officialUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {example.title}
+                                </a>
+                              ) : (
+                                <span>{example.title}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                     <div className="cf-new-type-resolution">
                       <input
