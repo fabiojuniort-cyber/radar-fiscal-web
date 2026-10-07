@@ -217,7 +217,7 @@ describe('Filtro de Coleta administrativo', () => {
           return json({ items: [] })
         }
         if (
-          url === '/api/v1/admin/collection-filter/approve' &&
+          url === `/api/v1/admin/collection-filter/drafts/${policyId}/approve` &&
           init?.method === 'POST'
         ) {
           return json(
