@@ -178,13 +178,18 @@ export async function requestCollectionFilterSimulation(
     policyRevision: number
     action: 'CREATED' | 'EXISTING'
   }>(
-    await apiFetch('/api/v1/admin/collection-filter/simulations', {
+    await apiFetch(
+      `/api/v1/admin/collection-filter/drafts/${input.policyId}/simulations`,
+      {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        scope: input.scope,
+        reviewMode: input.reviewMode,
+      }),
     }),
   )
 }
@@ -199,14 +204,16 @@ export async function approveCollectionFilterDraft(
     revision: number
     simulationId: string
   }>(
-    await apiFetch('/api/v1/admin/collection-filter/approve', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+    await apiFetch(
+      `/api/v1/admin/collection-filter/drafts/${policyId}/approve`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
       },
-      body: JSON.stringify({ policyId }),
-    }),
+    ),
   )
 }
 
