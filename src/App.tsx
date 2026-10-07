@@ -34,6 +34,7 @@ import { DEMO_PATH, isDemoAccessEnabled } from './demo-access'
 import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
 import { PlatformAdministratorsPage } from './platform-admin'
+import { CollectionFilterAdminPage } from './collection-filter-admin'
 import { TaxonomyAdminPage } from './taxonomy-admin'
 import {
   PRIVACY_POLICY,
@@ -152,6 +153,10 @@ function AppContent() {
     return <AuthenticatedPlatformAdministrators />
   }
 
+  if (location.pathname === '/admin/filtro-coleta') {
+    return <AuthenticatedCollectionFilterAdmin />
+  }
+
   return (
     <div className="app-shell">
       <PublicExperience onAuth={openAuth} />
@@ -226,6 +231,20 @@ function AuthenticatedPlatformAdministrators() {
   }
 
   return <PlatformAdministratorsPage apiFetch={apiFetch} />
+}
+
+function AuthenticatedCollectionFilterAdmin() {
+  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return <CollectionFilterAdminPage apiFetch={apiFetch} />
 }
 
 function AuthenticatedPublicationDetail({

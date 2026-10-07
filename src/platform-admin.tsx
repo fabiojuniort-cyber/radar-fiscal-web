@@ -147,6 +147,7 @@ export function PlatformAdministratorsPage({
         </div>
         <nav aria-label="Áreas administrativas">
           <Link to="/admin/taxonomia">Taxonomia</Link>
+          <Link to="/admin/filtro-coleta">Filtro de Coleta</Link>
         </nav>
       </header>
 
