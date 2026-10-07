@@ -34,6 +34,15 @@ export interface HighlightResult {
 
 const PREVIOUS_WORDING_CLASSES = new Set(['RedaoAnt', 'A8-3RedacaoAnt', 'RemissoAnt', 'A8-2RemissaoAnt'])
 const PREVIOUS_WORDING_TABLE_CLASS = /^(?:A\d+-\d+)?Tabela[A-Za-z]*verde$/
+const NON_NORMATIVE_CLASSES = new Set([
+  'TituloAcordo',
+  'AcordoTipo',
+  'Ementa',
+  'DataPublicao',
+  'A2DataPublicacao',
+  'Remisso',
+  'A8-1Remissao',
+])
 
 function isPreviousWordingClass(token: string) {
   return PREVIOUS_WORDING_CLASSES.has(token) || PREVIOUS_WORDING_TABLE_CLASS.test(token)
@@ -41,6 +50,10 @@ function isPreviousWordingClass(token: string) {
 
 function hasPreviousWordingClass(element: Element) {
   return Array.from(element.classList).some(isPreviousWordingClass)
+}
+
+function hasNonNormativeClass(element: Element) {
+  return Array.from(element.classList).some((token) => NON_NORMATIVE_CLASSES.has(token) || isPreviousWordingClass(token))
 }
 
 /** Same normalization as the classifier, with a map back to raw positions. */
@@ -189,9 +202,9 @@ function withoutOverlaps(ranges: Range[]): Range[] {
   return kept.sort((a, b) => a.start - b.start)
 }
 
-function isPreviousWording(node: Node): boolean {
+function isNonNormativeLegalText(node: Node): boolean {
   for (let element = node.parentElement; element; element = element.parentElement) {
-    if (hasPreviousWordingClass(element)) return true
+    if (hasNonNormativeClass(element)) return true
     if (element.tagName === 'TR') {
       const row = element
       if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
@@ -217,7 +230,7 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
     const raw = node.data
     if (!raw.trim()) continue
     if (node.parentElement?.closest('a, mark, script, style')) continue
-    if (isPreviousWording(node)) continue
+    if (isNonNormativeLegalText(node)) continue
     const ranges = withoutOverlaps([...ncmRanges(raw, rules.ncms), ...termRanges(raw, rules.terms)])
     if (ranges.length === 0) continue
 
