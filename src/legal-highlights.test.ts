@@ -93,6 +93,7 @@ describe('highlightLegalHtml', () => {
       taxonomy([
         tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
         tag('Revogado', { terms: ['REVOGADO'], ncmPrefixes: [] }),
+        tag('Terceira', { terms: ['terceira'], ncmPrefixes: [] }),
       ]),
       [],
     )
@@ -103,6 +104,7 @@ describe('highlightLegalHtml', () => {
         '<p class="TextoAcordo">Cláusula primeira: ICMS vigente.</p>' +
         '<p class="A8-1Remissao">Nova redação dada ao dispositivo do ICMS.</p>' +
         '<p class="A5-1TextoAcordo">II - REVOGADO</p>' +
+        '<p class="TextoAcordo"><b>Cláusula terceira</b> REVOGADA</p>' +
         '<p class="A8-3RedacaoAnt">ICMS na redação anterior.</p>' +
         '<table>' +
           '<tr><td>ICMS no anexo vigente.</td></tr>' +
@@ -116,6 +118,7 @@ describe('highlightLegalHtml', () => {
     expect(result.marks).toBe(2)
     expect(result.html).toContain('II - REVOGADO')
     expect(result.html).not.toContain('>REVOGADO</mark>')
+    expect(result.html).not.toContain('>terceira</mark>')
   })
 
 })
