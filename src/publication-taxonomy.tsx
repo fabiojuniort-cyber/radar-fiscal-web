@@ -26,9 +26,10 @@ const STATUS_COPY: Record<string, string> = {
   NO_RELEASE: 'Taxonomia indisponível.',
 }
 
-/** Products found through an NCM are marked in the text, not listed as tags. */
-function isNcmProduct(tag: PublicationTag) {
-  return tag.reason.type === 'NCM'
+/** Product intelligence stays detailed internally and in text highlights,
+ * but the legislation page presents it as one compact summary tag. */
+function isProductTag(tag: PublicationTag) {
+  return tag.dimensionCode === 'product'
 }
 
 export function reasonText(tag: PublicationTag): string {
@@ -140,7 +141,8 @@ export function PublicationTaxonomySection({
     navigate('/painel')
   }
 
-  const ncmProducts = (view?.sections ?? []).flatMap((section) => section.tags).filter(isNcmProduct)
+  const productTags = (view?.sections ?? []).flatMap((section) => section.tags).filter(isProductTag)
+  const activeProductTags = productTags.filter((tag) => !tag.removed)
 
   const renderTag = (tag: PublicationTag) => {
     const key = `${tag.kind}-${tag.conceptCode ?? tag.groupCode}`
@@ -228,7 +230,7 @@ export function PublicationTaxonomySection({
       )}
 
       {sections.map((section) => {
-        const shown = section.tags.filter((tag) => !isNcmProduct(tag))
+        const shown = section.tags.filter((tag) => !isProductTag(tag))
         if (shown.length === 0) return null
         return (
           <div className="publication-tag-section" key={section.name}>
@@ -238,17 +240,33 @@ export function PublicationTaxonomySection({
         )
       })}
 
-      {ncmProducts.length > 0 && (
+      {productTags.length > 0 && (
         <div className="publication-tag-section publication-tag-ncm-products">
-          <strong>Produtos pelos NCMs</strong>
+          <strong>Produtos e NCMs</strong>
+          <div className="publication-tag-list">
+            <span className="publication-tag">
+              <span
+                className="publication-tag-chip is-summary"
+                title="Produtos e itens identificados pela taxonomia; os termos e NCMs permanecem marcados no texto vigente."
+              >
+                <Tag size={12} aria-hidden="true" />
+                Produtos / NCMs
+                <small>
+                  {activeProductTags.length} {activeProductTags.length === 1 ? 'item' : 'itens'}
+                </small>
+              </span>
+              <span role="tooltip" className="publication-tag-reason">
+                Os produtos e itens foram aglutinados nesta tag. Consulte as marcações verdes no texto para localizar cada termo ou NCM.
+              </span>
+            </span>
+          </div>
           <p className="publication-tags-meta">
-            {ncmProducts.length} {ncmProducts.length === 1 ? 'produto identificado' : 'produtos identificados'} pelos
-            NCMs citados — veja cada NCM marcado em verde no texto da legislação (passe o mouse para ver o produto).
+            Os itens não são abertos tag por tag porque seus termos e NCMs já aparecem destacados no texto vigente.
           </p>
           {curator && (
             <details>
-              <summary>Ver os produtos (curadoria)</summary>
-              <div className="publication-tag-list">{ncmProducts.map(renderTag)}</div>
+              <summary>Ver itens individualmente (curadoria)</summary>
+              <div className="publication-tag-list">{productTags.map(renderTag)}</div>
             </details>
           )}
         </div>

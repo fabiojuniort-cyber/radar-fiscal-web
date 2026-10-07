@@ -87,6 +87,39 @@ describe('highlightLegalHtml', () => {
     expect(result.marks).toBe(2)
   })
 
+  it('mirrors the real CONFAZ classes used by CV100/97 and CV52/91', () => {
+    const rules = buildHighlightRules(
+      taxonomy([
+        tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
+        tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] }),
+        tag('Revogado', { terms: ['revogado'], ncmPrefixes: [] }),
+      ]),
+      [{ code: '84501100', description: 'Máquinas de lavar roupa' }],
+    )
+    const result = highlightLegalHtml(
+      '<p class="TituloAcordo">CONVÊNIO ICMS 100/97</p>' +
+        '<p class="DataPublicao">Alterado pelos Convs. ICMS 26/21 e 79/25; ICMS.</p>' +
+        '<p class="A2DataPublicacao">Prorrogado até 31.12.27; fertilizantes.</p>' +
+        '<p class="A8-1Remissao">Nova redação dada pelo Conv. ICMS 99/04.</p>' +
+        '<p class="A5-1TextoAcordo">I - fertilizantes sujeitos ao ICMS.</p>' +
+        '<p class="A8-2RemissaoAnt">Redação original, efeitos até 18.10.04.</p>' +
+        '<p class="A8-3RedacaoAnt">I - fertilizantes na redação anterior.</p>' +
+        '<table><tr><td><p class="TabelaSubtituloverde">39.1</p></td>' +
+        '<td><p class="Tabelajustificadoverde">Máquinas antigas</p></td>' +
+        '<td><p class="TabelaSubtituloverde">8450.11.00</p></td></tr></table>' +
+        '<p class="TextoAcordo">Cláusula terceira REVOGADA</p>' +
+        '<p class="TextoAcordo">Ficam revogadas as disposições em contrário.</p>',
+      rules,
+    )
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map((mark) => mark.textContent)).toEqual([
+      'fertilizantes',
+      'ICMS',
+    ])
+    expect(result.markedNcms.size).toBe(0)
+    expect(result.marks).toBe(2)
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
