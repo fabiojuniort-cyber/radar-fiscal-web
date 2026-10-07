@@ -66,6 +66,7 @@ describe('highlightLegalHtml', () => {
       taxonomy([
         tag('ICMS', { terms: ['ICMS'], ncmPrefixes: [] }),
         tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] }),
+        tag('Revogado', { terms: ['revogado'], ncmPrefixes: [] }),
       ]),
       [],
     )
@@ -74,6 +75,7 @@ describe('highlightLegalHtml', () => {
         '<p class="Ementa">Reduz a base de cálculo do ICMS para fertilizantes.</p>' +
         '<p class="DataPublicao">Alterado pelo Convênio ICMS 26/21.</p>' +
         '<p class="Remisso">Nova redação dada pelo Convênio ICMS 79/25.</p>' +
+        '<p class="TextoAcordo">II - REVOGADO</p>' +
         '<p class="TextoAcordo">Fica reduzida a base de cálculo do ICMS nas saídas de fertilizantes.</p>',
       rules,
     )
