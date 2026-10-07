@@ -34,8 +34,9 @@ import {
   type CollectionFilterTerm,
 } from './collection-filter-api'
 import './collection-filter-admin.css'
+import { CollectionFilterDiscards, CollectionFilterDiscardAlerts } from './collection-filter-discards'
 
-type Tab = 'types' | 'terms' | 'new-types' | 'simulations'
+type Tab = 'types' | 'terms' | 'new-types' | 'simulations' | 'discarded' | 'discard-alerts'
 type EditableDocument = Omit<
   CollectionFilterDocument,
   'id' | 'version' | 'revision' | 'status'
@@ -474,6 +475,8 @@ export function CollectionFilterAdminPage({
             ['terms', 'Termos'],
             ['new-types', `Novos tipos (${newTypesQuery.data?.items.length ?? 0})`],
             ['simulations', 'Simulações'],
+            ['discarded', 'Desconsiderados'],
+            ['discard-alerts', 'Alertas de descarte'],
           ] as Array<[Tab, string]>).map(([value, label]) => (
             <button
               key={value}
@@ -610,6 +613,9 @@ export function CollectionFilterAdminPage({
             simulations={stateQuery.data?.simulations ?? []}
           />
         )}
+
+        {tab === 'discarded' && <CollectionFilterDiscards apiFetch={apiFetch} />}
+        {tab === 'discard-alerts' && <CollectionFilterDiscardAlerts apiFetch={apiFetch} />}
 
         <footer className="cf-footer">
           <span>

@@ -328,3 +328,60 @@ export async function saveCollectionFilterSimulationFeedback(
     ),
   )
 }
+
+export interface CollectionFilterDiscard {
+  id: string
+  source_code: string
+  connector_key: string
+  section: string
+  raw_type: string | null
+  canonical_type: string | null
+  title: string
+  act_number: string | null
+  published_on: string | null
+  official_url: string | null
+  reason_code: string
+  decisive_term: string | null
+  policy_version: number
+  policy_revision: number
+  discarded_at: string
+  expires_at: string
+}
+
+export interface CollectionFilterDiscardAlert {
+  id: string
+  collection_run_id: string
+  source_code: string
+  discard_rate: number | string
+  baseline_rate: number | string
+  threshold_rate: number | string
+  found_count: number
+  discard_count: number
+  status: 'OPEN' | 'ACKNOWLEDGED'
+  created_at: string
+  acknowledged_at: string | null
+}
+
+export async function fetchCollectionFilterDiscards(
+  apiFetch: ProductApiFetch,
+  options: { sourceCode?: string; limit: number; offset: number },
+) {
+  const params = new URLSearchParams({ limit: String(options.limit), offset: String(options.offset) })
+  if (options.sourceCode?.trim()) params.set('sourceCode', options.sourceCode.trim().toLowerCase())
+  return readJson<{ items: CollectionFilterDiscard[] }>(await apiFetch(
+    `/api/v1/admin/collection-filter/discarded?${params}`,
+    { headers: { Accept: 'application/json' } },
+  ))
+}
+
+export async function fetchCollectionFilterDiscardAlerts(
+  apiFetch: ProductApiFetch,
+  status?: CollectionFilterDiscardAlert['status'],
+) {
+  const params = new URLSearchParams({ limit: '500' })
+  if (status) params.set('status', status)
+  return readJson<{ items: CollectionFilterDiscardAlert[] }>(await apiFetch(
+    `/api/v1/admin/collection-filter/discard-alerts?${params}`,
+    { headers: { Accept: 'application/json' } },
+  ))
+}
