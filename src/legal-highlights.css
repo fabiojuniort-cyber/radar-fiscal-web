@@ -1,0 +1,85 @@
+/* Highlighter pen: Brazilian-flag green, black bold text. */
+.publication-preserved-html mark.legal-mark,
+.publication-preserved-text mark.legal-mark {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: #009c3b;
+  color: #000;
+  font-weight: 700;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.publication-preserved-html mark.legal-mark[data-ncm-code],
+.publication-preserved-text mark.legal-mark[data-ncm-code] {
+  cursor: pointer;
+}
+
+.publication-preserved-html mark.legal-mark.is-current,
+.publication-preserved-text mark.legal-mark.is-current {
+  outline: 3px solid #ffdf00;
+  outline-offset: 1px;
+}
+
+.legal-marks-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.legal-marks-toggle,
+.legal-marks-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 5px 12px;
+  border: 1px solid #b9dcc6;
+  border-radius: 999px;
+  background: #f1faf4;
+  color: #0b5a2a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.legal-marks-toggle[aria-pressed='false'] {
+  border-color: #d6e0ea;
+  background: #f8fbfe;
+  color: #4a5f77;
+}
+
+.legal-marks-jump {
+  margin-bottom: 12px;
+}
+
+.legal-marks-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #4a5f77;
+  font-size: 13px;
+}
+
+.legal-marks-nav button {
+  display: inline-flex;
+  min-height: 0;
+  padding: 3px;
+  border: 1px solid #d6e0ea;
+  border-radius: 6px;
+  background: #fff;
+  color: #08306b;
+  cursor: pointer;
+}
+
+.publication-ncm-unmarked {
+  margin: 0 0 8px;
+  color: #657a91;
+  font-size: 13px;
+}
+
+.publication-document-card-head {
+  flex-wrap: wrap;
+}

@@ -192,6 +192,8 @@ export type PublicationTag = {
     term: string | null
     excerpt: string | null
   }
+  /** What marks the tag in the legislation text (absent on older APIs). */
+  highlight?: { terms: string[]; ncmPrefixes: string[] }
 }
 
 export type PublicationTaxonomy = {

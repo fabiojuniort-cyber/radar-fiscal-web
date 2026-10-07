@@ -155,7 +155,77 @@ describe('NCMs identificados na legislação', () => {
     // Description and excerpt are not printed; the description stays as a hint.
     expect(screen.queryByText(/Silos de matéria plástica/)).not.toBeInTheDocument()
     expect(chips[1]).toHaveAttribute('title', 'Reservatórios, cisternas · buscar no Acervo')
-    expect(screen.getByText(/2 códigos · clique para buscar no Acervo/)).toBeInTheDocument()
+    expect(screen.getByText(/extraídos do texto vigente/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('listitem', { name: 'Buscar NCM 3917.32.90 no Acervo' }))
+  })
+})
+
+describe('Marcações no texto da legislação', () => {
+  it('marks the tag terms and the NCMs in the current wording, and the toggle hides them', async () => {
+    const base = detail('confaz')
+    const withText = {
+      ...base,
+      version: {
+        ...base.version,
+        presentation: {
+          ...base.version.presentation,
+          html:
+            '<p class="RedaoAnt">Redação anterior com isenção</p>' +
+            '<p>Fica concedida isenção do ICMS para o NCM 3917.32.90.</p>',
+        },
+      },
+    }
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/publications/pub-1') return json(withText)
+      if (url === '/api/v1/publications/pub-1/ncms') {
+        return json({
+          items: [
+            { code: '39173290', description: 'Outros tubos', verificationStatus: 'CATALOG_MATCHED', method: { type: 'RULE', detectorKey: 'ncm', detectorVersion: '1.1.0' } },
+            { code: '39251000', description: 'Reservatórios', verificationStatus: 'CATALOG_MATCHED', method: { type: 'RULE', detectorKey: 'ncm', detectorVersion: '1.1.0' } },
+          ],
+        })
+      }
+      if (url === '/api/v1/publications/pub-1/taxonomy') {
+        const tag = (label: string, type: string, highlight: { terms: string[]; ncmPrefixes: string[] }) => ({
+          kind: 'CONCEPT', conceptCode: `x.${label}`, groupCode: null, label, dimensionCode: 'theme', groupLabel: null,
+          origin: 'AUTOMATIC', assertionId: null, removed: false, reason: { type, term: null, excerpt: null }, highlight,
+        })
+        return json({
+          publicationId: 'pub-1', publicationVersionId: 'v1', release: null, status: 'CLASSIFIED', classifiedAt: null,
+          sections: [{ name: 'Temas', order: 1, tags: [
+            tag('Isenção', 'TEXT', { terms: ['Isenção'], ncmPrefixes: [] }),
+            tag('Tubos plásticos', 'NCM', { terms: [], ncmPrefixes: ['3917'] }),
+          ] }],
+        })
+      }
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <PublicationDetailPage publicationId="pub-1" apiFetch={apiFetch} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    const toggle = await screen.findByRole('button', { name: 'Ocultar marcações' })
+    const marks = () => Array.from(container.querySelectorAll('mark.legal-mark'))
+    // Only the current wording; the previous wording keeps its text unmarked.
+    expect(marks().map((mark) => mark.textContent)).toEqual(['isenção', '3917.32.90'])
+    expect(marks()[1]).toHaveAttribute('title', expect.stringContaining('Produto: Tubos plásticos'))
+    expect(screen.getByText('2 marcações')).toBeInTheDocument()
+    // The marked NCM leaves the chips; the one not in the text stays.
+    const chips = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(chips.map((chip) => chip.textContent)).toEqual(['3925.10.00'])
+    expect(screen.getByText(/1 código marcado em verde no texto/)).toBeInTheDocument()
+    // The product found through the NCM is not a tag chip.
+    expect(screen.queryByRole('button', { name: /Tubos plásticos/ })).not.toBeInTheDocument()
+
+    fireEvent.click(toggle)
+    expect(marks()).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Mostrar marcações' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(2)
   })
 })
