@@ -56,6 +56,14 @@ function hasNonNormativeClass(element: Element) {
   return Array.from(element.classList).some((token) => NON_NORMATIVE_CLASSES.has(token) || isPreviousWordingClass(token))
 }
 
+const REVOKED_PLACEHOLDER =
+  /^(?:(?:cl[áa]usula|art(?:igo)?\.?|par[áa]grafo|inciso|al[íi]nea|item)\s+[\p{L}\p{N}º°ª.-]+|§\s*\d+[º°ª]?|[ivxlcdm]+|[a-z]|\d+[º°ª]?)\s*(?:[-–—:]\s*)?revogad[oa]s?\.?$/iu
+
+function isRevokedPlaceholder(element: Element) {
+  if (!['P', 'TD', 'TH'].includes(element.tagName)) return false
+  return REVOKED_PLACEHOLDER.test((element.textContent ?? '').replace(/\s+/g, ' ').trim())
+}
+
 /** Same normalization as the classifier, with a map back to raw positions. */
 export function normalizeWithIndex(raw: string): { text: string; rawIndex: number[] } {
   let text = ''
@@ -204,7 +212,7 @@ function withoutOverlaps(ranges: Range[]): Range[] {
 
 function isNonNormativeLegalText(node: Node): boolean {
   for (let element = node.parentElement; element; element = element.parentElement) {
-    if (hasNonNormativeClass(element)) return true
+    if (hasNonNormativeClass(element) || isRevokedPlaceholder(element)) return true
     if (element.tagName === 'TR') {
       const row = element
       if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
