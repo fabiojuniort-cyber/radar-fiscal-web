@@ -1,0 +1,273 @@
+.pa-app {
+  min-height: 100vh;
+  background: #f5f7f7;
+  color: #16312f;
+}
+
+.pa-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+  padding: 28px clamp(20px, 5vw, 72px);
+  background: #0e302e;
+  color: #fff;
+}
+
+.pa-header h1 {
+  margin: 2px 0 6px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.pa-header p,
+.pa-header span {
+  margin: 0;
+  color: rgba(255, 255, 255, .72);
+}
+
+.pa-header nav {
+  display: flex;
+  gap: 10px;
+}
+
+.pa-header nav a,
+.pa-back {
+  color: #fff;
+  text-decoration: none;
+}
+
+.pa-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pa-main {
+  width: min(1080px, calc(100% - 40px));
+  margin: 32px auto 64px;
+  display: grid;
+  gap: 20px;
+}
+
+.pa-summary,
+.pa-card {
+  border: 1px solid #dce5e3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(20, 50, 47, .05);
+}
+
+.pa-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 24px;
+}
+
+.pa-summary article {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.pa-summary article div {
+  display: grid;
+}
+
+.pa-summary strong {
+  font-size: 26px;
+}
+
+.pa-summary p {
+  margin: 0;
+  color: #5f7270;
+}
+
+.pa-card {
+  padding: 24px;
+}
+
+.pa-card-heading h2 {
+  margin: 0;
+}
+
+.pa-card-heading p,
+.pa-muted {
+  color: #647774;
+}
+
+.pa-grant {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+.pa-grant label {
+  display: grid;
+  gap: 6px;
+  font-weight: 650;
+}
+
+.pa-grant input {
+  min-height: 44px;
+  border: 1px solid #cbd8d5;
+  border-radius: 10px;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.pa-grant button,
+.pa-revoke,
+.pa-dialog-actions button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pa-grant button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #155e59;
+  color: white;
+}
+
+.pa-admin-list {
+  display: grid;
+  margin-top: 16px;
+}
+
+.pa-admin-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid #e6eceb;
+}
+
+.pa-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e3efed;
+  font-weight: 800;
+}
+
+.pa-admin-identity {
+  display: grid;
+  gap: 2px;
+}
+
+.pa-admin-identity span,
+.pa-admin-identity small {
+  color: #667a77;
+}
+
+.pa-status {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #eef1f1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pa-status.is-active {
+  background: #e7f6ef;
+  color: #176245;
+}
+
+.pa-revoke {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff0f0;
+  color: #9b2525;
+}
+
+.pa-error {
+  color: #9f2424;
+  font-weight: 650;
+}
+
+.pa-denied {
+  width: min(480px, calc(100% - 40px));
+  margin: 12vh auto;
+  padding: 32px;
+  border-radius: 18px;
+  background: white;
+  text-align: center;
+}
+
+.pa-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 25, 23, .56);
+  z-index: 80;
+}
+
+.pa-dialog {
+  position: fixed;
+  z-index: 81;
+  top: 50%;
+  left: 50%;
+  width: min(480px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+  border-radius: 18px;
+  background: white;
+  padding: 26px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .28);
+}
+
+.pa-dialog h2 {
+  margin-top: 0;
+}
+
+.pa-dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+}
+
+.pa-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.pa-dialog-actions .is-danger {
+  background: #a82828;
+  color: white;
+}
+
+@media (max-width: 720px) {
+  .pa-header {
+    grid-template-columns: 1fr;
+  }
+
+  .pa-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pa-grant,
+  .pa-admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pa-revoke {
+    justify-self: start;
+  }
+}
