@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CircleHelp } from 'lucide-react'
 import type { ProductApiFetch } from './product-api'
 import {
   fetchCollectionFilterDiscards,
@@ -59,6 +60,9 @@ export function CollectionFilterDiscards({ apiFetch }: { apiFetch: ProductApiFet
     <div className="cf-card-title"><h2 id="cf-discard-title">Desconsiderados</h2>
       <p>Publicações descartadas antes de entrar no acervo. Trilha operacional por 3 meses, sem texto integral ou resumo.</p>
     </div>
+    <details className="cf-settings"><summary><CircleHelp size={16} aria-hidden="true" />Ajuda — Desconsiderados</summary>
+      <p>A fonte usa o código do coletor, como dou. O filtro busca no servidor e reinicia a paginação. Motivo e termo explicam a decisão; a versão e a revisão identificam a política aplicada. Expiração indica quando termina a guarda de 3 meses. O link oficial permite conferir o ato original.</p>
+    </details>
     <form className="cf-review-filters" onSubmit={filter}>
       <label>Fonte<input value={input} maxLength={100} placeholder="Todas as fontes · código, ex.: dou" onChange={event => setInput(event.target.value)} /></label>
       <button type="submit">Filtrar</button>
@@ -111,6 +115,9 @@ export function CollectionFilterDiscardAlerts({ apiFetch }: { apiFetch: ProductA
     <div className="cf-card-title"><h2 id="cf-alert-title">Alertas de descarte</h2>
       <p>Saltos da taxa de descarte em relação às execuções anteriores. Exibição dos até 500 alertas mais recentes do status selecionado.</p>
     </div>
+    <details className="cf-settings"><summary><CircleHelp size={16} aria-hidden="true" />Ajuda — Alertas de descarte</summary>
+      <p>A taxa compara publicações descartadas e encontradas. A referência vem das execuções anteriores; o limiar é o valor usado para abrir o alerta. O status separa alertas abertos e reconhecidos. Esta tela permite consultar os alertas, sem alterar seu status.</p>
+    </details>
     <div className="cf-review-filters">
       <label>Status do alerta<select value={status} onChange={event => setStatus(event.target.value as typeof status)}>
         <option value="OPEN">Abertos</option><option value="ACKNOWLEDGED">Reconhecidos</option><option value="ALL">Todos</option>
