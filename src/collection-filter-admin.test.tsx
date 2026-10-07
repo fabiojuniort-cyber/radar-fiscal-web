@@ -162,8 +162,8 @@ describe('Filtro de Coleta administrativo', () => {
       await screen.findByText('PORTARIA'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Manter só se tiver termo tributário'),
-    ).toBeInTheDocument()
+      screen.getByLabelText('Modo PORTARIA'),
+    ).toHaveValue('KEEP_IF_TAX_TERM')
 
     const notes = screen.getByPlaceholderText(
       'O que mudou nesta revisão?',
@@ -237,6 +237,7 @@ describe('Filtro de Coleta administrativo', () => {
     const approve = await screen.findByRole('button', {
       name: 'Aprovar política',
     })
+    await waitFor(() => expect(approve).toBeEnabled())
     fireEvent.click(approve)
 
     expect(
