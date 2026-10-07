@@ -26,6 +26,11 @@ const STATUS_COPY: Record<string, string> = {
   NO_RELEASE: 'Taxonomia indisponível.',
 }
 
+/** Products found through an NCM are marked in the text, not listed as tags. */
+function isNcmProduct(tag: PublicationTag) {
+  return tag.reason.type === 'NCM'
+}
+
 export function reasonText(tag: PublicationTag): string {
   const { reason } = tag
   switch (reason.type) {
@@ -135,6 +140,51 @@ export function PublicationTaxonomySection({
     navigate('/painel')
   }
 
+  const ncmProducts = (view?.sections ?? []).flatMap((section) => section.tags).filter(isNcmProduct)
+
+  const renderTag = (tag: PublicationTag) => {
+    const key = `${tag.kind}-${tag.conceptCode ?? tag.groupCode}`
+    const text = reasonText(tag)
+    return (
+      <span
+        key={key}
+        className={`publication-tag${tag.removed ? ' is-removed' : ''}${tag.origin === 'CURATOR' ? ' is-curator' : ''}`}
+      >
+        <button
+          type="button"
+          className="publication-tag-chip"
+          title={text}
+          aria-describedby={`${key}-reason`}
+          disabled={!tag.conceptCode}
+          onClick={() => openInArchive(tag)}
+        >
+          <Tag size={12} aria-hidden="true" />
+          {tag.label}
+          {tag.groupLabel && <small>{tag.groupLabel}</small>}
+        </button>
+        <span role="tooltip" id={`${key}-reason`} className="publication-tag-reason">
+          {text}
+        </span>
+        {curator && tag.conceptCode && (
+          <button
+            type="button"
+            className="publication-tag-action"
+            aria-label={tag.removed ? `Restaurar ${tag.label}` : `Remover ${tag.label}`}
+            disabled={curate.isPending}
+            onClick={() =>
+              curate.mutate({
+                conceptCode: tag.conceptCode!,
+                action: tag.removed ? 'RESTORE' : 'REMOVE',
+              })
+            }
+          >
+            {tag.removed ? <RotateCcw size={12} /> : <X size={12} />}
+          </button>
+        )}
+      </span>
+    )
+  }
+
   if (tagsQuery.isPending || meQuery.isPending) {
     return (
       <section className="publication-origins-card publication-tags-card">
@@ -177,55 +227,32 @@ export function PublicationTaxonomySection({
         </p>
       )}
 
-      {sections.map((section) => (
-        <div className="publication-tag-section" key={section.name}>
-          <strong>{section.name}</strong>
-          <div className="publication-tag-list">
-            {section.tags.map((tag) => {
-              const key = `${tag.kind}-${tag.conceptCode ?? tag.groupCode}`
-              const text = reasonText(tag)
-              return (
-                <span
-                  key={key}
-                  className={`publication-tag${tag.removed ? ' is-removed' : ''}${tag.origin === 'CURATOR' ? ' is-curator' : ''}`}
-                >
-                  <button
-                    type="button"
-                    className="publication-tag-chip"
-                    title={text}
-                    aria-describedby={`${key}-reason`}
-                    disabled={!tag.conceptCode}
-                    onClick={() => openInArchive(tag)}
-                  >
-                    <Tag size={12} aria-hidden="true" />
-                    {tag.label}
-                    {tag.groupLabel && <small>{tag.groupLabel}</small>}
-                  </button>
-                  <span role="tooltip" id={`${key}-reason`} className="publication-tag-reason">
-                    {text}
-                  </span>
-                  {curator && tag.conceptCode && (
-                    <button
-                      type="button"
-                      className="publication-tag-action"
-                      aria-label={tag.removed ? `Restaurar ${tag.label}` : `Remover ${tag.label}`}
-                      disabled={curate.isPending}
-                      onClick={() =>
-                        curate.mutate({
-                          conceptCode: tag.conceptCode!,
-                          action: tag.removed ? 'RESTORE' : 'REMOVE',
-                        })
-                      }
-                    >
-                      {tag.removed ? <RotateCcw size={12} /> : <X size={12} />}
-                    </button>
-                  )}
-                </span>
-              )
-            })}
+      {sections.map((section) => {
+        const shown = section.tags.filter((tag) => !isNcmProduct(tag))
+        if (shown.length === 0) return null
+        return (
+          <div className="publication-tag-section" key={section.name}>
+            <strong>{section.name}</strong>
+            <div className="publication-tag-list">{shown.map(renderTag)}</div>
           </div>
+        )
+      })}
+
+      {ncmProducts.length > 0 && (
+        <div className="publication-tag-section publication-tag-ncm-products">
+          <strong>Produtos pelos NCMs</strong>
+          <p className="publication-tags-meta">
+            {ncmProducts.length} {ncmProducts.length === 1 ? 'produto identificado' : 'produtos identificados'} pelos
+            NCMs citados — veja cada NCM marcado em verde no texto da legislação (passe o mouse para ver o produto).
+          </p>
+          {curator && (
+            <details>
+              <summary>Ver os produtos (curadoria)</summary>
+              <div className="publication-tag-list">{ncmProducts.map(renderTag)}</div>
+            </details>
+          )}
         </div>
-      ))}
+      )}
 
       {curator && view?.status !== 'EXCLUDED' && (
         <div className="publication-tags-curator">
