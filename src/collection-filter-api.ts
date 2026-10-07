@@ -89,7 +89,14 @@ export interface CollectionFilterNewType {
   first_seen_at: string
   last_seen_at: string
   sample_publication_ids: string[]
+  examples: Array<{
+    id: string
+    title: string
+    publishedOn: string | null
+    officialUrl: string | null
+  }>
   status: 'OPEN' | 'RESOLVED' | 'MERGED'
+  resolved_canonical_type?: string | null
   resolved_at: string | null
 }
 
