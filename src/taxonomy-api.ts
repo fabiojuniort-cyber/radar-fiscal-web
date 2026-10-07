@@ -258,7 +258,7 @@ const ADMIN = '/api/v1/admin/taxonomy'
 
 export async function fetchAdminMe(apiFetch: ProductApiFetch) {
   const response = await apiFetch('/api/v1/admin/me', { headers: { Accept: 'application/json' } })
-  return readJson<{ taxonomyCurator: boolean; curatorDatabase: boolean }>(response)
+  return readJson<{ platformAdmin: boolean; taxonomyCurator: boolean; licenseBypass: boolean; curatorDatabase: boolean }>(response)
 }
 
 export async function fetchCurationState(apiFetch: ProductApiFetch) {

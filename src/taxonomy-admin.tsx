@@ -64,7 +64,7 @@ const TABS: Array<{ key: Tab; label: string }> = [
 ]
 
 const ERROR_MESSAGES: Record<string, string> = {
-  taxonomy_curator_required: 'Seu usuário não tem acesso de curadoria.',
+  platform_admin_required: 'Seu usuário não possui acesso administrativo global.',
   curator_database_unavailable:
     'A conexão de curadoria do banco não está configurada neste ambiente.',
   justification_required: 'Informe o motivo da alteração.',
@@ -108,15 +108,15 @@ export function TaxonomyAdminPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   })
 
   if (meQuery.isPending) {
-    return <main className="auth-panel-loading">Verificando acesso de curadoria…</main>
+    return <main className="auth-panel-loading">Verificando acesso administrativo…</main>
   }
-  if (meQuery.isError || !meQuery.data?.taxonomyCurator) {
+  if (meQuery.isError || !meQuery.data?.platformAdmin) {
     return (
       <div className="tp-app tc-app">
         <main className="tc-denied">
           <ShieldCheck size={28} />
           <h1>Acesso restrito</h1>
-          <p>A curadoria da taxonomia é exclusiva de usuários com acesso especial.</p>
+          <p>A curadoria da taxonomia é exclusiva de administradores globais da plataforma.</p>
           <Link to="/painel">Voltar ao painel</Link>
         </main>
       </div>
@@ -180,7 +180,7 @@ function CurationWorkspace({ apiFetch }: { apiFetch: ProductApiFetch }) {
           <ArrowLeft size={16} /> Painel
         </Link>
         <div>
-          <span className="tp-eyebrow">Acesso de curadoria</span>
+          <span className="tp-eyebrow">Administração da plataforma</span>
           <h1>Curadoria da Taxonomia</h1>
         </div>
         <label className="tc-justification">
