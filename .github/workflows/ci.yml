@@ -2,6 +2,7 @@ name: Frontend CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches:
       - main
@@ -19,6 +20,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+
+      - name: Validate CI routing
+        run: python3 -m unittest discover -s .github/scripts -p test_ci_plan.py
+
+      - name: Plan CI gates
+        id: ci-plan
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_DRAFT: ${{ github.event.pull_request.draft || false }}
+        run: python3 .github/scripts/ci-plan.py --kind web
 
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
@@ -68,21 +80,40 @@ jobs:
         run: npm run build
 
       - name: Build demo-enabled browser target
+        if: steps.ci-plan.outputs.full_regression == 'true'
         run: VITE_ENABLE_DEMO_ACCESS=true npm run build
 
       - name: Install Chromium for Playwright
+        if: steps.ci-plan.outputs.full_regression == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Browser tests
+        if: steps.ci-plan.outputs.full_regression == 'true'
         run: npm run test:e2e
 
       - name: Record browser evidence metadata
-        if: always()
+        if: ${{ !cancelled() && steps.ci-plan.outputs.full_regression == 'true' }}
         run: |
           mkdir -p playwright-artifacts
           printf '%s\n' "${{ github.event.pull_request.head.sha || github.sha }}" > playwright-artifacts/HEAD.txt
           printf '%s\n' "Chromium / local Vite preview from the CI build" > playwright-artifacts/RUNTIME.txt
           printf '%s\n' "1440x900, 1920x1080, 390x844, 360x800" > playwright-artifacts/VIEWPORTS.txt
+
+
+      - name: Require full regression before merge
+        if: ${{ !cancelled() }}
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_DRAFT: ${{ github.event.pull_request.draft || false }}
+        run: python3 .github/scripts/ci-plan.py --kind web --require-full
+
+      - name: Record CI mode
+        if: ${{ !cancelled() }}
+        env:
+          CI_MODE: ${{ steps.ci-plan.outputs.full_regression == 'true' && 'FULL_REGRESSION' || (steps.ci-plan.outputs.full_regression == 'false' && 'DRAFT_FAST_ONLY' || 'UNKNOWN') }}
+        run: |
+          mkdir -p playwright-artifacts
+          printf '%s\n' "$CI_MODE" > playwright-artifacts/CI-MODE.txt
 
       - name: Upload WEB-14 browser evidence
         if: always()
