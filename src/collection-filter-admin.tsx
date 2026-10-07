@@ -19,14 +19,17 @@ import {
   approveCollectionFilterDraft,
   CollectionFilterApiError,
   fetchCollectionFilterNewTypes,
+  fetchCollectionFilterSimulationItems,
   fetchCollectionFilterState,
   requestCollectionFilterSimulation,
   resolveCollectionFilterNewType,
   saveCollectionFilterDraft,
+  saveCollectionFilterSimulationFeedback,
   type CollectionFilterAlias,
   type CollectionFilterDocument,
   type CollectionFilterMode,
   type CollectionFilterRule,
+  type CollectionFilterSimulation,
   type CollectionFilterStrength,
   type CollectionFilterTerm,
 } from './collection-filter-api'
@@ -602,39 +605,10 @@ export function CollectionFilterAdminPage({
           </section>
         )}
         {tab === 'simulations' && (
-          <section className="cf-card">
-            <div className="cf-card-title">
-              <div>
-                <h2>Simulações</h2>
-                <p>
-                  Aprovação só é permitida após uma simulação concluída da
-                  mesma revisão do rascunho e sem erros marcados.
-                </p>
-              </div>
-            </div>
-            {stateQuery.data?.simulations.length ? (
-              <div className="cf-list">
-                {stateQuery.data.simulations.map((simulation) => (
-                  <article key={simulation.id} className="cf-simulation">
-                    <div>
-                      <strong>{simulation.status}</strong>
-                      <span>
-                        revisão {simulation.policy_revision} ·{' '}
-                        {simulation.scope === 'FULL_ARCHIVE'
-                          ? 'acervo completo'
-                          : 'recentes'}
-                      </span>
-                    </div>
-                    <code>{simulation.id.slice(0, 8)}</code>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="cf-empty">
-                Nenhuma simulação solicitada para esta política.
-              </p>
-            )}
-          </section>
+          <SimulationReviewPanel
+            apiFetch={apiFetch}
+            simulations={stateQuery.data?.simulations ?? []}
+          />
         )}
 
         <footer className="cf-footer">
@@ -983,6 +957,372 @@ function TermsEditor({
           termos positivos autônomos. O backend bloqueia essa combinação.
         </p>
       </div>
+    </section>
+  )
+}
+
+
+function SimulationReviewPanel({
+  apiFetch,
+  simulations,
+}: {
+  apiFetch: ProductApiFetch
+  simulations: CollectionFilterSimulation[]
+}) {
+  const queryClient = useQueryClient()
+  const [selectedId, setSelectedId] = useState<string | null>(
+    simulations[0]?.id ?? null,
+  )
+  const [decision, setDecision] =
+    useState<'ALL' | 'KEEP' | 'DISCARD'>('ALL')
+  const [sampleOnly, setSampleOnly] = useState(true)
+  const [page, setPage] = useState(0)
+  const [notes, setNotes] = useState<Record<string, string>>({})
+  const [expected, setExpected] = useState<
+    Record<string, 'KEEP' | 'DISCARD'>
+  >({})
+
+  useEffect(() => {
+    if (
+      selectedId &&
+      simulations.some((simulation) => simulation.id === selectedId)
+    ) {
+      return
+    }
+    setSelectedId(simulations[0]?.id ?? null)
+  }, [selectedId, simulations])
+
+  const selected = simulations.find(
+    (simulation) => simulation.id === selectedId,
+  )
+
+  useEffect(() => {
+    if (!selected) return
+    setSampleOnly(selected.review_mode === 'SAMPLE')
+    setPage(0)
+  }, [selected?.id, selected?.review_mode])
+
+  const itemsQuery = useQuery({
+    queryKey: [
+      'collection-filter',
+      'simulation-items',
+      selectedId,
+      decision,
+      sampleOnly,
+      page,
+    ],
+    queryFn: () =>
+      fetchCollectionFilterSimulationItems(
+        apiFetch,
+        selectedId!,
+        {
+          ...(decision === 'ALL' ? {} : { decision }),
+          sampleOnly,
+          limit: 50,
+          offset: page * 50,
+        },
+      ),
+    enabled: Boolean(selectedId),
+    retry: false,
+  })
+
+  const feedback = useMutation({
+    mutationFn: (input: {
+      publicationId: string
+      markedError: boolean
+      expectedDecision?: 'KEEP' | 'DISCARD' | null
+      note?: string | null
+    }) =>
+      saveCollectionFilterSimulationFeedback(apiFetch, {
+        simulationId: selectedId!,
+        ...input,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [
+          'collection-filter',
+          'simulation-items',
+          selectedId,
+        ],
+      })
+    },
+  })
+
+  if (!simulations.length) {
+    return (
+      <section className="cf-card">
+        <div className="cf-card-title">
+          <div>
+            <h2>Simulações</h2>
+            <p>
+              Nenhuma simulação solicitada para esta política.
+            </p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  const metrics =
+    selected?.metrics &&
+    typeof selected.metrics === 'object'
+      ? selected.metrics
+      : {}
+
+  return (
+    <section className="cf-card cf-simulation-review">
+      <div className="cf-card-title">
+        <div>
+          <h2>Simulações</h2>
+          <p>
+            Revise todos, uma amostra ou nenhum item. Marcar erro
+            bloqueia a aprovação da política.
+          </p>
+        </div>
+      </div>
+
+      <div className="cf-simulation-selector">
+        <label>
+          Execução
+          <select
+            value={selectedId ?? ''}
+            onChange={(event) => {
+              setSelectedId(event.target.value)
+              setPage(0)
+            }}
+          >
+            {simulations.map((simulation) => (
+              <option key={simulation.id} value={simulation.id}>
+                {simulation.status} · revisão {simulation.policy_revision} ·{' '}
+                {simulation.scope === 'FULL_ARCHIVE'
+                  ? 'acervo completo'
+                  : 'recentes'}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {selected ? (
+          <div className="cf-simulation-metrics">
+            <span>
+              Status <strong>{selected.status}</strong>
+            </span>
+            <span>
+              Inspecionados{' '}
+              <strong>{String(metrics.inspected ?? 0)}</strong>
+            </span>
+            <span>
+              KEEP <strong>{String(metrics.keep ?? 0)}</strong>
+            </span>
+            <span>
+              DISCARD <strong>{String(metrics.discard ?? 0)}</strong>
+            </span>
+            <span>
+              Tipo novo{' '}
+              <strong>{String(metrics.unknownType ?? 0)}</strong>
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="cf-review-filters">
+        <label>
+          Decisão
+          <select
+            value={decision}
+            onChange={(event) => {
+              setDecision(
+                event.target.value as 'ALL' | 'KEEP' | 'DISCARD',
+              )
+              setPage(0)
+            }}
+          >
+            <option value="ALL">Todas</option>
+            <option value="KEEP">KEEP</option>
+            <option value="DISCARD">DISCARD</option>
+          </select>
+        </label>
+        <label className="cf-checkbox">
+          <input
+            type="checkbox"
+            checked={sampleOnly}
+            onChange={(event) => {
+              setSampleOnly(event.target.checked)
+              setPage(0)
+            }}
+          />
+          Somente amostra
+        </label>
+      </div>
+
+      {selected?.status !== 'COMPLETED' ? (
+        <p className="cf-empty">
+          A simulação ainda não terminou. Os resultados aparecerão
+          quando o Worker concluir o processamento.
+        </p>
+      ) : itemsQuery.isPending ? (
+        <p className="cf-empty">Carregando itens da revisão…</p>
+      ) : itemsQuery.isError ? (
+        <p className="cf-error">{errorText(itemsQuery.error)}</p>
+      ) : (
+        <>
+          <div className="cf-review-list">
+            {(itemsQuery.data?.items ?? []).map((item) => {
+              const defaultExpected =
+                item.decision === 'KEEP' ? 'DISCARD' : 'KEEP'
+              const expectedDecision =
+                expected[item.publication_id] ?? defaultExpected
+              return (
+                <article
+                  key={item.publication_id}
+                  className={
+                    item.marked_error
+                      ? 'cf-review-item is-error'
+                      : 'cf-review-item'
+                  }
+                >
+                  <div className="cf-review-item-head">
+                    <div>
+                      <span
+                        className={
+                          item.decision === 'KEEP'
+                            ? 'cf-decision is-keep'
+                            : 'cf-decision is-discard'
+                        }
+                      >
+                        {item.decision}
+                      </span>
+                      <strong>
+                        {item.official_url ? (
+                          <a
+                            href={item.official_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.title}
+                          </a>
+                        ) : (
+                          item.title
+                        )}
+                      </strong>
+                    </div>
+                    <code>{item.reason_code}</code>
+                  </div>
+                  <p className="cf-review-meta">
+                    {item.source_code}
+                    {item.section ? ` · ${item.section}` : ''}
+                    {item.canonical_type
+                      ? ` · ${item.canonical_type}`
+                      : item.raw_type
+                        ? ` · ${item.raw_type}`
+                        : ''}
+                    {item.decisive_term
+                      ? ` · termo: ${item.decisive_term}`
+                      : ''}
+                  </p>
+                  {item.excerpt ? (
+                    <blockquote>{item.excerpt}</blockquote>
+                  ) : null}
+
+                  <div className="cf-feedback-row">
+                    <label>
+                      Decisão esperada
+                      <select
+                        value={expectedDecision}
+                        onChange={(event) =>
+                          setExpected((current) => ({
+                            ...current,
+                            [item.publication_id]:
+                              event.target.value as
+                                | 'KEEP'
+                                | 'DISCARD',
+                          }))
+                        }
+                      >
+                        <option value="KEEP">KEEP</option>
+                        <option value="DISCARD">DISCARD</option>
+                      </select>
+                    </label>
+                    <label>
+                      Nota
+                      <input
+                        value={
+                          notes[item.publication_id] ??
+                          item.note ??
+                          ''
+                        }
+                        onChange={(event) =>
+                          setNotes((current) => ({
+                            ...current,
+                            [item.publication_id]:
+                              event.target.value,
+                          }))
+                        }
+                        placeholder="Motivo da correção"
+                      />
+                    </label>
+                    {item.marked_error ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          feedback.mutate({
+                            publicationId: item.publication_id,
+                            markedError: false,
+                            expectedDecision: null,
+                            note:
+                              notes[item.publication_id] ??
+                              item.note ??
+                              null,
+                          })
+                        }
+                      >
+                        Marcar como correto
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="is-danger-quiet"
+                        onClick={() =>
+                          feedback.mutate({
+                            publicationId: item.publication_id,
+                            markedError: true,
+                            expectedDecision,
+                            note:
+                              notes[item.publication_id] ??
+                              null,
+                          })
+                        }
+                      >
+                        Marcar erro
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+
+          <div className="cf-pagination">
+            <button
+              type="button"
+              disabled={page === 0}
+              onClick={() =>
+                setPage((current) => Math.max(0, current - 1))
+              }
+            >
+              Anterior
+            </button>
+            <span>Página {page + 1}</span>
+            <button
+              type="button"
+              disabled={(itemsQuery.data?.items.length ?? 0) < 50}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Próxima
+            </button>
+          </div>
+        </>
+      )}
     </section>
   )
 }

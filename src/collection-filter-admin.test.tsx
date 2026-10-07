@@ -246,4 +246,122 @@ describe('Filtro de Coleta administrativo', () => {
       ),
     ).toBeInTheDocument()
   })
+
+  it('revisa amostra concluída e marca erro com decisão esperada', async () => {
+    const simulationId = '33333333-3333-4333-8333-333333333333'
+    const publicationId = '44444444-4444-4444-8444-444444444444'
+    let marked = false
+
+    const apiFetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url === '/api/v1/admin/me') return json(adminMe)
+        if (url === '/api/v1/admin/collection-filter/state') {
+          return json({
+            ...state(),
+            simulations: [
+              {
+                id: simulationId,
+                policy_id: policyId,
+                policy_revision: 2,
+                status: 'COMPLETED',
+                scope: 'FULL_ARCHIVE',
+                review_mode: 'SAMPLE',
+                metrics: {
+                  inspected: 100,
+                  keep: 70,
+                  discard: 30,
+                  unknownType: 4,
+                },
+                error_code: null,
+                created_at: '2026-10-07T01:00:00Z',
+                completed_at: '2026-10-07T01:05:00Z',
+              },
+            ],
+          })
+        }
+        if (url.includes('/new-types?status=OPEN')) {
+          return json({ items: [] })
+        }
+        if (
+          url.startsWith(
+            `/api/v1/admin/collection-filter/simulations/${simulationId}/items?`,
+          ) &&
+          !init?.method
+        ) {
+          return json({
+            items: [
+              {
+                simulation_id: simulationId,
+                publication_id: publicationId,
+                source_code: 'dou',
+                section: 'DO1',
+                raw_type: 'PORTARIA',
+                canonical_type: 'PORTARIA',
+                decision: 'DISCARD',
+                reason_code: 'WEAK_SCORE_BELOW_THRESHOLD',
+                decisive_term: null,
+                excerpt: 'Trecho administrativo de exemplo.',
+                title: 'Portaria de teste da simulação',
+                published_on: '2026-10-06',
+                official_url: 'https://example.test/portaria',
+                review_sample: true,
+                marked_error: marked,
+                expected_decision: marked ? 'KEEP' : null,
+                note: marked ? 'Deveria ser mantida.' : null,
+              },
+            ],
+          })
+        }
+        if (
+          url ===
+            `/api/v1/admin/collection-filter/simulations/${simulationId}/items/${publicationId}/feedback` &&
+          init?.method === 'PUT'
+        ) {
+          const body = JSON.parse(String(init.body))
+          expect(body).toEqual({
+            markedError: true,
+            expectedDecision: 'KEEP',
+            note: 'Deveria ser mantida.',
+          })
+          marked = true
+          return json({
+            simulation_id: simulationId,
+            publication_id: publicationId,
+            marked_error: true,
+            expected_decision: 'KEEP',
+            note: 'Deveria ser mantida.',
+          })
+        }
+        return json({ error: 'unexpected' }, 500)
+      },
+    ) as unknown as ProductApiFetch
+
+    renderPage(apiFetch)
+
+    await screen.findByText('PORTARIA')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulações' }),
+    )
+
+    expect(
+      await screen.findByText('Portaria de teste da simulação'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('30')).toBeInTheDocument()
+
+    fireEvent.change(
+      screen.getByPlaceholderText('Motivo da correção'),
+      { target: { value: 'Deveria ser mantida.' } },
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Marcar erro' }),
+    )
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Marcar como correto',
+      }),
+    ).toBeInTheDocument()
+  })
+
 })
