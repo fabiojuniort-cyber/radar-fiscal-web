@@ -34,6 +34,15 @@ export interface HighlightResult {
 
 const PREVIOUS_WORDING_CLASSES = new Set(['RedaoAnt', 'A8-3RedacaoAnt', 'RemissoAnt', 'A8-2RemissaoAnt'])
 const PREVIOUS_WORDING_TABLE_CLASS = /^(?:A\d+-\d+)?Tabela[A-Za-z]*verde$/
+const LEGAL_BODY_CLASSES = new Set(['TextoAcordo', 'A5-1TextoAcordo', 'AcordoTipo'])
+const NON_OPERATIVE_EDITORIAL_CLASSES = new Set([
+  'TituloAcordo',
+  'DataPublicao',
+  'A2DataPublicacao',
+  'Ementa',
+  'Remisso',
+  'A8-1Remissao',
+])
 
 function isPreviousWordingClass(token: string) {
   return PREVIOUS_WORDING_CLASSES.has(token) || PREVIOUS_WORDING_TABLE_CLASS.test(token)
@@ -41,6 +50,18 @@ function isPreviousWordingClass(token: string) {
 
 function hasPreviousWordingClass(element: Element) {
   return Array.from(element.classList).some(isPreviousWordingClass)
+}
+
+function hasClassFrom(element: Element, classes: ReadonlySet<string>) {
+  return Array.from(element.classList).some((token) => classes.has(token))
+}
+
+function hasLegalBodyClass(element: Element) {
+  return hasClassFrom(element, LEGAL_BODY_CLASSES)
+}
+
+function hasEditorialClass(element: Element) {
+  return hasClassFrom(element, NON_OPERATIVE_EDITORIAL_CLASSES)
 }
 
 /** Same normalization as the classifier, with a map back to raw positions. */
@@ -189,15 +210,38 @@ function withoutOverlaps(ranges: Range[]): Range[] {
   return kept.sort((a, b) => a.start - b.start)
 }
 
-function isPreviousWording(node: Node): boolean {
+function isInsideLegalBody(node: Node): boolean {
+  for (let element = node.parentElement; element; element = element.parentElement) {
+    if (hasLegalBodyClass(element)) return true
+  }
+  return false
+}
+
+function isExcludedLegalNode(node: Node, structuredBody: boolean): boolean {
   for (let element = node.parentElement; element; element = element.parentElement) {
     if (hasPreviousWordingClass(element)) return true
+    if (structuredBody && hasEditorialClass(element)) return true
     if (element.tagName === 'TR') {
-      const row = element
-      if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
+      const rowHasExcludedContent = Array.from(element.querySelectorAll('[class]')).some(
+        (child) =>
+          hasPreviousWordingClass(child) ||
+          (structuredBody && hasEditorialClass(child)),
+      )
+      if (rowHasExcludedContent) return true
     }
   }
   return false
+}
+
+function isRevokedPlaceholderText(value: string): boolean {
+  const text = value.replace(/\s+/g, ' ').trim()
+  if (!text) return false
+  return /^(?:(?:cl[aá]usula\s+\S+|par[aá]grafo(?:\s+único)?|art(?:igo)?\.?\s+\d+[ºo°]?|§\s*\d+[ºo°]?|inciso\s+[ivxlcdm]+|[ivxlcdm]+|\d+(?:\.\d+)*)\s*[-.:]?\s*)?revogad[oa]s?\.?$/i.test(text)
+}
+
+function isRevokedPlaceholderNode(node: Text): boolean {
+  const container = node.parentElement?.closest('p, tr, li')
+  return isRevokedPlaceholderText(container?.textContent ?? node.data)
 }
 
 /**
@@ -209,15 +253,21 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
   if (rules.terms.length === 0 && rules.ncms.size === 0) return result
 
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+  const structuredBody = Array.from(doc.querySelectorAll('[class]')).some(hasLegalBodyClass)
+  let bodyStarted = !structuredBody
   const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT)
   const nodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text)
 
   for (const node of nodes) {
+    if (structuredBody && isInsideLegalBody(node)) bodyStarted = true
+    if (!bodyStarted) continue
+
     const raw = node.data
     if (!raw.trim()) continue
     if (node.parentElement?.closest('a, mark, script, style')) continue
-    if (isPreviousWording(node)) continue
+    if (isExcludedLegalNode(node, structuredBody)) continue
+    if (isRevokedPlaceholderNode(node)) continue
     const ranges = withoutOverlaps([...ncmRanges(raw, rules.ncms), ...termRanges(raw, rules.terms)])
     if (ranges.length === 0) continue
 
