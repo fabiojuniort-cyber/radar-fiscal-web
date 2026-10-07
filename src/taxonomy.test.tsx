@@ -123,7 +123,7 @@ const state = {
 
 describe('Curadoria da taxonomia', () => {
   it('blocks users without the curator role', async () => {
-    const apiFetch = vi.fn(async () => json({ taxonomyCurator: false, curatorDatabase: true })) as unknown as ProductApiFetch
+    const apiFetch = vi.fn(async () => json({ platformAdmin: false, taxonomyCurator: false, licenseBypass: false, curatorDatabase: true })) as unknown as ProductApiFetch
     renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
     expect(await screen.findByText('Acesso restrito')).toBeInTheDocument()
   })
@@ -133,7 +133,7 @@ describe('Curadoria da taxonomia', () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       calls.push({ url, ...(init ? { init } : {}) })
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(view)
       if (url.endsWith('/dimensions/product/rows')) {
@@ -233,7 +233,7 @@ describe('Curadoria da taxonomia', () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       calls.push({ url, ...(init ? { init } : {}) })
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(withSegment)
       if (url.endsWith('/dimensions/product/rows')) {
@@ -278,7 +278,7 @@ describe('Curadoria da taxonomia', () => {
     }
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(documents)
       return json({ error: 'not_found' }, 404)
@@ -297,7 +297,7 @@ describe('Curadoria da taxonomia', () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       calls.push({ url, ...(init ? { init } : {}) })
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json({ ...state, draft: null })
       if (url === '/api/v1/admin/taxonomy/releases/rel-11') return json({ ...view, release: state.published })
       if (url === '/api/v1/admin/taxonomy/drafts') return json({ releaseId: 'rel-12', version: 'v1.2.0' })
@@ -318,7 +318,7 @@ describe('Curadoria da taxonomia', () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       calls.push(url)
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
       if (url === '/api/v1/admin/taxonomy/state') return json(state)
       if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(view)
       if (url.endsWith('/groups/g1/delete')) return json({ error: 'group_in_use', message: 'Falha simulada' }, 409)
@@ -375,7 +375,7 @@ describe('Tags da legislação', () => {
   it('groups tags by section, explains why and opens the Acervo filtered by the tag', async () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: false, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: false, taxonomyCurator: false, licenseBypass: false, curatorDatabase: true })
       if (url === '/api/v1/publications/pub-1/taxonomy') return json(tags)
       return json({ error: 'not_found' }, 404)
     }) as unknown as ProductApiFetch
@@ -397,7 +397,7 @@ describe('Tags da legislação', () => {
   it('explains pending classification without inventing tags', async () => {
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === '/api/v1/admin/me') return json({ taxonomyCurator: false, curatorDatabase: true })
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: false, taxonomyCurator: false, licenseBypass: false, curatorDatabase: true })
       return json({ ...tags, status: 'DISABLED', classifiedAt: null, sections: [] })
     }) as unknown as ProductApiFetch
     renderWithProviders(<PublicationTaxonomySection apiFetch={apiFetch} publicationId="pub-1" />)
