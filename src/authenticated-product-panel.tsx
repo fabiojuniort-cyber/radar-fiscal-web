@@ -960,11 +960,17 @@ export function AuthenticatedProductPanel({
                     <Settings size={16} />
                     Abrir configurações
                   </button>
-                  {adminMeQuery.data?.taxonomyCurator && (
-                    <Link to="/admin/taxonomia" className="tp-user-admin-link">
-                      <ShieldCheck size={16} />
-                      Curadoria da taxonomia
-                    </Link>
+                  {adminMeQuery.data?.platformAdmin && (
+                    <>
+                      <Link to="/admin/taxonomia" className="tp-user-admin-link">
+                        <ShieldCheck size={16} />
+                        Curadoria da taxonomia
+                      </Link>
+                      <Link to="/admin/administradores" className="tp-user-admin-link">
+                        <ShieldCheck size={16} />
+                        Administradores
+                      </Link>
+                    </>
                   )}
                   <button type="button" onClick={() => void onExit()}>
                     <LogOut size={16} />
