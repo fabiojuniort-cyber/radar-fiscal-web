@@ -515,7 +515,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('owner@example.test')
-  await dialog.getByLabel('Senha').fill('browser-test-value')
+  await dialog.getByLabel('Senha', { exact: true }).fill('browser-test-value')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/painel$/)
