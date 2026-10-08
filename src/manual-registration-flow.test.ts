@@ -178,7 +178,7 @@ describe('manual CNPJ fallback', () => {
       'tenant-1',
       'company-1',
       {
-        cnpj: '10.515.785/0004-30',
+        cnpj: '10.515.785/0004-31',
         typeCode: 'OTHER',
         businessLocationCode: 'FILIAL-004',
       },
@@ -286,22 +286,29 @@ describe('manual CNPJ fallback', () => {
     )
   })
 
-  it('does not offer manual fallback when both providers confirm CNPJ not found', async () => {
+  it('offers manual fallback for a checksum-valid CNPJ not found in the registry', async () => {
     const apiFetch = vi.fn(async () =>
-      response(
-        { error: 'cnpj_not_found' },
-        404,
-      ),
+      response({ error: 'cnpj_not_found' }, 404),
     ) as ProductApiFetch
+    const registration = createCompanyFromCnpj(
+      apiFetch,
+      'tenant-1',
+      '19.131.243/0001-97',
+    )
+    const pending = await waitForPending('company')
+    expect(pending.request.cnpj).toBe('19131243000197')
+    rejectManualRegistration(new Error('manual_registration_cancelled'))
+    await expect(registration).rejects.toThrow('manual_registration_cancelled')
+  })
 
-    await expect(
-      createCompanyFromCnpj(
-        apiFetch,
-        'tenant-1',
-        '19.131.243/0001-97',
-      ),
-    ).rejects.toThrow('cnpj_not_found')
-
+  it('never calls the API for an invalid CNPJ checksum', async () => {
+    const apiFetch = vi.fn() as ProductApiFetch
+    await expect(createCompanyFromCnpj(
+      apiFetch,
+      'tenant-1',
+      '19.131.243/0001-90',
+    )).rejects.toThrow('invalid_cnpj')
+    expect(apiFetch).not.toHaveBeenCalled()
     expect(getPendingManualRegistration()).toBeNull()
   })
 })
