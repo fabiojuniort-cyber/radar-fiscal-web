@@ -41,7 +41,7 @@ export type AccountSummary = {
     status: string
   }
   onboarding: {
-    companyName: string
+    companyName: string | null
     cnpj: string | null
     createdAt: string
   } | null
