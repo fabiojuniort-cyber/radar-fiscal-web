@@ -15,6 +15,7 @@ Governance: [#99](https://github.com/fabiojuniort-cyber/tribusca-control/issues/
 - Executar apenas em PostgreSQL 18 descartável, DB `radar_fiscal_onb01_b5`, servidor local 127.0.0.1; verificações rígidas no runner **antes de migrations**.
 - Backend original importado do commit imutável. Sem tokens no repositório/logs. No Actions usar `ONB01_B5_BACKEND_READ_TOKEN` (fine-grained, apenas backend privado, Contents: read). `GITHUB_TOKEN` do frontend NÃO serve como garantia de leitura do backend privado. Se o secret não existir, o workflow falha fechado antes do checkout.
 - `outbound-shim.mjs` é carregado **somente** pelo processo Fastify em `NODE_ENV=test`; responde HTTP 503 apenas às chamadas outbound de CNPJ nos hosts oficiais de registro e bloqueia outros fetches externos inesperados. Não altera nem intercepta endpoints internos `/auth`, `/api`, `/public`.
+- **Egress do Chromium:** como `auth-session.tsx` tenta `lookupBrasilApiFromBrowser` após 502/503, o spec agora registra antes de navegar uma rota Playwright **apenas para URLs HTTP(S) que não sejam `http://127.0.0.1:4173`**, abortando-as (`blockedbyclient`), e bloqueia service workers. A mesma proteção é instalada no segundo tenant/contexto. Nenhuma resposta `/auth/*`, `/api/*` ou `/public/*` é mockada; o spec exige ao menos uma tentativa BrasilAPI bloqueada e anexa somente origens e contagens, sem CNPJs. **Essa proteção de rota não substitui um firewall/sandbox de rede do sistema operacional**; executar em runner isolado continua obrigatório.
 - Fixtures CNAE são sintéticas e inseridas apenas na edição CURRENT criada no PostgreSQL efêmero. CNPJs com dígitos verificadores válidos e usuários `@example.test`. Sem sintéticos em bases reais.
 
 ## Uso (opt-in)
@@ -43,6 +44,6 @@ Teste real `e2e/onb01-b5.real.spec.ts` cobre:
 4. API `/account` autenticada, tentativa de CNAE fictício `9999999` retornando 400.
 5. Segundo usuário/tenant em contexto Chromium independente -> cross-tenant 403.
 6. SELECT real via psql antes/depois: usuário, tenant, matriz, estabelecimento, vínculo CNAE, raiz de CNPJ, descrição global preservada, CNAE inválido ausente e segundo tenant sem empresa.
-7. Playwright traces/logs e `HEADS.txt` guardados no artifact, sem expor passwords/tokens.
+7. Playwright report, `HEADS.txt`, contagens por origem externa abortada e verificações SQL guardados como evidência sanitizada. **Traces Playwright brutos podem incluir cookies, JWTs e corpo das requisições: não publicar traces nem `backend.log` sem revisão e sanitização.**
 
 **Limitações:** provedor CNPJ é simulado somente no outbound; não é um teste da disponibilidade real BrasilAPI/Sintegra; só um viewport desktop; não cobre carga/concurrency, dados antigos de produção ou o bloco 2. O runner precisa de credencial read-only entre repositórios e de execução manual efetiva. O revisor independente R3 deve confrontar SHA, run_id, logs e SQL; o executor não atribui PASS.
