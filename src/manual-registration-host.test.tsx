@@ -106,6 +106,7 @@ describe('ManualRegistrationHost', () => {
         district: undefined,
         stateRegistration: '123456789',
         cnaes: [{ code: '0111301', description: 'Cultivo de arroz', isPrimary: true }],
+        reactivateInactive: false,
       })
     })
 
