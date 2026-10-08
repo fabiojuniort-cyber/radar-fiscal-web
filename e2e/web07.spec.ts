@@ -353,6 +353,41 @@ test('WEB-16 — login modal, signup ativo, contenção de foco e Escape', async
   await expect(trigger).toBeFocused()
 })
 
+test('ONB-01 — keyboard navigates password controls with explicit labels on login and signup', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await openLogin(page)
+  const dialog = page.getByRole('dialog')
+  const loginInput = dialog.getByLabel('Senha', { exact: true })
+  const loginToggle = dialog.getByRole('button', { name: 'Mostrar senha' })
+  expect(await loginInput.evaluate((el) => {
+    const input = el as HTMLInputElement
+    return Boolean(input.id && document.querySelector(`label[for="${input.id}"]`)) && !input.closest('label')
+  })).toBe(true)
+  await loginInput.focus()
+  await page.keyboard.press('Tab')
+  await expect(loginToggle).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(loginInput).toHaveAttribute('type', 'text')
+  await expect(dialog.getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+
+  await dialog.getByRole('button', { name: 'Criar conta' }).click()
+  const signupInput = dialog.getByLabel('Senha', { exact: true })
+  const confirmInput = dialog.getByLabel('Confirmar senha', { exact: true })
+  for (const input of [signupInput, confirmInput]) {
+    expect(await input.evaluate((el) => {
+      const field = el as HTMLInputElement
+      return Boolean(field.id && document.querySelector(`label[for="${field.id}"]`)) && !field.closest('label')
+    })).toBe(true)
+  }
+  await confirmInput.focus()
+  await page.keyboard.press('Tab')
+  const confirmToggle = dialog.getByRole('button', { name: 'Mostrar confirmação de senha' })
+  await expect(confirmToggle).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(confirmInput).toHaveAttribute('type', 'text')
+  await expect(dialog.getByRole('button', { name: 'Ocultar confirmação de senha' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('WEB-11 — login uses only the real auth contract and no localStorage token', async ({ page }) => {
   let capturedMethod = ''
   let capturedBody = ''
