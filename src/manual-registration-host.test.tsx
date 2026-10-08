@@ -39,6 +39,7 @@ describe('ManualRegistrationHost', () => {
       kind: 'company',
       cnpj: '10515785000350',
       businessLocationCode: 'MATRIZ-001',
+      searchCnaes: vi.fn(async () => [{ code: '0111301', description: 'Cultivo de arroz' }]),
       submit,
     })
 
@@ -79,9 +80,20 @@ describe('ManualRegistrationHost', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Cadastrar empresa',
+        name: 'Continuar para CNAEs',
       }),
     )
+
+    await screen.findByRole('dialog', { name: 'Selecionar CNAEs da empresa' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /0111301.*Cultivo de arroz/ })).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('Lista suspensa de CNAEs oficiais'), {
+      target: { value: '0111301' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar CNAE selecionado' }))
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }))
 
     await waitFor(() => {
       expect(submit).toHaveBeenCalledWith({
@@ -93,6 +105,7 @@ describe('ManualRegistrationHost', () => {
         streetNumber: undefined,
         district: undefined,
         stateRegistration: '123456789',
+        cnaes: [{ code: '0111301', description: 'Cultivo de arroz', isPrimary: true }],
       })
     })
 
