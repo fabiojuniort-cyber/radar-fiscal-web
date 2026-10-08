@@ -241,13 +241,20 @@ describe('TriFaros release candidate WEB-11', () => {
     }
     const show = within(signup).getByRole('button', { name: 'Mostrar senha' })
     expect(show.closest('label')).toBeNull()
+    expect(show).toHaveAttribute('title', 'Mostrar senha')
+    expect(show.querySelector('svg')).toHaveClass('lucide-eye-off')
+    expect(show).not.toHaveTextContent('Mostrar')
     fireEvent.click(show)
     expect(input).toHaveAttribute('type', 'text')
-    expect(within(signup).getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+    const hide = within(signup).getByRole('button', { name: 'Ocultar senha' })
+    expect(hide).toHaveAttribute('aria-pressed', 'true')
+    expect(hide.querySelector('svg')).toHaveClass('lucide-eye')
     const confirmToggle = within(signup).getByRole('button', { name: 'Mostrar confirmação de senha' })
     expect(confirmToggle.closest('label')).toBeNull()
+    expect(confirmToggle.querySelector('svg')).toHaveClass('lucide-eye-off')
     fireEvent.click(confirmToggle)
     expect(confirm).toHaveAttribute('type', 'text')
+    expect(within(signup).getByRole('button', { name: 'Ocultar confirmação de senha' }).querySelector('svg')).toHaveClass('lucide-eye')
   })
 
   it('associates login password label explicitly and keeps the toggle out of the label', () => {
@@ -259,8 +266,11 @@ describe('TriFaros release candidate WEB-11', () => {
     expect(dialog.querySelector(`label[for="${input.id}"]`)).toHaveTextContent('Senha')
     const button = within(dialog).getByRole('button', { name: 'Mostrar senha' })
     expect(button.closest('label')).toBeNull()
+    expect(button.querySelector('svg')).toHaveClass('lucide-eye-off')
+    expect(button).toHaveTextContent('')
     fireEvent.click(button)
     expect(input).toHaveAttribute('type', 'text')
+    expect(within(dialog).getByRole('button', { name: 'Ocultar senha' }).querySelector('svg')).toHaveClass('lucide-eye')
   })
 
   it('preserves the real login contract without browser token storage', async () => {
