@@ -2,6 +2,7 @@ import {
   requestManualRegistration,
   type ManualCompanyForm,
   type ManualEstablishmentForm,
+  type ManualCnaeOption,
 } from './manual-registration-bridge'
 
 export type ProductApiFetch = (
@@ -279,6 +280,19 @@ export async function fetchAccountSummary(
   return requireJson<AccountSummary>(response)
 }
 
+export async function searchOfficialCnaes(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  term: string,
+): Promise<ManualCnaeOption[]> {
+  const response = await apiFetch(
+    '/api/v1/cnae-catalog?search=' + encodeURIComponent(term.slice(0, 80)),
+    { headers: tenantHeaders(tenantId, { Accept: 'application/json' }) },
+  )
+  const payload = await requireJson<{ items: ManualCnaeOption[] }>(response)
+  return payload.items
+}
+
 export async function createCompanyFromCnpj(
   apiFetch: ProductApiFetch,
   tenantId: string,
@@ -312,6 +326,7 @@ export async function createCompanyFromCnpj(
 
   return requestManualRegistration<CnpjRegistryResult>({
     kind: 'company',
+    searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     businessLocationCode:
       normalizedBusinessLocation,
@@ -515,6 +530,7 @@ export async function createEstablishmentFromCnpj(
 
   await requestManualRegistration<void>({
     kind: 'establishment',
+    searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     typeCode: input.typeCode,
     businessLocationCode:
@@ -544,6 +560,7 @@ export async function createEstablishmentFromCnpj(
             district: manual.district,
             stateRegistration:
               manual.stateRegistration,
+            cnaes: manual.cnaes,
             businessLocationCode:
               normalizedBusinessLocation ?? undefined,
           }),
