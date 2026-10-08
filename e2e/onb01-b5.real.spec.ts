@@ -1,13 +1,29 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 
-// ONB-01-B5: NO page.route, context.route, mocks of /auth, /api or /public.
+// ONB-01-B5: never mock /auth, /api, /public or responses from the internal server.
+// The sole browser route aborts requests to NON-loopback origins (deny-only).
 // Browser -> Vite preview proxy -> Fastify -> isolated PostgreSQL 18.
 const PASSWORD = 'B5-Test-Only-Strong!2026'
 const OFFICIAL_CODE = '6201501'
 const OFFICIAL_DESCRIPTION = 'Desenvolvimento de programas de computador sob encomenda'
 const INVALID_CODE = '9999999'
+
+// This test must not contact external CNPJ providers from Chromium. The app
+// tries an independent browser-side BrasilAPI fallback after backend 503.
+// Only off-loopback origins match this route; internal routes are untouched.
+const EXTERNAL_HTTP_URL = /^https?:\\/\\/(?!127\\.0\\.0\\.1:4173(?:\\/|$)).+/i
+type EgressAudit = { blockedOrigins: Record<string, number> }
+
+async function blockBrowserExternalEgress(context: BrowserContext, audit: EgressAudit): Promise<void> {
+  await context.route(EXTERNAL_HTTP_URL, async (route) => {
+    const origin = new URL(route.request().url()).origin
+    audit.blockedOrigins[origin] = (audit.blockedOrigins[origin] ?? 0) + 1
+    await route.abort('blockedbyclient')
+  })
+}
+test.use({ serviceWorkers: 'block' })
 
 function cnpj(root: string, branch = '0001'): string {
   const first12 = root + branch
@@ -109,6 +125,10 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
   const emailB = 'b5-b-' + randomUUID() + '@example.test'
   const headCnpj = cnpj('98765432')
   const rejectedCnpj = cnpj('98765431')
+  const egress: EgressAudit = { blockedOrigins: {} }
+  // Install before the first navigation; the API's 503 triggers browser
+  // fallback to BrasilAPI. This is an ABORT, not a fake API response.
+  await blockBrowserExternalEgress(page.context(), egress)
   const before = databaseState(emailA, headCnpj)
   expect(before.user_count).toBe(0)
   expect(before.company_count).toBe(0)
@@ -152,8 +172,12 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
   })
   expect(invalid.status()).toBe(400)
   expect((await invalid.json()).error).toBe('invalid_cnae')
-  const secondContext = await browser.newContext({ baseURL: 'http://127.0.0.1:4173' })
+  const secondContext = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4173',
+    serviceWorkers: 'block',
+  })
   try {
+    await blockBrowserExternalEgress(secondContext, egress)
     const secondPage = await secondContext.newPage()
     const ownerB = await signupAndLogin(secondPage, emailB)
     expect(ownerB.tenantId).not.toBe(ownerA.tenantId)
@@ -181,13 +205,19 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
   expect(after.invalid_global_count).toBe(0)
   expect(tenantB.user_count).toBe(1)
   expect(tenantB.company_count).toBe(0)
+  // Evidence that the direct browser-side external fallback was prevented,
+  // not silently allowed through to the public provider.
+  expect(egress.blockedOrigins['https://brasilapi.com.br']).toBeGreaterThanOrEqual(1)
   await testInfo.attach('ONB01-B5-evidence.json', {
     body: JSON.stringify({
       backendSha: process.env.ONB01_B5_BACKEND_SHA,
       frontendBaselineSha: process.env.ONB01_B5_FRONTEND_BASE_SHA,
       testCommitSha: process.env.GITHUB_SHA ?? 'local-run',
       postgres: '18 / disposable', registryOutbound: '503 test-only outbound shim',
-      internalEndpointMocks: 0, signupAndLogin: true,
+      internalEndpointMocks: 0,
+      browserExternalEgressPolicy: 'deny non-loopback HTTP(S) via abort (service workers blocked)',
+      blockedExternalOrigins: egress.blockedOrigins,
+      signupAndLogin: true,
       manualCnaeCanonical: true, tenantIsolation: true,
       postgresReadback: { before, after, secondTenantCompanyCount: tenantB.company_count },
       deployed: false,
