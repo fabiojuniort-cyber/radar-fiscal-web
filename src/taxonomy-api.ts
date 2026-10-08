@@ -202,6 +202,14 @@ export type PublicationTaxonomy = {
   release: ReleaseSummary | null
   status: 'CLASSIFIED' | 'PENDING' | 'FAILED' | 'DISABLED' | 'EXCLUDED' | 'NO_RELEASE' | 'NOT_FOUND'
   classifiedAt: string | null
+  /** Past scan, never evidence of current legal validity or a highlight rule. */
+  historicalClassification?: {
+    releaseVersion: string
+    engineVersion: string
+    scannedAt: string
+    assertionCount: number
+    revalidationRequired: true
+  } | null
   sections: Array<{ name: string; order: number; tags: PublicationTag[] }>
 }
 

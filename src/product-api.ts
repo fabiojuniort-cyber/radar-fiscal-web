@@ -751,7 +751,24 @@ export async function fetchProductArchive(
   return requireJson<ProductArchiveResponse>(response)
 }
 
+/**
+ * TAX13 F2: additive public legal status. Absent data still means UNVERIFIED.
+ * A public status cannot authorize green highlighting without an audited,
+ * hash-bound fragment projection consumed by a validated renderer.
+ */
+export type PublicLegalScopeUnavailable = {
+  schemaVersion: 1
+  status: 'UNVERIFIED'
+  reason: 'NO_AUTHORIZED_PUBLIC_ATTESTATION'
+  referenceDate: string
+  publicationVersionId: string | null
+  highlightsAuthorized: false
+  currentSegments: []
+}
+
 export type ProductPublicationDetail = {
+  legalScope?: PublicLegalScopeUnavailable
+
   publication: {
     id: string
     title: string

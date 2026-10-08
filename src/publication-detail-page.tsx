@@ -1,25 +1,20 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ExternalLink,
-  ChevronLeft,
-  ChevronRight,
   FileText,
-  Highlighter,
   History,
   Landmark,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { BrandMark } from './brand-mark'
-import { buildHighlightRules, escapeHtml, highlightLegalHtml } from './legal-highlights'
 import { renderLegalPresentation } from './legal-presentation'
 import { formatPublicDate } from './public-api'
 import { fetchPublicationNcms } from './product-ncm-api'
 import { PublicationAffinityBadge } from './publication-affinity'
 import { PublicationTaxonomySection } from './publication-taxonomy'
-import { fetchPublicationTaxonomy } from './taxonomy-api'
 import {
   fetchProductPublicationDetail,
   type ProductApiFetch,
@@ -140,18 +135,6 @@ export function PublicationDetailPage({
     retry: false,
   })
 
-  // Same query as the tags section for a customer: fetched once.
-  const taxonomyQuery = useQuery({
-    queryKey: ['publication-taxonomy', publicationId, false],
-    queryFn: () => fetchPublicationTaxonomy(apiFetch, publicationId),
-    enabled: Boolean(publicationId),
-    retry: false,
-  })
-
-  const [showMarks, setShowMarks] = useState(true)
-  const [currentMark, setCurrentMark] = useState(-1)
-  const textRef = useRef<HTMLDivElement>(null)
-
   const legalPresentation = useMemo(() => {
     if (!detailQuery.data) return null
     const { publication, version, origins } = detailQuery.data
@@ -167,31 +150,9 @@ export function PublicationDetailPage({
     })
   }, [detailQuery.data])
 
-  // The text with what produced the tags (terms and NCMs) highlighted.
-  const highlighted = useMemo(() => {
-    const rules = buildHighlightRules(taxonomyQuery.data, ncmQuery.data ?? [])
-    const contentText = detailQuery.data?.version?.contentText
-    const source = legalPresentation?.html ?? (contentText ? escapeHtml(contentText) : null)
-    if (!source) return null
-    return highlightLegalHtml(source, rules)
-  }, [legalPresentation, detailQuery.data, taxonomyQuery.data, ncmQuery.data])
-
-  const marks = () => Array.from(textRef.current?.querySelectorAll<HTMLElement>('mark.legal-mark') ?? [])
-  const goToMark = (index: number, selector = 'mark.legal-mark') => {
-    const all = Array.from(textRef.current?.querySelectorAll<HTMLElement>(selector) ?? [])
-    const target = all[index]
-    if (!target) return
-    marks().forEach((mark) => mark.classList.remove('is-current'))
-    target.classList.add('is-current')
-    target.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
-    setCurrentMark(marks().indexOf(target))
-  }
-  const stepMark = (delta: number) => {
-    const count = marks().length
-    if (count === 0) return
-    goToMark((currentMark + delta + count) % count)
-  }
-
+  // R2 F1: zero positive legal highlights until the backend attests vigência
+  // by publication VERSION, fragment, official act and reference date.
+  // Never trust prior tags, catalog NCMs or remote data-legal-status alone.
   const goBack = () => {
     if (window.history.length > 1) {
       navigate(-1)
@@ -249,10 +210,7 @@ export function PublicationDetailPage({
     origins,
   } = detailQuery.data
 
-  const displayHtml = showMarks && highlighted ? highlighted.html : (legalPresentation?.html ?? null)
-  const textHtml =
-    !legalPresentation?.html && showMarks && highlighted && highlighted.marks > 0 ? highlighted.html : null
-  const markCount = highlighted?.marks ?? 0
+  const displayHtml = legalPresentation?.html ?? null
 
   const reference = referenceLabel(
     publication.actType,
@@ -271,16 +229,6 @@ export function PublicationDetailPage({
         : null
 
   const ncms = ncmQuery.data ?? []
-  // With the marks on, the chips list only what the text does not show.
-  const unmarkedNcms = showMarks ? ncms.filter((ncm) => !highlighted?.markedNcms.has(ncm.code)) : ncms
-  const markedNcmCount = ncms.length - unmarkedNcms.length
-
-  // A click on a marked NCM searches it in the Acervo, like the NCM chips.
-  const onTextClick = (event: React.MouseEvent<HTMLElement>) => {
-    const mark = (event.target as HTMLElement).closest<HTMLElement>('mark[data-ncm-code]')
-    if (mark?.dataset.ncmCode) openNcmInArchive(mark.dataset.ncmCode)
-  }
-
   return (
     <div className="publication-detail-app">
       <header className="publication-detail-header">
@@ -339,11 +287,11 @@ export function PublicationDetailPage({
               <span
                 title={
                   publication.effectiveUntil?.amendedBy
-                    ? `Prazo dado pelo ${publication.effectiveUntil.amendedBy}`
+                    ? `Prazo geral informado pelo ${publication.effectiveUntil.amendedBy}`
                     : undefined
                 }
               >
-                Vigência:{' '}
+                Período geral informado do ato:{' '}
                 {publication.effectiveOn &&
                   formatPublicDate(
                     publication.effectiveOn,
@@ -400,39 +348,24 @@ export function PublicationDetailPage({
               <FileText size={18} />
               Texto da legislação
             </span>
-            {markCount > 0 && (
-              <div className="legal-marks-toolbar">
-                <button
-                  type="button"
-                  className="legal-marks-toggle"
-                  aria-pressed={showMarks}
-                  title="Marca em verde, no texto vigente, os trechos que geraram as tags e os NCMs identificados"
-                  onClick={() => setShowMarks((value) => !value)}
-                >
-                  <Highlighter size={15} aria-hidden="true" />
-                  {showMarks ? 'Ocultar marcações' : 'Mostrar marcações'}
-                </button>
-                {showMarks && (
-                  <span className="legal-marks-nav">
-                    <button type="button" aria-label="Marcação anterior" onClick={() => stepMark(-1)}>
-                      <ChevronLeft size={15} />
-                    </button>
-                    <span aria-live="polite">
-                      {currentMark >= 0 ? `${currentMark + 1} de ${markCount}` : `${markCount} ${markCount === 1 ? 'marcação' : 'marcações'}`}
-                    </span>
-                    <button type="button" aria-label="Próxima marcação" onClick={() => stepMark(1)}>
-                      <ChevronRight size={15} />
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
           </div>
+          <p
+            className="publication-ncm-state"
+            role="status"
+            data-legal-scope-status={
+              detailQuery.data?.legalScope?.status === 'UNVERIFIED'
+                ? 'UNVERIFIED'
+                : 'NOT_ATTESTED'
+            }
+          >
+            A vigência de cada trecho não foi comprovada. Marcações automáticas estão
+            desativadas; consulte a fonte oficial para verificar alterações e efeitos.
+            {detailQuery.data?.legalScope?.status === 'UNVERIFIED' &&
+              ' A API ainda não dispõe de atestação pública autorizada por fragmento.'}
+          </p>
 
           {displayHtml ? (
             <div
-              ref={textRef}
-              onClick={onTextClick}
               className="publication-preserved-html"
               data-presentation-format={
                 version?.presentation.format
@@ -455,13 +388,6 @@ export function PublicationDetailPage({
               dangerouslySetInnerHTML={{
                 __html: displayHtml,
               }}
-            />
-          ) : textHtml ? (
-            <div
-              ref={textRef}
-              onClick={onTextClick}
-              className="publication-preserved-text"
-              dangerouslySetInnerHTML={{ __html: textHtml }}
             />
           ) : version?.contentText ? (
             <div
@@ -500,9 +426,8 @@ export function PublicationDetailPage({
         <section className="publication-origins-card publication-ncm-card">
           <h2>NCMs identificados nesta legislação</h2>
           <p>
-            Códigos confirmados no catálogo oficial e extraídos do texto vigente.
-            {markedNcmCount > 0 &&
-              ` ${markedNcmCount} ${markedNcmCount === 1 ? 'código marcado' : 'códigos marcados'} em verde no texto · passe o mouse para ver o produto e clique para buscar no Acervo.`}
+            Códigos detectados no conteúdo e associados ao catálogo NCM. A presença
+            no catálogo não comprova a vigência dos dispositivos que os mencionam.
           </p>
 
           {ncmQuery.isPending ? (
@@ -513,25 +438,14 @@ export function PublicationDetailPage({
             </p>
           ) : ncms.length === 0 ? (
             <p className="publication-ncm-state">
-              Nenhum NCM do catálogo oficial foi identificado nesta versão.
+              Nenhum NCM foi detectado nesta versão; isso não comprova ausência de dispositivos vigentes.
             </p>
           ) : (
             <>
-              {markedNcmCount > 0 && showMarks && (
-                <button
-                  type="button"
-                  className="legal-marks-jump"
-                  onClick={() => goToMark(0, 'mark.legal-mark[data-ncm-code]')}
-                >
-                  <Highlighter size={14} aria-hidden="true" />
-                  Ir para os NCMs no texto
-                </button>
-              )}
-              {unmarkedNcms.length > 0 && (
+              {ncms.length > 0 && (
                 <>
-                  {markedNcmCount > 0 && <p className="publication-ncm-unmarked">Não localizados no texto exibido:</p>}
                   <div className="publication-ncm-list" role="list">
-                    {unmarkedNcms.map((ncm) => (
+                    {ncms.map((ncm) => (
                       <button
                         type="button"
                         role="listitem"

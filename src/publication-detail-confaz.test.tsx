@@ -33,6 +33,15 @@ function detail(
       firstCollectedAt: '2026-10-03T06:18:40Z',
       lastSeenAt: '2026-10-03T06:18:40Z',
     },
+    legalScope: {
+      schemaVersion: 1,
+      status: 'UNVERIFIED',
+      reason: 'NO_AUTHORIZED_PUBLIC_ATTESTATION',
+      referenceDate: '2026-10-08',
+      publicationVersionId: 'v1',
+      highlightsAuthorized: false,
+      currentSegments: [],
+    },
     version: {
       id: 'v1',
       versionNo: 1,
@@ -109,16 +118,16 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
     expect(body).not.toHaveAttribute('data-legal-template')
   })
 
-  it('shows until when the act is in force, from its current wording', async () => {
+  it('labels act-level dates as general information, never fragment validity', async () => {
     await renderDetail('confaz', { date: '2027-12-31', basis: 'CURRENT_VALIDITY_CLAUSE', amendedBy: 'Conv. ICMS 79/25' })
-    const validity = screen.getByText(/Vigência:/)
-    expect(validity).toHaveTextContent('Vigência: 06/11/1997 até 31/12/2027')
-    expect(validity).toHaveAttribute('title', 'Prazo dado pelo Conv. ICMS 79/25')
+    const validity = screen.getByText(/Período geral informado do ato:/)
+    expect(validity).toHaveTextContent('Período geral informado do ato: 06/11/1997 até 31/12/2027')
+    expect(validity).toHaveAttribute('title', 'Prazo geral informado pelo Conv. ICMS 79/25')
   })
 
   it('keeps only the start date when the end is unknown', async () => {
     await renderDetail('confaz')
-    expect(screen.getByText(/Vigência:/)).toHaveTextContent(/^Vigência: 06\/11\/1997$/)
+    expect(screen.getByText(/Período geral informado do ato:/)).toHaveTextContent(/^Período geral informado do ato: 06\/11\/1997$/)
   })
 })
 
@@ -155,13 +164,14 @@ describe('NCMs identificados na legislação', () => {
     // Description and excerpt are not printed; the description stays as a hint.
     expect(screen.queryByText(/Silos de matéria plástica/)).not.toBeInTheDocument()
     expect(chips[1]).toHaveAttribute('title', 'Reservatórios, cisternas · buscar no Acervo')
-    expect(screen.getByText(/extraídos do texto vigente/)).toBeInTheDocument()
+    expect(screen.getByText(/não comprova a vigência dos dispositivos/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('data-legal-scope-status', 'UNVERIFIED')
     fireEvent.click(screen.getByRole('listitem', { name: 'Buscar NCM 3917.32.90 no Acervo' }))
   })
 })
 
 describe('Marcações no texto da legislação', () => {
-  it('marks the tag terms and the NCMs in the current wording, and the toggle hides them', async () => {
+  it('fails closed: legacy NCM and tax tags cannot create green marks without official proof', async () => {
     const base = detail('confaz')
     const withText = {
       ...base,
@@ -216,26 +226,58 @@ describe('Marcações no texto da legislação', () => {
       </QueryClientProvider>,
     )
 
-    const toggle = await screen.findByRole('button', { name: 'Ocultar marcações' })
-    const marks = () => Array.from(container.querySelectorAll('mark.legal-mark'))
-    // Only the current wording; the previous wording keeps its text unmarked.
-    expect(marks().map((mark) => mark.textContent)).toEqual(['isenção', '3917.32.90'])
-    expect(marks()[1]).toHaveAttribute('title', expect.stringContaining('Produto: Tubos plásticos'))
-    expect(screen.getByText('2 marcações')).toBeInTheDocument()
-    // The marked NCM leaves the chips; the one not in the text stays.
+    await screen.findByText(/vigência de cada trecho não foi comprovada/i)
+    expect(container.querySelectorAll('mark.legal-mark')).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: /marcações/i })).not.toBeInTheDocument()
     const chips = within(screen.getByRole('list')).getAllByRole('listitem')
-    expect(chips.map((chip) => chip.textContent)).toEqual(['3925.10.00'])
-    expect(screen.getByText(/1 código marcado em verde no texto/)).toBeInTheDocument()
-    // Product/item intelligence is presented as one summary tag; individual
-    // product tags stay internal for affinity/highlights and curator details.
+    expect(chips.map((chip) => chip.textContent)).toEqual(['3917.32.90', '3925.10.00'])
+    expect(screen.queryByText(/extraídos do texto vigente/)).not.toBeInTheDocument()
+    // Non-attested taxonomy and NCM data remain queryable, never highlighted.
     expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
     expect(await screen.findByText('2 itens')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Tubos plásticos/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Fertilizantes/ })).not.toBeInTheDocument()
-
-    fireEvent.click(toggle)
-    expect(marks()).toHaveLength(0)
-    expect(screen.getByRole('button', { name: 'Mostrar marcações' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(2)
   })
+  it('rejects CSS current status and PENDING tags outside the controlled CONFAZ review', async () => {
+    const source = detail('dou')
+    // Even a forged API response must not activate positive highlighting.
+    const forged = {
+      ...source,
+      legalScope: {
+        ...source.legalScope,
+        status: 'VERIFIED_COMPLETE',
+        highlightsAuthorized: true,
+      },
+    }
+    source.version.presentation.html =
+      '<p data-legal-status="current">Citação histórica NCM 7307.19.20</p>' +
+      '<table><tr><th data-legal-status="revoked"><p>ANEXO II</p></th></tr>' +
+      '<tr><td>8450.11.00</td></tr></table>'
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/publications/pub-1') return json(forged)
+      if (url === '/api/v1/publications/pub-1/ncms') {
+        return json({ items: [{
+          code: '73071920', description: 'Tubo', verificationStatus: 'CATALOG_MATCHED',
+          method: { type: 'RULE', detectorKey: 'ncm', detectorVersion: '1.1.0' },
+        }] })
+      }
+      if (url === '/api/v1/publications/pub-1/taxonomy') {
+        return json({ publicationId: 'pub-1', publicationVersionId: 'v1',
+          release: null, status: 'PENDING', classifiedAt: null,
+          sections: [{ name: 'Temas', order: 1, tags: [] }] })
+      }
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter><PublicationDetailPage publicationId="pub-1" apiFetch={apiFetch} /></MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await screen.findByText(/vigência de cada trecho não foi comprovada/i)
+    expect(container.querySelectorAll('mark.legal-mark')).toHaveLength(0)
+    expect(screen.queryByText(/extraídos do texto vigente/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /marcações/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('listitem', { name: 'Buscar NCM 7307.19.20 no Acervo' })).toBeInTheDocument()
+  })
+
 })
