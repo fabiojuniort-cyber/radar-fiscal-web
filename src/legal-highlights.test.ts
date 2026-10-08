@@ -244,6 +244,24 @@ describe('highlightLegalHtml', () => {
     expect(result.html).toContain('8701.90.00')
   })
 
+  it('excludes CONFAZ annex subtitles but highlights products inside operative annex tables', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('Máquinas', { terms: ['máquinas'], ncmPrefixes: [] })]),
+      [{ code: '73071920', description: null }],
+    )
+    const html = [
+      '<p class="Subtitulo">ANEXO I</p>',
+      '<p class="Subtitulo">CLÁUSULA PRIMEIRA DO CONVÊNIO ICMS 52/91</p>',
+      '<p class="Subtitulo">MÁQUINAS, APARELHOS E EQUIPAMENTOS INDUSTRIAIS</p>',
+      '<table><tr><td>máquinas para perfuração</td><td>7307.19.20</td></tr></table>',
+    ].join('')
+    const result = highlightLegalHtml(html, rules)
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map(mark => mark.textContent)).toEqual([
+      'máquinas', '7307.19.20',
+    ])
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
