@@ -275,17 +275,22 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
   for (const node of nodes) {
     // Track section boundaries in document order. A historical annex cannot
     // leak highlights into later rows just because those rows have no classes.
-    const block = node.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, li') ?? null
+    const block = node.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, li, th, td') ?? null
+    const annexBlock = block && isAnnexHeading(block.textContent ?? '') ? block : block?.closest('th, td') ?? null
+    const annexHeading = annexBlock && isAnnexHeading(annexBlock.textContent ?? '')
     if (block && block !== lastBlock) {
       lastBlock = block
-      if (isAnnexHeading(block.textContent ?? '')) {
-        historicalAnnex = isHistoricalAnnexHeading(block.textContent ?? '') ||
+      if (annexBlock && annexHeading) {
+        historicalAnnex = isHistoricalAnnexHeading(annexBlock.textContent ?? '') ||
           sourceLegalStatus(block) === 'previous' || sourceLegalStatus(block) === 'revoked' ||
           sourceLegalStatus(block) === 'unverified' ||
-          Array.from(block.classList).some(isPreviousWordingClass)
+          sourceLegalStatus(annexBlock) === 'revoked' || sourceLegalStatus(annexBlock) === 'previous' ||
+          sourceLegalStatus(annexBlock) === 'unverified' ||
+          Array.from(block.classList).some(isPreviousWordingClass) ||
+          Array.from(annexBlock.classList).some(isPreviousWordingClass)
       }
     }
-    if (historicalAnnex || (block && isAnnexHeading(block.textContent ?? ''))) continue
+    if (historicalAnnex || annexHeading) continue
     const raw = node.data
     if (!raw.trim()) continue
     if (node.parentElement?.closest('a, mark, script, style')) continue
