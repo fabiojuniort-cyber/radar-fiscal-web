@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App'
 import appSource from './App.tsx?raw'
+import stylesSource from './styles.css?raw'
 import authSource from './auth-session.tsx?raw'
 import mainSource from './main.tsx?raw'
 import { selectFeaturedStates } from './content'
@@ -255,6 +256,22 @@ describe('TriFaros release candidate WEB-11', () => {
     fireEvent.click(confirmToggle)
     expect(confirm).toHaveAttribute('type', 'text')
     expect(within(signup).getByRole('button', { name: 'Ocultar confirmação de senha' }).querySelector('svg')).toHaveClass('lucide-eye')
+  })
+
+  it('hides the browser-native Edge password eye so only the app toggle is shown while typing', () => {
+    // Chromium-based Edge injects ::-ms-reveal as a second eye only after input is entered.
+    // Keep this rule scoped to password fields managed by our own visibility toggle.
+    expect(stylesSource).toMatch(
+      /\.password-visibility-field input\[type="password"\]::-ms-reveal,\s*\.password-visibility-field input\[type="password"\]::-ms-clear\s*\{\s*display:\s*none;\s*\}/,
+    )
+
+    renderApp('/como-funciona')
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    const dialog = screen.getByRole('dialog')
+    const password = within(dialog).getByLabelText('Senha')
+    fireEvent.change(password, { target: { value: strongTestPassword } })
+    expect(within(dialog).getAllByRole('button', { name: 'Mostrar senha' })).toHaveLength(1)
+    expect(within(dialog).getAllByRole('button', { name: 'Mostrar confirmação de senha' })).toHaveLength(1)
   })
 
   it('associates login password label explicitly and keeps the toggle out of the label', () => {
