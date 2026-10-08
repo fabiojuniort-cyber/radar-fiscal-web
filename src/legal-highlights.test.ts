@@ -320,3 +320,31 @@ describe('highlightLegalHtml', () => {
     })
   })
 })
+
+describe('TAX13 R2 annex nested table-cell status regression', () => {
+  it('inherits revoked/unverified status from TH/TD even when heading is nested in P', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('industrial', { terms: [], ncmPrefixes: ['8450', '7307'] }, 'NCM')]),
+      [
+        { code: '84501100', description: 'historical' },
+        { code: '73071920', description: 'later section' },
+      ],
+    )
+    for (const cell of ['th', 'td']) {
+      for (const status of ['revoked', 'unverified']) {
+        const html =
+          `<table><tr><${cell} data-legal-status="${status}"><p>ANEXO II</p></${cell}></tr>` +
+          '<tr><td>8450.11.00</td></tr>' +
+          '<tr><th><p>ANEXO III</p></th></tr>' +
+          '<tr><td>7307.19.20</td></tr></table>'
+        // These are parser-only behavior tests. The actual page is fail-closed
+        // and does not invoke this helper without official scope evidence.
+        const result = highlightLegalHtml(html, rules)
+        const doc = new DOMParser().parseFromString(result.html, 'text/html')
+        const codes = [...doc.querySelectorAll<HTMLElement>('mark[data-ncm-code]')]
+          .map((item) => item.dataset.ncmCode)
+        expect(codes).toEqual(['73071920'])
+      }
+    }
+  })
+})

@@ -276,7 +276,10 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
     // Track section boundaries in document order. A historical annex cannot
     // leak highlights into later rows just because those rows have no classes.
     const block = node.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, li, th, td') ?? null
-    const annexBlock = block && isAnnexHeading(block.textContent ?? '') ? block : block?.closest('th, td') ?? null
+    // A nested <p> inside an annex <th>/<td> inherits its cell's legal
+    // status. Checking only the <p> would miss a revoked parent annex.
+    const cell = block?.closest('th, td') ?? null
+    const annexBlock = cell && isAnnexHeading(cell.textContent ?? '') ? cell : block
     const annexHeading = annexBlock && isAnnexHeading(annexBlock.textContent ?? '')
     if (block && block !== lastBlock) {
       lastBlock = block
