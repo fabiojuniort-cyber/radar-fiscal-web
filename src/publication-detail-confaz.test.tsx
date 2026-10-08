@@ -33,6 +33,15 @@ function detail(
       firstCollectedAt: '2026-10-03T06:18:40Z',
       lastSeenAt: '2026-10-03T06:18:40Z',
     },
+    legalScope: {
+      schemaVersion: 1,
+      status: 'UNVERIFIED',
+      reason: 'NO_AUTHORIZED_PUBLIC_ATTESTATION',
+      referenceDate: '2026-10-08',
+      publicationVersionId: 'v1',
+      highlightsAuthorized: false,
+      currentSegments: [],
+    },
     version: {
       id: 'v1',
       versionNo: 1,
@@ -109,16 +118,16 @@ describe('Texto da legislação com identidade da fonte oficial', () => {
     expect(body).not.toHaveAttribute('data-legal-template')
   })
 
-  it('shows until when the act is in force, from its current wording', async () => {
+  it('labels act-level dates as general information, never fragment validity', async () => {
     await renderDetail('confaz', { date: '2027-12-31', basis: 'CURRENT_VALIDITY_CLAUSE', amendedBy: 'Conv. ICMS 79/25' })
-    const validity = screen.getByText(/Vigência:/)
-    expect(validity).toHaveTextContent('Vigência: 06/11/1997 até 31/12/2027')
-    expect(validity).toHaveAttribute('title', 'Prazo dado pelo Conv. ICMS 79/25')
+    const validity = screen.getByText(/Período geral informado do ato:/)
+    expect(validity).toHaveTextContent('Período geral informado do ato: 06/11/1997 até 31/12/2027')
+    expect(validity).toHaveAttribute('title', 'Prazo geral informado pelo Conv. ICMS 79/25')
   })
 
   it('keeps only the start date when the end is unknown', async () => {
     await renderDetail('confaz')
-    expect(screen.getByText(/Vigência:/)).toHaveTextContent(/^Vigência: 06\/11\/1997$/)
+    expect(screen.getByText(/Período geral informado do ato:/)).toHaveTextContent(/^Período geral informado do ato: 06\/11\/1997$/)
   })
 })
 
@@ -156,6 +165,7 @@ describe('NCMs identificados na legislação', () => {
     expect(screen.queryByText(/Silos de matéria plástica/)).not.toBeInTheDocument()
     expect(chips[1]).toHaveAttribute('title', 'Reservatórios, cisternas · buscar no Acervo')
     expect(screen.getByText(/não comprova a vigência dos dispositivos/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('data-legal-scope-status', 'UNVERIFIED')
     fireEvent.click(screen.getByRole('listitem', { name: 'Buscar NCM 3917.32.90 no Acervo' }))
   })
 })
@@ -228,13 +238,22 @@ describe('Marcações no texto da legislação', () => {
   })
   it('rejects CSS current status and PENDING tags outside the controlled CONFAZ review', async () => {
     const source = detail('dou')
+    // Even a forged API response must not activate positive highlighting.
+    const forged = {
+      ...source,
+      legalScope: {
+        ...source.legalScope,
+        status: 'VERIFIED_COMPLETE',
+        highlightsAuthorized: true,
+      },
+    }
     source.version.presentation.html =
       '<p data-legal-status="current">Citação histórica NCM 7307.19.20</p>' +
       '<table><tr><th data-legal-status="revoked"><p>ANEXO II</p></th></tr>' +
       '<tr><td>8450.11.00</td></tr></table>'
     const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === '/api/v1/publications/pub-1') return json(source)
+      if (url === '/api/v1/publications/pub-1') return json(forged)
       if (url === '/api/v1/publications/pub-1/ncms') {
         return json({ items: [{
           code: '73071920', description: 'Tubo', verificationStatus: 'CATALOG_MATCHED',

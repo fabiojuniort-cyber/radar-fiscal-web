@@ -287,11 +287,11 @@ export function PublicationDetailPage({
               <span
                 title={
                   publication.effectiveUntil?.amendedBy
-                    ? `Prazo dado pelo ${publication.effectiveUntil.amendedBy}`
+                    ? `Prazo geral informado pelo ${publication.effectiveUntil.amendedBy}`
                     : undefined
                 }
               >
-                Vigência:{' '}
+                Período geral informado do ato:{' '}
                 {publication.effectiveOn &&
                   formatPublicDate(
                     publication.effectiveOn,
@@ -349,9 +349,19 @@ export function PublicationDetailPage({
               Texto da legislação
             </span>
           </div>
-          <p className="publication-ncm-state" role="status">
+          <p
+            className="publication-ncm-state"
+            role="status"
+            data-legal-scope-status={
+              detailQuery.data?.legalScope?.status === 'UNVERIFIED'
+                ? 'UNVERIFIED'
+                : 'NOT_ATTESTED'
+            }
+          >
             A vigência de cada trecho não foi comprovada. Marcações automáticas estão
             desativadas; consulte a fonte oficial para verificar alterações e efeitos.
+            {detailQuery.data?.legalScope?.status === 'UNVERIFIED' &&
+              ' A API ainda não dispõe de atestação pública autorizada por fragmento.'}
           </p>
 
           {displayHtml ? (
