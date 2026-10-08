@@ -24,12 +24,25 @@ for command in docker node npm openssl psql pg_isready git curl; do
     echo "BLOCK: missing local prerequisite: $command" >&2; exit 2
   fi
 done
+if [[ "$(node --version)" != v24.* ]]; then
+  echo 'BLOCK: ONB-01-B5 requires Node.js 24 for backend and Vite' >&2; exit 2
+fi
+if [[ -z "${ONB01_B5_BACKEND_DIR:-}" && ! -d "$BACKEND_DIR/.git" ]]; then
+  echo 'BLOCK: an authorized private backend Git checkout is required' >&2; exit 2
+fi
 if [[ "$(git -C "$BACKEND_DIR" rev-parse HEAD 2>/dev/null)" != '532006508aebdb8dd1f384da14b3f7cdcd2a8aa5' ]]; then
   echo 'BLOCK: backend private checkout must be pinned to PR #190 immutable SHA' >&2; exit 2
 fi
 if ! git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' HEAD; then
   echo 'BLOCK: frontend B5 must descend from PR #83 immutable SHA' >&2; exit 2
 fi
+# A pinned HEAD alone does not prove the working tree is pristine.
+# Make sure source is exactly the committed SHA before builds or test evidence.
+for path in "$BACKEND_DIR" "$FRONTEND_DIR"; do
+  if ! git -C "$path" diff --quiet HEAD -- || ! git -C "$path" diff --cached --quiet; then
+    echo 'BLOCK: tracked files differ from committed Git SHA' >&2; exit 2
+  fi
+done
 # Never trust a stale dist/ produced by a different checkout or commit.
 # Compile the immutable backend source before provisioning the test database.
 (
