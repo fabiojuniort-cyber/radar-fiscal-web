@@ -279,6 +279,7 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
       if (isAnnexHeading(block.textContent ?? '')) {
         historicalAnnex = isHistoricalAnnexHeading(block.textContent ?? '') ||
           sourceLegalStatus(block) === 'previous' || sourceLegalStatus(block) === 'revoked' ||
+          sourceLegalStatus(block) === 'unverified' ||
           Array.from(block.classList).some(isPreviousWordingClass)
       }
     }
