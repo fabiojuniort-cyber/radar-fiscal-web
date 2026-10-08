@@ -220,7 +220,7 @@ describe('Marcações no texto da legislação', () => {
     expect(container.querySelectorAll('mark.legal-mark')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /marcações/i })).not.toBeInTheDocument()
     const chips = within(screen.getByRole('list')).getAllByRole('listitem')
-    expect(chips.map((chip) => chip.textContent).toEqual(['3917.32.90', '3925.10.00'])
+    expect(chips.map((chip) => chip.textContent)).toEqual(['3917.32.90', '3925.10.00'])
     expect(screen.queryByText(/extraídos do texto vigente/)).not.toBeInTheDocument()
     // Non-attested taxonomy and NCM data remain queryable, never highlighted.
     expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
