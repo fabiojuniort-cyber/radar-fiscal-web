@@ -738,10 +738,9 @@ export function AuthenticatedProductPanel({
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
   const account = accountQuery.data
-  const selectedCompany =
-    account?.companies.find(
-      (company) => company.id === selectedCompanyId,
-    ) ?? account?.companies[0]
+  const selectedCompany = selectedCompanyId
+    ? account?.companies.find((company) => company.id === selectedCompanyId)
+    : account?.companies[0]
 
   const establishmentsQuery = useQuery({
     queryKey: ['launch', 'establishments', tenantId, selectedCompany?.id],
@@ -1669,6 +1668,12 @@ export function AuthenticatedProductPanel({
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                 }}
               />
+            ) : !selectedCompany && selectedCompanyId ? (
+              accountQuery.isFetching ? (
+                <LoadingState text="Carregando empresa selecionada…" />
+              ) : (
+                <ErrorState title="Empresa selecionada indisponível" />
+              )
             ) : !selectedCompany ? (
               <EmptyState title="Cadastre a empresa primeiro">
                 O Perfil Tributário e os estabelecimentos dependem da empresa.

@@ -633,6 +633,58 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true }).click()
   await expect(page.getByText('Perfil v1')).toBeVisible()
 
+  // A successful second registration must never expose the cached first profile
+  // while the account readback is still in flight.
+  const secondCompanyId = '22222222-2222-4222-8222-222222222223'
+  let releaseAccount!: () => void
+  const accountGate = new Promise<void>((resolve) => { releaseAccount = resolve })
+  let accountReadbackStarted = false
+  let oldCompanyWrites = 0
+  page.on('request', (request) => {
+    if (request.url().includes(`/companies/${companyId}/`) &&
+        !['GET', 'OPTIONS'].includes(request.method())) oldCompanyWrites += 1
+  })
+  await page.route('**/api/v1/account', async (route) => {
+    accountReadbackStarted = true
+    await accountGate
+    await route.fulfill({ json: {
+      tenant: { id: tenantId, name: 'Empresa Launch', slug: 'empresa-launch', status: 'ACTIVE' },
+      onboarding: { companyName: 'Empresa Launch', cnpj: null, createdAt: '2026-09-30T00:00:00.000Z' },
+      companies: [
+        { id: companyId, legalName: 'Empresa Launch Ltda', cnpj: '11222333000181', isActive: true, establishmentCount: 1 },
+        { id: secondCompanyId, legalName: 'Segunda Empresa Ltda', cnpj: '04252011000110', isActive: true, establishmentCount: 1 },
+      ],
+    } })
+  })
+  await page.route('**/api/v1/companies/from-cnpj', (route) => route.fulfill({
+    status: 201,
+    json: { company: { id: secondCompanyId, legalName: 'Segunda Empresa Ltda', cnpj: '04252011000110' }, establishment: {} },
+  }))
+  await page.route(`**/api/v1/companies/${secondCompanyId}/**`, (route) => {
+    const path = new URL(route.request().url()).pathname
+    const json = path.endsWith('/tax-profile') ? { profile: null }
+      : path.endsWith('/taxonomy-suggestions') ? { cnaes: [], suggestions: [] }
+        : { items: [] }
+    return route.fulfill({ json })
+  })
+  await page.getByRole('tab', { name: /Empresas/ }).click()
+  await page.getByRole('button', { name: 'Adicionar empresa', exact: true }).click()
+  await page.getByLabel('CNPJ da matriz').fill('04252011000110')
+  await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
+  await expect.poll(() => accountReadbackStarted).toBe(true)
+  await expect(page.getByRole('tab', { name: /Perfil tributário/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText('Carregando empresa selecionada…', { exact: true })).toBeVisible()
+  await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Regime tributário')).toHaveCount(0)
+  expect(oldCompanyWrites).toBe(0)
+  releaseAccount()
+  await expect(page.locator('.tp-tax-profile-editor')).toBeVisible()
+  await expect(page.locator('.tp-profile-context')).toContainText('04.252.011/0001-10')
+  await expect(page.locator('.tp-profile-context')).not.toContainText('11.222.333/0001-81')
+  await expect(page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true })).toBeVisible()
+  expect(oldCompanyWrites).toBe(0)
+
   await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
   await page.getByRole('button', { name: 'Abrir configurações', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Configurações' })).toBeVisible()
