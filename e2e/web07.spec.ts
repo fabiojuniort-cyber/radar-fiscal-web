@@ -396,7 +396,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
     const request = JSON.parse(capturedBody) as {
       email: string
       name: string
-      company: string
     }
 
     await route.fulfill({
@@ -410,7 +409,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
         },
         tenant: {
           id: 'tenant-auth-02',
-          name: request.company,
+          name: `Conta de ${request.name}`,
           slug: 'empresa-auth-02-abc',
         },
         membership: { role: 'OWNER' },
@@ -435,8 +434,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await expect(dialog.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
   await dialog.getByLabel('Nome completo').fill('Nova Pessoa')
   await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
-  await dialog.getByLabel('Empresa').fill('Empresa Nova')
-  await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
   await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()
@@ -451,8 +448,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   expect(JSON.parse(capturedBody)).toEqual({
     name: 'Nova Pessoa',
     email: 'nova.pessoa@example.com',
-    company: 'Empresa Nova',
-    cnpj: '12.345.678/0001-95',
     password: SIGNUP_TEST_PASSWORD,
     confirmPassword: SIGNUP_TEST_PASSWORD,
     acceptedTerms: true,
@@ -485,7 +480,6 @@ test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Nome completo').fill('Pessoa Existente')
   await dialog.getByLabel('E-mail corporativo').fill('existente@example.com')
-  await dialog.getByLabel('Empresa').fill('Empresa Existente')
   await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()
