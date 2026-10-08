@@ -30,8 +30,14 @@ fi
 if ! git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' HEAD; then
   echo 'BLOCK: frontend B5 must descend from PR #83 immutable SHA' >&2; exit 2
 fi
+# Never trust a stale dist/ produced by a different checkout or commit.
+# Compile the immutable backend source before provisioning the test database.
+(
+  cd "$BACKEND_DIR"
+  npm run build
+)
 if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
-  echo 'BLOCK: build the authorized backend checkout before starting an isolated DB' >&2; exit 2
+  echo 'BLOCK: immutable backend build did not produce dist/server.js' >&2; exit 2
 fi
 if ! docker info >/dev/null 2>&1; then
   echo 'BLOCK: local Docker daemon unavailable' >&2; exit 2
