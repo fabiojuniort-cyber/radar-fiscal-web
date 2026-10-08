@@ -9,6 +9,7 @@ export type DisplayAuditReason =
   | 'VERSION_MISMATCH' | 'DATE_UNVERIFIED' | 'DISPLAY_TRANSFORMED'
   | 'CRYPTO_UNAVAILABLE' | 'HTML_HASH_MISMATCH' | 'INVALID_SEGMENTS'
   | 'CROSSES_TEXT_NODES' | 'EDITORIAL_OR_HISTORY' | 'TEXT_HASH_MISMATCH'
+  | 'ENTITY_OFFSETS_UNVERIFIED'
 
 export type DisplayAuditResult =
   | { status: 'BLOCKED'; reason: DisplayAuditReason; highlightsAuthorized: false; segments: [] }
@@ -39,6 +40,24 @@ const EXCLUDED = new Set([
   'RemissoAnt', 'A8-2RemissaoAnt',
 ])
 const TABLE_HISTORY = /^(?:A\d+-\d+)?Tabela[A-Za-z]*verde$/
+/**
+ * Browser DOMParser may coalesce an HTML entity into its neighboring text
+ * node while the backend htmlparser2 emits distinct ontext callbacks.
+ * Refuse to assert a source-to-display offset mapping in that situation.
+ */
+const ENTITY_REF = /&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]+);/i
+const ANNEX_HEADING = /^anexo\s+(?:único|unico|[ivxlcdm]+|\d+)(?=\s*$|\s*[-–—:.(])/iu
+const ANNEX_HISTORY = /\b(?:revogad[oa]s?|redação\s+(?:anterior|original)|texto\s+anterior|substitu[íi]d[oa]s?|sem\s+(?:efeito|vigência))\b/iu
+const EDITORIAL_START = /^(?:publicad[oa]s?\s+(?:no|na|em)|ratificad[oa]s?\s+(?:no|na|pel[oa]s?)|alterad[oa]s?\s+(?:pel[oa]s?|por)|prorrogad[oa]s?\s+at[eé]|redação\s+anterior\b|nova\s+redação\s+dada\s+pel[oa])/iu
+const REVOKED_PLACEHOLDER = /^(?:(?:cl[áa]usula|art(?:igo)?\.?|par[áa]grafo|inciso|al[íi]nea|item)\s+[\p{L}\p{N}º°ª.-]+|§\s*\d+[º°ª]?|[ivxlcdm]+|[a-z]|\d+[º°ª]?)\s*(?:[-–—:]\s*)?revogad[oa]s?\.?$/iu
+const ACT_IDENTIFIER = /^(?:convênio(?:\s+icms)?|ajuste\s+sinief|ato\s+cotepe(?:\/icms)?|protocolo\s+icms|lei(?:\s+complementar)?|decreto|portaria|resolução)\s+(?:n[ºo°.]?\s*)?\d+(?:[./-]\d+)*(?:\s*,?\s+de\s+\d{1,2}\s+de\s+[\p{L}]+\s+de\s+\d{4})?\.?$/iu
+
+function standaloneEditorial(value: string): boolean {
+  const line = value.replace(/\s+/g, ' ').trim()
+  return ANNEX_HEADING.test(line) || EDITORIAL_START.test(line) ||
+    REVOKED_PLACEHOLDER.test(line) || ACT_IDENTIFIER.test(line)
+}
+
 const blocked = (reason: DisplayAuditReason): DisplayAuditResult =>
   ({ status: 'BLOCKED', reason, highlightsAuthorized: false, segments: [] })
 
@@ -94,6 +113,7 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
   // A template can wrap tables or rebuild presentation; a matching visible
   // sentence alone is insufficient to safely project ledger offsets.
   if (input.sourceSanitizedHtml !== input.displayHtml) return blocked('DISPLAY_TRANSFORMED')
+  if (ENTITY_REF.test(input.sourceSanitizedHtml)) return blocked('ENTITY_OFFSETS_UNVERIFIED')
   if (typeof s.htmlSha256 !== 'string' || !HASH.test(s.htmlSha256)) return blocked('INVALID_SCOPE')
   const htmlHash = await sha256(input.sourceSanitizedHtml)
   if (htmlHash === null) return blocked('CRYPTO_UNAVAILABLE')
@@ -105,13 +125,22 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
   }
   const doc = new DOMParser().parseFromString(input.displayHtml, 'text/html')
   const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT)
-  const nodes: Array<{ node: Text; start: number; end: number }> = []
+  const nodes: Array<{ node: Text; start: number; end: number; nonNormative: boolean }> = []
   let offset = 0
+  let historicalAnnex = false
   let cursor = walker.nextNode()
   while (cursor) {
-    const n = (cursor.nodeValue ?? '').length
+    const value = cursor.nodeValue ?? ''
+    const n = value.length
     if (n > 0) {
-      nodes.push({ node: cursor as Text, start: offset, end: offset + n })
+      const line = value.replace(/\s+/g, ' ').trim()
+      if (ANNEX_HEADING.test(line)) historicalAnnex = ANNEX_HISTORY.test(line)
+      nodes.push({
+        node: cursor as Text,
+        start: offset,
+        end: offset + n,
+        nonNormative: historicalAnnex || standaloneEditorial(value),
+      })
       offset += n
     }
     cursor = walker.nextNode()
@@ -136,7 +165,9 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
     lastEnd = end
     const node = nodes.find((n) => n.start <= start && n.end >= end)
     if (!node) return blocked('CROSSES_TEXT_NODES')
-    if (excludedNode(node.node)) return blocked('EDITORIAL_OR_HISTORY')
+    if (node.nonNormative || excludedNode(node.node)) {
+      return blocked('EDITORIAL_OR_HISTORY')
+    }
     const text = (node.node.nodeValue ?? '').slice(start - node.start, end - node.start)
     const hash = await sha256(text)
     if (hash === null) return blocked('CRYPTO_UNAVAILABLE')

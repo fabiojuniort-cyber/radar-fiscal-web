@@ -187,4 +187,76 @@ describe('TAX13 F2 scope-to-DOM mapping (draft only)', () => {
       status: 'BLOCKED', reason: 'CRYPTO_UNAVAILABLE',
     })
   })
+
+  it('rejects explicitly revoked annex content, but resets at a later annex', async () => {
+    const html = [
+      '<p>ANEXO II - REVOGADO</p>',
+      '<table><tr><td>8451.21.00</td></tr></table>',
+      '<p>ANEXO III</p>',
+      '<table><tr><td>3102.10.90</td></tr></table>',
+    ].join('')
+    const plain = 'ANEXO II - REVOGADO8451.21.00ANEXO III3102.10.90'
+    for (const [phrase, expectedStatus] of [
+      ['8451.21.00', 'BLOCKED'],
+      ['3102.10.90', 'DRAFT_ONLY'],
+    ] as const) {
+      const start = plain.indexOf(phrase)
+      const result = await auditLegalScopeDisplay({
+        ...input(), sourceSanitizedHtml: html, displayHtml: html,
+        scope: {
+          ...candidate(), htmlSha256: sha(html),
+          currentSegments: [{
+            start, end: start + phrase.length, textSha256: sha(phrase), status: 'CURRENT',
+          }],
+        },
+      })
+      expect(result.status).toBe(expectedStatus)
+      expect(result.highlightsAuthorized).toBe(false)
+      if (expectedStatus === 'BLOCKED') {
+        expect(result).toMatchObject({reason: 'EDITORIAL_OR_HISTORY'})
+      }
+    }
+  })
+
+  it('rejects metadata lines without CSS and a standalone revoked placeholder', async () => {
+    for (const html of [
+      '<p>Publicado no Diário Oficial da União em 2026.</p>',
+      '<p>Cláusula terceira REVOGADA</p>',
+      '<p>CONVÊNIO ICMS 100/97</p>',
+    ]) {
+      const phrase = html.replace(/<[^>]*>/g, '')
+      const result = await auditLegalScopeDisplay({
+        ...input(), sourceSanitizedHtml: html, displayHtml: html,
+        scope: {...candidate(), htmlSha256: sha(html), currentSegments: [{
+          start: 0, end: phrase.length, textSha256: sha(phrase), status: 'CURRENT',
+        }]},
+      })
+      expect(result).toMatchObject({status: 'BLOCKED', reason: 'EDITORIAL_OR_HISTORY'})
+    }
+  })
+
+  it('rejects ambiguous htmlparser2-to-DOMParser offsets when character entities exist', async () => {
+    const html = '<p>ICMS &amp; CBS</p>'
+    const result = await auditLegalScopeDisplay({
+      ...input(), sourceSanitizedHtml: html, displayHtml: html,
+      scope: {...candidate(), htmlSha256: sha(html), currentSegments: [{
+        start: 0, end: 'ICMS & CBS'.length,
+        textSha256: sha('ICMS & CBS'), status: 'CURRENT',
+      }]},
+    })
+    expect(result).toMatchObject({status: 'BLOCKED', reason: 'ENTITY_OFFSETS_UNVERIFIED'})
+  })
+
+  it('continues to consider operative revocation language as diagnostic-only', async () => {
+    const html = '<p>Ficam revogadas as disposições em contrário.</p>'
+    const phrase = 'Ficam revogadas as disposições em contrário.'
+    const result = await auditLegalScopeDisplay({
+      ...input(), sourceSanitizedHtml: html, displayHtml: html,
+      scope: {...candidate(), htmlSha256: sha(html), currentSegments: [{
+        start: 0, end: phrase.length, textSha256: sha(phrase), status: 'CURRENT',
+      }]},
+    })
+    expect(result.status).toBe('DRAFT_ONLY')
+    expect(result.highlightsAuthorized).toBe(false)
+  })
 })
