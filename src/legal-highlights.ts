@@ -42,6 +42,8 @@ const NON_NORMATIVE_CLASSES = new Set([
   'A2DataPublicacao',
   'Remisso',
   'A8-1Remissao',
+  'Subtitulo',
+  'A6-1Subtitulo',
 ])
 
 function isPreviousWordingClass(token: string) {
