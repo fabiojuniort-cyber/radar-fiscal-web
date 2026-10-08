@@ -26,8 +26,8 @@ const STATUS_COPY: Record<string, string> = {
   NO_RELEASE: 'Taxonomia indisponível.',
 }
 
-/** Product intelligence stays detailed internally and in text highlights,
- * but the legislation page presents it as one compact summary tag. */
+/** Product intelligence remains available as historical classification data.
+ * These tags do not establish the legal effectiveness of a provision. */
 function isProductTag(tag: PublicationTag) {
   return tag.dimensionCode === 'product'
 }
@@ -213,6 +213,7 @@ export function PublicationTaxonomySection({
   return (
     <section className="publication-origins-card publication-tags-card">
       <h2>Tags identificadas nesta legislação</h2>
+      <p className="publication-tags-meta">As tags são resultados de classificação e não comprovam a vigência jurídica dos trechos. Marcações automáticas permanecem desativadas até revalidação oficial.</p>
       {view?.release && (
         <p className="publication-tags-meta">
           Taxonomia {view.release.version}
@@ -247,7 +248,7 @@ export function PublicationTaxonomySection({
             <span className="publication-tag">
               <span
                 className="publication-tag-chip is-summary"
-                title="Produtos e itens identificados pela taxonomia; os termos e NCMs permanecem marcados no texto vigente."
+                title="Produtos e itens associados à taxonomia. A vigência dos dispositivos ainda não foi revalidada."
               >
                 <Tag size={12} aria-hidden="true" />
                 Produtos / NCMs
@@ -256,12 +257,12 @@ export function PublicationTaxonomySection({
                 </small>
               </span>
               <span role="tooltip" className="publication-tag-reason">
-                Os produtos e itens foram aglutinados nesta tag. Consulte as marcações verdes no texto para localizar cada termo ou NCM.
+                Os produtos e itens foram agrupados nesta tag. Consulte o documento e a fonte oficial antes de concluir pela vigência.
               </span>
             </span>
           </div>
           <p className="publication-tags-meta">
-            Os itens não são abertos tag por tag porque seus termos e NCMs já aparecem destacados no texto vigente.
+            Os itens estão agrupados para consulta. A identificação no texto ou catálogo não comprova a vigência dos dispositivos.
           </p>
           {curator && (
             <details>
