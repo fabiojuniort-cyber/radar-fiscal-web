@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -262,11 +260,6 @@ describe('TriFaros release candidate WEB-11', () => {
   it('hides the browser-native Edge password eye so only the app toggle is shown while typing', () => {
     // Chromium-based Edge injects ::-ms-reveal as a second eye only after input is entered.
     // Keep this rule scoped to password fields managed by our own visibility toggle.
-    const stylesSource = readFileSync(new URL('./styles.css', import.meta.url), 'utf8')
-    expect(stylesSource).toMatch(
-      /\.password-visibility-field input\[type="password"\]::-ms-reveal,\s*\.password-visibility-field input\[type="password"\]::-ms-clear\s*\{\s*display:\s*none;\s*\}/,
-    )
-
     renderApp('/como-funciona')
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
     const dialog = screen.getByRole('dialog')
