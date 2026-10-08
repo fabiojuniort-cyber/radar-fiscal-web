@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# ONB-01-B5: opt-in, private repos checked out in independent dirs, PG18 disposable ONLY.
+set -euo pipefail
+FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKEND_DIR="${ONB01_B5_BACKEND_DIR:-$FRONTEND_DIR/backend}"
+EVIDENCE_DIR="${ONB01_B5_EVIDENCE_DIR:-$FRONTEND_DIR/playwright-artifacts/onb01-b5}"
+mkdir -p "$EVIDENCE_DIR"
+BACKEND_PID=''
+cleanup() {
+  if [[ -n "$BACKEND_PID" ]]; then kill "$BACKEND_PID" 2>/dev/null || :; wait "$BACKEND_PID" 2>/dev/null || :; fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if [[ "${ONB01_B5_RUNNER_MODE:-}" != 'isolated-postgres-service' ]]; then
+  echo 'BLOCK: B5 must run only with ONB01_B5_RUNNER_MODE=isolated-postgres-service' >&2; exit 2
+fi
+# A curator URL is optional in the app, and must never point outside this runner.
+if [[ -n "${DATABASE_CURATOR_URL:-}" || -n "${DATABASE_WORKER_URL:-}" || "${DOTENV_CONFIG_PATH:-}" != /dev/null ]]; then
+  echo 'BLOCK: inherited database/dotenv configuration is not permitted' >&2; exit 2
+fi
+if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
+  echo 'BLOCK: compiled backend must be checked out and built separately' >&2; exit 2
+fi
+# Fail closed before the first SQL or migration. A database name on localhost
+# alone does NOT establish that its server is disposable.
+if [[ -z "${ONB01_B5_CONTAINER_ID:-}" || -z "${ONB01_B5_RUN_NONCE:-}" ]]; then
+  echo 'BLOCK: missing isolated Docker container identity/nonce' >&2; exit 2
+fi
+if ! command -v docker >/dev/null || ! command -v node >/dev/null; then
+  echo 'BLOCK: Docker and Node 24 are required to verify disposable database ownership' >&2; exit 2
+fi
+if ! docker inspect "$ONB01_B5_CONTAINER_ID" | node -e '
+  let raw = ""; process.stdin.on("data", x => raw += x);
+  process.stdin.on("end", () => {
+    try {
+      const d = JSON.parse(raw)[0];
+      const labels = d.Config.Labels ?? {};
+      const bindings = d.NetworkSettings.Ports?.["5432/tcp"] ?? [];
+      if (d.Config.Image !== "postgres:18-bookworm" || !d.State.Running
+          || labels["com.tribusca.onb01-b5"] !== "disposable"
+          || labels["com.tribusca.onb01-b5.nonce"] !== process.env.ONB01_B5_RUN_NONCE
+          || bindings.length !== 1 || bindings[0].HostIp !== "127.0.0.1"
+          || !/^[0-9]+$/.test(bindings[0].HostPort)
+          || d.Mounts.some(m => m.Type !== "volume")
+          || !d.Config.Env.includes("POSTGRES_DB=radar_fiscal_onb01_b5")) {
+        throw Error("not an owned disposable PostgreSQL 18 container");
+      }
+      for (const k of ["DATABASE_URL","DATABASE_ADMIN_URL"]) {
+        const rawUrl = process.env[k];
+        if (!rawUrl) throw Error("missing " + k);
+        const u = new URL(rawUrl);
+        if (u.protocol !== "postgresql:" || u.hostname !== "127.0.0.1"
+            || u.port !== bindings[0].HostPort
+            || u.pathname !== "/radar_fiscal_onb01_b5"
+            || u.search || u.hash) throw Error("database URL not bound to disposable Docker port");
+      }
+      if (process.env.NODE_ENV !== "test"
+          || process.env.ONB01_B5_RUNNER_MODE !== "isolated-postgres-service")
+        throw Error("not an isolated test runner");
+    } catch {
+      process.stderr.write("BLOCK: disposable container or database origin verification failed\\n");
+      process.exitCode = 2;
+    }
+  });
+'; then
+  echo 'BLOCK: refusing to migrate an unverified PostgreSQL instance' >&2; exit 2
+fi
+actual_db="$(psql "$DATABASE_ADMIN_URL" -X -A -t -v ON_ERROR_STOP=1 -c "SELECT current_database() || ':' || current_setting('server_version_num')")"
+if [[ ! "$actual_db" =~ ^radar_fiscal_onb01_b5:18[0-9]{4}$ ]]; then
+  echo 'BLOCK: only PostgreSQL 18 and radar_fiscal_onb01_b5 are permitted' >&2; exit 2
+fi
+# Prevent Playwright preview/backend from attaching to an unrelated local app.
+# Checking the ports is necessary even for localhost-only test runs.
+if ! node -e '
+ const net = require("node:net");
+ (async () => {
+   for (const port of [3000, 4173]) {
+     await new Promise((resolve, reject) => {
+       const server = net.createServer();
+       server.once("error", reject);
+       server.listen({ host: "127.0.0.1", port }, () => server.close(resolve));
+     });
+   }
+ })().catch(() => {
+   process.stderr.write("BLOCK: port 3000/4173 already occupied or not bindable\\n");
+   process.exitCode = 2;
+ });
+'; then
+  echo 'BLOCK: dedicated backend/Vite ports must be free' >&2; exit 2
+fi
+actual_backend="$(git -C "$BACKEND_DIR" rev-parse HEAD)"
+if [[ "$actual_backend" != 'a42f11bf2b928ce9ec48bf41b8069f998f26af95' ]]; then
+  echo 'BLOCK: backend immutable SHA mismatch' >&2; exit 2
+fi
+git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' HEAD || {
+  echo 'BLOCK: web checkout does not descend from reference SHA' >&2; exit 2;
+}
+printf 'BACKEND_SHA=%s\nFRONTEND_TEST_SHA=%s\nFRONTEND_BASE_SHA=%s\nPG=%s\n' "$actual_backend" "$(git -C "$FRONTEND_DIR" rev-parse HEAD)" 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' "$actual_db" > "$EVIDENCE_DIR/HEADS.txt"
+export ONB01_B5_BACKEND_SHA="$actual_backend"
+export ONB01_B5_FRONTEND_TEST_SHA="$(git -C "$FRONTEND_DIR" rev-parse HEAD)"
+export ONB01_B5_FRONTEND_BASE_SHA='b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a'
+(
+  cd "$BACKEND_DIR"
+  npm run db:prepare
+  # Response/GET/SQL regressions share only this disposable test database.
+  npx tsx --test --test-concurrency=1 test/onboarding-integrity.integration.test.ts test/product-api.integration.test.ts test/company-manual-registration.integration.test.ts test/establishment-manual-registration.integration.test.ts > "$EVIDENCE_DIR/REGISTRATION_TESTS.txt" 2>&1
+)
+psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -f "$FRONTEND_DIR/e2e/onb01-b5/seed.sql" > "$EVIDENCE_DIR/SEED.txt"
+(
+  cd "$BACKEND_DIR"
+  export HOST=127.0.0.1
+  export PORT=3000
+  export NODE_OPTIONS="--import=$FRONTEND_DIR/e2e/onb01-b5/outbound-shim.mjs"
+  exec node dist/server.js
+) > "$EVIDENCE_DIR/backend.log" 2>&1 &
+BACKEND_PID=$!
+healthy=0
+for _ in $(seq 1 40); do
+  if curl --silent --fail --max-time 1 http://127.0.0.1:3000/health >/dev/null; then healthy=1; break; fi
+  sleep 1
+done
+if [[ "$healthy" -ne 1 ]]; then echo 'BLOCK: local Fastify health probe failed' >&2; exit 1; fi
+(
+ cd "$FRONTEND_DIR"
+ export AUTH_PROXY_TARGET='http://127.0.0.1:3000'
+ npm run build
+ # Force a fresh Vite preview server: never reuse another developer's server.
+ CI=1 npx playwright test e2e/onb01-b5.real.spec.ts --project=desktop-1440x900 --workers=1 --retries=0
+)
+printf 'COMPLETED: real Chromium -> Fastify -> isolated PostgreSQL 18\n' > "$EVIDENCE_DIR/RUN_RESULT.txt"
