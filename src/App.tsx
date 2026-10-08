@@ -9,6 +9,8 @@ import {
   Check,
   CircleHelp,
   FileSearch,
+  Eye,
+  EyeOff,
   Layers3,
   MonitorCheck,
   Menu,
@@ -909,7 +911,7 @@ function LoginForm({
       )}
       <form className="auth-form" onSubmit={submit}>
         <label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
+        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? <EyeOff size={21} strokeWidth={1.8} aria-hidden="true" /> : <Eye size={21} strokeWidth={1.8} aria-hidden="true" />}</button></div></div>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e tente novamente.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
@@ -1026,8 +1028,8 @@ function PasswordFlow({
             <label>E-mail corporativo<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={320} required /></label>
           </>
         )}
-        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
-        <div className="password-control"><label htmlFor={confirmPasswordId}>Confirmar senha</label><div className="password-visibility-field"><input id={confirmPasswordId} type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /><button type="button" aria-label={confirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'} aria-pressed={confirmVisible} onClick={() => setConfirmVisible((value) => !value)}>{confirmVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
+        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? <EyeOff size={21} strokeWidth={1.8} aria-hidden="true" /> : <Eye size={21} strokeWidth={1.8} aria-hidden="true" />}</button></div></div>
+        <div className="password-control"><label htmlFor={confirmPasswordId}>Confirmar senha</label><div className="password-visibility-field"><input id={confirmPasswordId} type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /><button type="button" aria-label={confirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'} aria-pressed={confirmVisible} onClick={() => setConfirmVisible((value) => !value)}>{confirmVisible ? <EyeOff size={21} strokeWidth={1.8} aria-hidden="true" /> : <Eye size={21} strokeWidth={1.8} aria-hidden="true" />}</button></div></div>
         <div className="password-rules" aria-label="Requisitos da senha">
           <PasswordRule ok={checks.minLength} text="Mínimo de 8 caracteres" />
           <PasswordRule ok={checks.uppercase} text="Uma letra maiúscula" />
