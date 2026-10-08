@@ -18,7 +18,7 @@ command_name="\${0##*/}"
 case "$command_name" in
  git)
   case "$*" in
-   *rev-parse*) echo 532006508aebdb8dd1f384da14b3f7cdcd2a8aa5 ;;
+   *rev-parse*) echo a42f11bf2b928ce9ec48bf41b8069f998f26af95 ;;
    *ls-files*) [[ "$CASE" != extra-input ]] || echo migrations/999_untracked.sql ;;
   esac
   exit 0 ;;

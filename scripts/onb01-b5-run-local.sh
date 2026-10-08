@@ -90,7 +90,7 @@ if ! node -e '
   echo 'BLOCK: dedicated backend/Vite ports must be free' >&2; exit 2
 fi
 actual_backend="$(git -C "$BACKEND_DIR" rev-parse HEAD)"
-if [[ "$actual_backend" != '532006508aebdb8dd1f384da14b3f7cdcd2a8aa5' ]]; then
+if [[ "$actual_backend" != 'a42f11bf2b928ce9ec48bf41b8069f998f26af95' ]]; then
   echo 'BLOCK: backend immutable SHA mismatch' >&2; exit 2
 fi
 git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' HEAD || {
@@ -103,6 +103,8 @@ export ONB01_B5_FRONTEND_BASE_SHA='b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a'
 (
   cd "$BACKEND_DIR"
   npm run db:prepare
+  # Response/GET/SQL regressions share only this disposable test database.
+  npx tsx --test --test-concurrency=1 test/onboarding-integrity.integration.test.ts test/product-api.integration.test.ts test/company-manual-registration.integration.test.ts test/establishment-manual-registration.integration.test.ts > "$EVIDENCE_DIR/REGISTRATION_TESTS.txt" 2>&1
 )
 psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -f "$FRONTEND_DIR/e2e/onb01-b5/seed.sql" > "$EVIDENCE_DIR/SEED.txt"
 (

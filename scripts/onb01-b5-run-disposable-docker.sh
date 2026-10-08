@@ -54,7 +54,7 @@ done
 if [[ "$(node --version)" != v24.* ]]; then
   echo 'BLOCK: ONB-01-B5 requires Node.js 24 for backend and Vite' >&2; exit 2
 fi
-if [[ "$(git -C "$BACKEND_DIR" rev-parse HEAD 2>/dev/null)" != '532006508aebdb8dd1f384da14b3f7cdcd2a8aa5' ]]; then
+if [[ "$(git -C "$BACKEND_DIR" rev-parse HEAD 2>/dev/null)" != 'a42f11bf2b928ce9ec48bf41b8069f998f26af95' ]]; then
   echo 'BLOCK: backend private checkout must be pinned to PR #190 immutable SHA' >&2; exit 2
 fi
 if ! git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' HEAD; then

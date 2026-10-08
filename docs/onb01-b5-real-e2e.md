@@ -6,8 +6,9 @@ Governance: [#99](https://github.com/fabiojuniort-cyber/tribusca-control/issues/
 
 ## Baselines imutáveis
 
-- Backend PR #190, `532006508aebdb8dd1f384da14b3f7cdcd2a8aa5`.
-- Frontend PR #83, `b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a`.
+- Backend PR #190, `a42f11bf2b928ce9ec48bf41b8069f998f26af95`.
+- Frontend baseline PR #83, `b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a`; the profile-selection correction from `fa21ec4f46943186a2928384ee82ac1f61402f85` is also present in this harness branch.
+- After preparation, the runner executes four backend registration suites against this same disposable PG18 before the browser scenario. The registration responses must agree with GET and SQL, including preserved reactivation fields and canonical CNAE descriptions. Results are recorded in `REGISTRATION_TESTS.txt`.
 - Código B5 em branch separada `test/onb01-b5-real-browser-pg18-20261008`; não editar heads congelados.
 
 ## Segurança
