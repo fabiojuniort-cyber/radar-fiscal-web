@@ -100,6 +100,8 @@ async function signupAndLogin(page: Page, email: string): Promise<{ tenantId: st
   return { tenantId: signup.tenant.id, token: session.accessToken }
 }
 
+test.skip(process.env.ONB01_B5_RUNNER_MODE !== 'isolated-postgres-service', 'B5 is opt-in and requires disposable PG18 + real Fastify')
+
 test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual official CNAE and RLS', async ({ page, browser, request }, testInfo) => {
   test.setTimeout(150_000)
   expect(process.env.ONB01_B5_RUNNER_MODE).toBe('isolated-postgres-service')
