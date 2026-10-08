@@ -161,6 +161,49 @@ describe('highlightLegalHtml', () => {
     expect(result.markedNcms.size).toBe(0)
   })
 
+  it('highlights only explicitly current cells in a mixed annex while preserving full display', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] })]),
+      [
+        { code: '87019000', description: null },
+        { code: '31021090', description: null },
+        { code: '39251000', description: null },
+      ],
+    )
+    const source = [
+      '<p data-legal-status="editorial">Histórico fertilizantes 8701.90.00</p>',
+      '<p>ANEXO I</p>',
+      '<table><tr>',
+      '<td data-legal-status="previous">fertilizantes 8701.90.00</td>',
+      '<td data-legal-status="current">fertilizantes 3102.10.90</td>',
+      '<td data-legal-status="unverified">vigência não comprovada 3925.10.00</td>',
+      '</tr></table>',
+    ].join('')
+    const result = highlightLegalHtml(source, rules)
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map(mark => mark.textContent)).toEqual([
+      'fertilizantes', '3102.10.90',
+    ])
+    expect([...result.markedNcms]).toEqual(['31021090'])
+    expect(result.html).toContain('fertilizantes 8701.90.00')
+    expect(result.html).toContain('vigência não comprovada 3925.10.00')
+  })
+
+  it('excludes unstyled annex content after a previous-wording annex heading', () => {
+    const rules = buildHighlightRules(taxonomy([]), [
+      { code: '87019000', description: null },
+      { code: '31021090', description: null },
+    ])
+    const result = highlightLegalHtml(
+      '<p data-legal-status="previous">ANEXO II</p>' +
+      '<table><tr><td>8701.90.00</td></tr></table>' +
+      '<p>ANEXO III</p><table><tr><td>3102.10.90</td></tr></table>',
+      rules,
+    )
+    expect([...result.markedNcms]).toEqual(['31021090'])
+    expect(result.marks).toBe(1)
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
