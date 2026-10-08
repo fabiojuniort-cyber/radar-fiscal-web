@@ -5,6 +5,19 @@ import {
   type ManualCnaeOption,
 } from './manual-registration-bridge'
 
+// Local checksum validation improves UX; backend always validates independently.
+export function isValidCnpj(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false
+  const digit = (weights: number[]) => {
+    const sum = weights.reduce((total, weight, index) => total + Number(digits[index]) * weight, 0)
+    const remainder = sum % 11
+    return remainder < 2 ? 0 : 11 - remainder
+  }
+  return digit([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[12])
+    && digit([6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[13])
+}
+
 export type ProductApiFetch = (
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -300,6 +313,7 @@ export async function createCompanyFromCnpj(
   businessLocationCode?: string,
 ): Promise<CnpjRegistryResult> {
   const normalizedCnpj = cnpj.replace(/\D/g, '')
+  if (!isValidCnpj(normalizedCnpj)) throw new Error('invalid_cnpj')
   const normalizedBusinessLocation =
     businessLocationCode?.trim() || null
   const response = await apiFetch('/api/v1/companies/from-cnpj', {
@@ -499,6 +513,7 @@ export async function createEstablishmentFromCnpj(
   },
 ): Promise<void> {
   const normalizedCnpj = input.cnpj.replace(/\D/g, '')
+  if (!isValidCnpj(normalizedCnpj)) throw new Error('invalid_cnpj')
   const normalizedBusinessLocation =
     input.businessLocationCode?.trim() || null
   const response = await apiFetch(
