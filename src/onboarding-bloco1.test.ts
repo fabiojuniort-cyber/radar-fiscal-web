@@ -12,7 +12,7 @@ describe('ONB-01 CNPJ and official CNAE selection', () => {
   })
 
   it('uses the backend tenant-scoped official catalogue, not browser-supplied labels', async () => {
-    const apiFetch = vi.fn(async () => new Response(JSON.stringify({
+    const apiFetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
       source: 'https://servicodados.ibge.gov.br/api/v2/cnae/subclasses',
       items: [{ code: '0111301', description: 'Cultivo de arroz' }],
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
@@ -26,7 +26,7 @@ describe('ONB-01 CNPJ and official CNAE selection', () => {
   })
 
   it('keeps catalogue unavailability distinct from empty results', async () => {
-    const apiFetch = vi.fn(async () => new Response(JSON.stringify({
+    const apiFetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
       error: 'cnae_catalog_unavailable',
     }), { status: 503, headers: { 'content-type': 'application/json' } }))
     await expect(searchOfficialCnaes(apiFetch, 'tenant-1', 'soja')).rejects.toThrow()
