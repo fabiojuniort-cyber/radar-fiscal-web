@@ -1,7 +1,7 @@
 export type SignupRequest = {
   name: string
   email: string
-  company: string
+  company?: string
   cnpj?: string
   password: string
   confirmPassword: string

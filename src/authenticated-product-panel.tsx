@@ -738,10 +738,9 @@ export function AuthenticatedProductPanel({
   const sources = sourcesQuery.data?.items ?? []
   const stats = statsQuery.data
   const account = accountQuery.data
-  const selectedCompany =
-    account?.companies.find(
-      (company) => company.id === selectedCompanyId,
-    ) ?? account?.companies[0]
+  const selectedCompany = selectedCompanyId
+    ? account?.companies.find((company) => company.id === selectedCompanyId)
+    : account?.companies[0]
 
   const establishmentsQuery = useQuery({
     queryKey: ['launch', 'establishments', tenantId, selectedCompany?.id],
@@ -1669,6 +1668,12 @@ export function AuthenticatedProductPanel({
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                 }}
               />
+            ) : !selectedCompany && selectedCompanyId ? (
+              accountQuery.isFetching ? (
+                <LoadingState text="Carregando empresa selecionada…" />
+              ) : (
+                <ErrorState title="Empresa selecionada indisponível" />
+              )
             ) : !selectedCompany ? (
               <EmptyState title="Cadastre a empresa primeiro">
                 O Perfil Tributário e os estabelecimentos dependem da empresa.
@@ -1687,6 +1692,7 @@ export function AuthenticatedProductPanel({
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'account'] })
                 }}
+                onOpenProfile={() => setOrgTab('perfil')}
               />
             ) : (
               <TaxProfileSection
@@ -2019,6 +2025,9 @@ function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
+      // ONB-01: loading animation/wizard are subsequent blocks.
+      // Existing tax profile is the safe transition target.
+      onOpenProfile()
     },
   })
 
@@ -2240,6 +2249,7 @@ function EstablishmentSection({
   loading,
   error,
   onChanged,
+  onOpenProfile,
 }: {
   apiFetch: ProductApiFetch
   tenantId: string
@@ -2250,6 +2260,7 @@ function EstablishmentSection({
   loading: boolean
   error: boolean
   onChanged: () => void
+  onOpenProfile: () => void
 }) {
   const [creating, setCreating] = useState(false)
   const [cnpj, setCnpj] = useState('')
@@ -2271,6 +2282,7 @@ function EstablishmentSection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
+      onOpenProfile()
     },
   })
 

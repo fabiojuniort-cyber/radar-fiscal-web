@@ -51,6 +51,42 @@ afterEach(() => {
 })
 
 describe('manual CNPJ fallback', () => {
+  it('opens official manual company flow on invalid CNAE from registry and does not submit the provider code', async () => {
+    const manualResult = { company: { id: 'official-company' } } as CnpjRegistryResult
+    const apiFetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/v1/companies/from-cnpj') return response({ error: 'invalid_cnae' }, 400)
+      if (url === '/api/v1/cnae-catalog?search=6201501') return response({
+        items: [{ code: '6201501', description: 'Desenvolvimento de programas de computador sob encomenda' }],
+      })
+      if (url === '/api/v1/companies/manual') return response(manualResult, 201)
+      return response({ error: 'unexpected' }, 500)
+    })
+    const apiFetch = apiFetchMock as ProductApiFetch
+    const pendingOperation = createCompanyFromCnpj(apiFetch, 'tenant-1', '10.515.785/0003-50')
+    const pending = await waitForPending('company')
+    expect(pending.request.kind).toBe('company')
+    if (pending.request.kind !== 'company') throw new Error('expected_company_registration')
+    if (!pending.request.searchCnaes) throw new Error('official_catalog_search_not_available')
+    const options = await pending.request.searchCnaes('6201501')
+    expect(options).toHaveLength(1)
+    expect(options[0]?.code).toBe('6201501')
+    const output = await pending.request.submit({
+      legalName: 'Empresa de CNAE Oficial',
+      uf: 'GO',
+      cnaes: [{ ...options[0]!, isPrimary: true }],
+    })
+    resolveManualRegistration(output)
+    await expect(pendingOperation).resolves.toEqual(manualResult)
+    const posted = apiFetchMock.mock.calls.find(([url]) => String(url) === '/api/v1/companies/manual')
+    const body = JSON.parse(String(posted?.[1]?.body))
+    expect(body.cnaes).toEqual([{ code: '6201501',
+      description: 'Desenvolvimento de programas de computador sob encomenda',
+      isPrimary: true }])
+    expect(apiFetchMock.mock.calls.filter(([url]) => String(url) === '/api/v1/companies/from-cnpj')).toHaveLength(1)
+  })
+
+
   it('opens manual company registration when providers are unavailable', async () => {
     const manualResult: CnpjRegistryResult = {
       company: {
@@ -178,7 +214,7 @@ describe('manual CNPJ fallback', () => {
       'tenant-1',
       'company-1',
       {
-        cnpj: '10.515.785/0004-30',
+        cnpj: '10.515.785/0004-31',
         typeCode: 'OTHER',
         businessLocationCode: 'FILIAL-004',
       },
@@ -212,7 +248,7 @@ describe('manual CNPJ fallback', () => {
     )
     expect(manualBody).toMatchObject({
       companyId: 'company-1',
-      cnpj: '10515785000430',
+      cnpj: '10515785000431',
       name: 'Filial Manual',
       typeCode: 'OTHER',
       uf: 'GO',
@@ -286,22 +322,29 @@ describe('manual CNPJ fallback', () => {
     )
   })
 
-  it('does not offer manual fallback when both providers confirm CNPJ not found', async () => {
+  it('offers manual fallback for a checksum-valid CNPJ not found in the registry', async () => {
     const apiFetch = vi.fn(async () =>
-      response(
-        { error: 'cnpj_not_found' },
-        404,
-      ),
+      response({ error: 'cnpj_not_found' }, 404),
     ) as ProductApiFetch
+    const registration = createCompanyFromCnpj(
+      apiFetch,
+      'tenant-1',
+      '19.131.243/0001-97',
+    )
+    const pending = await waitForPending('company')
+    expect(pending.request.cnpj).toBe('19131243000197')
+    rejectManualRegistration(new Error('manual_registration_cancelled'))
+    await expect(registration).rejects.toThrow('manual_registration_cancelled')
+  })
 
-    await expect(
-      createCompanyFromCnpj(
-        apiFetch,
-        'tenant-1',
-        '19.131.243/0001-97',
-      ),
-    ).rejects.toThrow('cnpj_not_found')
-
+  it('never calls the API for an invalid CNPJ checksum', async () => {
+    const apiFetch = vi.fn() as ProductApiFetch
+    await expect(createCompanyFromCnpj(
+      apiFetch,
+      'tenant-1',
+      '19.131.243/0001-90',
+    )).rejects.toThrow('invalid_cnpj')
+    expect(apiFetch).not.toHaveBeenCalled()
     expect(getPendingManualRegistration()).toBeNull()
   })
 })

@@ -353,6 +353,41 @@ test('WEB-16 — login modal, signup ativo, contenção de foco e Escape', async
   await expect(trigger).toBeFocused()
 })
 
+test('ONB-01 — keyboard navigates password controls with explicit labels on login and signup', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await openLogin(page)
+  const dialog = page.getByRole('dialog')
+  const loginInput = dialog.getByLabel('Senha', { exact: true })
+  const loginToggle = dialog.getByRole('button', { name: 'Mostrar senha' })
+  expect(await loginInput.evaluate((el) => {
+    const input = el as HTMLInputElement
+    return Boolean(input.id && document.querySelector(`label[for="${input.id}"]`)) && !input.closest('label')
+  })).toBe(true)
+  await loginInput.focus()
+  await page.keyboard.press('Tab')
+  await expect(loginToggle).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(loginInput).toHaveAttribute('type', 'text')
+  await expect(dialog.getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+
+  await dialog.getByRole('button', { name: 'Criar conta' }).click()
+  const signupInput = dialog.getByLabel('Senha', { exact: true })
+  const confirmInput = dialog.getByLabel('Confirmar senha', { exact: true })
+  for (const input of [signupInput, confirmInput]) {
+    expect(await input.evaluate((el) => {
+      const field = el as HTMLInputElement
+      return Boolean(field.id && document.querySelector(`label[for="${field.id}"]`)) && !field.closest('label')
+    })).toBe(true)
+  }
+  await confirmInput.focus()
+  await page.keyboard.press('Tab')
+  const confirmToggle = dialog.getByRole('button', { name: 'Mostrar confirmação de senha' })
+  await expect(confirmToggle).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(confirmInput).toHaveAttribute('type', 'text')
+  await expect(dialog.getByRole('button', { name: 'Ocultar confirmação de senha' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('WEB-11 — login uses only the real auth contract and no localStorage token', async ({ page }) => {
   let capturedMethod = ''
   let capturedBody = ''
@@ -396,7 +431,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
     const request = JSON.parse(capturedBody) as {
       email: string
       name: string
-      company: string
     }
 
     await route.fulfill({
@@ -410,7 +444,7 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
         },
         tenant: {
           id: 'tenant-auth-02',
-          name: request.company,
+          name: `Conta de ${request.name}`,
           slug: 'empresa-auth-02-abc',
         },
         membership: { role: 'OWNER' },
@@ -435,8 +469,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   await expect(dialog.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
   await dialog.getByLabel('Nome completo').fill('Nova Pessoa')
   await dialog.getByLabel('E-mail corporativo').fill('nova.pessoa@example.com')
-  await dialog.getByLabel('Empresa').fill('Empresa Nova')
-  await dialog.getByLabel('CNPJ').fill('12.345.678/0001-95')
   await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()
@@ -451,8 +483,6 @@ test('AUTH-02 — signup real exige confirmação da API antes do sucesso', asyn
   expect(JSON.parse(capturedBody)).toEqual({
     name: 'Nova Pessoa',
     email: 'nova.pessoa@example.com',
-    company: 'Empresa Nova',
-    cnpj: '12.345.678/0001-95',
     password: SIGNUP_TEST_PASSWORD,
     confirmPassword: SIGNUP_TEST_PASSWORD,
     acceptedTerms: true,
@@ -485,7 +515,6 @@ test('AUTH-02 — signup duplicado permanece no formulário sem falso sucesso', 
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Nome completo').fill('Pessoa Existente')
   await dialog.getByLabel('E-mail corporativo').fill('existente@example.com')
-  await dialog.getByLabel('Empresa').fill('Empresa Existente')
   await dialog.getByLabel('Senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel('Confirmar senha', { exact: true }).fill(SIGNUP_TEST_PASSWORD)
   await dialog.getByLabel(/Aceite dos Termos/).check()

@@ -145,7 +145,7 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await openLogin(page)
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('owner@example.test')
-  await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Only-For-Browser-Test!1')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/painel$/)
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()

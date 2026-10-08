@@ -108,6 +108,9 @@ describe('TriFaros release candidate WEB-11', () => {
 
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('Empresa')).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('CNPJ')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Mostrar senha' })).toBeInTheDocument()
 
     fireEvent.change(within(dialog).getByLabelText('Nome completo'), {
       target: { value: 'Nova Pessoa' },
@@ -115,12 +118,10 @@ describe('TriFaros release candidate WEB-11', () => {
     fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
       target: { value: 'nova.pessoa@example.com' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
-      target: { value: 'Empresa Nova' },
-    })
-    fireEvent.change(within(dialog).getByLabelText('CNPJ'), {
-      target: { value: '12.345.678/0001-95' },
-    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Mostrar senha' }))
+    expect(within(dialog).getByLabelText('Senha')).toHaveAttribute('type', 'text')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ocultar senha' }))
+    expect(within(dialog).getByLabelText('Senha')).toHaveAttribute('type', 'password')
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
       target: { value: strongTestPassword },
     })
@@ -209,9 +210,6 @@ describe('TriFaros release candidate WEB-11', () => {
     fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
       target: { value: 'existente@example.com' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
-      target: { value: 'Empresa Existente' },
-    })
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
       target: { value: strongTestPassword },
     })
@@ -226,6 +224,43 @@ describe('TriFaros release candidate WEB-11', () => {
     )
     expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
     expect(within(dialog).queryByText(/Conta criada com sucesso/)).not.toBeInTheDocument()
+  })
+
+  it('keeps password toggles outside labels and explicitly associates both inputs by id', () => {
+    renderApp('/como-funciona')
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    const signup = screen.getByRole('dialog')
+    const input = within(signup).getByLabelText('Senha') as HTMLInputElement
+    const confirm = within(signup).getByLabelText('Confirmar senha') as HTMLInputElement
+    for (const [field, title] of [[input, 'Senha'], [confirm, 'Confirmar senha']] as const) {
+      expect(field.closest('label')).toBeNull()
+      const label = signup.querySelector(`label[for="${field.id}"]`)
+      expect(label).not.toBeNull()
+      expect(label?.textContent).toBe(title)
+      expect(field.id).toBeTruthy()
+    }
+    const show = within(signup).getByRole('button', { name: 'Mostrar senha' })
+    expect(show.closest('label')).toBeNull()
+    fireEvent.click(show)
+    expect(input).toHaveAttribute('type', 'text')
+    expect(within(signup).getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+    const confirmToggle = within(signup).getByRole('button', { name: 'Mostrar confirmação de senha' })
+    expect(confirmToggle.closest('label')).toBeNull()
+    fireEvent.click(confirmToggle)
+    expect(confirm).toHaveAttribute('type', 'text')
+  })
+
+  it('associates login password label explicitly and keeps the toggle out of the label', () => {
+    renderApp('/como-funciona')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
+    const dialog = screen.getByRole('dialog')
+    const input = within(dialog).getByLabelText('Senha') as HTMLInputElement
+    expect(input.closest('label')).toBeNull()
+    expect(dialog.querySelector(`label[for="${input.id}"]`)).toHaveTextContent('Senha')
+    const button = within(dialog).getByRole('button', { name: 'Mostrar senha' })
+    expect(button.closest('label')).toBeNull()
+    fireEvent.click(button)
+    expect(input).toHaveAttribute('type', 'text')
   })
 
   it('preserves the real login contract without browser token storage', async () => {

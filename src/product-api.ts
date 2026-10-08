@@ -2,7 +2,21 @@ import {
   requestManualRegistration,
   type ManualCompanyForm,
   type ManualEstablishmentForm,
+  type ManualCnaeOption,
 } from './manual-registration-bridge'
+
+// Local checksum validation improves UX; backend always validates independently.
+export function isValidCnpj(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false
+  const digit = (weights: number[]) => {
+    const sum = weights.reduce((total, weight, index) => total + Number(digits[index]) * weight, 0)
+    const remainder = sum % 11
+    return remainder < 2 ? 0 : 11 - remainder
+  }
+  return digit([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[12])
+    && digit([6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[13])
+}
 
 export type ProductApiFetch = (
   input: RequestInfo | URL,
@@ -27,7 +41,7 @@ export type AccountSummary = {
     status: string
   }
   onboarding: {
-    companyName: string
+    companyName: string | null
     cnpj: string | null
     createdAt: string
   } | null
@@ -244,7 +258,10 @@ function canUseManualCnpjFallback(
 ) {
   return (
     code === 'cnpj_provider_unavailable' ||
-    code === 'cnpj_provider_invalid_response'
+    code === 'cnpj_provider_invalid_response' ||
+    code === 'cnpj_not_found' ||
+    code === 'invalid_cnae' ||
+    code === 'reactivation_required'
   )
 }
 
@@ -279,6 +296,19 @@ export async function fetchAccountSummary(
   return requireJson<AccountSummary>(response)
 }
 
+export async function searchOfficialCnaes(
+  apiFetch: ProductApiFetch,
+  tenantId: string,
+  term: string,
+): Promise<ManualCnaeOption[]> {
+  const response = await apiFetch(
+    '/api/v1/cnae-catalog?search=' + encodeURIComponent(term.slice(0, 80)),
+    { headers: tenantHeaders(tenantId, { Accept: 'application/json' }) },
+  )
+  const payload = await requireJson<{ items: ManualCnaeOption[] }>(response)
+  return payload.items
+}
+
 export async function createCompanyFromCnpj(
   apiFetch: ProductApiFetch,
   tenantId: string,
@@ -286,6 +316,7 @@ export async function createCompanyFromCnpj(
   businessLocationCode?: string,
 ): Promise<CnpjRegistryResult> {
   const normalizedCnpj = cnpj.replace(/\D/g, '')
+  if (!isValidCnpj(normalizedCnpj)) throw new Error('invalid_cnpj')
   const normalizedBusinessLocation =
     businessLocationCode?.trim() || null
   const response = await apiFetch('/api/v1/companies/from-cnpj', {
@@ -312,6 +343,7 @@ export async function createCompanyFromCnpj(
 
   return requestManualRegistration<CnpjRegistryResult>({
     kind: 'company',
+    searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     businessLocationCode:
       normalizedBusinessLocation,
@@ -484,6 +516,7 @@ export async function createEstablishmentFromCnpj(
   },
 ): Promise<void> {
   const normalizedCnpj = input.cnpj.replace(/\D/g, '')
+  if (!isValidCnpj(normalizedCnpj)) throw new Error('invalid_cnpj')
   const normalizedBusinessLocation =
     input.businessLocationCode?.trim() || null
   const response = await apiFetch(
@@ -515,6 +548,7 @@ export async function createEstablishmentFromCnpj(
 
   await requestManualRegistration<void>({
     kind: 'establishment',
+    searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     typeCode: input.typeCode,
     businessLocationCode:
@@ -544,6 +578,8 @@ export async function createEstablishmentFromCnpj(
             district: manual.district,
             stateRegistration:
               manual.stateRegistration,
+            cnaes: manual.cnaes,
+            reactivateInactive: manual.reactivateInactive,
             businessLocationCode:
               normalizedBusinessLocation ?? undefined,
           }),
