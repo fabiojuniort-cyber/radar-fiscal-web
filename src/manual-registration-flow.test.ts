@@ -67,6 +67,7 @@ describe('manual CNPJ fallback', () => {
     const pending = await waitForPending('company')
     expect(pending.request.kind).toBe('company')
     if (pending.request.kind !== 'company') throw new Error('expected_company_registration')
+    if (!pending.request.searchCnaes) throw new Error('official_catalog_search_not_available')
     const options = await pending.request.searchCnaes('6201501')
     expect(options).toHaveLength(1)
     expect(options[0]?.code).toBe('6201501')
