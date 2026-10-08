@@ -51,6 +51,41 @@ afterEach(() => {
 })
 
 describe('manual CNPJ fallback', () => {
+  it('opens official manual company flow on invalid CNAE from registry and does not submit the provider code', async () => {
+    const manualResult = { company: { id: 'official-company' } } as CnpjRegistryResult
+    const apiFetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/v1/companies/from-cnpj') return response({ error: 'invalid_cnae' }, 400)
+      if (url === '/api/v1/cnae-catalog?search=6201501') return response({
+        items: [{ code: '6201501', description: 'Desenvolvimento de programas de computador sob encomenda' }],
+      })
+      if (url === '/api/v1/companies/manual') return response(manualResult, 201)
+      return response({ error: 'unexpected' }, 500)
+    })
+    const apiFetch = apiFetchMock as ProductApiFetch
+    const pendingOperation = createCompanyFromCnpj(apiFetch, 'tenant-1', '10.515.785/0001-98')
+    const pending = await waitForPending('company')
+    expect(pending.request.kind).toBe('company')
+    if (pending.request.kind !== 'company') throw new Error('expected_company_registration')
+    const options = await pending.request.searchCnaes('6201501')
+    expect(options).toHaveLength(1)
+    expect(options[0]?.code).toBe('6201501')
+    const output = await pending.request.submit({
+      legalName: 'Empresa de CNAE Oficial',
+      uf: 'GO',
+      cnaes: [{ ...options[0]!, isPrimary: true }],
+    })
+    resolveManualRegistration(output)
+    await expect(pendingOperation).resolves.toEqual(manualResult)
+    const posted = apiFetchMock.mock.calls.find(([url]) => String(url) === '/api/v1/companies/manual')
+    const body = JSON.parse(String(posted?.[1]?.body))
+    expect(body.cnaes).toEqual([{ code: '6201501',
+      description: 'Desenvolvimento de programas de computador sob encomenda',
+      isPrimary: true }])
+    expect(apiFetchMock.mock.calls.filter(([url]) => String(url) === '/api/v1/companies/from-cnpj')).toHaveLength(1)
+  })
+
+
   it('opens manual company registration when providers are unavailable', async () => {
     const manualResult: CnpjRegistryResult = {
       company: {
