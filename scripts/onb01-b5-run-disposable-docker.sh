@@ -2,22 +2,49 @@
 # ONB-01-B5: manual opt-in runner. Creates and destroys a dedicated PG18 container.
 # Run ONLY after an authorized operator has checked out the two private repos.
 set -Eeuo pipefail
+# Sanitize before even invoking Node's version/build preflight.
+unset NODE_OPTIONS DOTENV_KEY DATABASE_URL DATABASE_ADMIN_URL DATABASE_CURATOR_URL DATABASE_WORKER_URL
+unset DB_RUNTIME_PASSWORD DB_WORKER_RUNTIME_PASSWORD DB_CURATOR_RUNTIME_PASSWORD
+unset PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGOPTIONS PGSERVICE PGSERVICEFILE PGPASSFILE
+while IFS= read -r name; do unset "$name"; done < <(compgen -A variable DOTENV_CONFIG_ || :)
+export DOTENV_CONFIG_PATH=/dev/null
 FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ONB01_B5_BACKEND_DIR:-$FRONTEND_DIR/backend}"
 CONTAINER_ID=''
+CONTAINER_VOLUMES=()
+EVIDENCE_DIR="$FRONTEND_DIR/playwright-artifacts/onb01-b5"
 
 cleanup() {
   local result=$?
-  trap - EXIT
-  if [[ -n "$CONTAINER_ID" ]] && docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
-    if ! docker rm -f -v "$CONTAINER_ID" >/dev/null 2>&1; then
-      echo 'BLOCK: disposable PG18 container cleanup FAILED; operator action required' >&2
+  trap - EXIT INT TERM
+  if [[ -n "$CONTAINER_ID" ]]; then
+    local verified=true
+    # An inspect failure alone cannot prove deletion: the daemon may be down.
+    docker rm -f -v "$CONTAINER_ID" >/dev/null 2>&1 || :
+    if ! docker info >/dev/null 2>&1; then
+      verified=false
+    else
+      local remaining
+      remaining="$(docker ps -aq --no-trunc --filter "id=$CONTAINER_ID")" || verified=false
+      [[ -z "$remaining" ]] || verified=false
+      for volume in "${CONTAINER_VOLUMES[@]}"; do
+        remaining="$(docker volume ls -q --filter "name=^${volume}$")" || verified=false
+        [[ -z "$remaining" ]] || verified=false
+      done
+    fi
+    mkdir -p "$EVIDENCE_DIR"
+    printf '{"containerAbsent":%s,"anonymousVolumesAbsent":%s,"volumeCount":%s,"verified":%s}\n' \
+      "$verified" "$verified" "${#CONTAINER_VOLUMES[@]}" "$verified" > "$EVIDENCE_DIR/TEARDOWN.json"
+    if [[ "$verified" != true ]]; then
+      echo 'BLOCK: disposable PG18 teardown NOT_PROVEN; operator action required' >&2
       result=2
     fi
   fi
   exit "$result"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 for command in docker node npm openssl psql pg_isready git curl; do
   if ! command -v "$command" >/dev/null; then
@@ -39,6 +66,17 @@ for path in "$BACKEND_DIR" "$FRONTEND_DIR"; do
   if ! git -C "$path" diff --quiet HEAD -- || ! git -C "$path" diff --cached --quiet; then
     echo 'BLOCK: tracked files differ from committed Git SHA' >&2; exit 2
   fi
+  # Ignored dotenv files and extra source/migrations are outside the pinned SHA.
+  for env_file in "$path"/.env "$path"/.env.*; do
+    if [[ -e "$env_file" && "${env_file##*/}" != '.env.example' ]]; then
+      echo 'BLOCK: dotenv input outside the committed test environment' >&2; exit 2
+    fi
+  done
+  extra_inputs="$(git -C "$path" ls-files --others --exclude-standard -- src migrations scripts e2e public ':(top,glob)*.config.*' ':(top,glob)package*.json' ':(top,glob)tsconfig*.json')"
+  ignored_inputs="$(git -C "$path" ls-files --others --ignored --exclude-standard -- src migrations scripts e2e public ':(top,glob)*.config.*' ':(top,glob)package*.json' ':(top,glob)tsconfig*.json')"
+  if [[ -n "$extra_inputs" || -n "$ignored_inputs" ]]; then
+    echo 'BLOCK: executable test inputs outside the committed Git manifest' >&2; exit 2
+  fi
 done
 # Never trust a stale dist/ produced by a different checkout or commit.
 # Compile the immutable backend source before provisioning the test database.
@@ -49,21 +87,24 @@ done
 if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
   echo 'BLOCK: immutable backend build did not produce dist/server.js' >&2; exit 2
 fi
-if ! docker info >/dev/null 2>&1; then
-  echo 'BLOCK: local Docker daemon unavailable' >&2; exit 2
-fi
 # Remote Docker daemons could publish 127.0.0.1 on a different machine.
 # Fail closed: this wrapper is intentionally WSL2/Linux with a Unix socket.
 if [[ -n "${DOCKER_HOST:-}" && "${DOCKER_HOST}" != unix://* ]]; then
   echo 'BLOCK: remote Docker host is not an isolated local runner' >&2; exit 2
 fi
-docker_endpoint="$(docker context inspect "$(docker context show)" --format '{{ (index .Endpoints "docker").Host }}' 2>/dev/null || :)"
+export DOCKER_CONTEXT="$(docker context show)"
+docker_endpoint="$(docker context inspect "$DOCKER_CONTEXT" --format '{{ (index .Endpoints "docker").Host }}' 2>/dev/null || :)"
 if [[ "$docker_endpoint" != unix://* ]]; then
   echo 'BLOCK: only local Unix-socket Docker contexts are authorized' >&2; exit 2
 fi
 # Do not inherit unrelated DB/auth credentials. Everything below is synthetic.
-unset NODE_OPTIONS PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGOPTIONS
+unset DOCKER_HOST
+if ! docker info >/dev/null 2>&1; then
+  echo 'BLOCK: local Docker daemon unavailable' >&2; exit 2
+fi
 RUN_NONCE="$(openssl rand -hex 16)"
+EVIDENCE_DIR="$FRONTEND_DIR/playwright-artifacts/onb01-b5/$RUN_NONCE"
+export ONB01_B5_EVIDENCE_DIR="$EVIDENCE_DIR"
 DB_PASSWORD="$(openssl rand -hex 24)"
 APP_PASSWORD="$(openssl rand -hex 24)"
 CURATOR_PASSWORD="$(openssl rand -hex 24)"
@@ -79,6 +120,10 @@ CONTAINER_ID="$(docker run -d --rm \
   postgres:18-bookworm)"
 if [[ -z "$CONTAINER_ID" ]]; then
   echo 'BLOCK: failed to provision disposable PostgreSQL 18' >&2; exit 2
+fi
+mapfile -t CONTAINER_VOLUMES < <(docker inspect "$CONTAINER_ID" --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name}}{{end}}{{end}}' | sed '/^$/d')
+if [[ "${#CONTAINER_VOLUMES[@]}" -ne 1 || ! "${CONTAINER_VOLUMES[0]}" =~ ^[a-f0-9]{64}$ ]]; then
+  echo 'BLOCK: anonymous PostgreSQL volume identity not verified' >&2; exit 2
 fi
 HOST_PORT="$(docker inspect "$CONTAINER_ID" | node -e '
   let data=""; process.stdin.on("data", x => data+=x);
@@ -97,7 +142,7 @@ export NODE_ENV=test ONB01_B5_RUNNER_MODE='isolated-postgres-service'
 export ONB01_B5_CONTAINER_ID="$CONTAINER_ID" ONB01_B5_RUN_NONCE="$RUN_NONCE"
 export DATABASE_ADMIN_URL="postgresql://postgres:$DB_PASSWORD@127.0.0.1:$HOST_PORT/radar_fiscal_onb01_b5"
 export DATABASE_URL="postgresql://radar_app_runtime:$APP_PASSWORD@127.0.0.1:$HOST_PORT/radar_fiscal_onb01_b5"
-export DB_RUNTIME_PASSWORD="$APP_PASSWORD" DB_CURATOR_RUNTIME_PASSWORD="$CURATOR_PASSWORD"
+export DB_RUNTIME_PASSWORD="$APP_PASSWORD" DB_WORKER_RUNTIME_PASSWORD="$APP_PASSWORD" DB_CURATOR_RUNTIME_PASSWORD="$CURATOR_PASSWORD"
 export JWT_ACCESS_SECRET="$JWT_SECRET"
 export AUTH_REFRESH_COOKIE_NAME='radar_refresh_token'
 export PUBLIC_API_ALLOWED_ORIGINS='http://127.0.0.1:4173'

@@ -40,12 +40,15 @@ type Login = { accessToken: string }
 type DbState = {
   user_count: number
   tenant_count: number
+  consent_count: number
   company_count: number
   establishment_count: number
+  all_establishment_count: number
   company_cnae_count: number
   branch_root_ok: boolean
   global_description: string
   invalid_global_count: number
+  tenant_data_hash: string | null
 }
 
 function databaseState(email: string, targetCnpj: string): DbState {
@@ -59,12 +62,20 @@ function databaseState(email: string, targetCnpj: string): DbState {
         (SELECT count(*)::int FROM app_users WHERE email = :'email') AS user_count,
         (SELECT count(*)::int FROM tenant_memberships m JOIN app_users u ON m.user_id=u.id
            WHERE u.email = :'email') AS tenant_count,
+        (SELECT count(*)::int FROM tenant_onboarding_profiles p
+           JOIN tenant_memberships m ON m.tenant_id=p.tenant_id JOIN app_users u ON u.id=m.user_id
+           WHERE u.email=:'email' AND p.company_name IS NULL AND p.cnpj IS NULL
+             AND p.terms_accepted_at IS NOT NULL AND p.privacy_policy_accepted_at IS NOT NULL
+             AND length(p.consent_version)>0) AS consent_count,
         (SELECT count(*)::int FROM companies c JOIN tenant_memberships m ON m.tenant_id=c.tenant_id
            JOIN app_users u ON u.id=m.user_id
            WHERE u.email=:'email' AND c.head_office_cnpj=:'cnpj') AS company_count,
         (SELECT count(*)::int FROM establishments e JOIN companies c ON c.id=e.company_id
            JOIN tenant_memberships m ON m.tenant_id=c.tenant_id JOIN app_users u ON u.id=m.user_id
            WHERE u.email=:'email' AND e.cnpj=:'cnpj' AND e.is_head_office=true) AS establishment_count,
+        (SELECT count(*)::int FROM establishments e JOIN companies c ON c.id=e.company_id
+           JOIN tenant_memberships m ON m.tenant_id=c.tenant_id JOIN app_users u ON u.id=m.user_id
+           WHERE u.email=:'email' AND c.head_office_cnpj=:'cnpj') AS all_establishment_count,
         (SELECT count(*)::int FROM company_cnaes cc JOIN companies c ON c.id=cc.company_id
            JOIN tenant_memberships m ON m.tenant_id=c.tenant_id JOIN app_users u ON u.id=m.user_id
            WHERE u.email=:'email' AND c.head_office_cnpj=:'cnpj' AND cc.cnae_code='6201501'
@@ -73,7 +84,17 @@ function databaseState(email: string, targetCnpj: string): DbState {
            FROM establishments e JOIN companies c ON c.id=e.company_id
            WHERE c.head_office_cnpj=:'cnpj') IS DISTINCT FROM FALSE AS branch_root_ok,
         (SELECT description FROM cnaes WHERE code='6201501') AS global_description,
-        (SELECT count(*)::int FROM cnaes WHERE code='9999999') AS invalid_global_count
+        (SELECT count(*)::int FROM cnaes WHERE code='9999999') AS invalid_global_count,
+        (SELECT md5(jsonb_build_object(
+          'company', to_jsonb(c),
+          'establishments', (SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM establishments e WHERE e.company_id=c.id),
+          'companyCnaes', (SELECT jsonb_agg(to_jsonb(cc) ORDER BY cc.cnae_code) FROM company_cnaes cc WHERE cc.company_id=c.id),
+          'establishmentCnaes', (SELECT jsonb_agg(to_jsonb(ec) ORDER BY ec.establishment_id, ec.cnae_code)
+            FROM establishment_cnaes ec JOIN establishments e ON e.id=ec.establishment_id WHERE e.company_id=c.id)
+        )::text)
+        FROM companies c JOIN tenant_memberships m ON m.tenant_id=c.tenant_id
+          JOIN app_users u ON u.id=m.user_id
+        WHERE u.email=:'email' AND c.head_office_cnpj=:'cnpj') AS tenant_data_hash
     ) s;
   `
   const result = spawnSync('psql', [
@@ -161,8 +182,10 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
     headers: { Authorization: 'Bearer ' + ownerA.token, 'x-tenant-id': ownerA.tenantId },
   })
   expect(accountA.status()).toBe(200)
-  const bodyA = await accountA.json() as { companies: Array<{ cnpj: string, legalName: string }> }
+  const bodyA = await accountA.json() as { companies: Array<{ id: string, cnpj: string, legalName: string }> }
   expect(bodyA.companies.some(c => c.cnpj === headCnpj && c.legalName === 'Empresa Fictícia B5')).toBe(true)
+  const companyA = bodyA.companies.find(c => c.cnpj === headCnpj)!
+  expect(companyA.id).toBeTruthy()
   const invalid = await request.post('/api/v1/companies/manual', {
     headers: { Authorization: 'Bearer ' + ownerA.token, 'x-tenant-id': ownerA.tenantId },
     data: {
@@ -172,6 +195,10 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
   })
   expect(invalid.status()).toBe(400)
   expect((await invalid.json()).error).toBe('invalid_cnae')
+  const rejected = databaseState(emailA, rejectedCnpj)
+  expect(rejected.company_count).toBe(0)
+  expect(rejected.all_establishment_count).toBe(0)
+  const beforeHostile = databaseState(emailA, headCnpj)
   const secondContext = await browser.newContext({
     baseURL: 'http://127.0.0.1:4173',
     serviceWorkers: 'block',
@@ -185,6 +212,25 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
       headers: { Authorization: 'Bearer ' + ownerB.token, 'x-tenant-id': ownerA.tenantId },
     })
     expect(crossTenant.status()).toBe(403)
+    const crossTenantWrite = await request.post('/api/v1/companies/manual', {
+      headers: { Authorization: 'Bearer ' + ownerB.token, 'x-tenant-id': ownerA.tenantId },
+      data: {
+        cnpj: headCnpj, legalName: 'Tentativa hostil B5', uf: 'GO',
+        cnaes: [{ code: OFFICIAL_CODE, description: 'DESCRICAO ADULTERADA', isPrimary: true }],
+      },
+    })
+    expect(crossTenantWrite.status()).toBe(403)
+    // Own tenant header with a foreign companyId must also fail under RLS.
+    const foreignCompanyWrite = await request.post('/api/v1/establishments/manual', {
+      headers: { Authorization: 'Bearer ' + ownerB.token, 'x-tenant-id': ownerB.tenantId },
+      data: {
+        companyId: companyA.id, cnpj: cnpj('98765432', '0002'),
+        name: 'Filial hostil B5', typeCode: 'OTHER', uf: 'GO',
+        cnaes: [{ code: OFFICIAL_CODE, description: 'DESCRICAO ADULTERADA', isPrimary: true }],
+      },
+    })
+    expect(foreignCompanyWrite.status()).toBe(404)
+    expect(databaseState(emailA, headCnpj)).toEqual(beforeHostile)
     const ownAccount = await request.get('/api/v1/account', {
       headers: { Authorization: 'Bearer ' + ownerB.token, 'x-tenant-id': ownerB.tenantId },
     })
@@ -197,13 +243,16 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
   const tenantB = databaseState(emailB, headCnpj)
   expect(after.user_count).toBe(1)
   expect(after.tenant_count).toBe(1)
+  expect(after.consent_count).toBe(1)
   expect(after.company_count).toBe(1)
   expect(after.establishment_count).toBe(1)
+  expect(after.all_establishment_count).toBe(1)
   expect(after.company_cnae_count).toBe(1)
   expect(after.branch_root_ok).toBe(true)
   expect(after.global_description).toBe(OFFICIAL_DESCRIPTION)
   expect(after.invalid_global_count).toBe(0)
   expect(tenantB.user_count).toBe(1)
+  expect(tenantB.consent_count).toBe(1)
   expect(tenantB.company_count).toBe(0)
   // Evidence that the direct browser-side external fallback was prevented,
   // not silently allowed through to the public provider.
@@ -219,7 +268,8 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
       blockedExternalOrigins: egress.blockedOrigins,
       signupAndLogin: true,
       manualCnaeCanonical: true, tenantIsolation: true,
-      postgresReadback: { before, after, secondTenantCompanyCount: tenantB.company_count },
+      rejectedCnaeRollback: true, crossTenantWriteRejected: true, foreignCompanyWriteRejected: true,
+      postgresReadback: { before, after, rejected, secondTenantCompanyCount: tenantB.company_count },
       deployed: false,
     }, null, 2),
     contentType: 'application/json',

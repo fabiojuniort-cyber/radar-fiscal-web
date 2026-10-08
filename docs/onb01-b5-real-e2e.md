@@ -52,3 +52,17 @@ Teste real `e2e/onb01-b5.real.spec.ts` cobre:
 7. Playwright report, `HEADS.txt`, contagens por origem externa abortada e verificações SQL guardados como evidência sanitizada. **Traces Playwright brutos podem incluir cookies, JWTs e corpo das requisições: não publicar traces nem `backend.log` sem revisão e sanitização.**
 
 **Limitações:** provedor CNPJ é simulado somente no outbound; não é um teste da disponibilidade real BrasilAPI/Sintegra; só um viewport desktop; não cobre carga/concurrency, dados antigos de produção ou o bloco 2. O runner precisa de credencial read-only entre repositórios e de execução manual efetiva. O revisor independente R3 deve confrontar SHA, run_id, logs e SQL; o executor não atribui PASS.
+
+## Continuidade no Windows / hardening de preparação
+
+No Windows, instalar primeiro Docker Desktop com WSL2 e uma distribuição Linux com integração Docker habilitada. Node.js 24, Git, `openssl`, `curl`, cliente PostgreSQL (`psql`/`pg_isready`) e Chromium/Playwright devem estar disponíveis **dentro do Linux**. O instalador PostgreSQL do Windows não substitui esses clientes Linux. Usar checkouts e `npm ci` próprios do Linux; não reutilizar `node_modules` compilado no Windows. Os scripts B5 são versionados com LF. O daemon via named pipe do Windows continua recusado; não remover a guarda Unix socket.
+
+Para checkouts irmãos, exportar `ONB01_B5_BACKEND_DIR` com o caminho Linux absoluto do backend imutável antes de executar o wrapper. Não é necessário criar token de CI quando o operador já possui acesso Git privado local autorizado.
+
+O wrapper também recusa arquivos dotenv locais e entradas de código/migrations não rastreadas ou ignoradas fora do manifesto Git. Limpa URLs de banco, passwords de runtime, configurações libpq/dotenv e preloads herdados antes do build; somente as credenciais sintéticas criadas pelo runner são fornecidas à aplicação.
+
+Após o runner, verificar **ambos** `RUN_RESULT.txt` e `TEARDOWN.json`: o primeiro indica que a suíte passou, o segundo confirma ausência do container e do volume anônimo. Falha de acesso ao daemon ou teardown não verificável retorna BLOCK/exit 2. INT/TERM seguem o cleanup; SIGKILL/interrupção do sistema requer inspeção posterior pelo operador. Não tratar somente a existência de um relatório antigo como prova de uma execução nova.
+
+O spec reforçado inclui consentimento persistido sem empresa/CNPJ, rollback SQL para o CNPJ rejeitado, POST com header de outro tenant, POST com `companyId` alheio sob o próprio tenant e igualdade do estado SQL antes/depois dessas tentativas (hash dos campos de empresa, estabelecimentos e vínculos CNAE). Essas verificações continuam **não executadas** até uma execução real B5.
+
+`node --test e2e/onb01-b5/runner-safety.unit.mjs` executa cinco testes de subprocesso Bash com CLIs Docker/psql/npm **fictícias**: neutralização de ambiente, dotenv/entrada SQL extra recusados antes do build, cleanup confirmado, daemon indisponível e recurso retido. Nenhum banco/container é criado nesses testes; não constituem B5. No Windows pode ser necessário definir `ONB01_B5_TEST_BASH` para o executável Git Bash. A evidência real fica em diretório próprio por nonce em `playwright-artifacts/onb01-b5/`.

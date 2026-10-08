@@ -3,15 +3,21 @@
 set -euo pipefail
 FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ONB01_B5_BACKEND_DIR:-$FRONTEND_DIR/backend}"
-EVIDENCE_DIR="$FRONTEND_DIR/playwright-artifacts/onb01-b5"
+EVIDENCE_DIR="${ONB01_B5_EVIDENCE_DIR:-$FRONTEND_DIR/playwright-artifacts/onb01-b5}"
 mkdir -p "$EVIDENCE_DIR"
 BACKEND_PID=''
 cleanup() {
   if [[ -n "$BACKEND_PID" ]]; then kill "$BACKEND_PID" 2>/dev/null || :; wait "$BACKEND_PID" 2>/dev/null || :; fi
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 if [[ "${ONB01_B5_RUNNER_MODE:-}" != 'isolated-postgres-service' ]]; then
   echo 'BLOCK: B5 must run only with ONB01_B5_RUNNER_MODE=isolated-postgres-service' >&2; exit 2
+fi
+# A curator URL is optional in the app, and must never point outside this runner.
+if [[ -n "${DATABASE_CURATOR_URL:-}" || -n "${DATABASE_WORKER_URL:-}" || "${DOTENV_CONFIG_PATH:-}" != /dev/null ]]; then
+  echo 'BLOCK: inherited database/dotenv configuration is not permitted' >&2; exit 2
 fi
 if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
   echo 'BLOCK: compiled backend must be checked out and built separately' >&2; exit 2
