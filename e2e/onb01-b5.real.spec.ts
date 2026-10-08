@@ -13,7 +13,7 @@ const INVALID_CODE = '9999999'
 // This test must not contact external CNPJ providers from Chromium. The app
 // tries an independent browser-side BrasilAPI fallback after backend 503.
 // Only off-loopback origins match this route; internal routes are untouched.
-const EXTERNAL_HTTP_URL = /^https?:\\/\\/(?!127\\.0\\.0\\.1:4173(?:\\/|$)).+/i
+const EXTERNAL_HTTP_URL = /^https?:\/\/(?!127\.0\.0\.1:4173(?:\/|$)).+/i
 type EgressAudit = { blockedOrigins: Record<string, number> }
 
 async function blockBrowserExternalEgress(context: BrowserContext, audit: EgressAudit): Promise<void> {
