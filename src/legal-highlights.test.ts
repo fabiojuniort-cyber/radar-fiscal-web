@@ -121,6 +121,46 @@ describe('highlightLegalHtml', () => {
     expect(result.marks).toBe(3)
   })
 
+  it('marks NCMs in operative annexes but not in revoked/historical annexes', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] })]),
+      [
+        { code: '31021090', description: 'Adubos' },
+        { code: '87019000', description: 'Máquinas antigas' },
+        { code: '10063011', description: 'Arroz' },
+      ],
+    )
+    const html = [
+      '<p class="TituloAcordo">CONVÊNIO ICMS 100/97</p>',
+      '<p>ANEXO I</p>',
+      '<table><tr><td>fertilizantes</td><td>3102.10.90</td></tr></table>',
+      '<p>ANEXO II - REVOGADO</p>',
+      '<table><tr><td>fertilizantes históricos</td><td>8701.90.00</td></tr></table>',
+      '<p>ANEXO III</p>',
+      '<table><tr><td>Arroz atual</td><td>1006.30.11</td></tr></table>',
+    ].join('')
+    const result = highlightLegalHtml(html, rules)
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map(mark => mark.textContent)).toEqual([
+      'fertilizantes', '3102.10.90', '1006.30.11',
+    ])
+    expect([...result.markedNcms].sort()).toEqual(['10063011', '31021090'])
+    expect(result.marks).toBe(3)
+  })
+
+  it('does not mark words or NCMs in a single annex containing former wording', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('Fertilizantes', { terms: ['fertilizantes'], ncmPrefixes: [] })]),
+      [{ code: '87019000', description: 'Máquinas' }],
+    )
+    const result = highlightLegalHtml(
+      '<p>ANEXO ÚNICO — Redação anterior</p><table><tr><td>fertilizantes</td><td>8701.90.00</td></tr></table>',
+      rules,
+    )
+    expect(result.marks).toBe(0)
+    expect(result.markedNcms.size).toBe(0)
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
