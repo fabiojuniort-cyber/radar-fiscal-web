@@ -64,6 +64,25 @@ actual_db="$(psql "$DATABASE_ADMIN_URL" -X -A -t -v ON_ERROR_STOP=1 -c "SELECT c
 if [[ ! "$actual_db" =~ ^radar_fiscal_onb01_b5:18[0-9]{4}$ ]]; then
   echo 'BLOCK: only PostgreSQL 18 and radar_fiscal_onb01_b5 are permitted' >&2; exit 2
 fi
+# Prevent Playwright preview/backend from attaching to an unrelated local app.
+# Checking the ports is necessary even for localhost-only test runs.
+if ! node -e '
+ const net = require("node:net");
+ (async () => {
+   for (const port of [3000, 4173]) {
+     await new Promise((resolve, reject) => {
+       const server = net.createServer();
+       server.once("error", reject);
+       server.listen({ host: "127.0.0.1", port }, () => server.close(resolve));
+     });
+   }
+ })().catch(() => {
+   process.stderr.write("BLOCK: port 3000/4173 already occupied or not bindable\\n");
+   process.exitCode = 2;
+ });
+'; then
+  echo 'BLOCK: dedicated backend/Vite ports must be free' >&2; exit 2
+fi
 actual_backend="$(git -C "$BACKEND_DIR" rev-parse HEAD)"
 if [[ "$actual_backend" != '532006508aebdb8dd1f384da14b3f7cdcd2a8aa5' ]]; then
   echo 'BLOCK: backend immutable SHA mismatch' >&2; exit 2
@@ -97,6 +116,7 @@ if [[ "$healthy" -ne 1 ]]; then echo 'BLOCK: local Fastify health probe failed' 
  cd "$FRONTEND_DIR"
  export AUTH_PROXY_TARGET='http://127.0.0.1:3000'
  npm run build
- npx playwright test e2e/onb01-b5.real.spec.ts --project=desktop-1440x900 --workers=1 --retries=0
+ # Force a fresh Vite preview server: never reuse another developer's server.
+ CI=1 npx playwright test e2e/onb01-b5.real.spec.ts --project=desktop-1440x900 --workers=1 --retries=0
 )
 printf 'COMPLETED: real Chromium -> Fastify -> isolated PostgreSQL 18\n' > "$EVIDENCE_DIR/RUN_RESULT.txt"
