@@ -241,13 +241,22 @@ describe('TriFaros release candidate WEB-11', () => {
     }
     const show = within(signup).getByRole('button', { name: 'Mostrar senha' })
     expect(show.closest('label')).toBeNull()
+    expect(show).toHaveAttribute('type', 'button')
+    expect(show.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(show).not.toHaveTextContent(/Mostrar|Ocultar/)
+    expect(show.parentElement).toHaveClass('password-visibility-field')
     fireEvent.click(show)
     expect(input).toHaveAttribute('type', 'text')
     expect(within(signup).getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+    expect(show).not.toHaveTextContent(/Mostrar|Ocultar/)
     const confirmToggle = within(signup).getByRole('button', { name: 'Mostrar confirmação de senha' })
     expect(confirmToggle.closest('label')).toBeNull()
+    expect(confirmToggle).toHaveAttribute('type', 'button')
+    expect(confirmToggle.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(confirmToggle).not.toHaveTextContent(/Mostrar|Ocultar/)
     fireEvent.click(confirmToggle)
     expect(confirm).toHaveAttribute('type', 'text')
+    expect(within(signup).getByRole('button', { name: 'Ocultar confirmação de senha' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('associates login password label explicitly and keeps the toggle out of the label', () => {
@@ -259,8 +268,14 @@ describe('TriFaros release candidate WEB-11', () => {
     expect(dialog.querySelector(`label[for="${input.id}"]`)).toHaveTextContent('Senha')
     const button = within(dialog).getByRole('button', { name: 'Mostrar senha' })
     expect(button.closest('label')).toBeNull()
+    expect(button).toHaveAttribute('type', 'button')
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(button).not.toHaveTextContent(/Mostrar|Ocultar/)
     fireEvent.click(button)
     expect(input).toHaveAttribute('type', 'text')
+    expect(within(dialog).getByRole('button', { name: 'Ocultar senha' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(button)
+    expect(input).toHaveAttribute('type', 'password')
   })
 
   it('preserves the real login contract without browser token storage', async () => {
