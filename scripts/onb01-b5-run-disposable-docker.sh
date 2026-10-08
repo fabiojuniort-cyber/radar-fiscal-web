@@ -19,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for command in docker node openssl psql pg_isready git; do
+for command in docker node npm openssl psql pg_isready git curl; do
   if ! command -v "$command" >/dev/null; then
     echo "BLOCK: missing local prerequisite: $command" >&2; exit 2
   fi
@@ -35,6 +35,15 @@ if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
 fi
 if ! docker info >/dev/null 2>&1; then
   echo 'BLOCK: local Docker daemon unavailable' >&2; exit 2
+fi
+# Remote Docker daemons could publish 127.0.0.1 on a different machine.
+# Fail closed: this wrapper is intentionally WSL2/Linux with a Unix socket.
+if [[ -n "${DOCKER_HOST:-}" && "${DOCKER_HOST}" != unix://* ]]; then
+  echo 'BLOCK: remote Docker host is not an isolated local runner' >&2; exit 2
+fi
+docker_endpoint="$(docker context inspect "$(docker context show)" --format '{{ (index .Endpoints "docker").Host }}' 2>/dev/null || :)"
+if [[ "$docker_endpoint" != unix://* ]]; then
+  echo 'BLOCK: only local Unix-socket Docker contexts are authorized' >&2; exit 2
 fi
 # Do not inherit unrelated DB/auth credentials. Everything below is synthetic.
 unset NODE_OPTIONS PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGOPTIONS
