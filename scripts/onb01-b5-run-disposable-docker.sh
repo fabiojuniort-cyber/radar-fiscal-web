@@ -27,9 +27,6 @@ done
 if [[ "$(node --version)" != v24.* ]]; then
   echo 'BLOCK: ONB-01-B5 requires Node.js 24 for backend and Vite' >&2; exit 2
 fi
-if [[ -z "${ONB01_B5_BACKEND_DIR:-}" && ! -d "$BACKEND_DIR/.git" ]]; then
-  echo 'BLOCK: an authorized private backend Git checkout is required' >&2; exit 2
-fi
 if [[ "$(git -C "$BACKEND_DIR" rev-parse HEAD 2>/dev/null)" != '532006508aebdb8dd1f384da14b3f7cdcd2a8aa5' ]]; then
   echo 'BLOCK: backend private checkout must be pinned to PR #190 immutable SHA' >&2; exit 2
 fi
