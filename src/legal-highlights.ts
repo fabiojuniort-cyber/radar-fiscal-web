@@ -85,6 +85,19 @@ function isHistoricalAnnexHeading(text: string) {
   return HISTORICAL_ANNEX_HEADING.test(text.replace(/\s+/g, ' ').trim())
 }
 
+/** Source-independent safeguards for standalone act identification/editorial
+ * paragraphs. Presence of normal text is not proof of current legal status. */
+const ACT_IDENTIFIER_HEADING =
+  /^(?:lei(?:\s+complementar)?|decreto(?:-lei)?|portaria|instrução\s+normativa(?:\s+[A-Z]{2,8})?|resolução(?:\s+[A-Z]{2,8})?|convênio(?:\s+icms)?|ajuste\s+sinief|ato\s+cotepe(?:\/icms)?|medida\s+provisória)\s+(?:n[ºo°.]?\s*)?\d+(?:[./-]\d+)*(?:\s*,?\s+de\s+\d{1,2}\s+de\s+[\p{L}]+\s+de\s+\d{4})?\.?$/iu
+const EDITORIAL_REFERENCE_LINE =
+  /^(?:publicad[oa]s?\s+(?:no|na|em)|ratificad[oa]s?\s+(?:no|na|pel[oa]s?)|alterad[oa]s?\s+(?:pel[oa]s?|por)|prorrogad[oa]s?\s+at[eé]|vide\s+(?:o|a|os|as|cl[áa]usula|art)|redação\s+anterior\b|texto\s+anterior\b|nova\s+redação\s+dada\s+pel[oa])/iu
+
+function isStandaloneEditorial(element: Element) {
+  if (!['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(element.tagName)) return false
+  const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim()
+  return ACT_IDENTIFIER_HEADING.test(text) || EDITORIAL_REFERENCE_LINE.test(text)
+}
+
 /** Same normalization as the classifier, with a map back to raw positions. */
 export function normalizeWithIndex(raw: string): { text: string; rawIndex: number[] } {
   let text = ''
@@ -233,7 +246,7 @@ function withoutOverlaps(ranges: Range[]): Range[] {
 
 function isNonNormativeLegalText(node: Node): boolean {
   for (let element = node.parentElement; element; element = element.parentElement) {
-    if (hasNonNormativeClass(element) || isRevokedPlaceholder(element)) return true
+    if (hasNonNormativeClass(element) || isRevokedPlaceholder(element) || isStandaloneEditorial(element)) return true
     if (element.tagName === 'TR') {
       const row = element
       if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
