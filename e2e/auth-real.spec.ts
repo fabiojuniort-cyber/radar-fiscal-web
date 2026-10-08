@@ -178,7 +178,7 @@ test('hides the built-in Edge eye while preserving the app password toggle', asy
   // then exercise the application control in a real Chromium browser.
   const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
   expect(styles).toMatch(
-    /\\.password-visibility-field input\\[type="password"\\]::-ms-reveal,\\s*\\.password-visibility-field input\\[type="password"\\]::-ms-clear\\s*\\{\\s*display:\\s*none;\\s*\\}/,
+    /\.password-visibility-field input\[type="password"\]::-ms-reveal,\s*\.password-visibility-field input\[type="password"\]::-ms-clear\s*\{\s*display:\s*none;\s*\}/,
   )
 
   await page.goto('/como-funciona')
