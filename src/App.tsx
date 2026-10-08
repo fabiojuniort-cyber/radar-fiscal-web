@@ -908,7 +908,7 @@ function LoginForm({
       )}
       <form className="auth-form" onSubmit={submit}>
         <label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-        <label>Senha<div className="password-visibility-field"><input type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></label>
+        <label>Senha<div className="password-visibility-field"><input aria-label="Senha" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></label>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e tente novamente.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
