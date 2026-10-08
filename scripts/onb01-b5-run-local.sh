@@ -92,6 +92,7 @@ git -C "$FRONTEND_DIR" merge-base --is-ancestor 'b07b36a9603a3fa71bd5e9e84cfd1ad
 }
 printf 'BACKEND_SHA=%s\nFRONTEND_TEST_SHA=%s\nFRONTEND_BASE_SHA=%s\nPG=%s\n' "$actual_backend" "$(git -C "$FRONTEND_DIR" rev-parse HEAD)" 'b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a' "$actual_db" > "$EVIDENCE_DIR/HEADS.txt"
 export ONB01_B5_BACKEND_SHA="$actual_backend"
+export ONB01_B5_FRONTEND_TEST_SHA="$(git -C "$FRONTEND_DIR" rev-parse HEAD)"
 export ONB01_B5_FRONTEND_BASE_SHA='b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a'
 (
   cd "$BACKEND_DIR"
