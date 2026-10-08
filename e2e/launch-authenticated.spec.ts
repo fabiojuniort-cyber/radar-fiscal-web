@@ -595,6 +595,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
+  // ONB-01 forwards new organizations to the current Tax Profile screen.
+  await expect(page.getByRole('tab', { name: /Perfil tributário/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: /Empresas/ }).click()
   await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
   await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
 
