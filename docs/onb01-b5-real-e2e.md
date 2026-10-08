@@ -19,7 +19,7 @@ Governance: [#99](https://github.com/fabiojuniort-cyber/tribusca-control/issues/
 
 ## Uso (opt-in)
 
-Workflow: `.github/workflows/onb01-b5-optin.yml` com `workflow_dispatch`, sem ganchos para PR/push genéricos. GitHub normalmente exige que o workflow exista na branch default para aceitar workflow_dispatch: enquanto proibido o merge, executar localmente com os dois checkouts e PostgreSQL 18 efêmero ou disponibilizar runner de revisão isolado, **sem mover os PRs ONB**. Não afirmar que CI executou enquanto não houver `run_id`.
+**Workflow CI não instalado:** a tentativa de adicionar `.github/workflows/onb01-b5-optin.yml` foi bloqueada pela camada de autorização/segurança da integração GitHub. Não contornar a restrição nem assumir existência de workflow ou run_id. A execução disponível nesta branch é somente o runner opt-in local com repositórios privados já obtidos por um operador autorizado e PostgreSQL 18 descartável. A prova E2E permanece PENDENTE até executar e guardar artifacts, sem mover os PRs ONB.
 
 Para execução local autônoma, preparar PostgreSQL 18 em Docker com DB `radar_fiscal_onb01_b5` e credenciais descartáveis (nunca Railway), clonar frontend na branch isolada e backend no SHA fixo dentro da pasta `backend/`. Fazer `npm ci && npm run build` no backend; `npm ci && npx playwright install --with-deps chromium` no frontend. Exportar:
 ```sh
