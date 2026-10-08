@@ -428,7 +428,7 @@ export function PublicationDetailPage({
             </p>
           ) : ncms.length === 0 ? (
             <p className="publication-ncm-state">
-              Nenhum NCM do catálogo oficial foi identificado nesta versão.
+              Nenhum NCM foi detectado nesta versão; isso não comprova ausência de dispositivos vigentes.
             </p>
           ) : (
             <>
