@@ -122,4 +122,34 @@ describe('ManualRegistrationHost', () => {
       screen.queryByRole('dialog'),
     ).not.toBeInTheDocument()
   })
+  it('requires a second explicit confirmation before reactivating an inactive company', async () => {
+    const submit = vi.fn(async (input: ManualCompanyForm) => {
+      if (!input.reactivateInactive) throw new Error('reactivation_required')
+      return { company: { id: 'company-restored' } }
+    })
+    const operation = requestManualRegistration({
+      kind: 'company',
+      cnpj: '10515785000350',
+      searchCnaes: vi.fn(async () => [{ code: '6201501', description: 'Desenvolvimento de programas' }]),
+      submit,
+    })
+    render(<ManualRegistrationHost />)
+    fireEvent.change(screen.getByLabelText('Razão social'), { target: { value: 'Empresa Preservada' } })
+    fireEvent.change(screen.getByLabelText('UF'), { target: { value: 'GO' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar para CNAEs' }))
+    await screen.findByRole('option', { name: /6201501/ })
+    fireEvent.change(screen.getByLabelText('Lista suspensa de CNAEs oficiais'), {
+      target: { value: '6201501' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar CNAE selecionado' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }))
+    await screen.findByRole('button', { name: 'Confirmar reativação' })
+    expect(submit).toHaveBeenCalledTimes(1)
+    expect(submit.mock.calls[0]?.[0]?.reactivateInactive).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reativação' }))
+    await expect(operation).resolves.toMatchObject({ company: { id: 'company-restored' } })
+    expect(submit).toHaveBeenCalledTimes(2)
+    expect(submit.mock.calls[1]?.[0]?.reactivateInactive).toBe(true)
+  })
+
 })
