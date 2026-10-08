@@ -134,12 +134,27 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
     const n = value.length
     if (n > 0) {
       const line = value.replace(/\s+/g, ' ').trim()
-      if (ANNEX_HEADING.test(line)) historicalAnnex = ANNEX_HISTORY.test(line)
+      // The revoked annotation may be on a TH/TD wrapping several nodes.
+      let heading: string | null = null
+      let headingHistory = false
+      for (let parent = cursor.parentElement; parent; parent = parent.parentElement) {
+        const status = parent.getAttribute('data-legal-status')
+        if (status !== null && status !== 'current') headingHistory = true
+        if (heading === null && /^(?:P|TH|TD|H[1-6])$/.test(parent.tagName)) {
+          const title = (parent.textContent ?? '').replace(/\s+/g, ' ').trim()
+          if (ANNEX_HEADING.test(title)) heading = title
+        }
+      }
+      if (heading !== null) {
+        historicalAnnex = headingHistory || ANNEX_HISTORY.test(heading)
+      } else if (ANNEX_HEADING.test(line)) {
+        historicalAnnex = headingHistory || ANNEX_HISTORY.test(line)
+      }
       nodes.push({
         node: cursor as Text,
         start: offset,
         end: offset + n,
-        nonNormative: historicalAnnex || standaloneEditorial(value),
+        nonNormative: historicalAnnex || heading !== null || standaloneEditorial(value),
       })
       offset += n
     }
