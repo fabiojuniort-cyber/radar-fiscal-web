@@ -212,7 +212,7 @@ test('ONB-01-B5: real Chromium -> Fastify -> isolated PostgreSQL 18; manual offi
     body: JSON.stringify({
       backendSha: process.env.ONB01_B5_BACKEND_SHA,
       frontendBaselineSha: process.env.ONB01_B5_FRONTEND_BASE_SHA,
-      testCommitSha: process.env.GITHUB_SHA ?? 'local-run',
+      testCommitSha: process.env.ONB01_B5_FRONTEND_TEST_SHA ?? null,
       postgres: '18 / disposable', registryOutbound: '503 test-only outbound shim',
       internalEndpointMocks: 0,
       browserExternalEgressPolicy: 'deny non-loopback HTTP(S) via abort (service workers blocked)',
