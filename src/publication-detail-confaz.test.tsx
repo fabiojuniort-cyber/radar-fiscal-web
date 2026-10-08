@@ -226,4 +226,39 @@ describe('Marcações no texto da legislação', () => {
     expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
     expect(await screen.findByText('2 itens')).toBeInTheDocument()
   })
+  it('rejects CSS current status and PENDING tags outside the controlled CONFAZ review', async () => {
+    const source = detail('dou')
+    source.version.presentation.html =
+      '<p data-legal-status="current">Citação histórica NCM 7307.19.20</p>' +
+      '<table><tr><th data-legal-status="revoked"><p>ANEXO II</p></th></tr>' +
+      '<tr><td>8450.11.00</td></tr></table>'
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/publications/pub-1') return json(source)
+      if (url === '/api/v1/publications/pub-1/ncms') {
+        return json({ items: [{
+          code: '73071920', description: 'Tubo', verificationStatus: 'CATALOG_MATCHED',
+          method: { type: 'RULE', detectorKey: 'ncm', detectorVersion: '1.1.0' },
+        }] })
+      }
+      if (url === '/api/v1/publications/pub-1/taxonomy') {
+        return json({ publicationId: 'pub-1', publicationVersionId: 'v1',
+          release: null, status: 'PENDING', classifiedAt: null,
+          sections: [{ name: 'Temas', order: 1, tags: [] }] })
+      }
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter><PublicationDetailPage publicationId="pub-1" apiFetch={apiFetch} /></MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await screen.findByText(/vigência de cada trecho não foi comprovada/i)
+    expect(container.querySelectorAll('mark.legal-mark')).toHaveLength(0)
+    expect(screen.queryByText(/extraídos do texto vigente/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /marcações/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('listitem', { name: 'Buscar NCM 7307.19.20 no Acervo' })).toBeInTheDocument()
+  })
+
 })
