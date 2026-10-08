@@ -258,7 +258,8 @@ function canUseManualCnpjFallback(
 ) {
   return (
     code === 'cnpj_provider_unavailable' ||
-    code === 'cnpj_provider_invalid_response'
+    code === 'cnpj_provider_invalid_response' ||
+    code === 'cnpj_not_found'
   )
 }
 
