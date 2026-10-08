@@ -251,7 +251,7 @@ function isNonNormativeLegalText(node: Node): boolean {
     if (hasNonNormativeClass(element) || isRevokedPlaceholder(element) || isStandaloneEditorial(element)) return true
     if (element.tagName === 'TR') {
       const row = element
-      if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
+      if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) { const cell = node.parentElement?.closest('td, th'); if (!cell || sourceLegalStatus(cell) !== 'current') return true }
     }
   }
   return false
