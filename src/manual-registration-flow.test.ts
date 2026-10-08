@@ -63,7 +63,7 @@ describe('manual CNPJ fallback', () => {
       return response({ error: 'unexpected' }, 500)
     })
     const apiFetch = apiFetchMock as ProductApiFetch
-    const pendingOperation = createCompanyFromCnpj(apiFetch, 'tenant-1', '10.515.785/0001-98')
+    const pendingOperation = createCompanyFromCnpj(apiFetch, 'tenant-1', '10.515.785/0003-50')
     const pending = await waitForPending('company')
     expect(pending.request.kind).toBe('company')
     if (pending.request.kind !== 'company') throw new Error('expected_company_registration')
