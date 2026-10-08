@@ -155,13 +155,13 @@ describe('NCMs identificados na legislação', () => {
     // Description and excerpt are not printed; the description stays as a hint.
     expect(screen.queryByText(/Silos de matéria plástica/)).not.toBeInTheDocument()
     expect(chips[1]).toHaveAttribute('title', 'Reservatórios, cisternas · buscar no Acervo')
-    expect(screen.getByText(/extraídos do texto vigente/)).toBeInTheDocument()
+    expect(screen.getByText(/não comprova a vigência dos dispositivos/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('listitem', { name: 'Buscar NCM 3917.32.90 no Acervo' }))
   })
 })
 
 describe('Marcações no texto da legislação', () => {
-  it('marks the tag terms and the NCMs in the current wording, and the toggle hides them', async () => {
+  it('fails closed: legacy NCM and tax tags cannot create green marks without official proof', async () => {
     const base = detail('confaz')
     const withText = {
       ...base,
@@ -216,26 +216,14 @@ describe('Marcações no texto da legislação', () => {
       </QueryClientProvider>,
     )
 
-    const toggle = await screen.findByRole('button', { name: 'Ocultar marcações' })
-    const marks = () => Array.from(container.querySelectorAll('mark.legal-mark'))
-    // Only the current wording; the previous wording keeps its text unmarked.
-    expect(marks().map((mark) => mark.textContent)).toEqual(['isenção', '3917.32.90'])
-    expect(marks()[1]).toHaveAttribute('title', expect.stringContaining('Produto: Tubos plásticos'))
-    expect(screen.getByText('2 marcações')).toBeInTheDocument()
-    // The marked NCM leaves the chips; the one not in the text stays.
+    await screen.findByText(/vigência de cada trecho não foi comprovada/i)
+    expect(container.querySelectorAll('mark.legal-mark')).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: /marcações/i })).not.toBeInTheDocument()
     const chips = within(screen.getByRole('list')).getAllByRole('listitem')
-    expect(chips.map((chip) => chip.textContent)).toEqual(['3925.10.00'])
-    expect(screen.getByText(/1 código marcado em verde no texto/)).toBeInTheDocument()
-    // Product/item intelligence is presented as one summary tag; individual
-    // product tags stay internal for affinity/highlights and curator details.
+    expect(chips.map((chip) => chip.textContent).toEqual(['3917.32.90', '3925.10.00'])
+    expect(screen.queryByText(/extraídos do texto vigente/)).not.toBeInTheDocument()
+    // Non-attested taxonomy and NCM data remain queryable, never highlighted.
     expect(await screen.findByText('Produtos / NCMs')).toBeInTheDocument()
     expect(await screen.findByText('2 itens')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Tubos plásticos/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Fertilizantes/ })).not.toBeInTheDocument()
-
-    fireEvent.click(toggle)
-    expect(marks()).toHaveLength(0)
-    expect(screen.getByRole('button', { name: 'Mostrar marcações' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(2)
   })
 })
