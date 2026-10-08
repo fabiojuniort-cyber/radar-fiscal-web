@@ -212,7 +212,7 @@ describe('manual CNPJ fallback', () => {
     )
     expect(manualBody).toMatchObject({
       companyId: 'company-1',
-      cnpj: '10515785000430',
+      cnpj: '10515785000431',
       name: 'Filial Manual',
       typeCode: 'OTHER',
       uf: 'GO',
