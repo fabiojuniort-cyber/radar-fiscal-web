@@ -108,6 +108,9 @@ describe('TriFaros release candidate WEB-11', () => {
 
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByRole('heading', { name: 'Criar conta' })).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('Empresa')).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('CNPJ')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Mostrar senha' })).toBeInTheDocument()
 
     fireEvent.change(within(dialog).getByLabelText('Nome completo'), {
       target: { value: 'Nova Pessoa' },
@@ -115,12 +118,10 @@ describe('TriFaros release candidate WEB-11', () => {
     fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
       target: { value: 'nova.pessoa@example.com' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
-      target: { value: 'Empresa Nova' },
-    })
-    fireEvent.change(within(dialog).getByLabelText('CNPJ'), {
-      target: { value: '12.345.678/0001-95' },
-    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Mostrar senha' }))
+    expect(within(dialog).getByLabelText('Senha')).toHaveAttribute('type', 'text')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ocultar senha' }))
+    expect(within(dialog).getByLabelText('Senha')).toHaveAttribute('type', 'password')
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
       target: { value: strongTestPassword },
     })
@@ -208,9 +209,6 @@ describe('TriFaros release candidate WEB-11', () => {
     })
     fireEvent.change(within(dialog).getByLabelText('E-mail corporativo'), {
       target: { value: 'existente@example.com' },
-    })
-    fireEvent.change(within(dialog).getByLabelText('Empresa'), {
-      target: { value: 'Empresa Existente' },
     })
     fireEvent.change(within(dialog).getByLabelText('Senha'), {
       target: { value: strongTestPassword },
