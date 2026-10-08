@@ -221,6 +221,16 @@ export function PublicationTaxonomySection({
         </p>
       )}
 
+      {view?.historicalClassification && view.status !== 'CLASSIFIED' && (
+        <p className="publication-tags-state" role="status">
+          Existe uma classificação anterior (taxonomia {view.historicalClassification.releaseVersion},
+          motor {view.historicalClassification.engineVersion},
+          {' '}{view.historicalClassification.assertionCount} registros).
+          A redação legal ainda precisa ser revalidada; as tags antigas permanecem no histórico,
+          mas não são apresentadas como vigentes nem destacadas no texto.
+        </p>
+      )}
+
       {!hasTags && (
         <p className="publication-tags-state">
           {view && view.status !== 'CLASSIFIED'
