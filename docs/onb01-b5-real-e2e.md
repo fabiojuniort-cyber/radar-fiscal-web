@@ -22,7 +22,19 @@ Governance: [#99](https://github.com/fabiojuniort-cyber/tribusca-control/issues/
 
 **Workflow CI não instalado:** a tentativa de adicionar `.github/workflows/onb01-b5-optin.yml` foi bloqueada pela camada de autorização/segurança da integração GitHub. Não contornar a restrição nem assumir existência de workflow ou run_id. A execução disponível nesta branch é somente o runner opt-in local com repositórios privados já obtidos por um operador autorizado e PostgreSQL 18 descartável. A prova E2E permanece PENDENTE até executar e guardar artifacts, sem mover os PRs ONB.
 
-Para execução local autônoma, preparar PostgreSQL 18 em Docker com DB `radar_fiscal_onb01_b5` e credenciais descartáveis (nunca Railway), clonar frontend na branch isolada e backend no SHA fixo dentro da pasta `backend/`. Fazer `npm ci && npm run build` no backend; `npm ci && npx playwright install --with-deps chromium` no frontend. Exportar:
+Para a execução local autônoma, o operador autorizado deve obter ambos os repositórios **privados** (sem torná-los públicos): frontend na branch isolada B5 e backend no SHA imutável sob `backend/`. Pré-requisitos locais: Docker funcional, Node 24, `openssl`, `psql`/`pg_isready` (cliente PostgreSQL), Chromium/Playwright e acesso de leitura aos repositórios. Preparar `npm ci && npm run build` no backend e `npm ci && npx playwright install --with-deps chromium` no frontend. Então executar na raiz do frontend:
+
+```sh
+bash scripts/onb01-b5-run-disposable-docker.sh
+```
+
+O wrapper cria seu **próprio** PostgreSQL `postgres:18-bookworm` em container com nonce e labels privados da execução, porta dinâmica publicada **somente** em `127.0.0.1`, credenciais sintéticas e URL vinculada à porta publicada. O runner interno exige correspondência exata de **ID + nonce + imagem + labels + versão + banco + porta + ausência de bind mounts** *antes* de migrações. O trap do wrapper destrói o container e seus volumes anônimos após sucesso ou erro. **Não apontar manualmente para containers existentes, PostgreSQL local do operador, Railway ou um túnel de produção.** A execução deve ocorrer em WSL2/Linux ou runner descartável de rede controlada. Não publicar passwords, JWTs ou traces não sanitizados.
+
+A chamada direta ao runner inferior só é permitida quando essas garantias de container/nonce já foram provisionadas por um executor confiável; ela **recusa** um banco apenas nomeado como `radar_fiscal_onb01_b5`.
+
+#### Contrato de variáveis geradas pelo wrapper (exemplo ilustrativo)
+
+O bloco abaixo documenta apenas o contrato e NÃO deve ser necessário na execução normal.
 ```sh
 export NODE_ENV=test ONB01_B5_RUNNER_MODE=isolated-postgres-service
 export DATABASE_ADMIN_URL='postgresql://postgres:postgres@127.0.0.1:5432/radar_fiscal_onb01_b5'
@@ -34,6 +46,8 @@ export AUTH_REFRESH_COOKIE_NAME=radar_refresh_token
 export PUBLIC_API_ALLOWED_ORIGINS='http://127.0.0.1:4173'
 bash scripts/onb01-b5-run-local.sh
 ```
+
+**Nota:** esse bloco isolado, sem `ONB01_B5_CONTAINER_ID` e `ONB01_B5_RUN_NONCE` válidos para um container Docker rotulado, é intencionalmente recusado. Use o wrapper acima.
 
 ## Evidência exigida e limitações
 
