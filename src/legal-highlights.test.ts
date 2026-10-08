@@ -225,6 +225,25 @@ describe('highlightLegalHtml', () => {
     expect([...result.markedNcms]).toEqual(['31021090'])
   })
 
+  it('suppresses unverified annex sections until the next annex', () => {
+    const rules = buildHighlightRules(taxonomy([]), [
+      { code: '87019000', description: null },
+      { code: '31021090', description: null },
+      { code: '39251000', description: null },
+    ])
+    const html = [
+      '<p>Art. 1º: NCM 3102.10.90</p>',
+      '<p data-legal-status="unverified">ANEXO II</p>',
+      '<table><tr><td>8701.90.00</td></tr></table>',
+      '<p>ANEXO III</p>',
+      '<table><tr><td>3925.10.00</td></tr></table>',
+    ].join('')
+    const result = highlightLegalHtml(html, rules)
+    expect([...result.markedNcms]).toEqual(['31021090', '39251000'])
+    expect(result.marks).toBe(2)
+    expect(result.html).toContain('8701.90.00')
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
