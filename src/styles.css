@@ -453,6 +453,11 @@ p { color: var(--muted); line-height: 1.65; }
   min-width: 0;
   padding-right: 3.25rem;
 }
+/* Edge adds a native reveal icon once typing begins; the app has its own accessible toggle. */
+.password-visibility-field input[type="password"]::-ms-reveal,
+.password-visibility-field input[type="password"]::-ms-clear {
+  display: none;
+}
 .password-visibility-field button {
   position: absolute;
   top: 50%;
