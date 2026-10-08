@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import {
@@ -872,6 +872,7 @@ function LoginForm({
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
+  const passwordId = useId()
   const navigate = useNavigate()
   const demoAccessEnabled = isDemoAccessEnabled()
   const { login: loginSession } = useAuthSession()
@@ -908,7 +909,7 @@ function LoginForm({
       )}
       <form className="auth-form" onSubmit={submit}>
         <label>E-mail<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-        <label>Senha<div className="password-visibility-field"><input aria-label="Senha" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></label>
+        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e tente novamente.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
@@ -953,6 +954,8 @@ function PasswordFlow({
   const [confirm, setConfirm] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [confirmVisible, setConfirmVisible] = useState(false)
+  const passwordId = useId()
+  const confirmPasswordId = useId()
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [legalView, setLegalView] = useState<'terms' | 'privacy' | null>(null)
   const checks = getPasswordChecks(password)
@@ -1023,8 +1026,8 @@ function PasswordFlow({
             <label>E-mail corporativo<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={320} required /></label>
           </>
         )}
-        <label>Senha<div className="password-visibility-field"><input aria-label="Senha" type={passwordVisible ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></label>
-        <label>Confirmar senha<div className="password-visibility-field"><input aria-label="Confirmar senha" type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /><button type="button" aria-label={confirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'} aria-pressed={confirmVisible} onClick={() => setConfirmVisible((value) => !value)}>{confirmVisible ? 'Ocultar' : 'Mostrar'}</button></div></label>
+        <div className="password-control"><label htmlFor={passwordId}>Senha</label><div className="password-visibility-field"><input id={passwordId} type={passwordVisible ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
+        <div className="password-control"><label htmlFor={confirmPasswordId}>Confirmar senha</label><div className="password-visibility-field"><input id={confirmPasswordId} type={confirmVisible ? 'text' : 'password'} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} required /><button type="button" aria-label={confirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'} aria-pressed={confirmVisible} onClick={() => setConfirmVisible((value) => !value)}>{confirmVisible ? 'Ocultar' : 'Mostrar'}</button></div></div>
         <div className="password-rules" aria-label="Requisitos da senha">
           <PasswordRule ok={checks.minLength} text="Mínimo de 8 caracteres" />
           <PasswordRule ok={checks.uppercase} text="Uma letra maiúscula" />
