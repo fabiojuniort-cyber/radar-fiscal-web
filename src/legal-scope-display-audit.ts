@@ -129,15 +129,19 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
         !HASH.test(item.textSha256)) {
       return blocked('INVALID_SEGMENTS')
     }
-    lastEnd = item.end
-    const node = nodes.find((n) => n.start <= item.start && n.end >= item.end)
+    // Capture narrowed values outside the callback; the untrusted record
+    // is not treated as a stable, typed object inside a closure.
+    const start = item.start
+    const end = item.end
+    lastEnd = end
+    const node = nodes.find((n) => n.start <= start && n.end >= end)
     if (!node) return blocked('CROSSES_TEXT_NODES')
     if (excludedNode(node.node)) return blocked('EDITORIAL_OR_HISTORY')
-    const text = (node.node.nodeValue ?? '').slice(item.start - node.start, item.end - node.start)
+    const text = (node.node.nodeValue ?? '').slice(start - node.start, end - node.start)
     const hash = await sha256(text)
     if (hash === null) return blocked('CRYPTO_UNAVAILABLE')
     if (hash !== item.textSha256) return blocked('TEXT_HASH_MISMATCH')
-    segments.push({ start: item.start, end: item.end, text })
+    segments.push({ start, end, text })
   }
   return {
     status: 'DRAFT_ONLY',
