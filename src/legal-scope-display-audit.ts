@@ -119,11 +119,14 @@ export async function auditLegalScopeDisplay(input: DisplayAuditInput): Promise<
   const segments: Array<{ start: number; end: number; text: string }> = []
   let lastEnd = 0
   for (const item of s.currentSegments) {
-    if (!record(item) || item.status !== 'CURRENT' ||
-        typeof item.start !== 'number' || typeof item.end !== 'number' ||
+    if (!record(item) || typeof item.start !== 'number' ||
+        typeof item.end !== 'number' || typeof item.textSha256 !== 'string') {
+      return blocked('INVALID_SEGMENTS')
+    }
+    if (item.status !== 'CURRENT' ||
         !Number.isSafeInteger(item.start) || !Number.isSafeInteger(item.end) ||
         item.start < lastEnd || item.end <= item.start || item.end > offset ||
-        typeof item.textSha256 !== 'string' || !HASH.test(item.textSha256)) {
+        !HASH.test(item.textSha256)) {
       return blocked('INVALID_SEGMENTS')
     }
     lastEnd = item.end

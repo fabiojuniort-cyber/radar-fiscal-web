@@ -1,3 +1,6 @@
+// Frontend's production TS config deliberately excludes Node declarations;
+// Node crypto is used only by this Vitest fixture, never by browser code.
+// @ts-ignore test-only Node builtin; bundled frontend has no crypto import.
 import { createHash, webcrypto } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
