@@ -18,7 +18,7 @@ describe('ONB-01-B5 runner static isolation contracts', () => {
   })
 
   it('checks backend head, Docker identity and PostgreSQL before migrations', () => {
-    expect(inner).toContain('532006508aebdb8dd1f384da14b3f7cdcd2a8aa5')
+    expect(inner).toContain('a42f11bf2b928ce9ec48bf41b8069f998f26af95')
     expect(inner).toContain('b07b36a9603a3fa71bd5e9e84cfd1ada9e5e449a')
     expect(inner).toContain('ONB01_B5_CONTAINER_ID')
     expect(inner).toContain('ONB01_B5_RUN_NONCE')
