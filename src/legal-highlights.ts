@@ -64,6 +64,18 @@ function isRevokedPlaceholder(element: Element) {
   return REVOKED_PLACEHOLDER.test((element.textContent ?? '').replace(/\s+/g, ' ').trim())
 }
 
+/** Annex headings do not classify; revoked/historical annexes exclude subsequent
+ * paragraphs and table rows until another annex heading is reached. */
+const ANNEX_HEADING = /^anexo\s+(?:único|unico|[ivxlcdm]+|\d+)(?=\s*$|\s*[-–—:.(])/iu
+const HISTORICAL_ANNEX_HEADING = /\b(?:revogad[oa]s?|redação\s+(?:anterior|original)|texto\s+anterior|substitu[íi]d[oa]s?|sem\s+(?:efeito|vigência))\b/iu
+
+function isAnnexHeading(text: string) {
+  return ANNEX_HEADING.test(text.replace(/\s+/g, ' ').trim())
+}
+function isHistoricalAnnexHeading(text: string) {
+  return HISTORICAL_ANNEX_HEADING.test(text.replace(/\s+/g, ' ').trim())
+}
+
 /** Same normalization as the classifier, with a map back to raw positions. */
 export function normalizeWithIndex(raw: string): { text: string; rawIndex: number[] } {
   let text = ''
@@ -234,7 +246,19 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
   const nodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text)
 
+  let historicalAnnex = false
+  let lastBlock: Element | null = null
   for (const node of nodes) {
+    // Track section boundaries in document order. A historical annex cannot
+    // leak highlights into later rows just because those rows have no classes.
+    const block = node.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, li') ?? null
+    if (block && block !== lastBlock) {
+      lastBlock = block
+      if (isAnnexHeading(block.textContent ?? '')) {
+        historicalAnnex = isHistoricalAnnexHeading(block.textContent ?? '')
+      }
+    }
+    if (historicalAnnex || (block && isAnnexHeading(block.textContent ?? ''))) continue
     const raw = node.data
     if (!raw.trim()) continue
     if (node.parentElement?.closest('a, mark, script, style')) continue
