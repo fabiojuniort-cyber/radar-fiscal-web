@@ -16,18 +16,52 @@ fi
 if [[ ! -f "$BACKEND_DIR/dist/server.js" ]]; then
   echo 'BLOCK: compiled backend must be checked out and built separately' >&2; exit 2
 fi
-node -e '
- for (const k of ["DATABASE_URL","DATABASE_ADMIN_URL"]) {
-   const raw=process.env[k]; if(!raw) throw Error("Missing "+k);
-   const u=new URL(raw);
-   if (!["127.0.0.1","localhost"].includes(u.hostname)
-       || u.pathname!=="/radar_fiscal_onb01_b5"
-       || !["5432",""].includes(u.port)) throw Error("BLOCK: non-isolated database URL");
- }
- if(process.env.NODE_ENV!=="test") throw Error("BLOCK: NODE_ENV must be test");
-'
+# Fail closed before the first SQL or migration. A database name on localhost
+# alone does NOT establish that its server is disposable.
+if [[ -z "${ONB01_B5_CONTAINER_ID:-}" || -z "${ONB01_B5_RUN_NONCE:-}" ]]; then
+  echo 'BLOCK: missing isolated Docker container identity/nonce' >&2; exit 2
+fi
+if ! command -v docker >/dev/null || ! command -v node >/dev/null; then
+  echo 'BLOCK: Docker and Node 24 are required to verify disposable database ownership' >&2; exit 2
+fi
+if ! docker inspect "$ONB01_B5_CONTAINER_ID" | node -e '
+  let raw = ""; process.stdin.on("data", x => raw += x);
+  process.stdin.on("end", () => {
+    try {
+      const d = JSON.parse(raw)[0];
+      const labels = d.Config.Labels ?? {};
+      const bindings = d.NetworkSettings.Ports?.["5432/tcp"] ?? [];
+      if (d.Config.Image !== "postgres:18-bookworm" || !d.State.Running
+          || labels["com.tribusca.onb01-b5"] !== "disposable"
+          || labels["com.tribusca.onb01-b5.nonce"] !== process.env.ONB01_B5_RUN_NONCE
+          || bindings.length !== 1 || bindings[0].HostIp !== "127.0.0.1"
+          || !/^[0-9]+$/.test(bindings[0].HostPort)
+          || d.Mounts.some(m => m.Type !== "volume")
+          || !d.Config.Env.includes("POSTGRES_DB=radar_fiscal_onb01_b5")) {
+        throw Error("not an owned disposable PostgreSQL 18 container");
+      }
+      for (const k of ["DATABASE_URL","DATABASE_ADMIN_URL"]) {
+        const rawUrl = process.env[k];
+        if (!rawUrl) throw Error("missing " + k);
+        const u = new URL(rawUrl);
+        if (u.protocol !== "postgresql:" || u.hostname !== "127.0.0.1"
+            || u.port !== bindings[0].HostPort
+            || u.pathname !== "/radar_fiscal_onb01_b5"
+            || u.search || u.hash) throw Error("database URL not bound to disposable Docker port");
+      }
+      if (process.env.NODE_ENV !== "test"
+          || process.env.ONB01_B5_RUNNER_MODE !== "isolated-postgres-service")
+        throw Error("not an isolated test runner");
+    } catch {
+      process.stderr.write("BLOCK: disposable container or database origin verification failed\\n");
+      process.exitCode = 2;
+    }
+  });
+'; then
+  echo 'BLOCK: refusing to migrate an unverified PostgreSQL instance' >&2; exit 2
+fi
 actual_db="$(psql "$DATABASE_ADMIN_URL" -X -A -t -v ON_ERROR_STOP=1 -c "SELECT current_database() || ':' || current_setting('server_version_num')")"
-if [[ "$actual_db" != radar_fiscal_onb01_b5:18* ]]; then
+if [[ ! "$actual_db" =~ ^radar_fiscal_onb01_b5:18[0-9]{4}$ ]]; then
   echo 'BLOCK: only PostgreSQL 18 and radar_fiscal_onb01_b5 are permitted' >&2; exit 2
 fi
 actual_backend="$(git -C "$BACKEND_DIR" rev-parse HEAD)"
