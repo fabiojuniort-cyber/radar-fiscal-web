@@ -257,6 +257,18 @@ describe('TriFaros release candidate WEB-11', () => {
     expect(within(signup).getByRole('button', { name: 'Ocultar confirmação de senha' }).querySelector('svg')).toHaveClass('lucide-eye')
   })
 
+  it('hides the browser-native Edge password eye so only the app toggle is shown while typing', () => {
+    // Chromium-based Edge injects ::-ms-reveal as a second eye only after input is entered.
+    // Keep this rule scoped to password fields managed by our own visibility toggle.
+    renderApp('/como-funciona')
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+    const dialog = screen.getByRole('dialog')
+    const password = within(dialog).getByLabelText('Senha')
+    fireEvent.change(password, { target: { value: strongTestPassword } })
+    expect(within(dialog).getAllByRole('button', { name: 'Mostrar senha' })).toHaveLength(1)
+    expect(within(dialog).getAllByRole('button', { name: 'Mostrar confirmação de senha' })).toHaveLength(1)
+  })
+
   it('associates login password label explicitly and keeps the toggle out of the label', () => {
     renderApp('/como-funciona')
     fireEvent.click(screen.getAllByRole('button', { name: 'Entrar' })[0])
