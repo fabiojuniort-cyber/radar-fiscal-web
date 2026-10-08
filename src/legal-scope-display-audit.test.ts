@@ -259,4 +259,25 @@ describe('TAX13 F2 scope-to-DOM mapping (draft only)', () => {
     expect(result.status).toBe('DRAFT_ONLY')
     expect(result.highlightsAuthorized).toBe(false)
   })
+  it('R2 rejects revoked TH/P annexes until a new annex heading', async () => {
+    const html = '<table><tr><th data-legal-status="revoked"><p>ANEXO II</p></th></tr>' +
+      '<tr><td>8451.21.00</td></tr></table>' +
+      '<p><strong>ANEXO</strong> III</p><table><tr><td>3102.10.90</td></tr></table>'
+    const joined = 'ANEXO II8451.21.00ANEXO III3102.10.90'
+    for (const [phrase, expected] of [
+      ['8451.21.00', 'BLOCKED'],
+      ['3102.10.90', 'DRAFT_ONLY'],
+    ] as const) {
+      const start = joined.indexOf(phrase)
+      const result = await auditLegalScopeDisplay({
+        ...input(), sourceSanitizedHtml: html, displayHtml: html,
+        scope: {...candidate(), htmlSha256: sha(html), currentSegments: [{
+          start, end: start + phrase.length, textSha256: sha(phrase), status: 'CURRENT',
+        }]},
+      })
+      expect(result.status).toBe(expected)
+      expect(result.highlightsAuthorized).toBe(false)
+    }
+  })
+
 })
