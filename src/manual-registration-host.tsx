@@ -164,7 +164,7 @@ export function ManualRegistrationHost() {
     try {
       const result = request.kind === 'company'
         ? await request.submit({ ...(manualInput as ManualCompanyForm), cnaes: selectedCnaes, reactivateInactive: reactivationPending })
-        : await request.submit({ ...(manualInput as ManualEstablishmentForm), cnaes: selectedCnaes })
+        : await request.submit({ ...(manualInput as ManualEstablishmentForm), cnaes: selectedCnaes, reactivateInactive: reactivationPending })
       resolveManualRegistration(result)
     } catch (cause) {
       const code =
