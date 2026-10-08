@@ -18,9 +18,11 @@ describe('ONB-01 CNPJ and official CNAE selection', () => {
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
     const options = await searchOfficialCnaes(apiFetch, '12345678-1234-1234-1234-123456789012', 'arroz')
     expect(options).toEqual([{ code: '0111301', description: 'Cultivo de arroz' }])
-    expect(apiFetch).toHaveBeenCalledWith('/api/v1/cnae-catalog?search=arroz', {
-      headers: expect.objectContaining({ 'x-tenant-id': '12345678-1234-1234-1234-123456789012' }),
-    })
+    expect(apiFetch).toHaveBeenCalledWith(
+      '/api/v1/cnae-catalog?search=arroz', expect.any(Object),
+    )
+    const request = apiFetch.mock.calls[0]?.[1] as { headers: Headers } | undefined
+    expect(request?.headers.get('x-tenant-id')).toBe('12345678-1234-1234-1234-123456789012')
   })
 
   it('keeps catalogue unavailability distinct from empty results', async () => {
