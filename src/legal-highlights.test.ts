@@ -262,6 +262,36 @@ describe('highlightLegalHtml', () => {
     ])
   })
 
+  it('R2 B1 keeps verified current NCM in a mixed green historical CONFAZ row', () => {
+    const rules = buildHighlightRules(taxonomy([]), [
+      { code: '84501100', description: null },
+      { code: '73071920', description: null },
+    ])
+    const html = '<table><tr>' +
+      '<td><p class="A9-2Tabelajustificadoverde">8450.11.00</p></td>' +
+      '<td data-legal-status="current">7307.19.20 — produto atual</td>' +
+      '</tr></table>'
+    const result = highlightLegalHtml(html, rules)
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map(mark => mark.textContent)).toEqual(['7307.19.20'])
+    expect([...result.markedNcms]).toEqual(['73071920'])
+  })
+
+  it('R2 B3 honors revoked TH annex heading until next TH annex', () => {
+    const rules = buildHighlightRules(taxonomy([]), [
+      { code: '84501100', description: null },
+      { code: '73071920', description: null },
+    ])
+    const html = '<table><tr><th data-legal-status="revoked">ANEXO II</th></tr>' +
+      '<tr><td>8450.11.00</td></tr>' +
+      '<tr><th>ANEXO III</th></tr>' +
+      '<tr><td>7307.19.20</td></tr></table>'
+    const result = highlightLegalHtml(html, rules)
+    expect([...result.markedNcms]).toEqual(['73071920'])
+    expect(result.marks).toBe(1)
+    expect(result.html).toContain('8450.11.00')
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
