@@ -1687,6 +1687,7 @@ export function AuthenticatedProductPanel({
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'account'] })
                 }}
+                onOpenProfile={() => setOrgTab('perfil')}
               />
             ) : (
               <TaxProfileSection
@@ -2019,6 +2020,9 @@ function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
+      // ONB-01: loading animation/wizard are subsequent blocks.
+      // Existing tax profile is the safe transition target.
+      onOpenProfile()
     },
   })
 
@@ -2240,6 +2244,7 @@ function EstablishmentSection({
   loading,
   error,
   onChanged,
+  onOpenProfile,
 }: {
   apiFetch: ProductApiFetch
   tenantId: string
@@ -2250,6 +2255,7 @@ function EstablishmentSection({
   loading: boolean
   error: boolean
   onChanged: () => void
+  onOpenProfile: () => void
 }) {
   const [creating, setCreating] = useState(false)
   const [cnpj, setCnpj] = useState('')
@@ -2271,6 +2277,7 @@ function EstablishmentSection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
+      onOpenProfile()
     },
   })
 
