@@ -32,22 +32,13 @@ O wrapper cria seu **próprio** PostgreSQL `postgres:18-bookworm` em container c
 
 A chamada direta ao runner inferior só é permitida quando essas garantias de container/nonce já foram provisionadas por um executor confiável; ela **recusa** um banco apenas nomeado como `radar_fiscal_onb01_b5`.
 
-#### Contrato de variáveis geradas pelo wrapper (exemplo ilustrativo)
+### Requisitos para executar com segurança
 
-O bloco abaixo documenta apenas o contrato e NÃO deve ser necessário na execução normal.
-```sh
-export NODE_ENV=test ONB01_B5_RUNNER_MODE=isolated-postgres-service
-export DATABASE_ADMIN_URL='postgresql://postgres:postgres@127.0.0.1:5432/radar_fiscal_onb01_b5'
-export DATABASE_URL='postgresql://radar_app_runtime:ci-runtime-password-with-at-least-32-chars@127.0.0.1:5432/radar_fiscal_onb01_b5'
-export DB_RUNTIME_PASSWORD='ci-runtime-password-with-at-least-32-chars'
-export DB_CURATOR_RUNTIME_PASSWORD='ci-curator-password-with-at-least-32-chars'
-export JWT_ACCESS_SECRET='ci-jwt-secret-with-at-least-32-characters'
-export AUTH_REFRESH_COOKIE_NAME=radar_refresh_token
-export PUBLIC_API_ALLOWED_ORIGINS='http://127.0.0.1:4173'
-bash scripts/onb01-b5-run-local.sh
-```
-
-**Nota:** esse bloco isolado, sem `ONB01_B5_CONTAINER_ID` e `ONB01_B5_RUN_NONCE` válidos para um container Docker rotulado, é intencionalmente recusado. Use o wrapper acima.
+- Os dois repositórios privados devem ser clonados por **um operador já autorizado**; no computador local, isso não exige um novo token cross-repo de CI.
+- O wrapper exige **daemon Docker local via Unix socket** (WSL2/Linux); contextos remotos/SSH/TCP são recusados. Banco é criado em container nomeado e rotulado para esta execução, com porta de PostgreSQL escolhida pelo Docker no loopback.
+- O runner testa que **127.0.0.1:3000 e 127.0.0.1:4173 estão livres** antes de subir Fastify/Vite; Playwright é executado com `CI=1` para **não reutilizar** um servidor Vite já existente.
+- As URLs e senhas de PostgreSQL, senhas do runtime e segredo JWT são **gerados automaticamente por execução**; não copiar credenciais de outros ambientes. O nome esperado do banco é `radar_fiscal_onb01_b5`.
+- Um resultado `FAILURE` no CI do PR draft reflete o gate `draft-fast-only`: **não é teste real E2E**. Não promover a PR a ready ou rodar full regression apenas para mascarar essa falta.
 
 ## Evidência exigida e limitações
 
