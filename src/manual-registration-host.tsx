@@ -62,6 +62,7 @@ export function ManualRegistrationHost() {
   const [selectedCnaes, setSelectedCnaes] = useState<ManualCnae[]>([])
   const [cnaesLoading, setCnaesLoading] = useState(false)
   const [cnaesError, setCnaesError] = useState<string | null>(null)
+  const [reactivationPending, setReactivationPending] = useState(false)
 
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export function ManualRegistrationHost() {
     setSelectedCnaes([])
     setCnaesLoading(false)
     setCnaesError(null)
+    setReactivationPending(false)
   }, [pending])
 
   useEffect(() => {
@@ -161,7 +163,7 @@ export function ManualRegistrationHost() {
     setSubmitting(true)
     try {
       const result = request.kind === 'company'
-        ? await request.submit({ ...(manualInput as ManualCompanyForm), cnaes: selectedCnaes })
+        ? await request.submit({ ...(manualInput as ManualCompanyForm), cnaes: selectedCnaes, reactivateInactive: reactivationPending })
         : await request.submit({ ...(manualInput as ManualEstablishmentForm), cnaes: selectedCnaes })
       resolveManualRegistration(result)
     } catch (cause) {
@@ -170,7 +172,16 @@ export function ManualRegistrationHost() {
           ? cause.message
           : 'manual_registration_failed'
 
-      if (code === 'business_location_code_exists') {
+      if (code === 'reactivation_required') {
+        setReactivationPending(true)
+        setError('O cadastro está inativo. Confirme a reativação para preservar os dados existentes sem sobrescrevê-los.')
+      } else if (code === 'cnae_catalog_unavailable') {
+        setError('O catálogo oficial de CNAEs está indisponível. Nenhum dado foi gravado.')
+      } else if (code === 'invalid_cnae') {
+        setError('CNAE não validado na edição oficial vigente. Atualize sua seleção.')
+      } else if (code === 'establishment_cnpj_root_mismatch' || code === 'head_office_cnpj_required') {
+        setError('Este CNPJ não pertence à matriz selecionada ou não corresponde a uma matriz.')
+      } else if (code === 'business_location_code_exists') {
         setError(
           'Este Local Negócio já está sendo usado por outro estabelecimento.',
         )
@@ -258,7 +269,7 @@ export function ManualRegistrationHost() {
               <button type="button" className="launch-secondary-button" disabled={submitting}
                 onClick={() => setStep('details')}>Voltar aos dados</button>
               <button type="submit" className="btn" disabled={submitting || !selectedCnaes.length}>
-                {submitting ? 'Cadastrando…' : 'Concluir cadastro'}
+                {submitting ? 'Cadastrando…' : reactivationPending ? 'Confirmar reativação' : 'Concluir cadastro'}
               </button>
             </div>
           </form>
