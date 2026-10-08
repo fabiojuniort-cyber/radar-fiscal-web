@@ -1,4 +1,13 @@
+export type ManualCnae = {
+  code: string
+  description: string
+  isPrimary: boolean
+}
+
+export type ManualCnaeOption = Pick<ManualCnae, 'code' | 'description'>
+
 export type ManualRegistrationCommon = {
+  searchCnaes?: (term: string) => Promise<ManualCnaeOption[]>
   cnpj: string
   businessLocationCode?: string | null
 }
@@ -12,6 +21,7 @@ export type ManualCompanyForm = {
   streetNumber?: string
   district?: string
   stateRegistration?: string
+  cnaes?: ManualCnae[]
 }
 
 export type ManualEstablishmentForm = {
@@ -23,6 +33,7 @@ export type ManualEstablishmentForm = {
   streetNumber?: string
   district?: string
   stateRegistration?: string
+  cnaes?: ManualCnae[]
 }
 
 export type ManualCompanyRegistrationRequest =
