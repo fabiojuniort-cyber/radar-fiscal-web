@@ -52,8 +52,17 @@ function hasPreviousWordingClass(element: Element) {
   return Array.from(element.classList).some(isPreviousWordingClass)
 }
 
+const LEGAL_SEGMENT_STATUSES = new Set(['current', 'previous', 'revoked', 'editorial', 'unverified'])
+
+function sourceLegalStatus(element: Element): string | null {
+  const status = element.getAttribute('data-legal-status')
+  return status && LEGAL_SEGMENT_STATUSES.has(status) ? status : null
+}
+
 function hasNonNormativeClass(element: Element) {
-  return Array.from(element.classList).some((token) => NON_NORMATIVE_CLASSES.has(token) || isPreviousWordingClass(token))
+  const status = sourceLegalStatus(element)
+  return (status !== null && status !== 'current') ||
+    Array.from(element.classList).some((token) => NON_NORMATIVE_CLASSES.has(token) || isPreviousWordingClass(token))
 }
 
 const REVOKED_PLACEHOLDER =
@@ -255,7 +264,9 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
     if (block && block !== lastBlock) {
       lastBlock = block
       if (isAnnexHeading(block.textContent ?? '')) {
-        historicalAnnex = isHistoricalAnnexHeading(block.textContent ?? '')
+        historicalAnnex = isHistoricalAnnexHeading(block.textContent ?? '') ||
+          sourceLegalStatus(block) === 'previous' || sourceLegalStatus(block) === 'revoked' ||
+          Array.from(block.classList).some(isPreviousWordingClass)
       }
     }
     if (historicalAnnex || (block && isAnnexHeading(block.textContent ?? ''))) continue
