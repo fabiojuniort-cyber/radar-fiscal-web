@@ -184,7 +184,7 @@ test('hides the built-in Edge eye while preserving the app password toggle', asy
   await page.goto('/como-funciona')
   await openLogin(page)
   const dialog = page.getByRole('dialog')
-  const password = dialog.getByLabel('Senha')
+  const password = dialog.getByLabel('Senha', { exact: true })
   await password.fill('Senha2026!')
   await expect(dialog.getByRole('button', { name: 'Mostrar senha' })).toHaveCount(1)
   await dialog.getByRole('button', { name: 'Mostrar senha' }).click()
