@@ -204,6 +204,27 @@ describe('highlightLegalHtml', () => {
     expect(result.marks).toBe(1)
   })
 
+  it('excludes generic legal act titles and editorial history in non-CONFAZ HTML', () => {
+    const rules = buildHighlightRules(
+      taxonomy([tag('IBS', { terms: ['IBS'], ncmPrefixes: [] })]),
+      [
+        { code: '87019000', description: null },
+        { code: '31021090', description: null },
+      ],
+    )
+    const result = highlightLegalHtml(
+      '<h1>LEI COMPLEMENTAR Nº 214, DE 16 DE JANEIRO DE 2025</h1>' +
+      '<p>Publicado no Diário Oficial em 17/01/2025, NCM 8701.90.00.</p>' +
+      '<p>Art. 1º Aplica-se o IBS aos produtos NCM 3102.10.90.</p>',
+      rules,
+    )
+    const doc = new DOMParser().parseFromString(result.html, 'text/html')
+    expect(Array.from(doc.querySelectorAll('mark.legal-mark')).map(mark => mark.textContent)).toEqual([
+      'IBS', '3102.10.90',
+    ])
+    expect([...result.markedNcms]).toEqual(['31021090'])
+  })
+
   it('prefers the longer term and skips Roman-numeral enumerations', () => {
     const rules = buildHighlightRules(
       taxonomy([
