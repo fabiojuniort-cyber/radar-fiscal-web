@@ -34,6 +34,17 @@ export interface HighlightResult {
 
 const PREVIOUS_WORDING_CLASSES = new Set(['RedaoAnt', 'A8-3RedacaoAnt', 'RemissoAnt', 'A8-2RemissaoAnt'])
 const PREVIOUS_WORDING_TABLE_CLASS = /^(?:A\d+-\d+)?Tabela[A-Za-z]*verde$/
+const NON_NORMATIVE_CLASSES = new Set([
+  'TituloAcordo',
+  'AcordoTipo',
+  'Ementa',
+  'DataPublicao',
+  'A2DataPublicacao',
+  'Remisso',
+  'A8-1Remissao',
+  'Subtitulo',
+  'A6-1Subtitulo',
+])
 
 function isPreviousWordingClass(token: string) {
   return PREVIOUS_WORDING_CLASSES.has(token) || PREVIOUS_WORDING_TABLE_CLASS.test(token)
@@ -41,6 +52,52 @@ function isPreviousWordingClass(token: string) {
 
 function hasPreviousWordingClass(element: Element) {
   return Array.from(element.classList).some(isPreviousWordingClass)
+}
+
+const LEGAL_SEGMENT_STATUSES = new Set(['current', 'previous', 'revoked', 'editorial', 'unverified'])
+
+function sourceLegalStatus(element: Element): string | null {
+  const status = element.getAttribute('data-legal-status')
+  return status && LEGAL_SEGMENT_STATUSES.has(status) ? status : null
+}
+
+function hasNonNormativeClass(element: Element) {
+  const status = sourceLegalStatus(element)
+  return (status !== null && status !== 'current') ||
+    Array.from(element.classList).some((token) => NON_NORMATIVE_CLASSES.has(token) || isPreviousWordingClass(token))
+}
+
+const REVOKED_PLACEHOLDER =
+  /^(?:(?:cl[áa]usula|art(?:igo)?\.?|par[áa]grafo|inciso|al[íi]nea|item)\s+[\p{L}\p{N}º°ª.-]+|§\s*\d+[º°ª]?|[ivxlcdm]+|[a-z]|\d+[º°ª]?)\s*(?:[-–—:]\s*)?revogad[oa]s?\.?$/iu
+
+function isRevokedPlaceholder(element: Element) {
+  if (!['P', 'TD', 'TH'].includes(element.tagName)) return false
+  return REVOKED_PLACEHOLDER.test((element.textContent ?? '').replace(/\s+/g, ' ').trim())
+}
+
+/** Annex headings do not classify; revoked/historical annexes exclude subsequent
+ * paragraphs and table rows until another annex heading is reached. */
+const ANNEX_HEADING = /^anexo\s+(?:único|unico|[ivxlcdm]+|\d+)(?=\s*$|\s*[-–—:.(])/iu
+const HISTORICAL_ANNEX_HEADING = /\b(?:revogad[oa]s?|redação\s+(?:anterior|original)|texto\s+anterior|substitu[íi]d[oa]s?|sem\s+(?:efeito|vigência))\b/iu
+
+function isAnnexHeading(text: string) {
+  return ANNEX_HEADING.test(text.replace(/\s+/g, ' ').trim())
+}
+function isHistoricalAnnexHeading(text: string) {
+  return HISTORICAL_ANNEX_HEADING.test(text.replace(/\s+/g, ' ').trim())
+}
+
+/** Source-independent safeguards for standalone act identification/editorial
+ * paragraphs. Presence of normal text is not proof of current legal status. */
+const ACT_IDENTIFIER_HEADING =
+  /^(?:lei(?:\s+complementar)?|decreto(?:-lei)?|portaria|instrução\s+normativa(?:\s+[A-Z]{2,8})?|resolução(?:\s+[A-Z]{2,8})?|convênio(?:\s+icms)?|ajuste\s+sinief|ato\s+cotepe(?:\/icms)?|medida\s+provisória)\s+(?:n[ºo°.]?\s*)?\d+(?:[./-]\d+)*(?:\s*,?\s+de\s+\d{1,2}\s+de\s+[\p{L}]+\s+de\s+\d{4})?\.?$/iu
+const EDITORIAL_REFERENCE_LINE =
+  /^(?:publicad[oa]s?\s+(?:no|na|em)|ratificad[oa]s?\s+(?:no|na|pel[oa]s?)|alterad[oa]s?\s+(?:pel[oa]s?|por)|prorrogad[oa]s?\s+at[eé]|vide\s+(?:o|a|os|as|cl[áa]usula|art)|redação\s+anterior\b|texto\s+anterior\b|nova\s+redação\s+dada\s+pel[oa])/iu
+
+function isStandaloneEditorial(element: Element) {
+  if (!['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(element.tagName)) return false
+  const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim()
+  return ACT_IDENTIFIER_HEADING.test(text) || EDITORIAL_REFERENCE_LINE.test(text)
 }
 
 /** Same normalization as the classifier, with a map back to raw positions. */
@@ -189,12 +246,12 @@ function withoutOverlaps(ranges: Range[]): Range[] {
   return kept.sort((a, b) => a.start - b.start)
 }
 
-function isPreviousWording(node: Node): boolean {
+function isNonNormativeLegalText(node: Node): boolean {
   for (let element = node.parentElement; element; element = element.parentElement) {
-    if (hasPreviousWordingClass(element)) return true
+    if (hasNonNormativeClass(element) || isRevokedPlaceholder(element) || isStandaloneEditorial(element)) return true
     if (element.tagName === 'TR') {
       const row = element
-      if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) return true
+      if (Array.from(row.querySelectorAll('[class]')).some(hasPreviousWordingClass)) { const cell = node.parentElement?.closest('td, th'); if (!cell || sourceLegalStatus(cell) !== 'current') return true }
     }
   }
   return false
@@ -213,11 +270,34 @@ export function highlightLegalHtml(html: string, rules: HighlightRules): Highlig
   const nodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text)
 
+  let historicalAnnex = false
+  let lastBlock: Element | null = null
   for (const node of nodes) {
+    // Track section boundaries in document order. A historical annex cannot
+    // leak highlights into later rows just because those rows have no classes.
+    const block = node.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, li, th, td') ?? null
+    // A nested <p> inside an annex <th>/<td> inherits its cell's legal
+    // status. Checking only the <p> would miss a revoked parent annex.
+    const cell = block?.closest('th, td') ?? null
+    const annexBlock = cell && isAnnexHeading(cell.textContent ?? '') ? cell : block
+    const annexHeading = annexBlock && isAnnexHeading(annexBlock.textContent ?? '')
+    if (block && block !== lastBlock) {
+      lastBlock = block
+      if (annexBlock && annexHeading) {
+        historicalAnnex = isHistoricalAnnexHeading(annexBlock.textContent ?? '') ||
+          sourceLegalStatus(block) === 'previous' || sourceLegalStatus(block) === 'revoked' ||
+          sourceLegalStatus(block) === 'unverified' ||
+          sourceLegalStatus(annexBlock) === 'revoked' || sourceLegalStatus(annexBlock) === 'previous' ||
+          sourceLegalStatus(annexBlock) === 'unverified' ||
+          Array.from(block.classList).some(isPreviousWordingClass) ||
+          Array.from(annexBlock.classList).some(isPreviousWordingClass)
+      }
+    }
+    if (historicalAnnex || annexHeading) continue
     const raw = node.data
     if (!raw.trim()) continue
     if (node.parentElement?.closest('a, mark, script, style')) continue
-    if (isPreviousWording(node)) continue
+    if (isNonNormativeLegalText(node)) continue
     const ranges = withoutOverlaps([...ncmRanges(raw, rules.ncms), ...termRanges(raw, rules.terms)])
     if (ranges.length === 0) continue
 
