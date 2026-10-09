@@ -63,6 +63,32 @@ describe('signup API', () => {
     expect(String(capturedInit?.body)).toContain(input.password)
   })
 
+  it('submits only user identity, password and consent in the simplified signup', async () => {
+    let body: Record<string, unknown> = {}
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body)) as Record<string, unknown>
+      return {
+        status: 201,
+        json: async () => ({
+          user: { id: 'u', name: 'Pessoa Teste', email: 'pessoa@example.test' },
+          tenant: { id: 't', name: 'Conta de Pessoa Teste', slug: 'pessoa-teste-a' },
+          membership: { role: 'OWNER' },
+          next: 'LOGIN',
+        }),
+      } as Response
+    }))
+    await registerPublicAccount({
+      name: 'Pessoa Teste',
+      email: 'pessoa@example.test',
+      password: 'Senha-Segura-2026!',
+      confirmPassword: 'Senha-Segura-2026!',
+      acceptedTerms: true,
+    })
+    expect(body).not.toHaveProperty('company')
+    expect(body).not.toHaveProperty('cnpj')
+    expect(body).toHaveProperty('acceptedTerms', true)
+  })
+
   it.each([
     [409, 'email_already_registered'],
     [409, 'company_already_registered'],

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 
 async function openLogin(page: import('@playwright/test').Page) {
   if ((page.viewportSize()?.width ?? 0) <= 680) {
@@ -145,7 +146,7 @@ test('real login, cookie refresh and logout protect the authenticated panel', as
   await openLogin(page)
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('E-mail').fill('owner@example.test')
-  await dialog.getByLabel('Senha').fill('Only-For-Browser-Test!1')
+  await dialog.getByLabel('Senha', { exact: true }).fill('Only-For-Browser-Test!1')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/painel$/)
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toBeVisible()
@@ -170,4 +171,24 @@ test('unauthenticated direct access never renders account data', async ({ page }
   await page.goto('/painel')
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'Olá, owner.' })).toHaveCount(0)
+})
+
+test('hides the built-in Edge eye while preserving the app password toggle', async ({ page }) => {
+  // CI runs Chromium, not Edge. Check the Edge-specific CSS policy in source,
+  // then exercise the application control in a real Chromium browser.
+  const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
+  expect(styles).toMatch(
+    /\.password-visibility-field input\[type="password"\]::-ms-reveal,\s*\.password-visibility-field input\[type="password"\]::-ms-clear\s*\{\s*display:\s*none;\s*\}/,
+  )
+
+  await page.goto('/como-funciona')
+  await openLogin(page)
+  const dialog = page.getByRole('dialog')
+  const password = dialog.getByLabel('Senha', { exact: true })
+  await password.fill('Senha2026!')
+  await expect(dialog.getByRole('button', { name: 'Mostrar senha' })).toHaveCount(1)
+  await dialog.getByRole('button', { name: 'Mostrar senha' }).click()
+  await expect(password).toHaveAttribute('type', 'text')
+  await dialog.getByRole('button', { name: 'Ocultar senha' }).click()
+  await expect(password).toHaveAttribute('type', 'password')
 })

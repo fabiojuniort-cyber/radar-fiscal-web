@@ -443,3 +443,36 @@ p { color: var(--muted); line-height: 1.65; }
 .auth-panel-main ul { padding-left: 1.25rem; }
 .auth-panel-main li { margin: .5rem 0; }
 .auth-panel-loading { min-height: 100vh; display: grid; place-items: center; }
+
+/* ONB-01: compact eye toggle sits inside the input, without covering its text. */
+.password-control { display: grid; gap: 7px; }
+.password-control > label { cursor: text; }
+.password-visibility-field { position: relative; width: 100%; }
+.password-visibility-field input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 3.25rem;
+}
+/* Edge adds a native reveal icon once typing begins; the app has its own accessible toggle. */
+.password-visibility-field input[type="password"]::-ms-reveal,
+.password-visibility-field input[type="password"]::-ms-clear {
+  display: none;
+}
+.password-visibility-field button {
+  position: absolute;
+  top: 50%;
+  right: .375rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: .5rem;
+  background: transparent;
+  color: #42566f;
+  cursor: pointer;
+}
+.password-visibility-field button:hover { background: #f2f6fa; color: var(--navy); }
+.password-visibility-field button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

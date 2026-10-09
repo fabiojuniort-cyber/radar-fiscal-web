@@ -134,3 +134,50 @@
     width: 100%;
   }
 }
+
+/* ONB-01: official CNAE selection, shared for matrix and branch. */
+.tp-manual-dialog form > label.tp-manual-wide {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  font-weight: 700;
+}
+.tp-manual-dialog form > label.tp-manual-wide input,
+.tp-manual-dialog form > label.tp-manual-wide select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line, #d7dde2);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--surface, #fff);
+  color: inherit;
+}
+.tp-manual-cnae-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+}
+.tp-manual-cnae-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line, #d7dde2);
+  border-radius: 10px;
+}
+.tp-manual-cnae-row span { flex: 1 1 230px; }
+.tp-manual-cnae-row button,
+.tp-manual-heading > button {
+  border: 1px solid var(--line, #d7dde2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: transparent;
+  cursor: pointer;
+}
+.tp-manual-dialog button:focus-visible,
+.tp-manual-dialog select:focus-visible,
+.tp-manual-dialog input:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
