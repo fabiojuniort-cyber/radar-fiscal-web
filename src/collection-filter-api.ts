@@ -385,3 +385,49 @@ export async function fetchCollectionFilterDiscardAlerts(
     { headers: { Accept: 'application/json' } },
   ))
 }
+
+
+// L-11 direct rule editing; the server must re-evaluate the current archive
+// at confirmation time. The front end never supplies publication IDs to delete.
+export interface CollectionFilterDirectRuleInput {
+  sourceCode: string
+  section: string
+  canonicalType: string
+  mode: CollectionFilterMode
+  newTypeId?: string
+}
+
+export interface CollectionFilterDirectPreview {
+  count: number
+  blockedCompany: number
+  token: string
+}
+
+export async function previewDirectCollectionFilterRule(
+  apiFetch: ProductApiFetch,
+  input: CollectionFilterDirectRuleInput,
+): Promise<CollectionFilterDirectPreview> {
+  return readJson<CollectionFilterDirectPreview>(
+    await apiFetch('/api/v1/admin/collection-filter/direct-rule/preview', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  )
+}
+
+export async function applyDirectCollectionFilterRule(
+  apiFetch: ProductApiFetch,
+  input: CollectionFilterDirectRuleInput & {
+    expectedCount: number
+    previewToken: string
+  },
+): Promise<{ changed: boolean; deletedCount: number; revision?: number }> {
+  return readJson<{ changed: boolean; deletedCount: number; revision?: number }>(
+    await apiFetch('/api/v1/admin/collection-filter/direct-rule/confirm', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  )
+}
