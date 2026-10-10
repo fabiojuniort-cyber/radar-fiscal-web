@@ -96,14 +96,16 @@ export function CollectionFilterDirectDialog({
           </select>
         </label>
         {preview && (
-          <p role="status"><strong>{preview.count} publicações serão apagadas.</strong>
+          <div role="status" className="cf-preview-summary">
+            <p><strong>{preview.count} publicações serão apagadas.</strong></p>
+            <p><strong>{preview.blockedCompany + preview.blockedOtherSource} protegidas (não serão apagadas).</strong></p>
             {preview.blockedCompany > 0 && (
-              <span> {preview.blockedCompany} possuem vínculo de cliente e não serão excluídas.</span>
+              <p>Motivo: {preview.blockedCompany} com vínculo a empresa cliente.</p>
             )}
             {preview.blockedOtherSource > 0 && (
-              <span> {preview.blockedOtherSource} são compartilhadas com outras fontes oficiais e serão preservadas.</span>
+              <p>Motivo: {preview.blockedOtherSource} também possuem origem em outra fonte oficial.</p>
             )}
-          </p>
+          </div>
         )}
         {error && <p className="cf-error" role="alert">{error}</p>}
         <div className="cf-row-actions">
