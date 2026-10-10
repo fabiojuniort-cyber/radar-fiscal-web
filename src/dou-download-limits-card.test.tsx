@@ -26,7 +26,7 @@ describe('Limites DOU em Administradores', () => {
     })) as unknown as ProductApiFetch
     mount(api)
     expect(await screen.findByText('Limites de arquivos do DOU')).toBeInTheDocument()
-    expect((screen.getByLabelText(/Arquivo ZIP INLABS/) as HTMLInputElement).value).toBe('64')
+    expect(((await screen.findByLabelText(/Arquivo ZIP INLABS/)) as HTMLInputElement).value).toBe('64')
     expect(screen.getByRole('button', { name: 'Salvar limites' })).toBeDisabled()
     expect(api).toHaveBeenCalledTimes(1)
   })
