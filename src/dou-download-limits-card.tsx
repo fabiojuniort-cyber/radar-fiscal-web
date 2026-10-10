@@ -9,7 +9,7 @@ import {
 } from './dou-download-limits-api'
 
 const FIELDS: { key: keyof DouDownloadLimits; label: string; description: string }[] = [
-  { key: 'pdfMiB', label: 'PDF oficial (MiB)', description: 'Evidência complementar, não exigida na coleta XML.' },
+  { key: 'pdfMiB', label: 'PDF oficial (MiB)', description: 'Configuração futura: a atestação PDF permanece bloqueada pela TAX13; não afeta a coleta XML.' },
   { key: 'zipMiB', label: 'Arquivo ZIP INLABS (MiB)', description: 'Limite por pacote ZIP baixado.' },
   { key: 'expandedZipMiB', label: 'ZIP descompactado (MiB)', description: 'Proteção contra expansão exagerada (ZIP bombs).' },
   { key: 'xmlEntryMiB', label: 'XML individual (MiB)', description: 'Limite de cada XML dentro do ZIP.' },
