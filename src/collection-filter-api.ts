@@ -422,8 +422,8 @@ export async function applyDirectCollectionFilterRule(
     expectedCount: number
     previewToken: string
   },
-): Promise<{ changed: boolean; deletedCount: number; revision?: number }> {
-  return readJson<{ changed: boolean; deletedCount: number; revision?: number }>(
+): Promise<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; token?: string }> {
+  return readJson<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; token?: string }>(
     await apiFetch('/api/v1/admin/collection-filter/direct-rule/confirm', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
