@@ -54,7 +54,7 @@ export function CollectionFilterDirectDialog({
       })
       if (result.changed) {
         // Never apply a stale confirmation; the next click requires a new count.
-        setPreview(result.count !== undefined && result.token ? {count:result.count,blockedCompany:result.blockedCompany ?? 0,token:result.token} : null)
+        setPreview(result.count !== undefined && result.token ? {count:result.count,blockedCompany:result.blockedCompany ?? 0,blockedOtherSource:result.blockedOtherSource ?? 0,token:result.token} : null)
         setError('A quantidade mudou para ' + (result.count ?? '—') + '. Confirme novamente.')
         return
       }
@@ -99,6 +99,9 @@ export function CollectionFilterDirectDialog({
           <p role="status"><strong>{preview.count} publicações serão apagadas.</strong>
             {preview.blockedCompany > 0 && (
               <span> {preview.blockedCompany} possuem vínculo de cliente e não serão excluídas.</span>
+            )}
+            {preview.blockedOtherSource > 0 && (
+              <span> {preview.blockedOtherSource} são compartilhadas com outras fontes oficiais e serão preservadas.</span>
             )}
           </p>
         )}
