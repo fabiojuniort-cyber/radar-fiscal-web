@@ -233,6 +233,7 @@ export interface CollectionFilterDirectRuleInput {
 export interface CollectionFilterDirectPreview {
   count: number
   blockedCompany: number
+  blockedOtherSource: number
   token: string
 }
 
@@ -255,7 +256,7 @@ export async function applyDirectCollectionFilterRule(
     expectedCount: number
     previewToken: string
   },
-): Promise<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; token?: string }> {
+): Promise<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; blockedOtherSource?: number; token?: string }> {
   return readJson<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; token?: string }>(
     await apiFetch('/api/v1/admin/collection-filter/direct-rule/confirm', {
       method: 'POST',
