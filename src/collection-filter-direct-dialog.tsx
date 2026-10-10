@@ -54,8 +54,8 @@ export function CollectionFilterDirectDialog({
       })
       if (result.changed) {
         // Never apply a stale confirmation; the next click requires a new count.
-        setPreview(null)
-        setError('A quantidade mudou. Consulte o novo número antes de confirmar.')
+        setPreview(result.count !== undefined && result.token ? {count:result.count,blockedCompany:result.blockedCompany ?? 0,token:result.token} : null)
+        setError('A quantidade mudou para ' + (result.count ?? '—') + '. Confirme novamente.')
         return
       }
       await onApplied()
