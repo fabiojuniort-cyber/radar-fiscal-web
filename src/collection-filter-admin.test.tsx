@@ -60,6 +60,8 @@ describe('L-11 filtro direto DOU',()=>{
     fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
     await screen.findByText(/2 publicações serão apagadas/)
+    expect(screen.getByText(/1 protegidas \(não serão apagadas\)/)).toBeInTheDocument()
+    expect(screen.getByText(/1 com vínculo a empresa cliente/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação e exclusão'}))
     await screen.findByText(/3 publicações serão apagadas/)
     expect(screen.getByRole('alert')).toHaveTextContent('A quantidade mudou para 3')
