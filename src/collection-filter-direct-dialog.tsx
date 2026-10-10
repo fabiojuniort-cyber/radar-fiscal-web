@@ -98,7 +98,7 @@ export function CollectionFilterDirectDialog({
         {preview && (
           <div role="status" className="cf-preview-summary">
             <p><strong>{preview.count} publicações serão apagadas.</strong></p>
-            <p><strong>{preview.blockedCompany + preview.blockedOtherSource} protegidas (não serão apagadas).</strong></p>
+            <p><strong>{preview.blockedCompany + (preview.blockedOtherSource ?? 0)} protegidas (não serão apagadas).</strong></p>
             {preview.blockedCompany > 0 && (
               <p>Motivo: {preview.blockedCompany} com vínculo a empresa cliente.</p>
             )}
