@@ -28,6 +28,8 @@ import {
 import './collection-filter-admin.css'
 import { fetchCatalogFacets } from './catalog-api'
 import { TypesEditor, TermsEditor, NewTypeActions, type FilterOrigins } from './collection-filter-editors'
+import { CollectionFilterDirectDialog } from './collection-filter-direct-dialog'
+import type { CollectionFilterDirectRuleInput } from './collection-filter-api'
 import { normalizeFilterText, filterTermKey } from './collection-filter-csv'
 import { CollectionFilterDiscards, CollectionFilterDiscardAlerts } from './collection-filter-discards'
 
@@ -114,6 +116,7 @@ function CollectionFilterAdminContent({ apiFetch }: {
 }) {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('types')
+  const [directRule, setDirectRule] = useState<CollectionFilterDirectRuleInput | null>(null)
   const [draft, setDraft] = useState<EditableDocument>(
     structuredClone(EMPTY_DRAFT),
   )
@@ -407,7 +410,8 @@ function CollectionFilterAdminContent({ apiFetch }: {
         </nav>
 
         {tab === 'types' && (
-          <TypesEditor draft={draft} setDraft={setDraft} origins={origins} apiFetch={apiFetch} />
+          <TypesEditor draft={draft} setDraft={setDraft} origins={origins} apiFetch={apiFetch}
+            onEditMode={(rule, mode) => setDirectRule({sourceCode:rule.sourceCode,section:rule.section,canonicalType:rule.canonicalType,mode})} />
         )}
         {tab === 'terms' && (
           <TermsEditor draft={draft} setDraft={setDraft} origins={origins} apiFetch={apiFetch} />
@@ -465,6 +469,7 @@ function CollectionFilterAdminContent({ apiFetch }: {
                     </div>
                     <div className="cf-new-type-resolution">
                       <NewTypeActions item={item} origins={origins} mergeRules={draft.rules} apiFetch={apiFetch}
+                        onClassify={item.source_code === 'dou' ? (value) => setDirectRule({sourceCode:'dou',section:value.section,canonicalType:value.normalized_type,mode:'KEEP_ALWAYS',newTypeId:value.id}) : undefined}
                         pending={resolveType.isPending}
                         error={resolveType.isError ? errorText(resolveType.error) : null}
                         onResolve={async (status, canonicalType) => { resolveType.reset(); await resolveType.mutateAsync({id:item.id,status,canonicalType}) }}
@@ -490,6 +495,15 @@ function CollectionFilterAdminContent({ apiFetch }: {
 
         {tab === 'discarded' && <CollectionFilterDiscards apiFetch={apiFetch} />}
         {tab === 'discard-alerts' && <CollectionFilterDiscardAlerts apiFetch={apiFetch} />}
+
+        {directRule && <CollectionFilterDirectDialog
+          apiFetch={apiFetch} initial={directRule}
+          onClose={() => setDirectRule(null)}
+          onApplied={async () => { setLoadedPolicyId(null); await Promise.all([
+            queryClient.invalidateQueries({queryKey:['collection-filter','state']}),
+            queryClient.invalidateQueries({queryKey:['collection-filter','new-types']}),
+          ]) }}
+        />}
 
         <footer className="cf-footer">
           <span>
