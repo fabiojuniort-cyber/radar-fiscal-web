@@ -87,7 +87,9 @@ export function CollectionFilterDirectDialog({
         // the bounded net reduction seen by the server on the next preview.
         // Never infer deletions from a failed preview or a count-drift pause.
         if (unacknowledgedCount !== null) {
-          finished += Math.min(500, Math.max(0, unacknowledgedCount - stepPreview.count))
+          const reconciled = Math.min(500, Math.max(0, unacknowledgedCount - stepPreview.count))
+          finished += reconciled
+          if (reconciled > 0) step += 1
           setUnacknowledgedCount(null)
         }
         total = finished + stepPreview.count
