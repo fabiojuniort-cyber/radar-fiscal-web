@@ -212,6 +212,15 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
                 <NewTypeActions item={item} apiFetch={apiFetch} origins={origins}
                   mergeRules={rules} pending={busy} error={error||null}
                   onClassify={canonicalType=>{
+                    if(item.source_code!=='dou'){
+                      // Other sources are classified in KEEP_ALWAYS mode only:
+                      // no destructive operation without a source-aware preview.
+                      void edit('NEWTYPE_KEEP',{
+                        sourceCode:item.source_code,section:item.section,
+                        canonicalType,newTypeId:item.id,
+                      }).catch(()=>{})
+                      return
+                    }
                     setDirectRule({
                       sourceCode:item.source_code,section:item.section,
                       canonicalType,mode:'KEEP_ALWAYS',newTypeId:item.id,
