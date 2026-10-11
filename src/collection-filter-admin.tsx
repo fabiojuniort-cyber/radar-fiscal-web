@@ -16,6 +16,7 @@ import {
 } from './collection-filter-direct-editors'
 import { normalizeFilterText } from './collection-filter-csv'
 import { CollectionFilterDirectDialog } from './collection-filter-direct-dialog'
+import { CollectionFilterScopePurgeDialog } from './collection-filter-scope-purge-dialog'
 import { CollectionFilterDiscards,CollectionFilterDiscardAlerts } from './collection-filter-discards'
 import './collection-filter-admin.css'
 
@@ -40,6 +41,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
   const qc=useQueryClient()
   const [tab,setTab]=useState<Tab>('types')
   const [directRule,setDirectRule]=useState<CollectionFilterDirectRuleInput|null>(null)
+  const [scopePurgeOpen,setScopePurgeOpen]=useState(false)
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const me=useQuery({queryKey:['admin','me'],queryFn:()=>fetchAdminMe(apiFetch),retry:false})
@@ -154,6 +156,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
       <nav aria-label="Áreas administrativas">
         <Link to="/admin/taxonomia">Taxonomia</Link>
         <Link to="/admin/administradores">Administradores</Link>
+        <button type="button" onClick={()=>setScopePurgeOpen(true)}>Apagar fora do escopo</button>
       </nav>
     </header>
     <main className="cf-main">
@@ -241,6 +244,8 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         <span>Alterações aplicadas diretamente à política publicada</span>
         <span>Referência atual: versão {document.version}</span>
       </footer>
+      {scopePurgeOpen&&<CollectionFilterScopePurgeDialog
+        apiFetch={apiFetch} onClose={()=>setScopePurgeOpen(false)} onApplied={refresh}/>}
       {directRule&&<CollectionFilterDirectDialog
         apiFetch={apiFetch} initial={directRule}
         onClose={()=>setDirectRule(null)} onApplied={refresh}/>}
