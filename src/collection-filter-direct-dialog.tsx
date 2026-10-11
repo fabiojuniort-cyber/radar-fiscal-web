@@ -36,7 +36,7 @@ export function CollectionFilterDirectDialog({
   onClose: () => void
   onApplied: () => Promise<void>
 }) {
-  const [rule, setRule] = useState<CollectionFilterDirectRuleInput & { mode: CollectionFilterMode | '' }>({
+  const [rule, setRule] = useState<Omit<CollectionFilterDirectRuleInput, 'mode'> & { mode: CollectionFilterMode | '' }>({
     ...initial, mode: initial.newTypeId ? '' : initial.mode,
   })
   const [preview, setPreview] = useState<CollectionFilterDirectPreview | null>(null)
