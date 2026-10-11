@@ -55,6 +55,7 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
         setPreview({count:result.count??0,token:result.token??'',
           outOfScope:result.outOfScope??0,
           hiddenLegacy:result.hiddenLegacy??0,
+          ruleDiscards:result.ruleDiscards??0,byRule:result.byRule??[],
           blockedCompany:result.blockedCompany??0,
           blockedOtherSource:result.blockedOtherSource??0})
         setWaitingContinue(false)
@@ -91,11 +92,14 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
   }
 
   return <FilterDialog title="Apagar fora do escopo"
-    description="Publicações DOU fora do escopo ou ocultas pela regra antiga. Vínculos com clientes e outras fontes serão protegidos."
+    description="Publicações DOU fora do escopo, descartadas pelo motor tributário ou ocultas pela regra antiga. Vínculos com clientes e outras fontes serão protegidos."
     onClose={onClose}>
     <div className="cf-modal-form">
       {preview&&<div className="cf-preview-summary" role="status">
-        <p><strong>{numberBr(preview.outOfScope??0)} fora do escopo + {numberBr(preview.hiddenLegacy??0)} ocultas pela regra antiga / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
+        <p><strong>{numberBr(preview.outOfScope??0)} fora do escopo + {numberBr(preview.ruleDiscards??0)} pelas regras + {numberBr(preview.hiddenLegacy??0)} ocultas pela regra antiga / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
+        {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por regra">
+          {(preview.byRule??[]).map((r,i)=><li key={i}>{r.section} / {r.canonicalType} / {r.mode}: {numberBr(r.count)}</li>)}
+        </ul>}
         {preview.blockedCompany>0&&<p>{numberBr(preview.blockedCompany)} vinculadas a clientes</p>}
         {preview.blockedOtherSource>0&&<p>{numberBr(preview.blockedOtherSource)} com outra origem oficial</p>}
       </div>}

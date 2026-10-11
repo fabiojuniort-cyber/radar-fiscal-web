@@ -258,6 +258,8 @@ export interface CollectionFilterDirectPreview {
   count: number
   outOfScope?: number
   hiddenLegacy?: number
+  ruleDiscards?: number
+  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
   blockedCompany: number
   blockedOtherSource: number
   token: string
