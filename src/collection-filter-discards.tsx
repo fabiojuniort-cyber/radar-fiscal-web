@@ -147,6 +147,8 @@ export function CollectionFilterDiscards({apiFetch}:{apiFetch:ProductApiFetch}) 
         <span role="status">{total.toLocaleString('pt-BR')} registros · Página {page+1} de {pages}</span>
         <button type="button" onClick={apply}>Aplicar filtros</button>
         <button type="button" onClick={reset}>Limpar filtros</button>
+        <button type="button" disabled={query.isFetching}
+          onClick={()=>void query.refetch()}>Atualizar desconsiderados</button>
         <button type="button" disabled={exporting||query.isPending||query.isError}
           onClick={()=>void exportAll()}><Download size={15}/>{exporting?'Exportando…':'Exportar Excel'}</button>
       </div>
@@ -180,7 +182,7 @@ export function CollectionFilterDiscards({apiFetch}:{apiFetch:ProductApiFetch}) 
               {REPORT_COLUMNS.map(c=><td key={c.key}>
                 {c.key==='officialUrl'?
                   (safeUrl(r.official_url)?<a href={safeUrl(r.official_url)??'#'}
-                    target="_blank" rel="noopener noreferrer">Abrir fonte oficial</a>:'—')
+                    target="_blank" rel="noopener noreferrer">Abrir fonte oficial</a>:'Link oficial indisponível')
                   :c.value(r)}
               </td>)}
             </tr>)}</tbody>
