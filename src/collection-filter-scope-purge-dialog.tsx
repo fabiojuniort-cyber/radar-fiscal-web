@@ -179,9 +179,9 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
           onClick={()=>{pausedRef.current=true;setPausing(true)}}>
           {pausing?'Pausando…':'Pausar'}
         </button>}
-        <button type="button" disabled={working}
+        <button type="button" disabled={working||running}
           onClick={()=>void (waitingContinue?confirm(true):!preview?consult():confirm())}>
-          {working?'Processando…':waitingContinue?'Continuar':
+          {working||running?'Processando…':waitingContinue?'Continuar':
             !preview?'Consultar quantidade':'Confirmar exclusão'}
         </button>
       </div>
