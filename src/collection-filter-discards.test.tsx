@@ -131,7 +131,7 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input); calls.push(url)
       if (url.endsWith('/me')) return json({ platformAdmin: true })
-      if (url.endsWith('/state')) return json({ policies: [], documents: {}, simulations: [], newTypesOpen: 0 })
+      if (url.endsWith('/state')) return json({ policies: [{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5}], documents: {'11111111-1111-4111-8111-111111111111':{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5,rules:[],aliases:[],terms:[]}}, newTypesOpen: 0 })
       return json({ items: url.includes('/discarded?') ? [discard] : [] })
     }) as ProductApiFetch
     mount(<CollectionFilterAdminPage apiFetch={fetch} />)
