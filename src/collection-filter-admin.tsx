@@ -116,7 +116,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
     })
   }
   const onAlias=async(action:'ALIAS_PUT'|'ALIAS_DELETE',alias:CollectionFilterAlias)=>{
-    await edit(action,alias)
+    await edit(action,{...alias})
   }
   const onTerm=async(term:CollectionFilterTerm,old?:CollectionFilterTerm)=>{
     await edit('TERM_PUT',{term:normalTerm(term),
