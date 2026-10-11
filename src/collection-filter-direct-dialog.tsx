@@ -69,10 +69,7 @@ export function CollectionFilterDirectDialog({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível consultar o acervo.')
     } finally {
-      executingRef.current = false
       setWorking(false)
-      setRunning(false)
-      setPausing(false)
     }
   }
 
@@ -208,7 +205,10 @@ export function CollectionFilterDirectDialog({
       setCanContinue(true)
       setError(formatStageError(cause, step))
     } finally {
+      executingRef.current = false
       setWorking(false)
+      setRunning(false)
+      setPausing(false)
     }
   }
 
