@@ -32,7 +32,7 @@ test('platform admin reviews discards and rate alerts without mutations or overf
   await page.getByRole('button', { name: 'Desconsiderados', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Portaria administrativa para revisão' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', 'https://www.in.gov.br/ato-42')
-  await expect(page.getByText('v1 · revisão 5', { exact: true })).toBeVisible()
+  await expect(page.getByText('v1 · revisão 5', { exact: true }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Próxima', exact: true })).toBeDisabled()
   await page.getByLabel('Fonte', { exact: true }).fill('dou')
   await page.getByRole('button', { name: 'Filtrar', exact: true }).click()
