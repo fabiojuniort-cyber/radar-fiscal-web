@@ -42,12 +42,16 @@ export function CollectionFilterDirectDialog({
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<DirectProgress | null>(null)
   const [canContinue, setCanContinue] = useState(false)
+  // Only a failed confirmation may have committed without a response.
+  // A failed preview or a changed count must never be treated as deletion.
+  const [unacknowledgedCount, setUnacknowledgedCount] = useState<number | null>(null)
 
   useEffect(() => {
     setPreview(null)
     setError(null)
     setProgress(null)
     setCanContinue(false)
+    setUnacknowledgedCount(null)
   }, [rule])
 
   const showPreview = async () => {
@@ -70,7 +74,7 @@ export function CollectionFilterDirectDialog({
     setError(null)
     setCanContinue(false)
     let finished = progress?.apagadas ?? 0
-    let total = progress?.total ?? preview?.count ?? 0
+    let total = finished + (progress?.restantes ?? preview?.count ?? 0)
     let step = (progress?.etapa ?? 0) + 1
     let isResume = manualContinue || finished > 0
     let stepPreview = preview
@@ -79,7 +83,20 @@ export function CollectionFilterDirectDialog({
       if (manualContinue) {
         stepPreview = await previewDirectCollectionFilterRule(apiFetch, rule)
         setPreview(stepPreview)
-        total = Math.max(total, finished + stepPreview.count)
+        // A lost HTTP response can follow a committed batch. Recover only
+        // the bounded net reduction seen by the server on the next preview.
+        // Never infer deletions from a failed preview or a count-drift pause.
+        if (unacknowledgedCount !== null) {
+          finished += Math.min(500, Math.max(0, unacknowledgedCount - stepPreview.count))
+          setUnacknowledgedCount(null)
+        }
+        total = finished + stepPreview.count
+        setProgress({apagadas:finished,restantes:stepPreview.count,total,etapa:step-1})
+        if (stepPreview.count === 0 && finished > 0) {
+          await onApplied()
+          onClose()
+          return
+        }
       }
       if (!stepPreview) return
 
@@ -93,8 +110,10 @@ export function CollectionFilterDirectDialog({
             resume: isResume,
           })
         } catch (cause) {
-          setProgress({ apagadas: finished, restantes: stepPreview.count, total, etapa: step - 1 })
+          setProgress({ apagadas: finished, restantes: stepPreview.count, total: finished + stepPreview.count, etapa: step - 1 })
+          setUnacknowledgedCount(stepPreview.count)
           if (cause instanceof CollectionFilterApiError && cause.code === 'confirmed_rule_not_active') {
+            setUnacknowledgedCount(null)
             setCanContinue(false)
             setPreview(stepPreview)
             setError(`Etapa ${step}: HTTP ${cause.status} — a regra não está ativa. Confirme novamente a quantidade exibida.`)
@@ -105,12 +124,14 @@ export function CollectionFilterDirectDialog({
           return
         }
 
+        setUnacknowledgedCount(null)
         if (response.changed) {
+          const current = response.count ?? 0
+          setProgress({apagadas:finished,restantes:current,total:finished+current,etapa:step-1})
           setPreview(response.count !== undefined && response.token
             ? { count: response.count, blockedCompany: response.blockedCompany ?? 0,
                 blockedOtherSource: response.blockedOtherSource ?? 0, token: response.token }
             : null)
-          setProgress(null)
           setCanContinue(false)
           setError('A quantidade mudou para ' + (response.count ?? '—') + '. Confirme novamente.')
           return
@@ -119,7 +140,7 @@ export function CollectionFilterDirectDialog({
         const removed = response.apagadas ?? response.deletedCount ?? 0
         const left = response.restantes ?? 0
         finished += removed
-        total = Math.max(total, finished + left)
+        total = finished + left
         setProgress({ apagadas: finished, restantes: left, total, etapa: step })
 
         if (left === 0) {
@@ -145,6 +166,8 @@ export function CollectionFilterDirectDialog({
         }
         if (nextPreview.count !== left) {
           setPreview(nextPreview)
+          setProgress({apagadas:finished,restantes:nextPreview.count,
+            total:finished+nextPreview.count,etapa:step})
           setCanContinue(true)
           setError(`Etapa ${step + 1}: a contagem passou de ${numberBr(left)} para ${numberBr(nextPreview.count)}. Use Continuar para recalcular e seguir do que falta.`)
           return
