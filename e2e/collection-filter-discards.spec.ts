@@ -8,7 +8,14 @@ test('platform admin reviews discards and rate alerts without mutations or overf
   await page.route('**/api/v1/admin/collection-filter/**', async route => {
     if (route.request().method() !== 'GET') writes.push(route.request().url())
     const url = new URL(route.request().url())
-    if (url.pathname.endsWith('/state')) return route.fulfill({ json: { policies: [], documents: {}, simulations: [], newTypesOpen: 0 } })
+    if (url.pathname.endsWith('/state')) {
+      const id='11111111-1111-4111-8111-111111111111'
+      return route.fulfill({ json: {
+        policies:[{id,status:'APPROVED',version:1,revision:5}],
+        documents:{[id]:{id,status:'APPROVED',version:1,revision:5,rules:[],aliases:[],terms:[]}},
+        newTypesOpen:0,
+      } })
+    }
     if (url.pathname.endsWith('/discarded')) return route.fulfill({ json: { items: [{
       id: 'discard-1', source_code: 'dou', connector_key: 'dou-inlabs', section: 'DO1', raw_type: 'PORTARIA', canonical_type: 'PORTARIA',
       title: 'Portaria administrativa para revisão', act_number: '42', published_on: '2026-10-07', official_url: 'https://www.in.gov.br/ato-42',
