@@ -300,30 +300,27 @@ describe('L-11 filtro direto DOU',()=>{
 })
 
 
-describe('L-11 modal selection and L-15 out-of-scope entrypoint',()=>{
-  it('leaves Modo blank when classifying a new type and disables quantity lookup',async()=>{
-    const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
-      const url=String(input)
-      if(url.includes('/admin/me'))return json({platformAdmin:true})
-      if(url.endsWith('/state'))return json(state)
-      if(url.includes('/new-types'))return json(newTypes)
-      return json({items:[]})
-    }) as ProductApiFetch
-    mount(apiFetch)
-    fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
-    fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
-    fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
-    const mode=screen.getByLabelText('Modo') as HTMLSelectElement
-    expect(mode.value).toBe('')
-    expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
-    const consult=screen.getByRole('button',{name:'Consultar quantidade'})
-    expect(consult).toBeDisabled()
-    fireEvent.change(mode,{target:{value:'EXCLUDE_ALWAYS'}})
-    expect(consult).not.toBeDisabled()
-    expect(apiFetch).not.toHaveBeenCalledWith(
-      expect.stringContaining('/out-of-scope/confirm'),expect.anything())
-  })
+it('L-11: modo em branco exige seleção após classificar novo tipo',async()=>{
+  const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+    const path=String(input)
+    if(path.includes('/admin/me'))return json({platformAdmin:true})
+    if(path.endsWith('/state'))return json(state)
+    if(path.includes('/new-types'))return json(newTypes)
+    return json({items:[]})
+  }) as ProductApiFetch
+  mount(apiFetch)
+  fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
+  fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
+  fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
+  const mode=screen.getByLabelText('Modo') as HTMLSelectElement
+  expect(mode.value).toBe('')
+  expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
+  expect(screen.getByRole('button',{name:'Consultar quantidade'})).toBeDisabled()
+  fireEvent.change(mode,{target:{value:'EXCLUDE_ALWAYS'}})
+  expect(screen.getByRole('button',{name:'Consultar quantidade'})).not.toBeDisabled()
+})
 
+describe('L-15 new scoped purge button',()=>{
   it('adds exactly one out-of-scope button and previews without deleting',async()=>{
     let confirmed=0
     const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
