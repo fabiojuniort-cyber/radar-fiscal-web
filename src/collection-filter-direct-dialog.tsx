@@ -36,7 +36,9 @@ export function CollectionFilterDirectDialog({
   onClose: () => void
   onApplied: () => Promise<void>
 }) {
-  const [rule, setRule] = useState<CollectionFilterDirectRuleInput>(initial)
+  const [rule, setRule] = useState<CollectionFilterDirectRuleInput & { mode: CollectionFilterMode | '' }>({
+    ...initial, mode: initial.newTypeId ? '' : initial.mode,
+  })
   const [preview, setPreview] = useState<CollectionFilterDirectPreview | null>(null)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,10 +57,11 @@ export function CollectionFilterDirectDialog({
   }, [rule])
 
   const showPreview = async () => {
+    if (!rule.mode) return
     setWorking(true)
     setError(null)
     try {
-      setPreview(await previewDirectCollectionFilterRule(apiFetch, rule))
+      setPreview(await previewDirectCollectionFilterRule(apiFetch, { ...rule, mode: rule.mode as CollectionFilterMode }))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível consultar o acervo.')
     } finally {
@@ -69,7 +72,7 @@ export function CollectionFilterDirectDialog({
   // A successful response starts the next step, but an error always stops:
   // no automatic HTTP retries, even on a 499 or a lost response.
   const confirm = async (manualContinue = false) => {
-    if (!preview && !manualContinue) return
+    if (!rule.mode || (!preview && !manualContinue)) return
     setWorking(true)
     setError(null)
     setCanContinue(false)
@@ -81,7 +84,7 @@ export function CollectionFilterDirectDialog({
 
     try {
       if (manualContinue) {
-        stepPreview = await previewDirectCollectionFilterRule(apiFetch, rule)
+        stepPreview = await previewDirectCollectionFilterRule(apiFetch, { ...rule, mode: rule.mode as CollectionFilterMode })
         setPreview(stepPreview)
         // A lost HTTP response can follow a committed batch. Recover only
         // the bounded net reduction seen by the server on the next preview.
@@ -107,6 +110,7 @@ export function CollectionFilterDirectDialog({
         try {
           response = await applyDirectCollectionFilterRule(apiFetch, {
             ...rule,
+            mode: rule.mode as CollectionFilterMode,
             expectedCount: stepPreview.count,
             previewToken: stepPreview.token,
             resume: isResume,
@@ -209,7 +213,8 @@ export function CollectionFilterDirectDialog({
         </label>
         <label>Modo
           <select aria-label="Modo" value={rule.mode}
-            onChange={e => setRule(r => ({ ...r, mode: e.target.value as CollectionFilterMode }))}>
+            onChange={e => setRule(r => ({ ...r, mode: e.target.value as CollectionFilterMode | '' }))}>
+            <option value="">Selecione o modo</option>
             {MODES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
@@ -231,7 +236,7 @@ export function CollectionFilterDirectDialog({
         {error && <p className="cf-error" role="alert">{error}</p>}
         <div className="cf-row-actions">
           <button type="button" onClick={onClose}>Cancelar</button>
-          <button type="button" disabled={working || !rule.section.trim() || !rule.canonicalType.trim()}
+          <button type="button" disabled={working || !rule.mode || !rule.section.trim() || !rule.canonicalType.trim()}
             onClick={canContinue ? () => void confirm(true) : preview ? () => void confirm() : showPreview}>
             {working ? 'Processando…' : canContinue ? 'Continuar'
               : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
