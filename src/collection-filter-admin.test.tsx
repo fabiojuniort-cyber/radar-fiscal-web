@@ -180,7 +180,7 @@ describe('L-11 filtro direto DOU',()=>{
     await waitFor(()=>expect(confirms).toHaveLength(2))
     expect(confirms.map(x=>x.expectedCount)).toEqual([1000,500])
     expect(confirms.map(x=>x.resume)).toEqual([false,true])
-    expect(await screen.findByText(/600 de 1.000 apagadas/)).toBeInTheDocument()
+    expect((await screen.findByText(/600 de 1.000 apagadas/)).textContent).toBe('600 de 1.000 apagadas')
   })
 
   it('atualiza total ao divergir a contagem entre etapas, sem perder acumulado',async()=>{
