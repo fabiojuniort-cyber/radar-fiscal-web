@@ -226,17 +226,14 @@ export function CollectionFilterDirectDialog({
           </div>
         )}
         {progress && (progress.apagadas > 0 || progress.etapa > 0) && (
-          <div role="status" aria-live="polite" className="cf-preview-summary">
-            <strong>{numberBr(progress.apagadas)} de {numberBr(progress.total)} apagadas</strong>
-            <p>Etapa {progress.etapa} — {numberBr(progress.restantes)} restantes.</p>
-          </div>
+          <p role="status" aria-live="polite">{numberBr(progress.apagadas)} de {numberBr(progress.total)} apagadas</p>
         )}
         {error && <p className="cf-error" role="alert">{error}</p>}
         <div className="cf-row-actions">
           <button type="button" onClick={onClose}>Cancelar</button>
           <button type="button" disabled={working || !rule.section.trim() || !rule.canonicalType.trim()}
             onClick={canContinue ? () => void confirm(true) : preview ? () => void confirm() : showPreview}>
-            {working ? 'Processando etapa…' : canContinue ? 'Continuar'
+            {working ? 'Processando…' : canContinue ? 'Continuar'
               : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
           </button>
         </div>
