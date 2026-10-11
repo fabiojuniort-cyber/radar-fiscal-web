@@ -279,6 +279,8 @@ export async function previewDirectCollectionFilterRule(
 }
 
 export interface CollectionFilterDirectConfirmResult {
+  ruleDiscards?: number
+  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
   changed: boolean
   outOfScope?: number
   hiddenLegacy?: number
