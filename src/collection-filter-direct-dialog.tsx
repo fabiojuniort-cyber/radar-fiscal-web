@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ProductApiFetch } from './product-api'
 import { FilterDialog } from './collection-filter-dialog'
 import {
@@ -44,6 +44,10 @@ export function CollectionFilterDirectDialog({
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<DirectProgress | null>(null)
   const [canContinue, setCanContinue] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [pausing, setPausing] = useState(false)
+  const pausedRef = useRef(false)
+  const executingRef = useRef(false)
   // Only a failed confirmation may have committed without a response.
   // A failed preview or a changed count must never be treated as deletion.
   const [unacknowledgedCount, setUnacknowledgedCount] = useState<number | null>(null)
@@ -72,7 +76,11 @@ export function CollectionFilterDirectDialog({
   // A successful response starts the next step, but an error always stops:
   // no automatic HTTP retries, even on a 499 or a lost response.
   const confirm = async (manualContinue = false) => {
-    if (!rule.mode || (!preview && !manualContinue)) return
+    if (executingRef.current || !rule.mode || (!preview && !manualContinue)) return
+    executingRef.current = true
+    pausedRef.current = false
+    setRunning(true)
+    setPausing(false)
     setWorking(true)
     setError(null)
     setCanContinue(false)
@@ -106,6 +114,12 @@ export function CollectionFilterDirectDialog({
       if (!stepPreview) return
 
       while (true) {
+        // Pausing never aborts an in-flight confirmation. It stops before
+        // any next batch, which must be resumed explicitly after re-preview.
+        if (pausedRef.current) {
+          setCanContinue(true)
+          return
+        }
         let response
         try {
           response = await applyDirectCollectionFilterRule(apiFetch, {
@@ -160,6 +174,11 @@ export function CollectionFilterDirectDialog({
           return
         }
 
+        if (pausedRef.current) {
+          setCanContinue(true)
+          return
+        }
+
         // The backend calculates every step against the current archive.
         // If the count changed unexpectedly, the user must explicitly resume.
         let nextPreview: CollectionFilterDirectPreview
@@ -186,7 +205,10 @@ export function CollectionFilterDirectDialog({
       setCanContinue(true)
       setError(formatStageError(cause, step))
     } finally {
+      executingRef.current = false
       setWorking(false)
+      setRunning(false)
+      setPausing(false)
     }
   }
 
@@ -194,7 +216,7 @@ export function CollectionFilterDirectDialog({
     <FilterDialog
       title="Classificar tipo de publicação"
       description="A regra será aplicada imediatamente às próximas coletas do DOU. Publicações descartadas serão excluídas somente após confirmação."
-      onClose={onClose}
+      onClose={() => { pausedRef.current = true; onClose() }}
     >
       <div className="cf-modal-form">
         <label>Fonte
@@ -235,10 +257,14 @@ export function CollectionFilterDirectDialog({
         )}
         {error && <p className="cf-error" role="alert">{error}</p>}
         <div className="cf-row-actions">
-          <button type="button" onClick={onClose}>Cancelar</button>
-          <button type="button" disabled={working || !rule.mode || !rule.section.trim() || !rule.canonicalType.trim()}
+          <button type="button" onClick={() => { pausedRef.current = true; onClose() }}>Cancelar</button>
+          {running && <button type="button" disabled={pausing}
+            onClick={() => { pausedRef.current = true; setPausing(true) }}>
+            {pausing ? 'Pausando…' : 'Pausar'}
+          </button>}
+          <button type="button" disabled={working || running || !rule.mode || !rule.section.trim() || !rule.canonicalType.trim()}
             onClick={canContinue ? () => void confirm(true) : preview ? () => void confirm() : showPreview}>
-            {working ? 'Processando…' : canContinue ? 'Continuar'
+            {working || running ? 'Processando…' : canContinue ? 'Continuar'
               : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
           </button>
         </div>
