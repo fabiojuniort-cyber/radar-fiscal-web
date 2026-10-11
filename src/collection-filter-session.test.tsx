@@ -41,7 +41,7 @@ function installFetch(options: { lateDiscard?: Promise<Response>; lateRefresh?: 
     if (url === '/auth/me') return json({ user: { id: token, email: 'test@test.invalid', name: null }, memberships: [] })
     if (url === '/auth/logout') return json({})
     if (url === '/api/v1/admin/me') return json({ platformAdmin: token === 'ADMIN' })
-    if (url.endsWith('/state')) return json({ policies: [], documents: {}, simulations: [], newTypesOpen: 0 })
+    if (url.endsWith('/state')) return json({ policies: [{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5}], documents: {'11111111-1111-4111-8111-111111111111':{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5,rules:[],aliases:[],terms:[]}}, newTypesOpen: 0 })
     if (url.includes('/discarded?')) {
       if (options.lateDiscard) return options.lateDiscard
       return json({ items: [{ id: 'restricted', title: 'Private admin discard', source_code: 'dou', reason_code: 'NO_TAX_TERM', policy_version: 1, policy_revision: 5 }] })
