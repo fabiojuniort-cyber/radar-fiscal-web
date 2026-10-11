@@ -319,3 +319,30 @@ it('L-11: modo em branco exige seleção após classificar novo tipo',async()=>{
   fireEvent.change(mode,{target:{value:'EXCLUDE_ALWAYS'}})
   expect(screen.getByRole('button',{name:'Consultar quantidade'})).not.toBeDisabled()
 })
+
+describe('L-15 new scoped purge button',()=>{
+  it('adds exactly one out-of-scope button and previews without deleting',async()=>{
+    let confirmed=0
+    const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+      const url=String(input)
+      if(url.includes('/admin/me'))return json({platformAdmin:true})
+      if(url.endsWith('/state'))return json(state)
+      if(url.includes('/new-types'))return json(newTypes)
+      if(url.endsWith('/out-of-scope/preview'))return json({
+        count:23000,blockedCompany:2,blockedOtherSource:3,token:'a'.repeat(64),
+      })
+      if(url.endsWith('/out-of-scope/confirm')){confirmed++;return json({
+        changed:false,apagadas:500,restantes:22500,deletedCount:500,
+      })}
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    const button=await screen.findByRole('button',{name:'Apagar fora do escopo'})
+    expect(screen.getAllByRole('button',{name:'Apagar fora do escopo'})).toHaveLength(1)
+    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
+    expect(await screen.findByText('23.000 serão apagadas')).toBeInTheDocument()
+    expect(screen.getByText('5 protegidas')).toBeInTheDocument()
+    expect(confirmed).toBe(0)
+  })
+})
