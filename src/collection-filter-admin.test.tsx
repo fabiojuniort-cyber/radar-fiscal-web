@@ -253,8 +253,10 @@ describe('L-11 filtro direto DOU',()=>{
   })
   it('excluir uma regra usa edição direta, sem purgar publicações',async()=>{
     const actions:string[]=[]
+    const paths:string[]=[]
     const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
       const path=String(input)
+      paths.push(path)
       if(path.includes('/admin/me'))return json({platformAdmin:true})
       if(path.endsWith('/state'))return json(state)
       if(path.includes('/new-types'))return json(newTypes)
@@ -268,7 +270,7 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     fireEvent.click(await screen.findByRole('button',{name:'Remover PORTARIA'}))
     await waitFor(()=>expect(actions).toEqual(['RULE_DELETE']))
-    expect(apiFetch.mock.calls.some(([path])=>String(path).includes('direct-rule/confirm'))).toBe(false)
+    expect(paths.some(path=>path.includes('direct-rule/confirm'))).toBe(false)
   })
 
   it('cadastrar termo grava diretamente na política aprovada',async()=>{
@@ -285,7 +287,7 @@ describe('L-11 filtro direto DOU',()=>{
       return json({items:[]})
     }) as ProductApiFetch
     mount(apiFetch)
-    fireEvent.click(await screen.findByRole('button',{name:'Termos',exact:true}))
+    fireEvent.click(await screen.findByRole('button',{name:'Termos'}))
     fireEvent.change(await screen.findByRole('textbox',{name:'Texto do termo'}),{
       target:{value:'Crédito presumido'},
     })
