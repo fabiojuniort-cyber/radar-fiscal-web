@@ -279,3 +279,22 @@ export async function applyDirectCollectionFilterRule(
     }),
   )
 }
+
+/** Strict non-destructive direct admin actions against the active policy. */
+export type CollectionFilterAdminEditAction =
+  | 'RULE_KEEP' | 'RULE_DELETE' | 'TERM_PUT' | 'TERM_DELETE'
+  | 'ALIAS_PUT' | 'ALIAS_DELETE' | 'NEWTYPE_MERGE' | 'NEWTYPE_KEEP'
+
+export async function editCollectionFilterActive(
+  apiFetch: ProductApiFetch,
+  action: CollectionFilterAdminEditAction,
+  payload: Record<string, unknown>,
+): Promise<{revision:number}> {
+  return readJson<{revision:number}>(await apiFetch(
+    '/api/v1/admin/collection-filter/direct-admin-edit', {
+      method:'POST',
+      headers:{Accept:'application/json','Content-Type':'application/json'},
+      body:JSON.stringify({action,payload}),
+    },
+  ))
+}

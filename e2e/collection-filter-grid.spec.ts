@@ -27,7 +27,7 @@ async function setup(page:Page, drift=false) {
       }
       if(body.canonicalType==='PORTARIA')portariaMode=body.mode as string
       if(body.newTypeId===newTypeId)resolved=true
-      return r.fulfill({json:{changed:false,deletedCount:drift?3:2,revision:6}})
+      return r.fulfill({json:{changed:false,apagadas:drift?3:2,restantes:0,deletedCount:drift?3:2,revision:6}})
     }
     if(method==='GET'&&pathname.endsWith('/state')){
       const policy={
@@ -81,6 +81,9 @@ test('L-11 Novos tipos: divergência de contagem exige segunda confirmação',as
   await page.getByRole('button',{name:/Novos tipos/}).click()
   await expect(page.getByRole('heading',{name:'Novos tipos'})).toBeVisible()
   await page.getByRole('button',{name:'Classificar'}).click()
+  const choose=page.getByRole('dialog',{name:'Classificar novo tipo'})
+  await expect(choose).toBeVisible()
+  await choose.getByRole('button',{name:'Confirmar classificação'}).click()
   const dialog=page.getByRole('dialog',{name:'Classificar tipo de publicação'})
   await expect(dialog.getByLabel('Tipo')).toHaveValue('ATO NOVO')
   await dialog.getByLabel('Modo').selectOption('EXCLUDE_UNLESS_STRONG')
