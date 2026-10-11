@@ -250,14 +250,28 @@ export async function previewDirectCollectionFilterRule(
   )
 }
 
+export interface CollectionFilterDirectConfirmResult {
+  changed: boolean
+  apagadas: number
+  restantes: number
+  deletedCount: number
+  revision?: number
+  elapsedMs?: number
+  count?: number
+  blockedCompany?: number
+  blockedOtherSource?: number
+  token?: string
+}
+
 export async function applyDirectCollectionFilterRule(
   apiFetch: ProductApiFetch,
   input: CollectionFilterDirectRuleInput & {
     expectedCount: number
     previewToken: string
+    resume?: boolean
   },
-): Promise<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; blockedOtherSource?: number; token?: string }> {
-  return readJson<{ changed: boolean; deletedCount: number; revision?: number; count?: number; blockedCompany?: number; token?: string }>(
+): Promise<CollectionFilterDirectConfirmResult> {
+  return readJson<CollectionFilterDirectConfirmResult>(
     await apiFetch('/api/v1/admin/collection-filter/direct-rule/confirm', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

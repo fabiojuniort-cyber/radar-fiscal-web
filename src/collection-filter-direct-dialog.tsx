@@ -3,11 +3,23 @@ import type { ProductApiFetch } from './product-api'
 import { FilterDialog } from './collection-filter-dialog'
 import {
   applyDirectCollectionFilterRule,
+  CollectionFilterApiError,
   previewDirectCollectionFilterRule,
   type CollectionFilterDirectRuleInput,
   type CollectionFilterDirectPreview,
   type CollectionFilterMode,
 } from './collection-filter-api'
+
+type DirectProgress = { apagadas: number; restantes: number; total: number; etapa: number }
+
+function formatStageError(error: unknown, etapa: number): string {
+  if (error instanceof CollectionFilterApiError) {
+    return `Etapa ${etapa}: HTTP ${error.status} — ${error.detail ?? error.code}. Use Continuar para recalcular e retomar.`
+  }
+  return `Etapa ${etapa}: HTTP não disponível (erro de rede) — ${error instanceof Error ? error.message : 'falha desconhecida'}. Use Continuar para recalcular e retomar.`
+}
+
+const numberBr = (n: number) => n.toLocaleString('pt-BR')
 
 const MODES: Array<[CollectionFilterMode, string]> = [
   ['KEEP_ALWAYS', 'Manter sempre'],
@@ -28,9 +40,19 @@ export function CollectionFilterDirectDialog({
   const [preview, setPreview] = useState<CollectionFilterDirectPreview | null>(null)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<DirectProgress | null>(null)
+  const [canContinue, setCanContinue] = useState(false)
+  // Only a failed confirmation may have committed without a response.
+  // A failed preview or a changed count must never be treated as deletion.
+  const [unacknowledgedCount, setUnacknowledgedCount] = useState<number | null>(null)
 
-  // Any change invalidates the previously approved count and identity.
-  useEffect(() => { setPreview(null); setError(null) }, [rule])
+  useEffect(() => {
+    setPreview(null)
+    setError(null)
+    setProgress(null)
+    setCanContinue(false)
+    setUnacknowledgedCount(null)
+  }, [rule])
 
   const showPreview = async () => {
     setWorking(true)
@@ -44,25 +66,121 @@ export function CollectionFilterDirectDialog({
     }
   }
 
-  const confirm = async () => {
-    if (!preview) return
+  // A successful response starts the next step, but an error always stops:
+  // no automatic HTTP retries, even on a 499 or a lost response.
+  const confirm = async (manualContinue = false) => {
+    if (!preview && !manualContinue) return
     setWorking(true)
     setError(null)
+    setCanContinue(false)
+    let finished = progress?.apagadas ?? 0
+    let total = finished + (progress?.restantes ?? preview?.count ?? 0)
+    let step = (progress?.etapa ?? 0) + 1
+    let isResume = manualContinue || finished > 0
+    let stepPreview = preview
+
     try {
-      const result = await applyDirectCollectionFilterRule(apiFetch, {
-        ...rule, expectedCount: preview.count, previewToken: preview.token,
-      })
-      if (result.changed) {
-        // Never apply a stale confirmation; the next click requires a new count.
-        setPreview(result.count !== undefined && result.token ? {count:result.count,blockedCompany:result.blockedCompany ?? 0,blockedOtherSource:result.blockedOtherSource ?? 0,token:result.token} : null)
-        setError('A quantidade mudou para ' + (result.count ?? '—') + '. Confirme novamente.')
-        return
+      if (manualContinue) {
+        stepPreview = await previewDirectCollectionFilterRule(apiFetch, rule)
+        setPreview(stepPreview)
+        // A lost HTTP response can follow a committed batch. Recover only
+        // the bounded net reduction seen by the server on the next preview.
+        // Never infer deletions from a failed preview or a count-drift pause.
+        if (unacknowledgedCount !== null) {
+          const reconciled = Math.min(500, Math.max(0, unacknowledgedCount - stepPreview.count))
+          finished += reconciled
+          if (reconciled > 0) step += 1
+          setUnacknowledgedCount(null)
+        }
+        total = finished + stepPreview.count
+        setProgress({apagadas:finished,restantes:stepPreview.count,total,etapa:step-1})
+        if (stepPreview.count === 0 && finished > 0) {
+          await onApplied()
+          onClose()
+          return
+        }
       }
-      await onApplied()
-      onClose()
+      if (!stepPreview) return
+
+      while (true) {
+        let response
+        try {
+          response = await applyDirectCollectionFilterRule(apiFetch, {
+            ...rule,
+            expectedCount: stepPreview.count,
+            previewToken: stepPreview.token,
+            resume: isResume,
+          })
+        } catch (cause) {
+          setProgress({ apagadas: finished, restantes: stepPreview.count, total: finished + stepPreview.count, etapa: step - 1 })
+          setUnacknowledgedCount(stepPreview.count)
+          if (cause instanceof CollectionFilterApiError && cause.code === 'confirmed_rule_not_active') {
+            setUnacknowledgedCount(null)
+            setCanContinue(false)
+            setPreview(stepPreview)
+            setError(`Etapa ${step}: HTTP ${cause.status} — a regra não está ativa. Confirme novamente a quantidade exibida.`)
+          } else {
+            setCanContinue(true)
+            setError(formatStageError(cause, step))
+          }
+          return
+        }
+
+        setUnacknowledgedCount(null)
+        if (response.changed) {
+          const current = response.count ?? 0
+          setProgress({apagadas:finished,restantes:current,total:finished+current,etapa:step-1})
+          setPreview(response.count !== undefined && response.token
+            ? { count: response.count, blockedCompany: response.blockedCompany ?? 0,
+                blockedOtherSource: response.blockedOtherSource ?? 0, token: response.token }
+            : null)
+          setCanContinue(false)
+          setError('A quantidade mudou para ' + (response.count ?? '—') + '. Confirme novamente.')
+          return
+        }
+
+        const removed = response.apagadas ?? response.deletedCount ?? 0
+        const left = response.restantes ?? 0
+        finished += removed
+        total = finished + left
+        setProgress({ apagadas: finished, restantes: left, total, etapa: step })
+
+        if (left === 0) {
+          await onApplied()
+          onClose()
+          return
+        }
+        if (removed === 0) {
+          setCanContinue(true)
+          setError(`Etapa ${step}: nenhum item foi apagado. Use Continuar para atualizar a contagem.`)
+          return
+        }
+
+        // The backend calculates every step against the current archive.
+        // If the count changed unexpectedly, the user must explicitly resume.
+        let nextPreview: CollectionFilterDirectPreview
+        try {
+          nextPreview = await previewDirectCollectionFilterRule(apiFetch, rule)
+        } catch (cause) {
+          setCanContinue(true)
+          setError(formatStageError(cause, step + 1))
+          return
+        }
+        if (nextPreview.count !== left) {
+          setPreview(nextPreview)
+          setProgress({apagadas:finished,restantes:nextPreview.count,
+            total:finished+nextPreview.count,etapa:step})
+          setCanContinue(true)
+          setError(`Etapa ${step + 1}: a contagem passou de ${numberBr(left)} para ${numberBr(nextPreview.count)}. Use Continuar para recalcular e seguir do que falta.`)
+          return
+        }
+        stepPreview = nextPreview
+        isResume = true
+        step += 1
+      }
     } catch (cause) {
-      setPreview(null)
-      setError(cause instanceof Error ? cause.message : 'Não foi possível confirmar. Confira a contagem novamente.')
+      setCanContinue(true)
+      setError(formatStageError(cause, step))
     } finally {
       setWorking(false)
     }
@@ -107,12 +225,19 @@ export function CollectionFilterDirectDialog({
             )}
           </div>
         )}
+        {progress && (progress.apagadas > 0 || progress.etapa > 0) && (
+          <div role="status" aria-live="polite" className="cf-preview-summary">
+            <strong>{numberBr(progress.apagadas)} de {numberBr(progress.total)} apagadas</strong>
+            <p>Etapa {progress.etapa} — {numberBr(progress.restantes)} restantes.</p>
+          </div>
+        )}
         {error && <p className="cf-error" role="alert">{error}</p>}
         <div className="cf-row-actions">
           <button type="button" onClick={onClose}>Cancelar</button>
           <button type="button" disabled={working || !rule.section.trim() || !rule.canonicalType.trim()}
-            onClick={preview ? confirm : showPreview}>
-            {working ? 'Processando…' : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
+            onClick={canContinue ? () => void confirm(true) : preview ? () => void confirm() : showPreview}>
+            {working ? 'Processando etapa…' : canContinue ? 'Continuar'
+              : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
           </button>
         </div>
       </div>
