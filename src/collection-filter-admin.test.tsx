@@ -251,4 +251,48 @@ describe('L-11 filtro direto DOU',()=>{
     await screen.findByText('Acesso restrito')
     expect(paths.some(path=>path.includes('/collection-filter/'))).toBe(false)
   })
+  it('excluir uma regra usa edição direta, sem purgar publicações',async()=>{
+    const actions:string[]=[]
+    const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      const path=String(input)
+      if(path.includes('/admin/me'))return json({platformAdmin:true})
+      if(path.endsWith('/state'))return json(state)
+      if(path.includes('/new-types'))return json(newTypes)
+      if(path.endsWith('/direct-admin-edit')) {
+        const data=JSON.parse(String(init?.body)) as {action:string}
+        actions.push(data.action)
+        return json({revision:3})
+      }
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    fireEvent.click(await screen.findByRole('button',{name:'Remover PORTARIA'}))
+    await waitFor(()=>expect(actions).toEqual(['RULE_DELETE']))
+    expect(apiFetch.mock.calls.some(([path])=>String(path).includes('direct-rule/confirm'))).toBe(false)
+  })
+
+  it('cadastrar termo grava diretamente na política aprovada',async()=>{
+    const payloads:Array<{action:string;payload:{term:{normalizedTerm:string}}}>=[]
+    const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      const path=String(input)
+      if(path.includes('/admin/me'))return json({platformAdmin:true})
+      if(path.endsWith('/state'))return json(state)
+      if(path.includes('/new-types'))return json(newTypes)
+      if(path.endsWith('/direct-admin-edit')) {
+        payloads.push(JSON.parse(String(init?.body)))
+        return json({revision:3})
+      }
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    fireEvent.click(await screen.findByRole('button',{name:'Termos',exact:true}))
+    fireEvent.change(await screen.findByRole('textbox',{name:'Texto do termo'}),{
+      target:{value:'Crédito presumido'},
+    })
+    fireEvent.click(screen.getByRole('button',{name:'Adicionar'}))
+    await waitFor(()=>expect(payloads).toHaveLength(1))
+    expect(payloads[0]?.action).toBe('TERM_PUT')
+    expect(payloads[0]?.payload.term.normalizedTerm).toBe('CREDITO PRESUMIDO')
+  })
+
 })
