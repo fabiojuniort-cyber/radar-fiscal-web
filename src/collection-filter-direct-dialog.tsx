@@ -262,9 +262,9 @@ export function CollectionFilterDirectDialog({
             onClick={() => { pausedRef.current = true; setPausing(true) }}>
             {pausing ? 'Pausando…' : 'Pausar'}
           </button>}
-          <button type="button" disabled={working || !rule.mode || !rule.section.trim() || !rule.canonicalType.trim()}
+          <button type="button" disabled={working || running || !rule.mode || !rule.section.trim() || !rule.canonicalType.trim()}
             onClick={canContinue ? () => void confirm(true) : preview ? () => void confirm() : showPreview}>
-            {working ? 'Processando…' : canContinue ? 'Continuar'
+            {working || running ? 'Processando…' : canContinue ? 'Continuar'
               : preview ? 'Confirmar classificação e exclusão' : 'Consultar quantidade'}
           </button>
         </div>
