@@ -89,7 +89,8 @@ export function CollectionFilterDiscards({apiFetch}:{apiFetch:ProductApiFetch}) 
   const total=query.data?.total??0
   const pages=Math.max(1,Math.ceil(total/PAGE_SIZE))
   function apply() {
-    setFilters(Object.fromEntries(Object.entries(draft).filter(([,v])=>v?.trim())) as CollectionDiscardFilters)
+    setFilters(Object.fromEntries(Object.entries(draft).filter(([,v])=>v?.trim())
+      .map(([key,value])=>[key,key==='sourceCode'?value.trim().toLowerCase():value.trim()])) as CollectionDiscardFilters)
     setPage(0)
   }
   function reset(){

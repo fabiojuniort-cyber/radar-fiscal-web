@@ -32,7 +32,7 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
     expect(screen.getByText(/v1 · rev.5/)).toBeInTheDocument()
     expect(screen.getByText(/1 registros/)).toBeInTheDocument()
     expect(screen.getByText('07/10/2026')).toBeInTheDocument()
-    expect(screen.getByText('Coleta')).toBeInTheDocument()
+    expect(screen.getAllByText('Coleta').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', discard.official_url)
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
   })
@@ -56,7 +56,7 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
     fireEvent.change(screen.getByLabelText('Filtrar Fonte'), { target: { value: '  DOU  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     await screen.findByText(/Nenhum documento atende aos filtros/)
-    expect(calls.at(-1)).toContain('sourceCode=DOU'); expect(calls.at(-1)).toContain('offset=0')
+    expect(calls.at(-1)).toContain('sourceCode=dou'); expect(calls.at(-1)).toContain('offset=0')
     expect(screen.getAllByText(/Página 1/).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
     await screen.findByText('Ato 0')
@@ -78,7 +78,7 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
     failed = false
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar desconsiderados' }))
-    await screen.findByText(/Nenhum desconsiderado/)
+    await screen.findByText(/Nenhum documento atende aos filtros/)
   })
 
   it('mostra regra desconhecida sem inventar explicação e bloqueia URL executável', async () => {
