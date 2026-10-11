@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ProductApiFetch } from './product-api'
 import {
   applyDirectCollectionFilterRule,
   CollectionFilterApiError,
@@ -41,9 +40,9 @@ const rule = {
 
 describe('L-11 backend response wire contract / browser parser', () => {
   it('parses the backend preview HTTP 200 payload and preserves confirmation token', async () => {
-    const apiFetch = vi.fn(async () => new Response(previewWireBody, {
+    const apiFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(previewWireBody, {
       status: 200, headers: { 'Content-Type': 'application/json' },
-    })) as ProductApiFetch
+    }))
     await expect(previewDirectCollectionFilterRule(apiFetch, rule)).resolves.toEqual({
       count: 1,
       blockedCompany: 1,
@@ -56,9 +55,9 @@ describe('L-11 backend response wire contract / browser parser', () => {
   })
 
   it('parses the backend confirm count-drift payload without treating it as success', async () => {
-    const apiFetch = vi.fn(async () => new Response(driftWireBody, {
+    const apiFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(driftWireBody, {
       status: 200, headers: { 'Content-Type': 'application/json' },
-    })) as ProductApiFetch
+    }))
     const result = await applyDirectCollectionFilterRule(apiFetch, {
       ...rule, expectedCount: 1, previewToken: 'a'.repeat(64),
     })
@@ -71,9 +70,9 @@ describe('L-11 backend response wire contract / browser parser', () => {
   })
 
   it('parses the backend successful confirm payload once, without auto retry', async () => {
-    const apiFetch = vi.fn(async () => new Response(successWireBody, {
+    const apiFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(successWireBody, {
       status: 200, headers: { 'Content-Type': 'application/json' },
-    })) as ProductApiFetch
+    }))
     const result = await applyDirectCollectionFilterRule(apiFetch, {
       ...rule, expectedCount: 2, previewToken: 'b'.repeat(64),
     })
@@ -85,9 +84,9 @@ describe('L-11 backend response wire contract / browser parser', () => {
   })
 
   it('reveals the actual browser HTTP status when non-JSON middleware rejects preview', async () => {
-    const apiFetch = vi.fn(async () => new Response('<html>Service Unavailable</html>', {
+    const apiFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('<html>Service Unavailable</html>', {
       status: 503, headers: { 'Content-Type': 'text/html' },
-    })) as ProductApiFetch
+    }))
     await expect(previewDirectCollectionFilterRule(apiFetch, rule)).rejects.toMatchObject({
       code: 'collection_filter_request_failed_http_503',
       status: 503,
@@ -95,7 +94,7 @@ describe('L-11 backend response wire contract / browser parser', () => {
   })
 
   it('does not retry confirmation after an HTTP 502, as deletion may have committed', async () => {
-    const apiFetch = vi.fn(async () => new Response('Gateway error', { status: 502 })) as ProductApiFetch
+    const apiFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('Gateway error', { status: 502 }))
     await expect(applyDirectCollectionFilterRule(apiFetch, {
       ...rule, expectedCount: 2, previewToken: 'b'.repeat(64),
     })).rejects.toMatchObject({
