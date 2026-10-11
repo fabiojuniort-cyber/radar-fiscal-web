@@ -164,7 +164,7 @@ export function CollectionFilterDirectDialog({
         // If the count changed unexpectedly, the user must explicitly resume.
         let nextPreview: CollectionFilterDirectPreview
         try {
-          nextPreview = await previewDirectCollectionFilterRule(apiFetch, rule)
+          nextPreview = await previewDirectCollectionFilterRule(apiFetch, { ...rule, mode: rule.mode as CollectionFilterMode })
         } catch (cause) {
           setCanContinue(true)
           setError(formatStageError(cause, step + 1))
