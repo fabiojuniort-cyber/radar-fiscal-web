@@ -298,3 +298,27 @@ export async function editCollectionFilterActive(
     },
   ))
 }
+
+
+// L-15: only the backend can select DOU OUT_OF_SCOPE IDs. The UI receives
+// summary counts and an opaque preview token, never caller-supplied IDs.
+export async function previewOutOfScopePublications(apiFetch: ProductApiFetch):
+  Promise<CollectionFilterDirectPreview> {
+  return readJson<CollectionFilterDirectPreview>(await apiFetch(
+    '/api/v1/admin/collection-filter/out-of-scope/preview', {
+      method: 'POST', headers: { Accept: 'application/json' },
+    },
+  ))
+}
+
+export async function confirmOutOfScopePublications(
+  apiFetch: ProductApiFetch, input: {expectedCount:number;previewToken:string},
+): Promise<CollectionFilterDirectConfirmResult> {
+  return readJson<CollectionFilterDirectConfirmResult>(await apiFetch(
+    '/api/v1/admin/collection-filter/out-of-scope/confirm', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  ))
+}
