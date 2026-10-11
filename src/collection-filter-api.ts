@@ -232,6 +232,8 @@ export interface CollectionFilterDirectRuleInput {
 
 export interface CollectionFilterDirectPreview {
   count: number
+  outOfScope?: number
+  hiddenLegacy?: number
   blockedCompany: number
   blockedOtherSource: number
   token: string
@@ -252,6 +254,8 @@ export async function previewDirectCollectionFilterRule(
 
 export interface CollectionFilterDirectConfirmResult {
   changed: boolean
+  outOfScope?: number
+  hiddenLegacy?: number
   apagadas: number
   restantes: number
   deletedCount: number
