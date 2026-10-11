@@ -105,7 +105,7 @@ async function readJson<T>(response: Response): Promise<T> {
       'error' in body &&
       typeof body.error === 'string'
         ? body.error
-        : 'collection_filter_request_failed'
+        : `collection_filter_request_failed_http_${response.status}`
     const detail =
       body &&
       typeof body === 'object' &&
