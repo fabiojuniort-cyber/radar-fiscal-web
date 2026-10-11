@@ -298,3 +298,54 @@ describe('L-11 filtro direto DOU',()=>{
   })
 
 })
+
+
+describe('L-11 modal selection and L-15 out-of-scope entrypoint',()=>{
+  it('leaves Modo blank when classifying a new type and disables quantity lookup',async()=>{
+    const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+      const url=String(input)
+      if(url.includes('/admin/me'))return json({platformAdmin:true})
+      if(url.endsWith('/state'))return json(state)
+      if(url.includes('/new-types'))return json(newTypes)
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
+    fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
+    fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
+    const mode=screen.getByLabelText('Modo') as HTMLSelectElement
+    expect(mode.value).toBe('')
+    expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
+    const consult=screen.getByRole('button',{name:'Consultar quantidade'})
+    expect(consult).toBeDisabled()
+    fireEvent.change(mode,{target:{value:'EXCLUDE_ALWAYS'}})
+    expect(consult).not.toBeDisabled()
+    expect(apiFetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/out-of-scope/confirm'),expect.anything())
+  })
+
+  it('adds exactly one out-of-scope button and previews without deleting',async()=>{
+    let confirmed=0
+    const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+      const url=String(input)
+      if(url.includes('/admin/me'))return json({platformAdmin:true})
+      if(url.endsWith('/state'))return json(state)
+      if(url.includes('/new-types'))return json(newTypes)
+      if(url.endsWith('/out-of-scope/preview'))return json({
+        count:23000,blockedCompany:2,blockedOtherSource:3,token:'a'.repeat(64),
+      })
+      if(url.endsWith('/out-of-scope/confirm')){confirmed++;return json({
+        changed:false,apagadas:500,restantes:22500,deletedCount:500,
+      })}
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    const button=await screen.findByRole('button',{name:'Apagar fora do escopo'})
+    expect(screen.getAllByRole('button',{name:'Apagar fora do escopo'})).toHaveLength(1)
+    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
+    expect(await screen.findByText('23.000 serão apagadas')).toBeInTheDocument()
+    expect(screen.getByText('5 protegidas')).toBeInTheDocument()
+    expect(confirmed).toBe(0)
+  })
+})
