@@ -26,13 +26,13 @@ const alert = {
 
 describe('ACT-SCOPE-02: trilha operacional', () => {
   it('exibe contrato de descarte, retenção e link seguro', async () => {
-    const fetch = vi.fn(async () => json({ items: [discard] })) as ProductApiFetch
+    const fetch = vi.fn(async () => json({ items: [discard],total:1 })) as ProductApiFetch
     mount(<CollectionFilterDiscards apiFetch={fetch} />)
     await screen.findByText(discard.title)
-    expect(screen.getByText('v1 · revisão 5')).toBeInTheDocument()
-    expect(screen.getByText('07/01/2027, 11:00:00')).toBeInTheDocument()
+    expect(screen.getByText(/v1 · rev.5/)).toBeInTheDocument()
+    expect(screen.getByText(/1 registros/)).toBeInTheDocument()
     expect(screen.getByText('07/10/2026')).toBeInTheDocument()
-    expect(screen.getByText('Nenhum termo decisivo')).toBeInTheDocument()
+    expect(screen.getAllByText('Coleta').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', discard.official_url)
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
   })
@@ -43,26 +43,27 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
       const url = String(input); calls.push(url)
       const params = new URL(url, 'https://example.test').searchParams
       return json({ items: params.get('sourceCode') ? [] : params.get('offset') === '0'
-        ? Array.from({ length: 51 }, (_, i) => ({ ...discard, id: String(i), title: `Ato ${i}` }))
-        : [{ ...discard, title: 'Último ato' }] })
+        ? Array.from({ length: 50 }, (_, i) => ({ ...discard, id: String(i), title: `Ato ${i}` }))
+        : [{ ...discard, id: 'last', title: 'Último ato' }],
+        total:params.get('sourceCode')?0:51 })
     }) as ProductApiFetch
     mount(<CollectionFilterDiscards apiFetch={fetch} />)
     await screen.findByText('Ato 49')
     expect(screen.queryByText('Ato 50')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Próxima' }))
     await screen.findByText('Último ato')
-    expect(calls.some(url => url.includes('limit=51&offset=50'))).toBe(true)
-    fireEvent.change(screen.getByLabelText('Fonte'), { target: { value: '  DOU  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Filtrar' }))
-    await screen.findByText(/Nenhum desconsiderado/)
-    expect(calls.at(-1)).toContain('offset=0&sourceCode=dou')
-    expect(screen.getByText('Página 1')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtro' }))
+    expect(calls.some(url => url.includes('limit=50') && url.includes('offset=50'))).toBe(true)
+    fireEvent.change(screen.getByLabelText('Filtrar Fonte'), { target: { value: '  DOU  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+    await screen.findByText(/Nenhum documento atende aos filtros/)
+    expect(calls.at(-1)).toContain('sourceCode=dou'); expect(calls.at(-1)).toContain('offset=0')
+    expect(screen.getAllByText(/Página 1/).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
     await screen.findByText('Ato 0')
   })
 
   it('não abre página fantasma quando existem exatamente 50 registros', async () => {
-    const fetch = vi.fn(async () => json({ items: Array.from({ length: 50 }, (_, i) => ({ ...discard, id: String(i) })) })) as ProductApiFetch
+    const fetch = vi.fn(async () => json({ items: Array.from({ length: 50 }, (_, i) => ({ ...discard, id: String(i) })),total:50 })) as ProductApiFetch
     mount(<CollectionFilterDiscards apiFetch={fetch} />)
     await screen.findAllByText(discard.title)
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
@@ -70,18 +71,18 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
 
   it('diferencia erro de lista vazia e permite recuperar sem avançar página', async () => {
     let failed = true
-    const fetch = vi.fn(async () => failed ? json({ error: 'unavailable' }, 503) : json({ items: [] })) as ProductApiFetch
+    const fetch = vi.fn(async () => failed ? json({ error: 'unavailable' }, 503) : json({ items: [],total:0 })) as ProductApiFetch
     mount(<CollectionFilterDiscards apiFetch={fetch} />)
     await screen.findByRole('alert')
-    expect(screen.queryByText(/Nenhum desconsiderado/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nenhum documento atende aos filtros/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
     failed = false
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar desconsiderados' }))
-    await screen.findByText(/Nenhum desconsiderado/)
+    await screen.findByText(/Nenhum documento atende aos filtros/)
   })
 
   it('mostra regra desconhecida sem inventar explicação e bloqueia URL executável', async () => {
-    const fetch = vi.fn(async () => json({ items: [{ ...discard, official_url: 'javascript:alert(1)', reason_code: 'CUSTOM_RULE', decisive_term: 'teste' }] })) as ProductApiFetch
+    const fetch = vi.fn(async () => json({ items: [{ ...discard, official_url: 'javascript:alert(1)', reason_code: 'CUSTOM_RULE', decisive_term: 'teste' }],total:1 })) as ProductApiFetch
     mount(<CollectionFilterDiscards apiFetch={fetch} />)
     await screen.findByText('CUSTOM_RULE')
     expect(screen.getByText('teste')).toBeInTheDocument()
@@ -132,7 +133,7 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
       const url = String(input); calls.push(url)
       if (url.endsWith('/me')) return json({ platformAdmin: true })
       if (url.endsWith('/state')) return json({ policies: [{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5}], documents: {'11111111-1111-4111-8111-111111111111':{id:'11111111-1111-4111-8111-111111111111',status:'APPROVED',version:1,revision:5,rules:[],aliases:[],terms:[]}}, newTypesOpen: 0 })
-      return json({ items: url.includes('/discarded?') ? [discard] : [] })
+      return json({ items: url.includes('/discarded?') ? [discard] : [],total:url.includes('/discarded?')?1:0 })
     }) as ProductApiFetch
     mount(<CollectionFilterAdminPage apiFetch={fetch} />)
     const tab = await screen.findByRole('button', { name: 'Desconsiderados' })

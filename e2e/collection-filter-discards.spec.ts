@@ -1,6 +1,8 @@
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
 import { expect, test } from '@playwright/test'
 
-test('platform admin reviews discards and rate alerts without mutations or overflow', async ({ page }) => {
+test('platform admin reviews discards and rate alerts without mutations or overflow', async ({ page }, testInfo) => {
   const writes: string[] = []
   await page.route('**/auth/refresh', route => route.fulfill({ json: { accessToken: 'test-admin-token', tokenType: 'Bearer', expiresIn: 900 } }))
   await page.route('**/auth/me', route => route.fulfill({ json: { user: { id: 'admin', email: 'admin@example.test', name: null }, memberships: [] } }))
@@ -21,7 +23,7 @@ test('platform admin reviews discards and rate alerts without mutations or overf
       title: 'Portaria administrativa para revisão', act_number: '42', published_on: '2026-10-07', official_url: 'https://www.in.gov.br/ato-42',
       reason_code: 'NO_TAX_TERM', decisive_term: null, policy_version: 1, policy_revision: 5,
       discarded_at: '2026-10-07T14:00:00Z', expires_at: '2027-01-07T14:00:00Z',
-    }] } })
+    }], total: 1 } })
     if (url.pathname.endsWith('/discard-alerts')) return route.fulfill({ json: { items: url.searchParams.get('status') === 'ACKNOWLEDGED' ? [] : [{
       id: 'alert-1', collection_run_id: '01234567-89ab-4cde-8f01-234567890abc', source_code: 'dou', discard_rate: '0.9', baseline_rate: '0.4', threshold_rate: '0.65',
       found_count: 100, discard_count: 90, status: 'OPEN', created_at: '2026-10-07T14:00:00Z', acknowledged_at: null,
@@ -30,13 +32,17 @@ test('platform admin reviews discards and rate alerts without mutations or overf
   })
   await page.goto('/admin/filtro-coleta')
   await page.getByRole('button', { name: 'Desconsiderados', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Portaria administrativa para revisão' })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Relatório de Desconsiderados' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Portaria administrativa para revisão' })).toBeVisible()
+  const evidence=path.join('playwright-artifacts','l17-review',testInfo.project.name)
+  await mkdir(evidence,{recursive:true})
+  await page.screenshot({path:path.join(evidence,'desconsiderados.png'),fullPage:true})
   await expect(page.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', 'https://www.in.gov.br/ato-42')
-  await expect(page.getByText('v1 · revisão 5', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText(/v1 · rev\.5/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Próxima', exact: true })).toBeDisabled()
-  await page.getByLabel('Fonte', { exact: true }).fill('dou')
-  await page.getByRole('button', { name: 'Filtrar', exact: true }).click()
-  await expect(page.getByText('07/01/2027, 11:00:00')).toBeVisible()
+  await page.getByLabel('Filtrar Fonte', { exact: true }).fill('dou')
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await expect(page.getByText(/1 registros/)).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'Alertas de descarte', exact: true }).click()
   await expect(page.getByText('90%', { exact: true })).toBeVisible()

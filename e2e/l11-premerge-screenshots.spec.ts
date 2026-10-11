@@ -65,7 +65,7 @@ test('L11 pré-merge: screenshots Tipos, Termos, Novos tipos com popup, Desconsi
       reason_code:'EXCLUDE_ALWAYS',decisive_term:null,policy_version:9,
       policy_revision:42,discarded_at:'2026-10-10T15:00:00Z',
       expires_at:'2027-01-10T15:00:00Z',
-    }]}})
+    }],total:1}})
     if(url.pathname.endsWith('/discard-alerts'))return r.fulfill({json:{items:[{
       id:'a-1',collection_run_id:'01234567-89ab-4cde-8f01-234567890abc',
       source_code:'dou',discard_rate:'0.85',baseline_rate:'0.45',threshold_rate:'0.65',
@@ -94,7 +94,7 @@ test('L11 pré-merge: screenshots Tipos, Termos, Novos tipos com popup, Desconsi
   await page.screenshot({path:path.join(files,'03-novos-tipos-popup.png'),fullPage:true})
   await confirm.getByRole('button',{name:'Cancelar'}).click()
   await page.getByRole('button',{name:'Desconsiderados',exact:true}).click()
-  await expect(page.getByRole('heading',{name:'Aviso de licitação para demonstração visual'})).toBeVisible()
+  await expect(page.getByRole('table',{name:'Relatório de Desconsiderados'})).toBeVisible()
   await page.screenshot({path:path.join(files,'04-desconsiderados.png'),fullPage:true})
   await page.getByRole('button',{name:'Alertas de descarte'}).click()
   await expect(page.getByText('85%',{exact:true})).toBeVisible()

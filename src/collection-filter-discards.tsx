@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CircleHelp } from 'lucide-react'
+import { ArrowDownUp, CircleHelp, Download } from 'lucide-react'
 import type { ProductApiFetch } from './product-api'
 import {
   fetchCollectionFilterDiscards,
   fetchCollectionFilterDiscardAlerts,
   type CollectionFilterDiscardAlert,
+  type CollectionFilterDiscard, type CollectionDiscardFilterKey,
+  type CollectionDiscardFilters, type CollectionDiscardSortBy,
 } from './collection-filter-api'
+import {buildCollectionDiscardsWorkbook} from './collection-filter-xlsx'
 
 const PAGE_SIZE = 50
 const REASONS: Record<string, string> = {
@@ -39,68 +42,162 @@ function percent(value: number | string) {
     : 'Não informado'
 }
 
-export function CollectionFilterDiscards({ apiFetch }: { apiFetch: ProductApiFetch }) {
-  const [input, setInput] = useState('')
-  const [source, setSource] = useState('')
-  const [page, setPage] = useState(0)
-  const query = useQuery({
-    queryKey: ['collection-filter', 'discarded', source, page],
-    queryFn: () => fetchCollectionFilterDiscards(apiFetch, {
-      sourceCode: source, limit: PAGE_SIZE + 1, offset: page * PAGE_SIZE,
+const REPORT_COLUMNS: Array<{
+  key:CollectionDiscardFilterKey; sort:CollectionDiscardSortBy; title:string;
+  value:(row:CollectionFilterDiscard)=>string;
+}> = [
+  {key:'discardedOn',sort:'discardedAt',title:'Data do descarte',
+    value:r=>date(r.discarded_at,true)},
+  {key:'origin',sort:'origin',title:'Origem',
+    value:r=>r.discard_origin==='ARCHIVE'?'Apagada do acervo':'Coleta'},
+  {key:'sourceCode',sort:'source',title:'Fonte',value:r=>r.source_code},
+  {key:'section',sort:'section',title:'Seção',value:r=>r.section||'—'},
+  {key:'type',sort:'type',title:'Tipo',
+    value:r=>r.canonical_type??r.raw_type??'—'},
+  {key:'title',sort:'title',title:'Título',value:r=>r.title},
+  {key:'actNumber',sort:'actNumber',title:'Nº do ato',
+    value:r=>r.act_number??'—'},
+  {key:'publishedOn',sort:'publishedOn',title:'Publicação',
+    value:r=>date(r.published_on)},
+  {key:'ruleMode',sort:'ruleMode',title:'Regra/Modo',
+    value:r=>[r.archive_policy_rule??r.canonical_type??'—',
+      r.rule_mode??'—',
+      'v'+r.policy_version+' · rev.'+r.policy_revision].join(' / ')},
+  {key:'reasonCode',sort:'reasonCode',title:'Motivo',
+    value:r=>REASONS[r.reason_code]??r.reason_code},
+  {key:'decisiveTerm',sort:'decisiveTerm',title:'Termo decisivo',
+    value:r=>r.decisive_term??'—'},
+  {key:'officialUrl',sort:'officialUrl',title:'Link oficial',
+    value:r=>r.official_url??'—'},
+]
+
+export function CollectionFilterDiscards({apiFetch}:{apiFetch:ProductApiFetch}) {
+  const [draft,setDraft]=useState<CollectionDiscardFilters>({})
+  const [filters,setFilters]=useState<CollectionDiscardFilters>({})
+  const [sortBy,setSortBy]=useState<CollectionDiscardSortBy>('discardedAt')
+  const [sortDir,setSortDir]=useState<'asc'|'desc'>('desc')
+  const [page,setPage]=useState(0)
+  const [exporting,setExporting]=useState(false)
+  const [exportError,setExportError]=useState('')
+  const query=useQuery({
+    queryKey:['collection-filter','discarded','report',filters,sortBy,sortDir,page],
+    queryFn:()=>fetchCollectionFilterDiscards(apiFetch,{
+      ...filters,sortBy,sortDir,limit:PAGE_SIZE,offset:PAGE_SIZE*page,
     }),
-    retry: false,
+    retry:false,
   })
-  function filter(event: FormEvent) {
-    event.preventDefault()
-    setSource(input.trim().toLowerCase())
+  const total=query.data?.total??0
+  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE))
+  function apply() {
+    setFilters(Object.fromEntries(Object.entries(draft).filter(([,v])=>v?.trim())
+      .map(([key,value])=>[key,key==='sourceCode'?value.trim().toLowerCase():value.trim()])) as CollectionDiscardFilters)
     setPage(0)
   }
-  const items = query.data?.items.slice(0, PAGE_SIZE) ?? []
+  function reset(){
+    setDraft({});setFilters({});setPage(0);setExportError('')
+  }
+  function sort(key:CollectionDiscardSortBy){
+    if(sortBy===key)setSortDir(v=>v==='asc'?'desc':'asc')
+    else{setSortBy(key);setSortDir('asc')}
+    setPage(0)
+  }
+  async function exportAll(){
+    if(exporting)return
+    setExporting(true);setExportError('')
+    try{
+      const output:CollectionFilterDiscard[]=[]
+      let offset=0,totalExpected:number|null=null
+      const ids=new Set<string>()
+      while(true){
+        const chunk=await fetchCollectionFilterDiscards(apiFetch,{
+          ...filters,sortBy,sortDir,offset,limit:500,
+        })
+        if(totalExpected===null)totalExpected=chunk.total
+        if(chunk.total!==totalExpected)throw new Error('Os registros mudaram durante a exportação; consulte novamente.')
+        for(const row of chunk.items){
+          if(ids.has(row.id))throw new Error('Duplicidade detectada durante a exportação; tente novamente.')
+          ids.add(row.id);output.push(row)
+        }
+        offset+=chunk.items.length
+        if(offset>=totalExpected)break
+        if(chunk.items.length===0)throw new Error('Exportação incompleta. Nenhum arquivo foi gerado.')
+      }
+      if(output.length!==(totalExpected??0))throw new Error('Exportação incompleta.')
+      const blob=buildCollectionDiscardsWorkbook(
+        REPORT_COLUMNS.map(c=>c.title),
+        output.map(r=>REPORT_COLUMNS.map(c=>c.value(r))),
+      )
+      const url=URL.createObjectURL(blob)
+      const a=document.createElement('a')
+      a.href=url;a.download='desconsiderados.xlsx'
+      document.body.appendChild(a);a.click();a.remove()
+      URL.revokeObjectURL(url)
+    }catch(error){setExportError(error instanceof Error?error.message:'Não foi possível exportar.')}
+    finally{setExporting(false)}
+  }
   return <section className="cf-card cf-discard-panel" aria-labelledby="cf-discard-title">
     <div className="cf-card-title"><h2 id="cf-discard-title">Desconsiderados</h2>
-      <p>Publicações descartadas antes de entrar no acervo. Trilha operacional por 3 meses, sem texto integral ou resumo.</p>
+      <p>Relatório de publicações descartadas na coleta ou apagadas do acervo, retido por 3 meses.</p>
     </div>
-    <details className="cf-settings"><summary><CircleHelp size={16} aria-hidden="true" />Ajuda — Desconsiderados</summary>
-      <p>A fonte usa o código do coletor, como dou. O filtro busca no servidor e reinicia a paginação. Motivo e termo explicam a decisão; a versão e a revisão identificam a política aplicada. Expiração indica quando termina a guarda de 3 meses. O link oficial permite conferir o ato original.</p>
+    <details className="cf-settings">
+      <summary><CircleHelp size={16} aria-hidden="true"/>Ajuda — Desconsiderados</summary>
+      <p>Uma linha por documento. Os filtros e a ordenação aplicam-se ao relatório inteiro, não apenas à página exibida. A exportação Excel inclui todas as linhas do filtro atual. O link é sempre a referência oficial preservada.</p>
     </details>
-    <form className="cf-review-filters" onSubmit={filter}>
-      <label>Fonte<input value={input} maxLength={100} placeholder="Todas as fontes · código, ex.: dou" onChange={event => setInput(event.target.value)} /></label>
-      <button type="submit">Filtrar</button>
-      <button type="button" onClick={() => { setInput(''); setSource(''); setPage(0) }}>Limpar filtro</button>
-      <button type="button" disabled={query.isFetching} onClick={() => void query.refetch()}>Atualizar desconsiderados</button>
-    </form>
-    {query.isPending ? <p role="status">Carregando desconsiderados…</p>
-      : query.isError ? <div className="cf-error" role="alert">Não foi possível carregar os desconsiderados. Tente atualizar.</div>
-      : <>
-        {!items.length && <p className="cf-empty">Nenhum desconsiderado nesta página para a fonte selecionada.</p>}
-        <div className="cf-review-list">
-          {items.map(item => {
-            const url = safeUrl(item.official_url)
-            return <article className="cf-review-item" key={item.id}>
-              <h3>{item.title}</h3>
-              <dl className="cf-discard-details">
-                <div><dt>Ato</dt><dd>{item.act_number ?? 'Não informado'}</dd></div>
-                <div><dt>Tipo</dt><dd>{item.canonical_type ?? item.raw_type ?? 'Não informado'}</dd></div>
-                {item.raw_type && item.raw_type !== item.canonical_type && <div><dt>Tipo original</dt><dd>{item.raw_type}</dd></div>}
-                <div><dt>Fonte / seção</dt><dd>{item.source_code} / {item.section || 'Não informada'}</dd></div>
-                <div><dt>Coletor</dt><dd>{item.connector_key}</dd></div>
-                <div><dt>Publicação</dt><dd>{date(item.published_on)}</dd></div>
-                <div><dt>Motivo / regra</dt><dd>{REASONS[item.reason_code] ?? 'Decisão do filtro'} <code>{item.reason_code}</code></dd></div>
-                <div><dt>Termo decisivo</dt><dd>{item.decisive_term ?? 'Nenhum termo decisivo'}</dd></div>
-                <div><dt>Política</dt><dd>v{item.policy_version} · revisão {item.policy_revision}</dd></div>
-                <div><dt>Descarte (Brasília)</dt><dd>{date(item.discarded_at, true)}</dd></div>
-                <div><dt>Expiração (Brasília)</dt><dd>{date(item.expires_at, true)}</dd></div>
-              </dl>
-              {url ? <a href={url} target="_blank" rel="noopener noreferrer">Abrir fonte oficial</a> : <span>Link oficial indisponível</span>}
-            </article>
-          })}
-        </div>
-      </>}
-    <nav className="cf-pagination" aria-label="Páginas de desconsiderados">
-      <button type="button" disabled={page === 0 || query.isFetching} onClick={() => setPage(current => Math.max(0, current - 1))}>Anterior</button>
-      <span aria-live="polite">Página {page + 1}</span>
-      <button type="button" disabled={query.isFetching || query.isError || (query.data?.items.length ?? 0) <= PAGE_SIZE} onClick={() => setPage(current => current + 1)}>Próxima</button>
-    </nav>
+    <div className="cf-grid">
+      <div className="cf-grid-toolbar">
+        <span role="status">{total.toLocaleString('pt-BR')} registros · Página {page+1} de {pages}</span>
+        <button type="button" onClick={apply}>Aplicar filtros</button>
+        <button type="button" onClick={reset}>Limpar filtros</button>
+        <button type="button" disabled={query.isFetching}
+          onClick={()=>void query.refetch()}>Atualizar desconsiderados</button>
+        <button type="button" disabled={exporting||query.isPending||query.isError}
+          onClick={()=>void exportAll()}><Download size={15}/>{exporting?'Exportando…':'Exportar Excel'}</button>
+      </div>
+      {exportError&&<p className="cf-error" role="alert">{exportError}</p>}
+      {query.isPending?<p role="status">Carregando desconsiderados…</p>
+        :query.isError?<p className="cf-error" role="alert">Não foi possível consultar o relatório.</p>
+        :<div className="cf-table-wrap cf-grid-scroll">
+          <table aria-label="Relatório de Desconsiderados">
+            <thead>
+              <tr>{REPORT_COLUMNS.map(c=><th key={c.key}
+                aria-sort={sortBy===c.sort?(sortDir==='asc'?'ascending':'descending'):'none'}>
+                <div className="cf-column-head">
+                  <button type="button" aria-label={'Ordenar '+c.title}
+                    onClick={()=>sort(c.sort)}>{c.title}<ArrowDownUp size={13}/></button>
+                </div>
+              </th>)}</tr>
+              <tr>{REPORT_COLUMNS.map(c=><th key={c.key}>
+                {c.key==='origin'?
+                  <select aria-label={'Filtrar '+c.title} value={draft.origin??''}
+                    onChange={e=>setDraft(v=>({...v,origin:e.target.value}))}>
+                    <option value="">Todas</option><option value="COLLECTION">Coleta</option>
+                    <option value="ARCHIVE">Apagada do acervo</option>
+                  </select>:
+                  <input aria-label={'Filtrar '+c.title}
+                    placeholder={c.key==='publishedOn'||c.key==='discardedOn'?'AAAA-MM-DD':'Filtrar…'}
+                    value={draft[c.key]??''}
+                    onChange={e=>setDraft(v=>({...v,[c.key]:e.target.value}))}/>}
+              </th>)}</tr>
+            </thead>
+            <tbody>{query.data?.items.map(r=><tr key={r.id}>
+              {REPORT_COLUMNS.map(c=><td key={c.key}>
+                {c.key==='officialUrl'?
+                  (safeUrl(r.official_url)?<a href={safeUrl(r.official_url)??'#'}
+                    target="_blank" rel="noopener noreferrer">Abrir fonte oficial</a>:'Link oficial indisponível')
+                  :c.value(r)}
+              </td>)}
+            </tr>)}</tbody>
+          </table>
+          {!query.data?.items.length&&<p className="cf-empty">Nenhum documento atende aos filtros.</p>}
+        </div>}
+      <nav className="cf-grid-pagination" aria-label="Páginas do relatório">
+        <button type="button" disabled={page===0||query.isFetching}
+          onClick={()=>setPage(v=>Math.max(0,v-1))}>Anterior</button>
+        <span>Página {page+1} de {pages}</span>
+        <button type="button" disabled={page+1>=pages||query.isFetching}
+          onClick={()=>setPage(v=>v+1)}>Próxima</button>
+      </nav>
+    </div>
   </section>
 }
 

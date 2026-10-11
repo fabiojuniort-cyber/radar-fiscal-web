@@ -175,10 +175,32 @@ export interface CollectionFilterDiscard {
   official_url: string | null
   reason_code: string
   decisive_term: string | null
+  policy_id?: string
   policy_version: number
   policy_revision: number
   discarded_at: string
   expires_at: string
+  discard_origin?: 'COLLECTION' | 'ARCHIVE'
+  archive_publication_id?: string | null
+  rule_mode?: string | null
+  archive_policy_rule?: string | null
+  collection_run_id?: string | null
+}
+
+export type CollectionDiscardSortBy =
+  | 'discardedAt' | 'origin' | 'source' | 'section' | 'type'
+  | 'title' | 'actNumber' | 'publishedOn' | 'ruleMode'
+  | 'reasonCode' | 'decisiveTerm' | 'officialUrl'
+export type CollectionDiscardFilterKey =
+  | 'sourceCode' | 'origin' | 'section' | 'type' | 'title'
+  | 'actNumber' | 'publishedOn' | 'ruleMode' | 'reasonCode'
+  | 'decisiveTerm' | 'officialUrl' | 'discardedOn'
+export type CollectionDiscardFilters = Partial<Record<CollectionDiscardFilterKey, string>>
+export type CollectionDiscardQuery = CollectionDiscardFilters & {
+  limit: number
+  offset: number
+  sortBy?: CollectionDiscardSortBy
+  sortDir?: 'asc' | 'desc'
 }
 
 export interface CollectionFilterDiscardAlert {
@@ -197,13 +219,15 @@ export interface CollectionFilterDiscardAlert {
 
 export async function fetchCollectionFilterDiscards(
   apiFetch: ProductApiFetch,
-  options: { sourceCode?: string; limit: number; offset: number },
+  options: CollectionDiscardQuery,
 ) {
-  const params = new URLSearchParams({ limit: String(options.limit), offset: String(options.offset) })
-  if (options.sourceCode?.trim()) params.set('sourceCode', options.sourceCode.trim().toLowerCase())
-  return readJson<{ items: CollectionFilterDiscard[] }>(await apiFetch(
+  const params = new URLSearchParams()
+  for(const [key,value] of Object.entries(options)){
+    if(value !== undefined && String(value).trim() !== '')params.set(key,String(value))
+  }
+  return readJson<{items:CollectionFilterDiscard[];total:number}>(await apiFetch(
     `/api/v1/admin/collection-filter/discarded?${params}`,
-    { headers: { Accept: 'application/json' } },
+    {headers:{Accept:'application/json'}},
   ))
 }
 
@@ -232,6 +256,10 @@ export interface CollectionFilterDirectRuleInput {
 
 export interface CollectionFilterDirectPreview {
   count: number
+  outOfScope?: number
+  hiddenLegacy?: number
+  ruleDiscards?: number
+  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
   blockedCompany: number
   blockedOtherSource: number
   token: string
@@ -251,7 +279,11 @@ export async function previewDirectCollectionFilterRule(
 }
 
 export interface CollectionFilterDirectConfirmResult {
+  ruleDiscards?: number
+  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
   changed: boolean
+  outOfScope?: number
+  hiddenLegacy?: number
   apagadas: number
   restantes: number
   deletedCount: number
