@@ -146,6 +146,82 @@ describe('L-11 filtro direto DOU',()=>{
     expect(seen).toEqual([1100,600,600,100])
   })
 
+  it('reconcilia resposta perdida pelo novo restante sem repetir automaticamente',async()=>{
+    let previewCount=0
+    const confirms:Array<{expectedCount:number;resume?:boolean}>=[]
+    const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      const path=String(input)
+      if(path.includes('/admin/me'))return json({platformAdmin:true})
+      if(path.endsWith('/state'))return json(state)
+      if(path.includes('/new-types'))return json(newTypes)
+      if(path.endsWith('/direct-rule/preview')){
+        previewCount++
+        if(previewCount===3)return json({error:'preview_failed'},503)
+        return json({count:previewCount===1?1000:500,blockedCompany:0,
+          blockedOtherSource:0,token:'d'.repeat(64)})
+      }
+      if(path.endsWith('/direct-rule/confirm')){
+        confirms.push(JSON.parse(String(init?.body)))
+        if(confirms.length===1)throw new TypeError('resposta perdida após commit')
+        return json({changed:false,apagadas:100,restantes:400,deletedCount:100,revision:3})
+      }
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
+    fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
+    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
+    fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
+    await screen.findByText(/1000 publicações serão apagadas/)
+    fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação e exclusão'}))
+    await screen.findByRole('button',{name:'Continuar'})
+    expect(confirms).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button',{name:'Continuar'}))
+    await waitFor(()=>expect(confirms).toHaveLength(2))
+    expect(confirms.map(x=>x.expectedCount)).toEqual([1000,500])
+    expect(confirms.map(x=>x.resume)).toEqual([false,true])
+    expect(await screen.findByText(/600 de 1.000 apagadas/)).toBeInTheDocument()
+  })
+
+  it('atualiza total ao divergir a contagem entre etapas, sem perder acumulado',async()=>{
+    const confirms:Array<{expectedCount:number}>=[]
+    let previews=0
+    const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      const path=String(input)
+      if(path.includes('/admin/me'))return json({platformAdmin:true})
+      if(path.endsWith('/state'))return json(state)
+      if(path.includes('/new-types'))return json(newTypes)
+      if(path.endsWith('/direct-rule/preview')){
+        previews++
+        if(previews===4)return json({error:'preview_unavailable'},503)
+        return json({count:previews===1?800:340,blockedCompany:0,
+          blockedOtherSource:0,token:'e'.repeat(64)})
+      }
+      if(path.endsWith('/direct-rule/confirm')){
+        confirms.push(JSON.parse(String(init?.body)))
+        return json(confirms.length===1
+          ? {changed:false,apagadas:500,restantes:300,deletedCount:500,revision:3}
+          : {changed:false,apagadas:200,restantes:140,deletedCount:200,revision:3})
+      }
+      return json({items:[]})
+    }) as ProductApiFetch
+    mount(apiFetch)
+    fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
+    fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
+    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
+    fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
+    await screen.findByText(/800 publicações serão apagadas/)
+    fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação e exclusão'}))
+    await screen.findByRole('button',{name:'Continuar'})
+    expect(screen.getByRole('alert')).toHaveTextContent('a contagem passou de 300 para 340')
+    expect(screen.getByText(/500 de 840 apagadas/)).toBeInTheDocument()
+    expect(confirms).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button',{name:'Continuar'}))
+    await waitFor(()=>expect(confirms).toHaveLength(2))
+    expect(confirms.map(x=>x.expectedCount)).toEqual([800,340])
+    expect(await screen.findByText(/700 de 840 apagadas/)).toBeInTheDocument()
+  })
+
   it('a edição de Modo em Tipos abre prévia, sem salvar rascunho',async()=>{
     const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
       const path=String(input)
