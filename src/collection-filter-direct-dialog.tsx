@@ -225,7 +225,7 @@ export function CollectionFilterDirectDialog({
             )}
           </div>
         )}
-        {progress && (
+        {progress && (progress.apagadas > 0 || progress.etapa > 0) && (
           <div role="status" aria-live="polite" className="cf-preview-summary">
             <strong>{numberBr(progress.apagadas)} de {numberBr(progress.total)} apagadas</strong>
             <p>Etapa {progress.etapa} — {numberBr(progress.restantes)} restantes.</p>
