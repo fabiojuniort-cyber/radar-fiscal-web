@@ -300,6 +300,9 @@ export async function initializeF2Actuacao(apiFetch: ProductApiFetch, justificat
   ))
 }
 
+/** Maximum approved full F2 dry-run JSON size; avoids rejecting the 3.1 MB report. */
+export const F2_DRYRUN_REPORT_MAX_BYTES = 8_000_000
+
 export interface F2ActuacaoOrigin {
   sourceLine: number
   cnaeCode: string
