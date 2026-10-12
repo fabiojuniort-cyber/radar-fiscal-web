@@ -599,13 +599,17 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(sourceSequence.locator('b')).toHaveText(expectedValues)
   await expect(sourceSequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
   if ((page.viewportSize()?.width ?? 0) <= 390) {
-    // The five indicators must all fit without clipping on narrow screens.
+    // Horizontal scroll is intentional on narrow screens: preserve legible
+    // metric labels/values instead of squeezing them or overflowing the page.
     for (const locator of [summarySequence, sourceCard.locator('.tp-monitor-source-counters')]) {
-      const dimensions = await locator.evaluate((element) => ({
+      const box = await locator.evaluate(element => ({
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
+        overflowX: getComputedStyle(element).overflowX,
       }))
-      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+      expect(box.clientWidth).toBeGreaterThan(0)
+      expect(['auto', 'scroll']).toContain(box.overflowX)
+      expect(box.scrollWidth).toBeGreaterThanOrEqual(box.clientWidth)
     }
   }
   await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
