@@ -31,6 +31,7 @@ import {
   formatOfficialCode,
   importCatalog,
   importDimensionCsv,
+  initializeF2Actuacao,
   readCsvFile,
   patchConcept,
   patchDimension,
@@ -300,6 +301,9 @@ function TablesTab({
 }) {
   const [dimensionCode, setDimensionCode] = useState(view.dimensions[0]?.code ?? '')
   const [gridDirty, setGridDirty] = useState(false)
+  const [creatingActuacao, setCreatingActuacao] = useState(false)
+  const [actuacaoError, setActuacaoError] = useState<string | null>(null)
+  const hasActuacao = view.dimensions.some(item => item.code === 'actuacao')
   const dimension = view.dimensions.find((d) => d.code === dimensionCode) ?? view.dimensions[0]
 
   const sortedDimensions = useMemo(
@@ -343,6 +347,24 @@ function TablesTab({
             </span>
           </button>
         ))}
+        {!hasActuacao && editable && (
+          <div className="tc-atuacao-intro">
+            <p>Atuação é independente de Segmento. A carga inicial contém 7 categorias da planilha Segmento v1.7.3.</p>
+            <button type="button" disabled={creatingActuacao} onClick={() => {
+              if (gridDirty && !window.confirm('Há alterações não salvas. Continuar?')) return
+              setCreatingActuacao(true)
+              setActuacaoError(null)
+              void initializeF2Actuacao(apiFetch, justification)
+                .then(onChanged)
+                .then(() => setDimensionCode('actuacao'))
+                .catch(error => setActuacaoError(errorText(error)))
+                .finally(() => setCreatingActuacao(false))
+            }}>
+              {creatingActuacao ? 'Preparando Atuação…' : 'Preparar tabela Atuação no rascunho'}
+            </button>
+            {actuacaoError && <p role="alert" className="tc-error">{actuacaoError}</p>}
+          </div>
+        )}
       </aside>
       <DimensionEditor
         key={dimension.code}
@@ -585,6 +607,12 @@ function DimensionEditor({
       <div className="tc-editor-head">
         <div>
           <h2>{dimension.name}</h2>
+          {dimension.code === 'actuacao' && (
+            <p className="tc-atuacao-explainer">
+              Tabela independente de Segmento, com sinônimos próprios configuráveis pelo curador.
+              Os 7 itens iniciais não classificam pelo nome até aprovação expressa na curadoria.
+            </p>
+          )}
           <p>
             {dimension.conceptCount} itens · {groups.length} {dimension.code === 'sector' ? 'subsegmentos' : 'grupos'} ·{' '}
             {dimension.profileVisible ? 'aparece no Perfil Tributário' : 'não aparece no perfil'} ·{' '}
@@ -630,7 +658,9 @@ function DimensionEditor({
               <option value="">{dimension.code === 'sector' ? 'Editar subsegmento…' : 'Editar grupo…'}</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
-                  {group.label}
+                  {dimension.code === 'sector'
+                    ? `${group.segmentCodes.map(code => view.concepts.find(item => item.code === code)?.label ?? code).join(', ')} – ${group.label}`
+                    : group.label}
                 </option>
               ))}
             </select>
