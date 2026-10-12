@@ -300,6 +300,30 @@ export async function initializeF2Actuacao(apiFetch: ProductApiFetch, justificat
   ))
 }
 
+export interface F2ActuacaoOrigin {
+  sourceLine: number
+  cnaeCode: string
+  atuacaoLabel: string
+}
+
+export async function importF2ActuacaoCnaeOrigins(
+  apiFetch: ProductApiFetch,
+  justification: string,
+  sourceSha256: string,
+  rows: F2ActuacaoOrigin[],
+) {
+  return readJson<{
+    originCount: number
+    reusedExisting: boolean
+    sourceSha256: string
+    projectionSha256: string
+    classificationPublished: false
+  }>(await apiFetch(
+    `${ADMIN}/drafts/current/actuacao/origins`,
+    jsonInit('POST', { justification, sourceSha256, rows }),
+  ))
+}
+
 export type DimensionPatch = Partial<{
   name: string
   description: string | null
