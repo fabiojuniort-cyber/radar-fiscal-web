@@ -1428,6 +1428,29 @@
     margin-top: 4px;
   }
 
+  /* Keep all five labels and values visible in the requested inline order. */
+  .tp-monitor-metric-unit {
+    flex: 0 0 auto;
+    gap: 3px;
+  }
+
+  .tp-monitor-metric-detail {
+    padding-right: 4px;
+  }
+
+  .tp-monitor-metric-detail small {
+    font-size: 9px;
+    letter-spacing: -.02em;
+  }
+
+  .tp-monitor-metric-separator {
+    font-size: 12px;
+  }
+
+  .tp-monitor-totals-24h .tp-monitor-metric-detail b {
+    font-size: 16px;
+  }
+
   .tp-monitor-source-main .tp-source-dot {
     grid-row: 1;
   }

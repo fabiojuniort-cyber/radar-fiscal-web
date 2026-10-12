@@ -598,6 +598,16 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(sourceSequence.locator('small')).toHaveText(expectedLabels)
   await expect(sourceSequence.locator('b')).toHaveText(expectedValues)
   await expect(sourceSequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
+  if ((page.viewportSize()?.width ?? 0) <= 390) {
+    // The five indicators must all fit without clipping on narrow screens.
+    for (const locator of [summarySequence, sourceCard.locator('.tp-monitor-source-counters')]) {
+      const dimensions = await locator.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      }))
+      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+    }
+  }
   await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
   const countersBox = await sourceCard.locator('.tp-monitor-source-counters').boundingBox()
   const toggleBox = await sourceCard.getByRole('button', { name: 'Ocultar execuções' }).boundingBox()
