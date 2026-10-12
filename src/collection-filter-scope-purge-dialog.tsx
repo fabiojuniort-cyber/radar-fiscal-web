@@ -109,6 +109,7 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
             count:newCount,token:result.token,
             outOfScope:result.outOfScope??0,
             hiddenLegacy:result.hiddenLegacy??0,
+            suspectDoe:result.suspectDoe??0,
             ruleDiscards:result.ruleDiscards??0,byRule:result.byRule??[],
             blockedCompany:result.blockedCompany??0,
             blockedOtherSource:result.blockedOtherSource??0,
@@ -158,11 +159,13 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
   }
 
   return <FilterDialog title="Apagar fora do escopo"
-    description="Publicações DOU fora do escopo, descartadas pelo motor tributário ou ocultas pela regra antiga. Vínculos com clientes e outras fontes serão protegidos."
+    description="DOU: fora do escopo e descartadas pelas regras. Qualquer fonte: ocultas pela regra antiga (029). DOE-SP: tipo provavelmente errado. Vínculos com clientes e publicações de múltiplas fontes permanecem protegidos."
     onClose={close}>
     <div className="cf-modal-form">
       {preview&&<div className="cf-preview-summary" role="status">
-        <p><strong>{numberBr(preview.outOfScope??0)} fora do escopo + {numberBr(preview.ruleDiscards??0)} pelas regras + {numberBr(preview.hiddenLegacy??0)} ocultas pela regra antiga / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
+        <p><strong>{numberBr(preview.outOfScope??0)} fora do escopo + {numberBr(preview.ruleDiscards??0)} pelas regras + {numberBr(preview.hiddenLegacy??0)} ocultas pela regra antiga + {numberBr(preview.suspectDoe??0)} tipo provavelmente errado / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
+        <p>Ocultas pela regra antiga (029), qualquer fonte: {numberBr(preview.hiddenLegacy??0)}</p>
+        <p>DOE-SP — tipo provavelmente errado: {numberBr(preview.suspectDoe??0)}</p>
         {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por regra">
           {(preview.byRule??[]).map((r,i)=><li key={i}>{r.section} / {r.canonicalType} / {r.mode}: {numberBr(r.count)}</li>)}
         </ul>}

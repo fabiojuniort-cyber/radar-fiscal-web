@@ -258,6 +258,7 @@ export interface CollectionFilterDirectPreview {
   count: number
   outOfScope?: number
   hiddenLegacy?: number
+  suspectDoe?: number
   ruleDiscards?: number
   byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
   blockedCompany: number
@@ -284,6 +285,7 @@ export interface CollectionFilterDirectConfirmResult {
   changed: boolean
   outOfScope?: number
   hiddenLegacy?: number
+  suspectDoe?: number
   apagadas: number
   restantes: number
   deletedCount: number
@@ -332,7 +334,7 @@ export async function editCollectionFilterActive(
 }
 
 
-// L-15: only the backend can select DOU OUT_OF_SCOPE IDs. The UI receives
+// L-18: backend exclusively selects DOU scope/rules, legacy-029 any source and DOE-SP type mismatch. The UI receives
 // summary counts and an opaque preview token, never caller-supplied IDs.
 export async function previewOutOfScopePublications(apiFetch: ProductApiFetch):
   Promise<CollectionFilterDirectPreview> {
