@@ -33,6 +33,7 @@ import {
   importDimensionCsv,
   initializeF2Actuacao,
   importF2ActuacaoCnaeOrigins,
+  F2_DRYRUN_REPORT_MAX_BYTES,
   readCsvFile,
   patchConcept,
   patchDimension,
@@ -384,7 +385,7 @@ function TablesTab({
                 setImportingOrigins(true)
                 setOriginsMessage(null)
                 void (async () => {
-                  if (file.size > 2_000_000) throw new Error('Relatório excede limite seguro')
+                  if (file.size > F2_DRYRUN_REPORT_MAX_BYTES) throw new Error('Relatório excede limite seguro')
                   const raw: unknown = JSON.parse(await file.text())
                   if (!raw || typeof raw !== 'object') throw new Error('JSON de dry-run inválido')
                   const report = raw as Record<string, unknown>
