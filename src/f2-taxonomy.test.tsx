@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { CurationGrid, displaySegmentSubsegment } from './taxonomy-grid'
-import { initializeF2Actuacao, type CurationConcept, type CurationDimension, type CurationGroup } from './taxonomy-api'
+import { initializeF2Actuacao, F2_DRYRUN_REPORT_MAX_BYTES, type CurationConcept, type CurationDimension, type CurationGroup } from './taxonomy-api'
 import type { ProductApiFetch } from './product-api'
 
 afterEach(cleanup)
@@ -46,5 +46,12 @@ describe('F2-T02 — Atuação independente da tabela Segmento', () => {
     expect(init?.method).toBe('POST')
     expect(JSON.parse(String(init?.body))).toEqual({ justification: 'Aprovação F2-T02 no rascunho' })
     expect(result.classificationPublished).toBe(false)
+  })
+})
+
+describe('F2-T02 approved full report guard', () => {
+  it('accepts the approved 3,125,408-byte JSON report while rejecting oversized files', () => {
+    expect(F2_DRYRUN_REPORT_MAX_BYTES).toBeGreaterThan(3_125_408)
+    expect(F2_DRYRUN_REPORT_MAX_BYTES).toBeLessThanOrEqual(8_000_000)
   })
 })
