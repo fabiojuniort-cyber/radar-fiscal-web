@@ -22,6 +22,19 @@ const preview = (count:number, token:string) => ({
 })
 const rule = {sourceCode:'dou',section:'DO1',canonicalType:'PORTARIA',mode:'EXCLUDE_ALWAYS' as const}
 
+it('L18 preview distinguishes 029 any-source and DOE-SP probably wrong type',async()=>{
+  const apiFetch=vi.fn(async()=>json({
+    count:60,token:'a'.repeat(64),outOfScope:0,ruleDiscards:0,
+    hiddenLegacy:39,suspectDoe:21,blockedCompany:2,blockedOtherSource:3,byRule:[],
+  })) as ProductApiFetch
+  render(<CollectionFilterScopePurgeDialog apiFetch={apiFetch}
+    onClose={vi.fn()} onApplied={vi.fn(async()=>{})}/>)
+  fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
+  expect(await screen.findByText(/Ocultas pela regra antiga \(029\), qualquer fonte: 39/)).toBeInTheDocument()
+  expect(screen.getByText(/DOE-SP — tipo provavelmente errado: 21/)).toBeInTheDocument()
+  expect(screen.getByText(/3 com outra origem oficial/)).toBeInTheDocument()
+})
+
 it('L17 auto: three separate 500-bounded requests finish the scope purge without another click',async()=>{
   const previews=[1050,550,50]
   const results=[{apagadas:500,restantes:550},{apagadas:500,restantes:50},
