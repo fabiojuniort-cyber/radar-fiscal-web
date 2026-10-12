@@ -600,6 +600,14 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Encontradas')
   await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Processadas')
   await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
+  const countersBox = await sourceCard.locator('.tp-monitor-source-counters').boundingBox()
+  const toggleBox = await sourceCard.getByRole('button', { name: 'Ocultar execuções' }).boundingBox()
+  expect(countersBox).not.toBeNull()
+  expect(toggleBox).not.toBeNull()
+  if ((page.viewportSize()?.width ?? 0) <= 760) {
+    expect(countersBox!.width).toBeGreaterThan(180)
+    expect(countersBox!.y + countersBox!.height).toBeLessThanOrEqual(toggleBox!.y + 1)
+  }
   const runHistory = sourceCard.locator('.tp-run-history')
   for (const name of ['Encontradas', 'Descartadas', 'Mantidas', 'Processadas', 'Importadas']) {
     await expect(runHistory.locator('.tp-run-history-head')).toContainText(name)
