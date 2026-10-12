@@ -34,7 +34,7 @@ const archiveItem = {
   excerpt: 'Conteúdo oficial de teste.',
 }
 
-test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }) => {
+test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }, testInfo) => {
   const archiveRequests: URL[] = []
   let companyCreated = false
   let profileSaved = false
@@ -141,8 +141,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           finishedAt: '2026-09-30T00:00:03.000Z',
           durationMs: 3000,
           attemptCount: 1,
-          foundItems: 7,
-          importedDocuments: 7,
+          foundItems: 10,
+          discardedItems: 3,
+          retainedItems: 6,
+          processedItems: 9,
+          importedDocuments: 2,
         }],
       }),
     })
@@ -580,6 +583,34 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
   await expect(page.getByText('DOU').first()).toBeVisible()
+
+  // MON-01: failures are found but not processed; existing retained items
+  // count as maintained, not imported.
+  const monitoringSummary = page.locator('.tp-monitor-summary')
+  for (const [label, value] of [
+    ['Encontradas 24h', '10'],
+    ['Descartadas 24h', '3'],
+    ['Mantidas 24h', '6'],
+    ['Processadas 24h', '9'],
+    ['Importadas 24h', '2'],
+  ]) {
+    await expect(monitoringSummary.locator('article').filter({ hasText: label }).locator('strong')).toHaveText(value)
+  }
+  const sourceCard = page.locator('.tp-monitor-source-card').filter({ hasText: 'DOU' })
+  await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Encontradas')
+  await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Processadas')
+  await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
+  const runHistory = sourceCard.locator('.tp-run-history')
+  for (const name of ['Encontradas', 'Descartadas', 'Mantidas', 'Processadas', 'Importadas']) {
+    await expect(runHistory.locator('.tp-run-history-head')).toContainText(name)
+  }
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(3)).toHaveText('10')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(4)).toHaveText('3')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(5)).toHaveText('6')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(6)).toHaveText('9')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(7)).toHaveText('2')
+  // Screenshot is captured pre-merge and retained in CI's test-results artifact.
+  await page.screenshot({ path: testInfo.outputPath('mon-01-central-monitoring.png'), fullPage: true })
 
   await page.getByRole('button', { name: 'Notícias', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()

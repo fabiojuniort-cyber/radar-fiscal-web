@@ -173,6 +173,9 @@ export type MonitoringRun = {
   durationMs: number | null
   attemptCount: number
   foundItems: number
+  discardedItems: number
+  retainedItems: number
+  processedItems: number
   importedDocuments: number
 }
 

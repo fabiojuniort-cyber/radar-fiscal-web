@@ -1172,9 +1172,9 @@
     12px minmax(170px, 1.25fr)
     minmax(180px, 1.25fr)
     minmax(130px, .85fr)
-    minmax(105px, .65fr)
+    minmax(300px, 2fr)
     auto;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   padding: 16px 18px;
 }
@@ -1183,6 +1183,30 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.tp-monitor-source-main > div.tp-monitor-source-counters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tp-monitor-source-counters > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tp-monitor-source-counters small {
+  color: var(--tp-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.tp-monitor-source-counters b {
+  color: var(--tp-navy);
+  font-size: 13px;
 }
 
 .tp-monitor-source-main > div > span {
@@ -1248,17 +1272,18 @@
   border-top: 1px solid var(--tp-border);
   background: #f8fbff;
   padding: 0 18px 14px;
+  overflow-x: auto;
 }
 
 .tp-run-history-head,
 .tp-run-history-row {
-  min-width: 760px;
+  min-width: 1100px;
   display: grid;
   grid-template-columns:
-    minmax(130px, 1fr)
-    minmax(175px, 1.3fr)
-    90px 90px 90px 100px;
-  gap: 12px;
+    minmax(140px, 1.3fr)
+    minmax(150px, 1.25fr)
+    75px repeat(5, minmax(85px, .7fr)) 100px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -1341,6 +1366,10 @@
   .tp-monitor-source-main > div,
   .tp-monitor-source-main button {
     grid-column: 2;
+  }
+
+  .tp-monitor-source-main > div.tp-monitor-source-counters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .tp-monitor-source-main .tp-source-dot {

@@ -1790,6 +1790,16 @@ function formatDuration(durationMs: number | null) {
     : Math.floor(seconds / 60) + ' min ' + Math.round(seconds % 60) + ' s'
 }
 
+function monitoringTotals(runs: MonitoringRun[]) {
+  return runs.reduce((total, run) => ({
+    found: total.found + run.foundItems,
+    discarded: total.discarded + (run.discardedItems ?? 0),
+    retained: total.retained + (run.retainedItems ?? 0),
+    processed: total.processed + (run.processedItems ?? 0),
+    imported: total.imported + run.importedDocuments,
+  }), { found: 0, discarded: 0, retained: 0, processed: 0, imported: 0 })
+}
+
 function MonitoringCenter({
   sources,
   runs,
@@ -1807,10 +1817,7 @@ function MonitoringCenter({
   expandedSource: string | null
   onToggleSource: (code: string) => void
 }) {
-  const imported24h = runs.reduce(
-    (total, run) => total + run.importedDocuments,
-    0,
-  )
+  const totals24h = monitoringTotals(runs)
   const federal = sources.filter((source) => source.jurisdictionLevel === 'FEDERAL')
   const states = sources.filter((source) => source.jurisdictionLevel === 'STATE')
 
@@ -1823,6 +1830,7 @@ function MonitoringCenter({
       <div className="tp-monitor-sources">
         {items.map((source) => {
           const sourceRuns = runs.filter((run) => run.sourceCode === source.code)
+          const sourceTotals = monitoringTotals(sourceRuns)
           const lastRun = sourceRuns[0] ?? null
 
           return (
@@ -1838,9 +1846,12 @@ function MonitoringCenter({
                   <span>Última execução</span>
                   <b>{formatRunTimestamp(lastRun?.startedAt ?? source.lastAttemptAt)}</b>
                 </div>
-                <div>
-                  <span>Importados 24h</span>
-                  <b>{sourceRuns.reduce((total, run) => total + run.importedDocuments, 0)}</b>
+                <div className="tp-monitor-source-counters" aria-label={`Indicadores de 24h da fonte ${source.name}`}>
+                  <span><small>Encontradas</small><b>{sourceTotals.found}</b></span>
+                  <span><small>Descartadas</small><b>{sourceTotals.discarded}</b></span>
+                  <span><small>Mantidas</small><b>{sourceTotals.retained}</b></span>
+                  <span><small>Processadas</small><b>{sourceTotals.processed}</b></span>
+                  <span><small>Importadas</small><b>{sourceTotals.imported}</b></span>
                 </div>
                 <button type="button" onClick={() => onToggleSource(source.code)}>
                   {expandedSource === source.code
@@ -1853,7 +1864,8 @@ function MonitoringCenter({
                 <div className="tp-run-history">
                   <div className="tp-run-history-head">
                     <span>Data/hora</span><span>Status</span><span>Tentativas</span>
-                    <span>Encontrados</span><span>Importados</span><span>Duração</span>
+                    <span>Encontradas</span><span>Descartadas</span><span>Mantidas</span>
+                    <span>Processadas</span><span>Importadas</span><span>Duração</span>
                   </div>
                   {sourceRuns.length === 0 ? (
                     <p>Nenhuma execução registrada nas últimas 24 horas.</p>
@@ -1868,6 +1880,9 @@ function MonitoringCenter({
                         </span>
                         <span>{run.attemptCount}</span>
                         <span>{run.foundItems}</span>
+                        <span>{run.discardedItems ?? 0}</span>
+                        <span>{run.retainedItems ?? 0}</span>
+                        <span>{run.processedItems ?? 0}</span>
                         <span><b>{run.importedDocuments}</b></span>
                         <span>{formatDuration(run.durationMs)}</span>
                       </div>
@@ -1888,7 +1903,11 @@ function MonitoringCenter({
         <article><span>Fontes monitoradas</span><strong>{sources.length}</strong></article>
         <article><span>Consultadas</span><strong>{consulted}</strong></article>
         <article><span>Com atenção</span><strong>{unavailable + unstable}</strong></article>
-        <article><span>Importados 24h</span><strong>{imported24h}</strong></article>
+        <article><span>Encontradas 24h</span><strong>{totals24h.found}</strong></article>
+        <article><span>Descartadas 24h</span><strong>{totals24h.discarded}</strong></article>
+        <article><span>Mantidas 24h</span><strong>{totals24h.retained}</strong></article>
+        <article><span>Processadas 24h</span><strong>{totals24h.processed}</strong></article>
+        <article><span>Importadas 24h</span><strong>{totals24h.imported}</strong></article>
       </div>
       {renderGroup('Cobertura Federal', federal)}
       {renderGroup('Diários Oficiais Estaduais', states)}
