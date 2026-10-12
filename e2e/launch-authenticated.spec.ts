@@ -618,8 +618,19 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     expect(countersBox!.y + countersBox!.height).toBeLessThanOrEqual(toggleBox!.y + 1)
   }
   const runHistory = sourceCard.locator('.tp-run-history')
-  for (const name of ['Encontradas', 'Descartadas', 'Mantidas', 'Processadas', 'Importadas']) {
-    await expect(runHistory.locator('.tp-run-history-head')).toContainText(name)
+  const expectedRunHeadings = [
+    'Tentativas', 'Encontradas', 'Descartadas', 'Mantidas',
+    'Processadas', 'Importadas', 'Duração',
+  ]
+  for (const [index, label] of expectedRunHeadings.entries()) {
+    await expect(runHistory.locator('.tp-run-history-head > span').nth(index + 2)).toContainText(label)
+  }
+  // Exactly six visible "|" separators, from Encontradas through Duração.
+  await expect(runHistory.locator('.tp-run-history-head i')).toHaveCount(6)
+  for (let i = 3; i <= 8; i += 1) {
+    expect(await runHistory.locator('.tp-run-history-row > span').nth(i).evaluate(
+      (span) => window.getComputedStyle(span, '::before').content,
+    )).toBe('"|"')
   }
   await expect(runHistory.locator('.tp-run-history-row > span').nth(3)).toHaveText('10')
   await expect(runHistory.locator('.tp-run-history-row > span').nth(4)).toHaveText('3')

@@ -1334,6 +1334,13 @@
   margin-right: 4px;
 }
 
+/* MON-01: separate all seven operational values in history rows as well. */
+.tp-run-history-row > span:nth-child(n + 4)::before {
+  content: '|';
+  color: var(--tp-muted);
+  margin-right: 4px;
+}
+
 .tp-run-history-head {
   padding: 12px 0 8px;
   color: var(--tp-muted);

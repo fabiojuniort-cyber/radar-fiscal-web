@@ -1883,12 +1883,12 @@ function MonitoringCenter({
                 <div className="tp-run-history">
                   <div className="tp-run-history-head">
                     <span>Data/hora</span><span>Status</span><span>Tentativas</span>
-                    <span>Encontradas</span>
+                    <span><i aria-hidden="true">|</i> Encontradas</span>
                     <span><i aria-hidden="true">|</i> Descartadas</span>
                     <span><i aria-hidden="true">|</i> Mantidas</span>
                     <span><i aria-hidden="true">|</i> Processadas</span>
                     <span><i aria-hidden="true">|</i> Importadas</span>
-                    <span>Duração</span>
+                    <span><i aria-hidden="true">|</i> Duração</span>
                   </div>
                   {sourceRuns.length === 0 ? (
                     <p>Nenhuma execução registrada nas últimas 24 horas.</p>
