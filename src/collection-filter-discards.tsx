@@ -35,6 +35,31 @@ function safeUrl(value: string | null) {
   } catch { return null }
 }
 
+/**
+ * Migration 029's generated is_hidden predicate, repeated ONLY for display of
+ * already-archived rows (whose publications no longer exist). This must never
+ * affect purge eligibility, policy decisions or other archived rule labels.
+ */
+export function wasLegacyHidden029(row: Pick<CollectionFilterDiscard,
+  'title' | 'raw_type' | 'discard_origin' | 'reason_code'>): boolean {
+  if (row.discard_origin !== 'ARCHIVE' || row.reason_code !== 'ARCHIVE_PURGE') return false
+  const type = (row.raw_type ?? '').toLocaleUpperCase('pt-BR')
+  const title = (row.title ?? '').toLocaleUpperCase('pt-BR')
+  return ['AVISO DE LICITAÇÃO', 'COMUNICADO DGFIN',
+    'PORTARIA DO COORDENADOR GERAL', 'COMISSÃO DE ANÁLISE DE PROJETOS',
+    'COMISSAO DE ANALISE DE PROJETOS'].some(needle =>
+      type.includes(needle) || title.includes(needle))
+}
+
+export function discardRuleModeLabel(r: CollectionFilterDiscard): string {
+  if (wasLegacyHidden029(r) && !r.rule_mode && !r.archive_policy_rule) {
+    return 'Regra antiga (029)'
+  }
+  return [r.archive_policy_rule ?? r.canonical_type ?? '—',
+    r.rule_mode ?? '—',
+    'v' + r.policy_version + ' · rev.' + r.policy_revision].join(' / ')
+}
+
 function percent(value: number | string) {
   const number = Number(value)
   return Number.isFinite(number)
@@ -60,9 +85,7 @@ const REPORT_COLUMNS: Array<{
   {key:'publishedOn',sort:'publishedOn',title:'Publicação',
     value:r=>date(r.published_on)},
   {key:'ruleMode',sort:'ruleMode',title:'Regra/Modo',
-    value:r=>[r.archive_policy_rule??r.canonical_type??'—',
-      r.rule_mode??'—',
-      'v'+r.policy_version+' · rev.'+r.policy_revision].join(' / ')},
+    value:r=>discardRuleModeLabel(r)},
   {key:'reasonCode',sort:'reasonCode',title:'Motivo',
     value:r=>REASONS[r.reason_code]??r.reason_code},
   {key:'decisiveTerm',sort:'decisiveTerm',title:'Termo decisivo',
