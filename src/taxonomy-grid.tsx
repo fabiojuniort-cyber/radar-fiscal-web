@@ -90,6 +90,13 @@ function normalize(value: string): string {
     .toLocaleLowerCase('pt-BR')
 }
 
+/** Presentation only: Segmento and Subsegmento keep separate stored identities. */
+export function displaySegmentSubsegment(segment: string, subsegment: string): string {
+  const parent = segment.trim()
+  const child = subsegment.trim()
+  return parent && child ? `${parent} – ${child}` : parent || child
+}
+
 const SEGMENT_COLUMN_DIMENSIONS = new Set(['sector', 'product'])
 
 let newRowCounter = 0
@@ -595,9 +602,14 @@ export function CurationGrid({
                         list={datalistId}
                         value={row.group}
                         placeholder={isCnae ? 'sem subsegmento' : 'sem grupo'}
-                        title={row.group}
+                        title={isCnae ? displaySegmentSubsegment(segmentOf(row.group), row.group) : row.group}
                         onChange={(event) => updateRow(row, { group: event.target.value })}
                       />
+                      {isCnae && row.group.trim() && (
+                        <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
+                          {displaySegmentSubsegment(segmentOf(row.group), row.group)}
+                        </small>
+                      )}
                     </td>
                   )}
                   {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
