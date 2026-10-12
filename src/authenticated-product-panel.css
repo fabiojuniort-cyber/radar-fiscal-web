@@ -1241,6 +1241,8 @@
 }
 
 .tp-monitor-totals-24h > .tp-monitor-metric-sequence {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
 }
 
