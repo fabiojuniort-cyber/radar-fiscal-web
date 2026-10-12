@@ -1172,7 +1172,7 @@
     12px minmax(170px, 1.25fr)
     minmax(180px, 1.25fr)
     minmax(130px, .85fr)
-    minmax(300px, 2fr)
+    minmax(410px, 2fr)
     auto;
   gap: 12px;
   align-items: center;
@@ -1186,33 +1186,66 @@
 }
 
 .tp-monitor-source-main > div.tp-monitor-source-counters {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.tp-monitor-source-counters > span {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
   min-width: 0;
+  overflow-x: auto;
 }
 
-.tp-monitor-source-main > div.tp-monitor-source-counters > span {
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.tp-monitor-source-counters small {
-  color: var(--tp-muted);
-  font-size: 10px;
-  font-weight: 700;
+.tp-monitor-metric-sequence {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  width: max-content;
+  min-width: 100%;
   white-space: nowrap;
 }
 
-.tp-monitor-source-counters b {
+.tp-monitor-metric-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 0 auto;
+}
+
+.tp-monitor-metric-separator {
+  color: var(--tp-muted);
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.tp-monitor-metric-detail {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+}
+
+.tp-monitor-metric-detail small {
+  color: var(--tp-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tp-monitor-metric-detail b {
   color: var(--tp-navy);
-  font-size: 13px;
+  font-size: 14px;
+}
+
+.tp-monitor-summary-runs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tp-monitor-totals-24h {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.tp-monitor-totals-24h > .tp-monitor-metric-sequence {
+  overflow-x: auto;
+}
+
+.tp-monitor-totals-24h .tp-monitor-metric-detail b {
+  font-size: 20px;
 }
 
 .tp-monitor-source-main > div > span {
@@ -1291,6 +1324,12 @@
     75px repeat(5, minmax(85px, .7fr)) 100px;
   gap: 10px;
   align-items: center;
+}
+
+.tp-run-history-head i {
+  color: var(--tp-muted);
+  font-style: normal;
+  margin-right: 4px;
 }
 
 .tp-run-history-head {
@@ -1378,10 +1417,12 @@
     grid-column: 2;
   }
 
+  .tp-monitor-summary-runs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .tp-monitor-source-main > div.tp-monitor-source-counters {
     grid-column: 2;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
     margin-top: 4px;
   }
 

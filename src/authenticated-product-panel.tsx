@@ -1800,6 +1800,29 @@ function monitoringTotals(runs: MonitoringRun[]) {
   }), { found: 0, discarded: 0, retained: 0, processed: 0, imported: 0 })
 }
 
+function MonitoringMetricSequence({ totals }: { totals: ReturnType<typeof monitoringTotals> }) {
+  const items = [
+    { label: 'Encontradas', value: totals.found },
+    { label: 'Descartadas', value: totals.discarded },
+    { label: 'Mantidas', value: totals.retained },
+    { label: 'Processadas', value: totals.processed },
+    { label: 'Importadas', value: totals.imported },
+  ]
+  return (
+    <div className="tp-monitor-metric-sequence">
+      {items.map((item, index) => (
+        <span className="tp-monitor-metric-unit" key={item.label}>
+          {index > 0 && <span aria-hidden="true" className="tp-monitor-metric-separator">|</span>}
+          <span className="tp-monitor-metric-detail">
+            <small>{item.label}</small>
+            <b>{item.value}</b>
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function MonitoringCenter({
   sources,
   runs,
@@ -1847,11 +1870,7 @@ function MonitoringCenter({
                   <b>{formatRunTimestamp(lastRun?.startedAt ?? source.lastAttemptAt)}</b>
                 </div>
                 <div className="tp-monitor-source-counters" aria-label={`Indicadores de 24h da fonte ${source.name}`}>
-                  <span><small>Encontradas</small><b>{sourceTotals.found}</b></span>
-                  <span><small>Descartadas</small><b>{sourceTotals.discarded}</b></span>
-                  <span><small>Mantidas</small><b>{sourceTotals.retained}</b></span>
-                  <span><small>Processadas</small><b>{sourceTotals.processed}</b></span>
-                  <span><small>Importadas</small><b>{sourceTotals.imported}</b></span>
+                  <MonitoringMetricSequence totals={sourceTotals} />
                 </div>
                 <button type="button" onClick={() => onToggleSource(source.code)}>
                   {expandedSource === source.code
@@ -1864,8 +1883,12 @@ function MonitoringCenter({
                 <div className="tp-run-history">
                   <div className="tp-run-history-head">
                     <span>Data/hora</span><span>Status</span><span>Tentativas</span>
-                    <span>Encontradas</span><span>Descartadas</span><span>Mantidas</span>
-                    <span>Processadas</span><span>Importadas</span><span>Duração</span>
+                    <span>Encontradas</span>
+                    <span><i aria-hidden="true">|</i> Descartadas</span>
+                    <span><i aria-hidden="true">|</i> Mantidas</span>
+                    <span><i aria-hidden="true">|</i> Processadas</span>
+                    <span><i aria-hidden="true">|</i> Importadas</span>
+                    <span>Duração</span>
                   </div>
                   {sourceRuns.length === 0 ? (
                     <p>Nenhuma execução registrada nas últimas 24 horas.</p>
@@ -1899,15 +1922,14 @@ function MonitoringCenter({
 
   return (
     <div className="tp-monitor-grid">
-      <div className="tp-monitor-summary">
+      <div className="tp-monitor-summary tp-monitor-summary-runs">
         <article><span>Fontes monitoradas</span><strong>{sources.length}</strong></article>
         <article><span>Consultadas</span><strong>{consulted}</strong></article>
         <article><span>Com atenção</span><strong>{unavailable + unstable}</strong></article>
-        <article><span>Encontradas 24h</span><strong>{totals24h.found}</strong></article>
-        <article><span>Descartadas 24h</span><strong>{totals24h.discarded}</strong></article>
-        <article><span>Mantidas 24h</span><strong>{totals24h.retained}</strong></article>
-        <article><span>Processadas 24h</span><strong>{totals24h.processed}</strong></article>
-        <article><span>Importadas 24h</span><strong>{totals24h.imported}</strong></article>
+        <article className="tp-monitor-totals-24h">
+          <span>Indicadores das últimas 24h</span>
+          <MonitoringMetricSequence totals={totals24h} />
+        </article>
       </div>
       {renderGroup('Cobertura Federal', federal)}
       {renderGroup('Diários Oficiais Estaduais', states)}

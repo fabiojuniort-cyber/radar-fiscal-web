@@ -586,19 +586,18 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   // MON-01: failures are found but not processed; existing retained items
   // count as maintained, not imported.
+  const expectedLabels = ['Encontradas', 'Descartadas', 'Mantidas', 'Processadas', 'Importadas']
+  const expectedValues = ['10', '3', '6', '9', '2']
   const monitoringSummary = page.locator('.tp-monitor-summary')
-  for (const [label, value] of [
-    ['Encontradas 24h', '10'],
-    ['Descartadas 24h', '3'],
-    ['Mantidas 24h', '6'],
-    ['Processadas 24h', '9'],
-    ['Importadas 24h', '2'],
-  ]) {
-    await expect(monitoringSummary.locator('article').filter({ hasText: label }).locator('strong')).toHaveText(value)
-  }
+  const summarySequence = monitoringSummary.locator('.tp-monitor-totals-24h .tp-monitor-metric-sequence')
+  await expect(summarySequence.locator('small')).toHaveText(expectedLabels)
+  await expect(summarySequence.locator('b')).toHaveText(expectedValues)
+  await expect(summarySequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
   const sourceCard = page.locator('.tp-monitor-source-card').filter({ hasText: 'DOU' })
-  await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Encontradas')
-  await expect(sourceCard.locator('.tp-monitor-source-counters')).toContainText('Processadas')
+  const sourceSequence = sourceCard.locator('.tp-monitor-source-counters .tp-monitor-metric-sequence')
+  await expect(sourceSequence.locator('small')).toHaveText(expectedLabels)
+  await expect(sourceSequence.locator('b')).toHaveText(expectedValues)
+  await expect(sourceSequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
   await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
   const countersBox = await sourceCard.locator('.tp-monitor-source-counters').boundingBox()
   const toggleBox = await sourceCard.getByRole('button', { name: 'Ocultar execuções' }).boundingBox()
