@@ -1198,10 +1198,16 @@
   min-width: 0;
 }
 
+.tp-monitor-source-main > div.tp-monitor-source-counters > span {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .tp-monitor-source-counters small {
   color: var(--tp-muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .tp-monitor-source-counters b {
@@ -1351,6 +1357,10 @@
   .tp-monitor-source-main button {
     grid-column: auto;
   }
+
+  .tp-monitor-source-main > div.tp-monitor-source-counters {
+    grid-column: 2 / -1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1369,7 +1379,10 @@
   }
 
   .tp-monitor-source-main > div.tp-monitor-source-counters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-column: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 4px;
   }
 
   .tp-monitor-source-main .tp-source-dot {
