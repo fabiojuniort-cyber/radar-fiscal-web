@@ -37,6 +37,30 @@ describe('ACT-SCOPE-02: trilha operacional', () => {
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
   })
 
+  it('L-18: identifica regra antiga 029 pelo tipo OU título, sem rotular purges comuns', async () => {
+    const archived = {
+      ...discard, discard_origin: 'ARCHIVE', reason_code: 'ARCHIVE_PURGE',
+      rule_mode: null, archive_policy_rule: null,
+    }
+    const rows = [
+      { ...archived, id: 'old1', raw_type: 'COMUNICADO',
+        title: 'AVISO DE LICITAÇÃO — fornecimento', policy_revision: 7 },
+      { ...archived, id: 'old2', raw_type: 'EMENDA CONSTITUCIONAL',
+        title: 'AVISO DE LICITAÇÃO N° 42' },
+      { ...archived, id: 'old3', raw_type: 'PORTARIA DO COORDENADOR GERAL',
+        title: 'Designação administrativa' },
+      { ...archived, id: 'scope', raw_type: 'RESOLUÇÃO', title: 'Resolução comum' },
+      { ...archived, id: 'rule', raw_type: 'COMUNICADO',
+        title: 'COMUNICADO DGFIN', rule_mode: 'EXCLUDE_ALWAYS',
+        archive_policy_rule: 'COMUNICADO DGFIN' },
+    ]
+    const fetch = vi.fn(async () => json({items:rows,total:rows.length})) as ProductApiFetch
+    mount(<CollectionFilterDiscards apiFetch={fetch} />)
+    await screen.findByText('Designação administrativa')
+    expect(screen.getAllByText('Regra antiga (029)')).toHaveLength(3)
+    expect(screen.getByText('COMUNICADO DGFIN / EXCLUDE_ALWAYS / v1 · rev.5')).toBeInTheDocument()
+  })
+
   it('pagina com sentinela e reinicia página ao aplicar filtro de fonte', async () => {
     const calls: string[] = []
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
