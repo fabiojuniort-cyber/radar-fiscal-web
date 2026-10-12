@@ -285,6 +285,21 @@ export async function createCurationDraft(apiFetch: ProductApiFetch, justificati
   )
 }
 
+// F2-T02: creates an independent Atuação dimension only in the current draft.
+// No publication or automatic lexical classification is triggered by this call.
+export async function initializeF2Actuacao(apiFetch: ProductApiFetch, justification: string) {
+  return readJson<{
+    dimension: 'actuacao'
+    seededCodes: string[]
+    sourceSha256: string
+    sourceRows: number
+    classificationPublished: false
+  }>(await apiFetch(
+    `${ADMIN}/drafts/current/actuacao/initialize`,
+    jsonInit('POST', { justification }),
+  ))
+}
+
 export type DimensionPatch = Partial<{
   name: string
   description: string | null
