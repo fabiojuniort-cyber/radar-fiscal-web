@@ -1790,6 +1790,39 @@ function formatDuration(durationMs: number | null) {
     : Math.floor(seconds / 60) + ' min ' + Math.round(seconds % 60) + ' s'
 }
 
+function monitoringTotals(runs: MonitoringRun[]) {
+  return runs.reduce((total, run) => ({
+    found: total.found + run.foundItems,
+    discarded: total.discarded + (run.discardedItems ?? 0),
+    retained: total.retained + (run.retainedItems ?? 0),
+    processed: total.processed + (run.processedItems ?? 0),
+    imported: total.imported + run.importedDocuments,
+  }), { found: 0, discarded: 0, retained: 0, processed: 0, imported: 0 })
+}
+
+function MonitoringMetricSequence({ totals }: { totals: ReturnType<typeof monitoringTotals> }) {
+  const items = [
+    { label: 'Encontradas', value: totals.found },
+    { label: 'Descartadas', value: totals.discarded },
+    { label: 'Mantidas', value: totals.retained },
+    { label: 'Processadas', value: totals.processed },
+    { label: 'Importadas', value: totals.imported },
+  ]
+  return (
+    <div className="tp-monitor-metric-sequence">
+      {items.map((item, index) => (
+        <span className="tp-monitor-metric-unit" key={item.label}>
+          {index > 0 && <span aria-hidden="true" className="tp-monitor-metric-separator">|</span>}
+          <span className="tp-monitor-metric-detail">
+            <small>{item.label}</small>
+            <b>{item.value}</b>
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function MonitoringCenter({
   sources,
   runs,
@@ -1807,10 +1840,7 @@ function MonitoringCenter({
   expandedSource: string | null
   onToggleSource: (code: string) => void
 }) {
-  const imported24h = runs.reduce(
-    (total, run) => total + run.importedDocuments,
-    0,
-  )
+  const totals24h = monitoringTotals(runs)
   const federal = sources.filter((source) => source.jurisdictionLevel === 'FEDERAL')
   const states = sources.filter((source) => source.jurisdictionLevel === 'STATE')
 
@@ -1823,6 +1853,7 @@ function MonitoringCenter({
       <div className="tp-monitor-sources">
         {items.map((source) => {
           const sourceRuns = runs.filter((run) => run.sourceCode === source.code)
+          const sourceTotals = monitoringTotals(sourceRuns)
           const lastRun = sourceRuns[0] ?? null
 
           return (
@@ -1838,9 +1869,8 @@ function MonitoringCenter({
                   <span>Última execução</span>
                   <b>{formatRunTimestamp(lastRun?.startedAt ?? source.lastAttemptAt)}</b>
                 </div>
-                <div>
-                  <span>Importados 24h</span>
-                  <b>{sourceRuns.reduce((total, run) => total + run.importedDocuments, 0)}</b>
+                <div className="tp-monitor-source-counters" aria-label={`Indicadores de 24h da fonte ${source.name}`}>
+                  <MonitoringMetricSequence totals={sourceTotals} />
                 </div>
                 <button type="button" onClick={() => onToggleSource(source.code)}>
                   {expandedSource === source.code
@@ -1853,7 +1883,12 @@ function MonitoringCenter({
                 <div className="tp-run-history">
                   <div className="tp-run-history-head">
                     <span>Data/hora</span><span>Status</span><span>Tentativas</span>
-                    <span>Encontrados</span><span>Importados</span><span>Duração</span>
+                    <span><i aria-hidden="true">|</i> Encontradas</span>
+                    <span><i aria-hidden="true">|</i> Descartadas</span>
+                    <span><i aria-hidden="true">|</i> Mantidas</span>
+                    <span><i aria-hidden="true">|</i> Processadas</span>
+                    <span><i aria-hidden="true">|</i> Importadas</span>
+                    <span><i aria-hidden="true">|</i> Duração</span>
                   </div>
                   {sourceRuns.length === 0 ? (
                     <p>Nenhuma execução registrada nas últimas 24 horas.</p>
@@ -1868,6 +1903,9 @@ function MonitoringCenter({
                         </span>
                         <span>{run.attemptCount}</span>
                         <span>{run.foundItems}</span>
+                        <span>{run.discardedItems ?? 0}</span>
+                        <span>{run.retainedItems ?? 0}</span>
+                        <span>{run.processedItems ?? 0}</span>
                         <span><b>{run.importedDocuments}</b></span>
                         <span>{formatDuration(run.durationMs)}</span>
                       </div>
@@ -1884,11 +1922,14 @@ function MonitoringCenter({
 
   return (
     <div className="tp-monitor-grid">
-      <div className="tp-monitor-summary">
+      <div className="tp-monitor-summary tp-monitor-summary-runs">
         <article><span>Fontes monitoradas</span><strong>{sources.length}</strong></article>
         <article><span>Consultadas</span><strong>{consulted}</strong></article>
         <article><span>Com atenção</span><strong>{unavailable + unstable}</strong></article>
-        <article><span>Importados 24h</span><strong>{imported24h}</strong></article>
+        <article className="tp-monitor-totals-24h">
+          <span>Indicadores das últimas 24h</span>
+          <MonitoringMetricSequence totals={totals24h} />
+        </article>
       </div>
       {renderGroup('Cobertura Federal', federal)}
       {renderGroup('Diários Oficiais Estaduais', states)}

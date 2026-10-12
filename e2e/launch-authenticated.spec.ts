@@ -34,7 +34,7 @@ const archiveItem = {
   excerpt: 'Conteúdo oficial de teste.',
 }
 
-test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }) => {
+test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }, testInfo) => {
   const archiveRequests: URL[] = []
   let companyCreated = false
   let profileSaved = false
@@ -141,8 +141,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           finishedAt: '2026-09-30T00:00:03.000Z',
           durationMs: 3000,
           attemptCount: 1,
-          foundItems: 7,
-          importedDocuments: 7,
+          foundItems: 10,
+          discardedItems: 3,
+          retainedItems: 6,
+          processedItems: 9,
+          importedDocuments: 2,
         }],
       }),
     })
@@ -580,6 +583,66 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Central de Monitoramento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Central de Monitoramento' })).toBeVisible()
   await expect(page.getByText('DOU').first()).toBeVisible()
+
+  // MON-01: failures are found but not processed; existing retained items
+  // count as maintained, not imported.
+  const expectedLabels = ['Encontradas', 'Descartadas', 'Mantidas', 'Processadas', 'Importadas']
+  const expectedValues = ['10', '3', '6', '9', '2']
+  const monitoringSummary = page.locator('.tp-monitor-summary')
+  const summarySequence = monitoringSummary.locator('.tp-monitor-totals-24h .tp-monitor-metric-sequence')
+  await expect(summarySequence.locator('small')).toHaveText(expectedLabels)
+  await expect(summarySequence.locator('b')).toHaveText(expectedValues)
+  await expect(summarySequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
+  const sourceCard = page.locator('.tp-monitor-source-card').filter({ hasText: 'DOU' })
+  const sourceSequence = sourceCard.locator('.tp-monitor-source-counters .tp-monitor-metric-sequence')
+  await expect(sourceSequence.locator('small')).toHaveText(expectedLabels)
+  await expect(sourceSequence.locator('b')).toHaveText(expectedValues)
+  await expect(sourceSequence.locator('.tp-monitor-metric-separator')).toHaveText(['|', '|', '|', '|'])
+  if ((page.viewportSize()?.width ?? 0) <= 390) {
+    // Horizontal scroll is intentional on narrow screens: preserve legible
+    // metric labels/values instead of squeezing them or overflowing the page.
+    for (const locator of [summarySequence, sourceCard.locator('.tp-monitor-source-counters')]) {
+      const box = await locator.evaluate(element => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        overflowX: getComputedStyle(element).overflowX,
+      }))
+      expect(box.clientWidth).toBeGreaterThan(0)
+      expect(['auto', 'scroll']).toContain(box.overflowX)
+      expect(box.scrollWidth).toBeGreaterThanOrEqual(box.clientWidth)
+    }
+  }
+  await sourceCard.getByRole('button', { name: 'Ver execuções' }).click()
+  const countersBox = await sourceCard.locator('.tp-monitor-source-counters').boundingBox()
+  const toggleBox = await sourceCard.getByRole('button', { name: 'Ocultar execuções' }).boundingBox()
+  expect(countersBox).not.toBeNull()
+  expect(toggleBox).not.toBeNull()
+  if ((page.viewportSize()?.width ?? 0) <= 760) {
+    expect(countersBox!.width).toBeGreaterThan(180)
+    expect(countersBox!.y + countersBox!.height).toBeLessThanOrEqual(toggleBox!.y + 1)
+  }
+  const runHistory = sourceCard.locator('.tp-run-history')
+  const expectedRunHeadings = [
+    'Tentativas', 'Encontradas', 'Descartadas', 'Mantidas',
+    'Processadas', 'Importadas', 'Duração',
+  ]
+  for (const [index, label] of expectedRunHeadings.entries()) {
+    await expect(runHistory.locator('.tp-run-history-head > span').nth(index + 2)).toContainText(label)
+  }
+  // Exactly six visible "|" separators, from Encontradas through Duração.
+  await expect(runHistory.locator('.tp-run-history-head i')).toHaveCount(6)
+  for (let i = 3; i <= 8; i += 1) {
+    expect(await runHistory.locator('.tp-run-history-row > span').nth(i).evaluate(
+      (span) => window.getComputedStyle(span, '::before').content,
+    )).toBe('"|"')
+  }
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(3)).toHaveText('10')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(4)).toHaveText('3')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(5)).toHaveText('6')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(6)).toHaveText('9')
+  await expect(runHistory.locator('.tp-run-history-row > span').nth(7)).toHaveText('2')
+  // Screenshot is captured pre-merge and retained in CI's test-results artifact.
+  await page.screenshot({ path: testInfo.outputPath('mon-01-central-monitoring.png'), fullPage: true })
 
   await page.getByRole('button', { name: 'Notícias', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Notícias' })).toBeVisible()

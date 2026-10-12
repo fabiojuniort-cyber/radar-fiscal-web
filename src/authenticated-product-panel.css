@@ -1172,9 +1172,9 @@
     12px minmax(170px, 1.25fr)
     minmax(180px, 1.25fr)
     minmax(130px, .85fr)
-    minmax(105px, .65fr)
+    minmax(410px, 2fr)
     auto;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   padding: 16px 18px;
 }
@@ -1183,6 +1183,71 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.tp-monitor-source-main > div.tp-monitor-source-counters {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tp-monitor-metric-sequence {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
+.tp-monitor-metric-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 0 auto;
+}
+
+.tp-monitor-metric-separator {
+  color: var(--tp-muted);
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.tp-monitor-metric-detail {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+}
+
+.tp-monitor-metric-detail small {
+  color: var(--tp-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tp-monitor-metric-detail b {
+  color: var(--tp-navy);
+  font-size: 14px;
+}
+
+.tp-monitor-summary-runs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tp-monitor-totals-24h {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.tp-monitor-totals-24h > .tp-monitor-metric-sequence {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tp-monitor-totals-24h .tp-monitor-metric-detail b {
+  font-size: 20px;
 }
 
 .tp-monitor-source-main > div > span {
@@ -1248,18 +1313,32 @@
   border-top: 1px solid var(--tp-border);
   background: #f8fbff;
   padding: 0 18px 14px;
+  overflow-x: auto;
 }
 
 .tp-run-history-head,
 .tp-run-history-row {
-  min-width: 760px;
+  min-width: 1100px;
   display: grid;
   grid-template-columns:
-    minmax(130px, 1fr)
-    minmax(175px, 1.3fr)
-    90px 90px 90px 100px;
-  gap: 12px;
+    minmax(140px, 1.3fr)
+    minmax(150px, 1.25fr)
+    75px repeat(5, minmax(85px, .7fr)) 100px;
+  gap: 10px;
   align-items: center;
+}
+
+.tp-run-history-head i {
+  color: var(--tp-muted);
+  font-style: normal;
+  margin-right: 4px;
+}
+
+/* MON-01: separate all seven operational values in history rows as well. */
+.tp-run-history-row > span:nth-child(n + 4)::before {
+  content: '|';
+  color: var(--tp-muted);
+  margin-right: 4px;
 }
 
 .tp-run-history-head {
@@ -1326,6 +1405,10 @@
   .tp-monitor-source-main button {
     grid-column: auto;
   }
+
+  .tp-monitor-source-main > div.tp-monitor-source-counters {
+    grid-column: 2 / -1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1341,6 +1424,38 @@
   .tp-monitor-source-main > div,
   .tp-monitor-source-main button {
     grid-column: 2;
+  }
+
+  .tp-monitor-summary-runs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tp-monitor-source-main > div.tp-monitor-source-counters {
+    grid-column: 2;
+    margin-top: 4px;
+  }
+
+  /* Keep all five labels and values visible in the requested inline order. */
+  .tp-monitor-metric-unit {
+    flex: 0 0 auto;
+    gap: 3px;
+  }
+
+  .tp-monitor-metric-detail {
+    padding-right: 2px;
+  }
+
+  .tp-monitor-metric-detail small {
+    font-size: 9px;
+    letter-spacing: -.02em;
+  }
+
+  .tp-monitor-metric-separator {
+    font-size: 12px;
+  }
+
+  .tp-monitor-totals-24h .tp-monitor-metric-detail b {
+    font-size: 16px;
   }
 
   .tp-monitor-source-main .tp-source-dot {
