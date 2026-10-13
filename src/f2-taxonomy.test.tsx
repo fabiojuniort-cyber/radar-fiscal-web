@@ -75,6 +75,7 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
   const group = {
     id: 'g1', code: 'g1', dimensionCode: 'sector', label: legacyLabel,
     displayOrder: 1, segmentCodes: ['sector.agro'], officialCodes: [],
+    helpText: null, detailSection: null,
   } as CurationGroup
   const activity = {
     ...sector, code: 'sector.cnae_0111301', label: 'Cultivo de arroz', groupId: 'g1',
