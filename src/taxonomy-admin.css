@@ -1420,3 +1420,21 @@
   white-space: normal;
   justify-content: center;
 }
+
+/* F2 visual smoke: source suggestions are read-only, never editable taxonomy tags.
+   Keep long legal/NCM suggestions legible inside the horizontally scrollable grid. */
+.tc-grid th.is-f2-source,
+.tc-grid td.is-f2-source {
+  min-width: 180px;
+  max-width: 280px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tc-grid td.is-f2-source {
+  font-size: 12px;
+}
+
+.tc-source-pending {
+  color: var(--tp-muted);
+}
