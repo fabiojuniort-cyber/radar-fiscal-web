@@ -1393,3 +1393,30 @@
 .tc-grid .is-group {
   min-width: 190px;
 }
+
+/* F2-T01: hierarchy is presentation only; group and segment retain their IDs. */
+.tc-subsegment-context {
+  display: block;
+  margin: 3px 6px 0;
+  color: var(--tp-muted);
+  font-size: 11px;
+  line-height: 1.3;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+
+/* F2-T02: separate curated dimension, only created in an open draft. */
+.tc-atuacao-intro {
+  border: 1px dashed var(--tp-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.tc-atuacao-intro p, .tc-atuacao-explainer {
+  font-size: 12px;
+  color: var(--tp-copy);
+}
+.tc-atuacao-intro button {
+  width: 100%;
+  white-space: normal;
+  justify-content: center;
+}

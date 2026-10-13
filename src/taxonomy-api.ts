@@ -285,6 +285,48 @@ export async function createCurationDraft(apiFetch: ProductApiFetch, justificati
   )
 }
 
+// F2-T02: creates an independent Atuação dimension only in the current draft.
+// No publication or automatic lexical classification is triggered by this call.
+export async function initializeF2Actuacao(apiFetch: ProductApiFetch, justification: string) {
+  return readJson<{
+    dimension: 'actuacao'
+    seededCodes: string[]
+    sourceSha256: string
+    sourceRows: number
+    classificationPublished: false
+  }>(await apiFetch(
+    `${ADMIN}/drafts/current/actuacao/initialize`,
+    jsonInit('POST', { justification }),
+  ))
+}
+
+/** Maximum approved full F2 dry-run JSON size; avoids rejecting the 3.1 MB report. */
+export const F2_DRYRUN_REPORT_MAX_BYTES = 8_000_000
+
+export interface F2ActuacaoOrigin {
+  sourceLine: number
+  cnaeCode: string
+  atuacaoLabel: string
+}
+
+export async function importF2ActuacaoCnaeOrigins(
+  apiFetch: ProductApiFetch,
+  justification: string,
+  sourceSha256: string,
+  rows: F2ActuacaoOrigin[],
+) {
+  return readJson<{
+    originCount: number
+    reusedExisting: boolean
+    sourceSha256: string
+    projectionSha256: string
+    classificationPublished: false
+  }>(await apiFetch(
+    `${ADMIN}/drafts/current/actuacao/origins`,
+    jsonInit('POST', { justification, sourceSha256, rows }),
+  ))
+}
+
 export type DimensionPatch = Partial<{
   name: string
   description: string | null

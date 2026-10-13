@@ -31,6 +31,9 @@ import {
   formatOfficialCode,
   importCatalog,
   importDimensionCsv,
+  initializeF2Actuacao,
+  importF2ActuacaoCnaeOrigins,
+  F2_DRYRUN_REPORT_MAX_BYTES,
   readCsvFile,
   patchConcept,
   patchDimension,
@@ -300,6 +303,11 @@ function TablesTab({
 }) {
   const [dimensionCode, setDimensionCode] = useState(view.dimensions[0]?.code ?? '')
   const [gridDirty, setGridDirty] = useState(false)
+  const [creatingActuacao, setCreatingActuacao] = useState(false)
+  const [importingOrigins, setImportingOrigins] = useState(false)
+  const [originsMessage, setOriginsMessage] = useState<string | null>(null)
+  const [actuacaoError, setActuacaoError] = useState<string | null>(null)
+  const hasActuacao = view.dimensions.some(item => item.code === 'actuacao')
   const dimension = view.dimensions.find((d) => d.code === dimensionCode) ?? view.dimensions[0]
 
   const sortedDimensions = useMemo(
@@ -343,6 +351,69 @@ function TablesTab({
             </span>
           </button>
         ))}
+        {!hasActuacao && editable && (
+          <div className="tc-atuacao-intro">
+            <p>Atuação é independente de Segmento. A carga inicial contém 7 categorias da planilha Segmento v1.7.3.</p>
+            <button type="button" disabled={creatingActuacao} onClick={() => {
+              if (gridDirty && !window.confirm('Há alterações não salvas. Continuar?')) return
+              setCreatingActuacao(true)
+              setActuacaoError(null)
+              void initializeF2Actuacao(apiFetch, justification)
+                .then(onChanged)
+                .then(() => setDimensionCode('actuacao'))
+                .catch(error => setActuacaoError(errorText(error)))
+                .finally(() => setCreatingActuacao(false))
+            }}>
+              {creatingActuacao ? 'Preparando Atuação…' : 'Preparar tabela Atuação no rascunho'}
+            </button>
+            {actuacaoError && <p role="alert" className="tc-error">{actuacaoError}</p>}
+          </div>
+        )}
+        {hasActuacao && editable && (
+          <div className="tc-atuacao-intro">
+            <label htmlFor="tc-f2-origin-report">Vínculos CNAE da fonte aprovada (JSON do dry-run F2)</label>
+            <input
+              id="tc-f2-origin-report"
+              type="file"
+              accept=".json,application/json"
+              aria-label="Importar vínculos CNAE da Atuação"
+              disabled={importingOrigins}
+              onChange={event => {
+                const file = event.target.files?.[0]
+                event.target.value = ''
+                if (!file) return
+                setImportingOrigins(true)
+                setOriginsMessage(null)
+                void (async () => {
+                  if (file.size > F2_DRYRUN_REPORT_MAX_BYTES) throw new Error('Relatório excede limite seguro')
+                  const raw: unknown = JSON.parse(await file.text())
+                  if (!raw || typeof raw !== 'object') throw new Error('JSON de dry-run inválido')
+                  const report = raw as Record<string, unknown>
+                  const provenance = report.provenance as Record<string, unknown> | null
+                  const origins = report.actuationOrigins
+                  const summary = report.summary as Record<string, unknown> | null
+                  if (report.mode !== 'DRY_RUN_ONLY' || !provenance ||
+                      typeof provenance.segmentoSha256 !== 'string' ||
+                      !Array.isArray(origins) || origins.length !== 1332 ||
+                      summary?.segmentRows !== 1332) {
+                    throw new Error('O arquivo precisa ser o relatório completo do dry-run F2 com 1.332 CNAEs')
+                  }
+                  if (!window.confirm('Gravar no RASCUNHO os 1.332 vínculos CNAE–Atuação verificados pelo servidor? Não publica normas.')) return
+                  const result = await importF2ActuacaoCnaeOrigins(
+                    apiFetch, justification, provenance.segmentoSha256,
+                    origins as Array<{ sourceLine: number; cnaeCode: string; atuacaoLabel: string }>,
+                  )
+                  setOriginsMessage(result.reusedExisting
+                    ? '1.332 vínculos já conferidos no rascunho; sem nova gravação.'
+                    : `1.332 vínculos de origem CNAE gravados no rascunho (SHA verificado).`)
+                  await onChanged()
+                })().catch(error => setOriginsMessage(`Falha: ${errorText(error)}`))
+                  .finally(() => setImportingOrigins(false))
+              }}
+            />
+            {originsMessage && <p role="status">{originsMessage}</p>}
+          </div>
+        )}
       </aside>
       <DimensionEditor
         key={dimension.code}
@@ -585,6 +656,12 @@ function DimensionEditor({
       <div className="tc-editor-head">
         <div>
           <h2>{dimension.name}</h2>
+          {dimension.code === 'actuacao' && (
+            <p className="tc-atuacao-explainer">
+              Tabela independente de Segmento, com sinônimos próprios configuráveis pelo curador.
+              Os 7 itens iniciais não classificam pelo nome até aprovação expressa na curadoria.
+            </p>
+          )}
           <p>
             {dimension.conceptCount} itens · {groups.length} {dimension.code === 'sector' ? 'subsegmentos' : 'grupos'} ·{' '}
             {dimension.profileVisible ? 'aparece no Perfil Tributário' : 'não aparece no perfil'} ·{' '}
@@ -630,7 +707,9 @@ function DimensionEditor({
               <option value="">{dimension.code === 'sector' ? 'Editar subsegmento…' : 'Editar grupo…'}</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
-                  {group.label}
+                  {dimension.code === 'sector'
+                    ? `${group.segmentCodes.map(code => view.concepts.find(item => item.code === code)?.label ?? code).join(', ')} – ${group.label}`
+                    : group.label}
                 </option>
               ))}
             </select>
