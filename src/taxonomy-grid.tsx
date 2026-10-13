@@ -31,9 +31,13 @@ type RowDraft = {
   profileVisible: boolean
   classifyByLabel: boolean
   displayOrder: string
+  /** F2 source suggestions; read-only, never included in curator writes. */
+  atuacao: string
+  suggestedProducts: string
+  suggestedNcms: string
 }
 
-type ColumnKey = 'segment' | 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code'
+type ColumnKey = 'segment' | 'group' | 'label' | 'codes' | 'aliases' | 'profileVisible' | 'classifyByLabel' | 'displayOrder' | 'code' | 'atuacao' | 'suggestedProducts' | 'suggestedNcms'
 
 
 function splitList(value: string): string[] {
@@ -54,6 +58,9 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     profileVisible: concept.profileVisible,
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
+    atuacao: concept.f2Source?.atuacao ?? '',
+    suggestedProducts: concept.f2Source?.suggestedProducts ?? '',
+    suggestedNcms: concept.f2Source?.suggestedNcms ?? '',
   }
 }
 
@@ -90,10 +97,24 @@ function normalize(value: string): string {
     .toLocaleLowerCase('pt-BR')
 }
 
-/** Presentation only: Segmento and Subsegmento keep separate stored identities. */
+/** Existing draft groups may already carry "Segmento / Subsegmento" as one label.
+ * Only strip a prefix that is demonstrably the selected parent; never rewrite
+ * group identity or guess at separators inside an unrelated subsegment name.
+ */
+export function subsegmentName(segment: string, subsegment: string): string {
+  const parent = segment.trim()
+  const raw = subsegment.trim()
+  if (!parent || !raw) return raw
+  const split = /^(.+?)\s+(?:\/|–)\s+(.+)$/.exec(raw)
+  return split && normalize(split[1]!.trim()) === normalize(parent)
+    ? split[2]!.trim()
+    : raw
+}
+
+/** Presentation only: Segmento and Subsegmento keep their stored identities. */
 export function displaySegmentSubsegment(segment: string, subsegment: string): string {
   const parent = segment.trim()
-  const child = subsegment.trim()
+  const child = subsegmentName(parent, subsegment)
   return parent && child ? `${parent} – ${child}` : parent || child
 }
 
@@ -265,6 +286,11 @@ export function CurationGrid({
   const columns: Array<{ key: ColumnKey; label: string; className?: string }> = [
     ...(showSegment ? [{ key: 'segment' as const, label: 'Segmento', className: 'is-segment' }] : []),
     ...(dimension.usesGroups ? [{ key: 'group' as const, label: isCnae ? 'Subsegmento' : 'Grupo', className: 'is-group' }] : []),
+    ...(isCnae ? [
+      { key: 'atuacao' as const, label: 'Atuação', className: 'is-f2-source' },
+      { key: 'suggestedProducts' as const, label: 'Produtos sugeridos', className: 'is-f2-source' },
+      { key: 'suggestedNcms' as const, label: 'NCMs sugeridos', className: 'is-f2-source' },
+    ] : []),
     ...(!isCnae ? [{ key: 'label' as const, label: 'Item', className: 'is-label' }] : []),
     {
       key: 'codes',
@@ -346,6 +372,9 @@ export function CurationGrid({
       profileVisible: true,
       classifyByLabel: true,
       displayOrder: '',
+      atuacao: '',
+      suggestedProducts: '',
+      suggestedNcms: '',
     }
     setNewRows((rows) => [row, ...rows])
     setMessage(null)
@@ -443,7 +472,17 @@ export function CurationGrid({
   }
 
   const allVisibleSelected = pageRows.length > 0 && pageRows.every((row) => selected.has(row.key))
-  const groupOptions = groups.map((group) => group.label).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const groupOptions = [...new Set(groups.map((group) =>
+    isCnae ? subsegmentName(segmentOf(group.label), group.label) : group.label,
+  ))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const resolveGroupInput = (value: string): string => {
+    if (!isCnae) return value
+    const matched = groups.filter((group) =>
+      subsegmentName(segmentOf(group.label), group.label) === value,
+    )
+    // If ambiguous, do not silently assign a CNAE to a different group.
+    return matched.length === 1 ? matched[0]!.label : value
+  }
   const datalistId = `tc-groups-${dimension.code}`
 
   return (
@@ -600,10 +639,10 @@ export function CurationGrid({
                         {...cellProps('group')}
                         aria-label={isCnae ? 'Subsegmento' : 'Grupo'}
                         list={datalistId}
-                        value={row.group}
+                        value={isCnae ? subsegmentName(segmentOf(row.group), row.group) : row.group}
                         placeholder={isCnae ? 'sem subsegmento' : 'sem grupo'}
                         title={isCnae ? displaySegmentSubsegment(segmentOf(row.group), row.group) : row.group}
-                        onChange={(event) => updateRow(row, { group: event.target.value })}
+                        onChange={(event) => updateRow(row, { group: resolveGroupInput(event.target.value) })}
                       />
                       {isCnae && row.group.trim() && (
                         <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
@@ -612,6 +651,11 @@ export function CurationGrid({
                       )}
                     </td>
                   )}
+                  {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
+                    <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
+                      {row[key] || <span className="tc-source-pending">—</span>}
+                    </td>
+                  ))}
                   {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
                     <input
                       {...cellProps('label')}
@@ -709,6 +753,13 @@ export function CurationGrid({
         <span>Página {currentPage + 1} de {lastPage + 1} · {visibleRows.length} linhas</span>
         <button type="button" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>Próxima página</button>
       </nav>}
+      {isCnae && (
+        <p className="tc-hint">
+          Atuação, Produtos sugeridos e NCMs sugeridos são campos de origem F2 (somente leitura).
+          Traço indica ausência de vínculo auditado por CNAE na versão exibida;
+          a carga isolada T03 não publica esses dados automaticamente.
+        </p>
+      )}
       <p className="tc-hint">
         {visibleRows.length} linhas · Enter, ↑ e ↓ mudam de linha · clique no título da coluna para ordenar · digite um
         {isCnae ? 'subsegmento novo na coluna Subsegmento' : 'grupo novo na coluna Grupo'} para criá-lo ao salvar · todo sinônimo marca
