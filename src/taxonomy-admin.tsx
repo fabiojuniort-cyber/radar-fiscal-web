@@ -51,7 +51,7 @@ import {
   type ReleaseView,
 } from './taxonomy-api'
 import './panel-experience.css'
-import { CurationGrid } from './taxonomy-grid'
+import { CurationGrid, displaySegmentSubsegment } from './taxonomy-grid'
 import { importSegmentPackage, parseSegmentPackage } from './segment-import'
 import './taxonomy-admin.css'
 
@@ -308,7 +308,9 @@ function TablesTab({
   const [originsMessage, setOriginsMessage] = useState<string | null>(null)
   const [actuacaoError, setActuacaoError] = useState<string | null>(null)
   const hasActuacao = view.dimensions.some(item => item.code === 'actuacao')
-  const dimension = view.dimensions.find((d) => d.code === dimensionCode) ?? view.dimensions[0]
+  const pendingActuacao = dimensionCode === 'actuacao' && !hasActuacao
+  const dimension = view.dimensions.find((d) => d.code === dimensionCode) ??
+    (pendingActuacao ? undefined : view.dimensions[0])
 
   const sortedDimensions = useMemo(
     () =>
@@ -321,7 +323,7 @@ function TablesTab({
     [view.dimensions],
   )
 
-  if (!dimension) return <p className="tc-hint">Nenhuma dimensão nesta versão.</p>
+  if (!dimension && !pendingActuacao) return <p className="tc-hint">Nenhuma dimensão nesta versão.</p>
 
   return (
     <div className="tc-tables">
@@ -330,10 +332,10 @@ function TablesTab({
           <button
             type="button"
             key={item.code}
-            className={item.code === dimension.code ? 'is-selected' : ''}
+            className={item.code === dimensionCode ? 'is-selected' : ''}
             onClick={() => {
               if (
-                item.code !== dimension.code &&
+                item.code !== dimensionCode &&
                 gridDirty &&
                 !window.confirm('Há alterações não salvas nesta tabela. Sair sem salvar?')
               ) {
@@ -351,23 +353,21 @@ function TablesTab({
             </span>
           </button>
         ))}
-        {!hasActuacao && editable && (
-          <div className="tc-atuacao-intro">
-            <p>Atuação é independente de Segmento. A carga inicial contém 7 categorias da planilha Segmento v1.7.3.</p>
-            <button type="button" disabled={creatingActuacao} onClick={() => {
-              if (gridDirty && !window.confirm('Há alterações não salvas. Continuar?')) return
-              setCreatingActuacao(true)
-              setActuacaoError(null)
-              void initializeF2Actuacao(apiFetch, justification)
-                .then(onChanged)
-                .then(() => setDimensionCode('actuacao'))
-                .catch(error => setActuacaoError(errorText(error)))
-                .finally(() => setCreatingActuacao(false))
-            }}>
-              {creatingActuacao ? 'Preparando Atuação…' : 'Preparar tabela Atuação no rascunho'}
-            </button>
-            {actuacaoError && <p role="alert" className="tc-error">{actuacaoError}</p>}
-          </div>
+        {!hasActuacao && (
+          <button
+            type="button"
+            className={pendingActuacao ? 'is-selected' : ''}
+            aria-current={pendingActuacao ? 'page' : undefined}
+            onClick={() => {
+              if (!pendingActuacao && gridDirty &&
+                  !window.confirm('Há alterações não salvas nesta tabela. Sair sem salvar?')) return
+              setGridDirty(false)
+              setDimensionCode('actuacao')
+            }}
+          >
+            <b>Atuação</b>
+            <span>Não inicializada · independente de Segmento</span>
+          </button>
         )}
         {hasActuacao && editable && (
           <div className="tc-atuacao-intro">
@@ -415,16 +415,49 @@ function TablesTab({
           </div>
         )}
       </aside>
-      <DimensionEditor
-        key={dimension.code}
-        apiFetch={apiFetch}
-        view={view}
-        dimension={dimension}
-        editable={editable}
-        justification={justification}
-        onChanged={onChanged}
-        onDirtyChange={setGridDirty}
-      />
+      {pendingActuacao ? (
+        <section className="tc-editor" aria-label="Atuação pendente">
+          <div className="tc-editor-head">
+            <h2>Atuação</h2>
+          </div>
+          <p>
+            Dimensão própria da Taxonomia: Serviço, Indústria, Comércio atacadista,
+            Produção agropecuária, Comércio varejista, Extração mineral e Representação comercial.
+          </p>
+          <p className="tc-hint">
+            A tabela ainda não integra esta versão. Atuação só pode ser preparada
+            explicitamente no rascunho, sem alterar a versão publicada nem ativar classificação.
+          </p>
+          {editable ? (
+            <button type="button" className="is-primary" disabled={creatingActuacao} onClick={() => {
+              if (gridDirty && !window.confirm('Há alterações não salvas. Continuar?')) return
+              setCreatingActuacao(true)
+              setActuacaoError(null)
+              void initializeF2Actuacao(apiFetch, justification)
+                .then(onChanged)
+                .then(() => setDimensionCode('actuacao'))
+                .catch(error => setActuacaoError(errorText(error)))
+                .finally(() => setCreatingActuacao(false))
+            }}>
+              {creatingActuacao ? 'Preparando Atuação…' : 'Preparar tabela Atuação no rascunho'}
+            </button>
+          ) : (
+            <p className="tc-hint">Crie um rascunho para habilitar a preparação da tabela Atuação.</p>
+          )}
+          {actuacaoError && <p role="alert" className="tc-error">{actuacaoError}</p>}
+        </section>
+      ) : dimension ? (
+        <DimensionEditor
+          key={dimension.code}
+          apiFetch={apiFetch}
+          view={view}
+          dimension={dimension}
+          editable={editable}
+          justification={justification}
+          onChanged={onChanged}
+          onDirtyChange={setGridDirty}
+        />
+      ) : null}
     </div>
   )
 }
@@ -708,7 +741,10 @@ function DimensionEditor({
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {dimension.code === 'sector'
-                    ? `${group.segmentCodes.map(code => view.concepts.find(item => item.code === code)?.label ?? code).join(', ')} – ${group.label}`
+                    ? displaySegmentSubsegment(
+                        group.segmentCodes.map(code => view.concepts.find(item => item.code === code)?.label ?? code).join(', '),
+                        group.label,
+                      )
                     : group.label}
                 </option>
               ))}

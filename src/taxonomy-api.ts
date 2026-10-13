@@ -98,6 +98,14 @@ export type CurationConcept = {
   classifyByLabel: boolean
   officialCodes: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
+  /** Optional, evidence-backed CNAE source data. Absent until approved
+   * T03 staging is explicitly linked by the API; not a classification result.
+   */
+  f2Source?: {
+    atuacao: string
+    suggestedProducts: string
+    suggestedNcms: string
+  } | null
 }
 
 export type ReleaseView = {
