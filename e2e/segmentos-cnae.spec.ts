@@ -48,7 +48,10 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   expect(headers.indexOf('CNAE')).toBeLessThan(headers.indexOf('Descrição do CNAE'))
   await expect(table.getByLabel('CNAE', { exact: true })).toHaveValue('0111-3/01')
   await expect(table.getByLabel('Descrição do CNAE', { exact: true })).toHaveValue('Cultivo de arroz')
-  await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Agropecuária / Produção')
+  // T01: the editor shows only the child; source group identity stays untouched.
+  await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Produção')
+  await expect(table.getByLabel('Segmento e subsegmento')).toHaveText('Agropecuária – Produção')
+  expect(groups[0]?.label).toBe('Agropecuária / Produção')
   // Segmento column: drop-down of the Segmento table, showing the subsegment's segment.
   await expect(table.getByRole('combobox', { name: 'Segmento' }).locator('option:checked')).toHaveText('Agropecuária')
   await expect(table.getByText('rizicultura', { exact: true })).toBeVisible()
