@@ -32,6 +32,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Link } from 'react-router-dom'
 
 import { BrandMark } from './brand-mark'
+import { manualIeActionLabel, manualIeHelperText } from './t06-ie-manual'
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
 import { ProductNcmProfiles } from './product-ncm-profiles'
@@ -2509,8 +2510,8 @@ function EstablishmentSection({
                 )}
                 {item.stateRegistrationLookupStatus === 'NOT_FOUND' && <small>IE não localizada</small>}
                 {item.stateRegistrationLookupStatus === 'UNAVAILABLE' && <small>Consulta estadual indisponível</small>}
-                {item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' && (
-                  <small>Sem consulta automática nesta UF. Informe a IE manualmente em Editar estabelecimento.</small>
+                {['NOT_SUPPORTED', 'UNAVAILABLE', 'NOT_FOUND'].includes(item.stateRegistrationLookupStatus ?? '') && (
+                  <small>{manualIeHelperText(item.uf, item.stateRegistrationLookupStatus)}</small>
                 )}
                 {item.stateRegistrationSource === 'MANUAL' && <small>Informada manualmente</small>}
               </span>
@@ -2528,12 +2529,7 @@ function EstablishmentSection({
                   Atualizar cadastro CNPJ e IE
                 </button>
                 <button type="button" onClick={() => beginEdit(item)}>
-                  {!item.stateRegistration &&
-                    (item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' ||
-                     item.stateRegistrationLookupStatus === 'UNAVAILABLE' ||
-                     item.stateRegistrationLookupStatus === 'NOT_FOUND')
-                    ? 'Informar IE manualmente'
-                    : 'Editar estabelecimento'}
+                  {manualIeActionLabel(item.stateRegistration, item.stateRegistrationLookupStatus)}
                 </button>
                 {!item.isHeadOffice && (
                   <button
