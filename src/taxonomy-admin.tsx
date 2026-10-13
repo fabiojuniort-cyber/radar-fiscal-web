@@ -323,7 +323,7 @@ function TablesTab({
     [view.dimensions],
   )
 
-  if (!dimension) return <p className="tc-hint">Nenhuma dimensão nesta versão.</p>
+  if (!dimension && !pendingActuacao) return <p className="tc-hint">Nenhuma dimensão nesta versão.</p>
 
   return (
     <div className="tc-tables">
