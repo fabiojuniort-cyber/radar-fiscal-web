@@ -332,10 +332,10 @@ function TablesTab({
           <button
             type="button"
             key={item.code}
-            className={item.code === dimension.code ? 'is-selected' : ''}
+            className={item.code === dimensionCode ? 'is-selected' : ''}
             onClick={() => {
               if (
-                item.code !== dimension.code &&
+                item.code !== dimensionCode &&
                 gridDirty &&
                 !window.confirm('Há alterações não salvas nesta tabela. Sair sem salvar?')
               ) {
