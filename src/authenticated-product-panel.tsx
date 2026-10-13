@@ -2509,7 +2509,9 @@ function EstablishmentSection({
                 )}
                 {item.stateRegistrationLookupStatus === 'NOT_FOUND' && <small>IE não localizada</small>}
                 {item.stateRegistrationLookupStatus === 'UNAVAILABLE' && <small>Consulta estadual indisponível</small>}
-                {item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' && <small>Consulta automática não disponível para esta UF</small>}
+                {item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' && (
+                  <small>Sem consulta automática nesta UF. Informe a IE manualmente em Editar estabelecimento.</small>
+                )}
                 {item.stateRegistrationSource === 'MANUAL' && <small>Informada manualmente</small>}
               </span>
               <span className="tp-cnae-cell">
@@ -2525,7 +2527,14 @@ function EstablishmentSection({
                 >
                   Atualizar cadastro CNPJ e IE
                 </button>
-                <button type="button" onClick={() => beginEdit(item)}>Editar estabelecimento</button>
+                <button type="button" onClick={() => beginEdit(item)}>
+                  {!item.stateRegistration &&
+                    (item.stateRegistrationLookupStatus === 'NOT_SUPPORTED' ||
+                     item.stateRegistrationLookupStatus === 'UNAVAILABLE' ||
+                     item.stateRegistrationLookupStatus === 'NOT_FOUND')
+                    ? 'Informar IE manualmente'
+                    : 'Editar estabelecimento'}
+                </button>
                 {!item.isHeadOffice && (
                   <button
                     className="is-danger"
@@ -2642,7 +2651,7 @@ function EstablishmentSection({
               />
             </label>
             <label>
-              Inscrição Estadual
+              Inscrição Estadual (preenchimento manual permitido)
               <input
                 value={draft.stateRegistration ?? ''}
                 onChange={(event) => updateDraft({ stateRegistration: event.target.value || null })}
