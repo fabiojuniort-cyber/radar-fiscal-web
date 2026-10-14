@@ -94,9 +94,9 @@ export function CollectionFilterDirectDialog({
           <p><strong>{numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas.</strong></p>
           {preview.blockedCompany>0&&<p>{numberBr(preview.blockedCompany)} com empresa cliente.</p>}
           {preview.blockedOtherSource>0&&<p>{numberBr(preview.blockedOtherSource)} com outra origem oficial.</p>}
-          {preview.samples?.length>0&&<div>
+          {Boolean(preview.samples?.length)&&<div>
             <p>Amostras da prévia:</p>
-            <ul>{preview.samples.map(item=><li key={item.id}>
+            <ul>{(preview.samples??[]).map(item=><li key={item.id}>
               {item.title} ({item.section}; {item.officialType||'tipo oficial não informado'})
               {item.protection? ` — protegida: ${item.protection}`:''}
             </li>)}</ul>
