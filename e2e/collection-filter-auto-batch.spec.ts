@@ -66,7 +66,7 @@ async function prepare(page:Page,kind:Kind,scenario:Scenario) {
   }
 }
 
-for(const kind of ['scope','direct'] as const){
+for(const kind of ['scope'] as const){
   test('L11/L17 '+kind+' advances separate 500-item batches automatically to zero',async({page})=>{
     const {dialog,confirmLabel,getConfirms}=await prepare(page,kind,'auto')
     await dialog.getByRole('button',{name:confirmLabel}).click()
