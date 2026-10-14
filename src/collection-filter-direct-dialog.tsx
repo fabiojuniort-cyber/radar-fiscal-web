@@ -105,7 +105,7 @@ export function CollectionFilterDirectDialog({
       description="Ao salvar um modo Excluir, os documentos elegíveis também serão apagados. Vínculos com clientes, matches e outras origens permanecem protegidos."
       onClose={close}>
       <div className="cf-modal-form">
-        <fieldset disabled={working||saved.current} style={{border:0,padding:0,margin:0}}>
+        <fieldset disabled={working||saved.current} style={{display:'grid',gap:14,minWidth:0,border:0,padding:0,margin:0}}>
         <label>Fonte
           <select aria-label="Fonte" value={rule.sourceCode}
             onChange={e=>setRule(r=>({...r,sourceCode:e.target.value}))}>
