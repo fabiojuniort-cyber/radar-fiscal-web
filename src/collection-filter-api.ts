@@ -264,9 +264,9 @@ export interface CollectionFilterDirectPreview {
   blockedCompany: number
   blockedOtherSource: number
   token: string
-  confirmationToken: string
-  policyRevision: number
-  samples: Array<{
+  confirmationToken?: string
+  policyRevision?: number
+  samples?: Array<{
     id:string; title:string; sourceCode:string; section:string
     officialType:string|null; pattern:string; protection:string|null
   }>
