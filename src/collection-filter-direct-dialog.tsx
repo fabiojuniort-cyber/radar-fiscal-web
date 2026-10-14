@@ -71,6 +71,7 @@ export function CollectionFilterDirectDialog({
           <select aria-label="Fonte" value={rule.sourceCode}
             onChange={e=>setRule(r=>({...r,sourceCode:e.target.value}))}>
             <option value="dou">DOU</option>
+            <option value="doe-sp">DOE-SP</option>
           </select>
         </label>
         <label>Seção

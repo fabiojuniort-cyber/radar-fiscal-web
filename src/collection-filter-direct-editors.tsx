@@ -32,6 +32,35 @@ const unique=(arr:string[])=>[...new Set(arr.filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b,'pt-BR'))
 const reason=(error:unknown)=>error instanceof Error?error.message:'Não foi possível alterar a política ativa.'
 
+/** A title suggestion, never an automatic rule or a legally authoritative act type. */
+export function newTypeTitlePrefix(title:string):string {
+  const line=(title.split(/[\r\n]/,1)[0]??'').trim()
+  const cut=line.search(/\s+N(?:[º°]|[oO]\.?|[úu]mero)?\s*(?:\d|$)|\s+\d+(?=[\s/-]|$)|,\s*DE\b|\s+DE\s+(?=\d{1,2}(?:[\/.\s]|$))|\s+-\s+|\s*\(/iu)
+  const prefix=(cut<0?line:line.slice(0,cut)).replace(/[\s,;:–-]+$/g,'')
+    .replace(/\s+/g,' ').trim()
+  const particles=new Set(['da','de','do','das','dos','e','em','na','no','nas','nos'])
+  return prefix.toLocaleLowerCase('pt-BR').split(' ').map((word,index)=>
+    index>0&&particles.has(word)?word:
+      word.replace(/^\p{L}/u,letter=>letter.toLocaleUpperCase('pt-BR'))
+  ).join(' ')
+}
+
+/** Counts are from the <=3 example titles, not a census of occurrence_count. */
+function titlePrefixOptions(item:CollectionFilterNewType) {
+  const counts=new Map<string,{title:string;count:number}>()
+  const uniqueExamples=new Map((item.examples??[]).map(example=>[example.id,example.title]))
+  for(const title of uniqueExamples.values()){
+    const prefix=newTypeTitlePrefix(title)
+    const key=normalizeFilterText(prefix)
+    if(!key||key===normalizeFilterText(item.normalized_type))continue
+    const prior=counts.get(key)
+    counts.set(key,{title:prior?.title??prefix,count:(prior?.count??0)+1})
+  }
+  return [...counts.values()].sort((a,b)=>b.count-a.count||
+    a.title.localeCompare(b.title,'pt-BR'))
+}
+
+
 function useTypes(apiFetch:ProductApiFetch,origins:FilterOrigins,source:string) {
   const q=useQuery({
     queryKey:['collection-filter','origin-types',source],
@@ -263,6 +292,7 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
 }) {
   const [action,setAction]=useState<'help'|'classify'|'merge'|'term'|null>(null)
   const [canonical,setCanonical]=useState(item.normalized_type)
+  const prefixOptions=useMemo(()=>titlePrefixOptions(item),[item])
   const targets=unique(mergeRules.filter(r=>r.sourceCode===item.source_code&&
     r.section===item.section&&r.canonicalType!==item.normalized_type).map(r=>r.canonicalType))
   const open=(v:typeof action)=>{
@@ -270,7 +300,7 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
   }
   const descriptions={
     help:'Entenda as ações disponíveis para este novo tipo.',
-    classify:'Registra o nome canônico e abre a confirmação de classificação na política ativa.',
+    classify:'Escolha tipo genérico ou prefixo observado nos títulos; a próxima janela solicita prévia antes de salvar sem excluir.',
     merge:'Registra a correspondência com um tipo já configurado nesta fonte e seção diretamente na política ativa.',
     term:'Adiciona uma palavra ou expressão diretamente à política ativa.',
   }
@@ -301,10 +331,29 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
       try{await onMerge(canonical);setAction(null)}catch{/* parent displays error */}
     }}>
       <p><strong>{item.sample_raw_type}</strong> · {item.source_code} · {item.section}</p>
+      {action==='classify'&&<fieldset aria-label="Sugestões de tipo pelos títulos">
+        <legend>Escolher classificação</legend>
+        <label>
+          <input type="radio" name={'prefix-'+item.id}
+            checked={normalizeFilterText(canonical)===normalizeFilterText(item.normalized_type)}
+            onChange={()=>setCanonical(item.normalized_type)}/>
+          {' Genérico: '+item.normalized_type+' (todos: '+Number(item.occurrence_count).toLocaleString('pt-BR')+')'}
+        </label>
+        {prefixOptions.map(option=><label key={option.title}>
+          <input type="radio" name={'prefix-'+item.id}
+            checked={normalizeFilterText(canonical)===normalizeFilterText(option.title)}
+            onChange={()=>setCanonical(option.title)}/>
+          {' '+option.title+' ('+option.count+' na amostra)'}
+        </label>)}
+        <p className="cf-origin-note">Prefixos e contagens dos até 3 títulos de exemplo.
+          As contagens por prefixo não representam o acervo completo.</p>
+      </fieldset>}
       <label>Tipo canônico
-        <TypeSelect types={action==='merge'?targets:[item.normalized_type]}
-          value={canonical} label={`Tipo canônico para ${item.sample_raw_type}`}
-          onChange={setCanonical}/>
+        {action==='merge'?<TypeSelect types={targets}
+          value={canonical} label={'Tipo canônico para '+item.sample_raw_type}
+          onChange={setCanonical}/>:<input type="text" maxLength={300}
+          aria-label={'Tipo canônico para '+item.sample_raw_type}
+          value={canonical} onChange={e=>setCanonical(e.target.value)}/>}
       </label>
       {action==='merge'&&!targets.length&&<p>Cadastre primeiro um tipo de destino para esta fonte e seção.</p>}
       {error&&<p className="cf-error" role="alert">{error}</p>}
