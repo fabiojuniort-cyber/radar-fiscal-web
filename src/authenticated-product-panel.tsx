@@ -579,8 +579,24 @@ export function AuthenticatedProductPanel({
   })
 
   const facetsQuery = useQuery({
-    queryKey: ['launch', 'archive-facets'],
-    queryFn: () => fetchCatalogFacets(apiFetch),
+    queryKey: ['launch', 'archive-facets', appliedQuery, fullText, jurisdiction, uf, source, actType, archiveTag?.code],
+    queryFn: () => fetchCatalogFacets(apiFetch, {
+        q: appliedQuery.trim().length >= 2
+          ? appliedQuery.trim()
+          : undefined,
+        scope: fullText ? 'full' : 'title',
+        jurisdiction:
+          jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
+            ? jurisdiction
+            : undefined,
+        uf: uf || undefined,
+        source: source || undefined,
+        actType: actType || undefined,
+        tag: archiveTag?.code,
+        page: 1,
+        limit: 25,
+      }),
+    enabled: screen === 'acervo',
     retry: false,
     staleTime: CATALOG_AGGREGATE_STALE_MS,
   })

@@ -123,10 +123,7 @@ function activeAcervoDateFilters(filters: CatalogFilters): Partial<CatalogFilter
   }
 }
 
-export async function fetchCatalogArchive(
-  apiFetch: ProductApiFetch,
-  filters: CatalogFilters = {},
-): Promise<CatalogArchiveResponse> {
+function catalogSearchParams(filters: CatalogFilters): URLSearchParams {
   const params = new URLSearchParams()
   const effectiveFilters = {
     ...filters,
@@ -151,8 +148,15 @@ export async function fetchCatalogArchive(
   params.set('page', String(effectiveFilters.page ?? 1))
   params.set('limit', String(effectiveFilters.limit ?? 25))
 
+  return params
+}
+
+export async function fetchCatalogArchive(
+  apiFetch: ProductApiFetch,
+  filters: CatalogFilters = {},
+): Promise<CatalogArchiveResponse> {
   const response = await apiFetch(
-    '/api/v2/archive?' + params.toString(),
+    '/api/v2/archive?' + catalogSearchParams(filters).toString(),
     { headers: { Accept: 'application/json' } },
   )
 
@@ -161,8 +165,9 @@ export async function fetchCatalogArchive(
 
 export async function fetchCatalogFacets(
   apiFetch: ProductApiFetch,
+  filters: CatalogFilters = {},
 ): Promise<CatalogFacets> {
-  const response = await apiFetch('/api/v2/archive/facets', {
+  const response = await apiFetch('/api/v2/archive/facets?' + catalogSearchParams(filters).toString(), {
     headers: { Accept: 'application/json' },
   })
 

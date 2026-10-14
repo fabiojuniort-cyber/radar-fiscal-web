@@ -175,13 +175,13 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     }),
   }))
 
-  await page.route('**/api/v2/archive/facets', (route) => route.fulfill({
+  await page.route('**/api/v2/archive/facets?*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({
       ufs: ['GO'],
       sources: [{ code: 'dou', name: 'DOU' }],
-      actTypes: ['IN', 'Convênio ICMS'],
+      actTypes: new URL(route.request().url()).searchParams.has('source') ? [] : ['IN', 'Convênio ICMS'],
     }),
   }))
 
@@ -562,6 +562,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.getByText('Resultados para')).toBeVisible()
   await page.getByLabel('Fonte').selectOption('dou')
   await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU · tipo IN/)).toBeVisible()
+
+  await expect(page.getByLabel('Tipo de base legal').locator('option')).toHaveCount(1)
+  await expect(page.getByLabel('Tipo de base legal')).toContainText('Todos')
 
   // Acervo filters do not leak into Publicações.
   await page.getByRole('button', { name: 'Publicações', exact: true }).click()
