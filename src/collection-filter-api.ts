@@ -260,7 +260,7 @@ export interface CollectionFilterDirectPreview {
   hiddenLegacy?: number
   suspectDoe?: number
   ruleDiscards?: number
-  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
+  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number}>
   blockedCompany: number
   blockedOtherSource: number
   token: string
@@ -268,7 +268,7 @@ export interface CollectionFilterDirectPreview {
   policyRevision?: number
   samples?: Array<{
     id:string; title:string; sourceCode:string; section:string
-    officialType:string|null; pattern:string; protection:string|null
+    officialType?:string|null; canonicalType?:string; pattern?:string; protection?:string|null
   }>
 }
 
@@ -303,7 +303,7 @@ export async function saveDirectCollectionFilterRule(
 
 export interface CollectionFilterDirectConfirmResult {
   ruleDiscards?: number
-  byRule?: Array<{section:string;canonicalType:string;mode:string;count:number}>
+  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number}>
   changed: boolean
   outOfScope?: number
   hiddenLegacy?: number
@@ -378,3 +378,4 @@ export async function confirmOutOfScopePublications(
     },
   ))
 }
+

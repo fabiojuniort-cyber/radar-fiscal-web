@@ -202,11 +202,12 @@ describe('L-15 new scoped purge button',()=>{
       return json({items:[]})
     }) as ProductApiFetch
     mount(apiFetch)
-    const button=await screen.findByRole('button',{name:'Apagar fora do escopo'})
-    expect(screen.getAllByRole('button',{name:'Apagar fora do escopo'})).toHaveLength(1)
+    const button=await screen.findByRole('button',{name:'Reaplicar filtro ao acervo'})
+    expect(screen.getAllByRole('button',{name:'Reaplicar filtro ao acervo'})).toHaveLength(1)
     fireEvent.click(button)
     fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-    expect(await screen.findByText('0 fora do escopo + 0 pelas regras + 23.000 ocultas pela regra antiga + 0 tipo provavelmente errado / 5 protegidas')).toBeInTheDocument()
+    expect(await screen.findByText('23.000 não passam no filtro atual / 5 protegidas')).toBeInTheDocument()
     expect(confirmed).toBe(0)
   })
 })
+

@@ -50,14 +50,14 @@ async function prepare(page:Page,kind:Kind,scenario:Scenario) {
   await page.goto('/admin/filtro-coleta')
   await expect(page.getByRole('heading',{name:'Tipos de ato'})).toBeVisible()
   if(kind==='scope'){
-    await page.getByRole('button',{name:'Apagar fora do escopo'}).click()
+    await page.getByRole('button',{name:'Reaplicar filtro ao acervo'}).click()
   } else {
     await page.getByLabel('Modo PORTARIA').selectOption('EXCLUDE_ALWAYS')
   }
-  const dialog=page.getByRole('dialog',{name:kind==='scope'?'Apagar fora do escopo':'Classificar tipo de publicação'})
+  const dialog=page.getByRole('dialog',{name:kind==='scope'?'Reaplicar filtro ao acervo':'Classificar tipo de publicação'})
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button',{name:'Consultar quantidade'}).click()
-  await expect(dialog.getByText(kind==='scope'?/1.050 fora do escopo/:/1050 publicações serão apagadas/)).toBeVisible()
+  await expect(dialog.getByText(kind==='scope'?/1.050 não passam no filtro atual/:/1050 publicações serão apagadas/)).toBeVisible()
   return {
     dialog,
     confirmLabel:kind==='scope'?'Confirmar exclusão':'Confirmar classificação e exclusão',
@@ -98,3 +98,4 @@ for(const kind of ['scope'] as const){
     expect(getConfirms()).toBe(4)
   })
 }
+
