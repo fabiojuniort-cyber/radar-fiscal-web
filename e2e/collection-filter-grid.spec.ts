@@ -109,7 +109,7 @@ test('F3 Novos tipos: prévia vencida bloqueia save e exige nova prévia/confirm
   await expect(choose).toBeVisible()
   await choose.getByRole('button',{name:'Confirmar classificação'}).click()
   const dialog=page.getByRole('dialog',{name:'Classificar Nome do ato'})
-  await expect(dialog.getByLabel('Nome do ato')).toHaveValue('ATO NOVO')
+  await expect(dialog.getByLabel('Nome do ato')).toHaveValue('Ato Novo')
   await dialog.getByLabel('Modo').selectOption('EXCLUDE_UNLESS_STRONG')
   await dialog.getByRole('button',{name:'Consultar prévia F3'}).click()
   await expect(dialog.getByRole('status')).toContainText('2 publicações históricas correspondem à regra')
