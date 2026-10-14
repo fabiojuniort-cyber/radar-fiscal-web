@@ -421,8 +421,8 @@ function TablesTab({
             <h2>Atuação</h2>
           </div>
           <p>
-            Dimensão própria da Taxonomia: Serviço, Indústria, Comércio atacadista,
-            Produção agropecuária, Comércio varejista, Extração mineral e Representação comercial.
+            Atuação é uma dimensão própria da Taxonomia, independente de Segmento.
+            As opções disponíveis são carregadas do backend para a versão selecionada.
           </p>
           <p className="tc-hint">
             A tabela ainda não integra esta versão. Atuação só pode ser preparada
