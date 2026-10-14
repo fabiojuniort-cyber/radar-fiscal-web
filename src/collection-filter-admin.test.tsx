@@ -3,7 +3,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CollectionFilterAdminPage } from './collection-filter-admin'
-import { newTypeTitlePrefix } from './collection-filter-direct-editors'
 import type { ProductApiFetch } from './product-api'
 
 afterEach(() => cleanup())
@@ -103,7 +102,7 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     const select=await screen.findByRole('combobox',{name:'Modo PORTARIA'})
     fireEvent.change(select,{target:{value:'EXCLUDE_UNLESS_STRONG'}})
-    expect(await screen.findByText('Classificar tipo de publicação')).toBeInTheDocument()
+    expect(await screen.findByText('Classificar Nome do ato')).toBeInTheDocument()
     expect(screen.queryByText('Simulações')).not.toBeInTheDocument()
   })
   it('não consulta filtros protegidos quando usuário não é PLATFORM_ADMIN',async()=>{
@@ -214,19 +213,11 @@ describe('L-15 new scoped purge button',()=>{
 
 
 describe('F3-UX-01 sugestões de títulos na classificação',()=>{
-  it.each([
-    ['DESPACHO DO SECRETÁRIO, DE 13 DE OUTUBRO DE 2026','Despacho do Secretário'],
-    ['Despacho do Chefe de Departamento - Substituto - DE 13/10/2026','Despacho do Chefe de Departamento'],
-    ['DESPACHO Nº 238/630/2026, DE 13…','Despacho'],
-  ])('extrai prefixo sem número/data/substituto: %s', (title,expected)=>{
-    expect(newTypeTitlePrefix(title)).toBe(expected)
-  })
-
   it.each(['dou','doe-sp'] as const)(
-    'mostra radios genérico/específicos, aceita Tipo editável e salva %s sem exclusão',
+    'mostra Nome do ato do backend sem rádio, aceita edição e salva %s sem exclusão',
     async(source)=>{
       const operations:Array<{path:string;body:Record<string,unknown>|null}>=[]
-      const item={id:typeId,source_code:source,
+      const item={id:typeId,source_code:source,act_name:'Despacho do Secretário',
         section:source==='dou'?'DO1':'ATOS NORMATIVOS',
         normalized_type:'DESPACHO',sample_raw_type:'Despacho',
         occurrence_count:25,first_seen_at:'2026-10-13T00:00:00Z',
@@ -261,20 +252,14 @@ describe('F3-UX-01 sugestões de títulos na classificação',()=>{
       mount(apiFetch)
       fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
       fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
-      const generic=screen.getByRole('radio',{name:/Genérico: DESPACHO \(todos: 25\)/})
-      expect(generic).toBeChecked()
-      const specific=screen.getByRole('radio',{name:/Despacho do Secretário \(1 na amostra\)/})
-      expect(specific).not.toBeChecked()
-      expect(screen.getByRole('radio',{name:/Despacho do Chefe de Departamento \(1 na amostra\)/}))
-        .toBeInTheDocument()
-      fireEvent.click(specific)
-      const typeInput=screen.getByRole('textbox',{name:'Tipo canônico para Despacho'}) as HTMLInputElement
+      expect(screen.queryByRole('radio')).toBeNull()
+      const typeInput=screen.getByRole('textbox',{name:'Nome do ato para Despacho'}) as HTMLInputElement
       expect(typeInput.value).toBe('Despacho do Secretário')
       fireEvent.change(typeInput,{target:{value:'Despacho do Secretário Adjunto'}})
       expect(typeInput.value).toBe('Despacho do Secretário Adjunto')
       fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
       expect(screen.getByRole('combobox',{name:'Fonte'})).toHaveValue(source)
-      expect(screen.getByRole('textbox',{name:'Tipo'})).toHaveValue('Despacho do Secretário Adjunto')
+      expect(screen.getByRole('textbox',{name:'Nome do ato'})).toHaveValue('Despacho do Secretário Adjunto')
       fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
       fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
       await screen.findByText(/7 publicações históricas correspondem à regra/)

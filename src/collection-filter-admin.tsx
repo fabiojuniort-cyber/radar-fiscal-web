@@ -70,7 +70,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
   const terms=document?.terms??[]
   const origins:FilterOrigins=useMemo(()=>{
     const allRules=[...rules,...(newTypes.data?.items??[]).map(n=>({
-      sourceCode:n.source_code,section:n.section,canonicalType:n.normalized_type,
+      sourceCode:n.source_code,section:n.section,canonicalType:n.normalized_type,actName:n.act_name||n.sample_raw_type,
       mode:'KEEP_ALWAYS' as const,helpText:null,
     }))]
     const sources=new Map((facets.data?.sources??[]).map(s=>[s.code,s]))
@@ -85,9 +85,9 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
       })
     })
     if(!sources.has('dou'))sources.set('dou',{code:'dou',name:'DOU'})
-    return {sources:[...sources.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')),
+    return {actNames:state.data?.actNames,sources:[...sources.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')),
       rules:allRules,allTypes:(facets.data?.actTypes??[]).map(normalizeFilterText)}
-  },[rules,terms,newTypes.data,facets.data])
+  },[rules,terms,newTypes.data,facets.data,state.data?.actNames])
 
   const refresh=async()=>{
     await Promise.all([
@@ -151,7 +151,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
       <div className="cf-heading"><span>Administração da plataforma</span>
         <h1>Filtro de Coleta</h1>
         <p>Configure o que o Trifaros mantém antes de persistir novas publicações.
-          Tipo desconhecido sempre fica e vai para Novos tipos.</p>
+          Nome do ato desconhecido sempre fica e vai para Novos tipos.</p>
       </div>
       <nav aria-label="Áreas administrativas">
         <Link to="/admin/taxonomia">Taxonomia</Link>
@@ -195,15 +195,15 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         onRemoveTerm={onRemoveTerm}/>}
       {tab==='new-types'&&<section className="cf-card">
         <div className="cf-card-title"><div><h2>Novos tipos</h2>
-          <p>Tipos ainda não configurados são mantidos automaticamente até sua classificação.</p>
+          <p>Nomes de ato ainda não configurados são mantidos automaticamente até sua classificação.</p>
         </div></div>
         {newTypes.isPending?<p>Carregando…</p>:
           newTypes.isError?<p className="cf-error">Não foi possível carregar novos tipos.</p>:
           newTypes.data?.items.length?<div className="cf-list">
             {newTypes.data.items.map(item=><article key={item.id} className="cf-new-type">
-              <div><strong>{item.sample_raw_type}</strong>
+              <div><strong>{item.act_name||item.sample_raw_type}</strong>
                 <span>{item.source_code}{item.section?` · ${item.section}`:''} · {Number(item.occurrence_count)} ocorrência(s)</span>
-                <small>Primeira: {new Date(item.first_seen_at).toLocaleString('pt-BR')} · Última: {new Date(item.last_seen_at).toLocaleString('pt-BR')}</small>
+                <small>Primeira: {item.first_seen_at?new Date(item.first_seen_at).toLocaleString('pt-BR'):'—'} · Última: {item.last_seen_at?new Date(item.last_seen_at).toLocaleString('pt-BR'):'—'}</small>
                 {item.examples?.length?<ul className="cf-example-list">
                   {item.examples.slice(0,3).map(example=><li key={example.id}>
                     {example.officialUrl?<a href={example.officialUrl} target="_blank"
@@ -218,12 +218,13 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
                     // Both DOU and DOE-SP use revision-bound F3 preview and save.
                     setDirectRule({
                       sourceCode:item.source_code,section:item.section,
-                      canonicalType,mode:'KEEP_ALWAYS',newTypeId:item.id,
+                      canonicalType,mode:'KEEP_ALWAYS',
+                      ...(item.queue_basis==='ARCHIVE_ACT_NAME'?{queueBasis:item.queue_basis,actName:item.act_name}:{newTypeId:item.id}),
                     })
                   }}
-                  onMerge={canonicalType=>edit('NEWTYPE_MERGE',{
+                  onMerge={canonicalType=>edit(item.queue_basis==='ARCHIVE_ACT_NAME'?'ALIAS_PUT':'NEWTYPE_MERGE',{
                     sourceCode:item.source_code,section:item.section,
-                    canonicalType,newTypeId:item.id,alias:item.normalized_type,
+                    canonicalType,...(item.queue_basis==='ARCHIVE_ACT_NAME'?{}:{newTypeId:item.id}),alias:item.normalized_type,
                   })}
                   onTerm={term=>onTerm(term)}/>
               </div>

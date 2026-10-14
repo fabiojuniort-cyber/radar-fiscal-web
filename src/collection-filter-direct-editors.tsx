@@ -1,8 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { CircleHelp, Plus, Trash2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import type { ProductApiFetch } from './product-api'
-import { fetchCatalogNavigation } from './catalog-api'
 import type {
   CollectionFilterRule, CollectionFilterAlias, CollectionFilterTerm,
   CollectionFilterMode, CollectionFilterStrength, CollectionFilterNewType,
@@ -27,50 +25,17 @@ export interface FilterOrigins {
   sources:Array<{code:string;name:string}>
   rules:CollectionFilterRule[]
   allTypes:string[]
+  actNames?:Array<{name:string;sourceCode:string;section:string;count:number}>
 }
 const unique=(arr:string[])=>[...new Set(arr.filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b,'pt-BR'))
 const reason=(error:unknown)=>error instanceof Error?error.message:'Não foi possível alterar a política ativa.'
 
-/** A title suggestion, never an automatic rule or a legally authoritative act type. */
-export function newTypeTitlePrefix(title:string):string {
-  const line=(title.split(/[\r\n]/,1)[0]??'').trim()
-  const cut=line.search(/\s+N(?:[º°]|[oO]\.?|[úu]mero)?\s*(?:\d|$)|\s+\d+(?=[\s/-]|$)|,\s*DE\b|\s+DE\s+(?=\d{1,2}(?:[\/.\s]|$))|\s+-\s+|\s*\(/iu)
-  const prefix=(cut<0?line:line.slice(0,cut)).replace(/[\s,;:–-]+$/g,'')
-    .replace(/\s+/g,' ').trim()
-  const particles=new Set(['da','de','do','das','dos','e','em','na','no','nas','nos'])
-  return prefix.toLocaleLowerCase('pt-BR').split(' ').map((word,index)=>
-    index>0&&particles.has(word)?word:
-      word.replace(/^\p{L}/u,letter=>letter.toLocaleUpperCase('pt-BR'))
-  ).join(' ')
-}
-
-/** Counts are from the <=3 example titles, not a census of occurrence_count. */
-function titlePrefixOptions(item:CollectionFilterNewType) {
-  const counts=new Map<string,{title:string;count:number}>()
-  const uniqueExamples=new Map((item.examples??[]).map(example=>[example.id,example.title]))
-  for(const title of uniqueExamples.values()){
-    const prefix=newTypeTitlePrefix(title)
-    const key=normalizeFilterText(prefix)
-    if(!key||key===normalizeFilterText(item.normalized_type))continue
-    const prior=counts.get(key)
-    counts.set(key,{title:prior?.title??prefix,count:(prior?.count??0)+1})
-  }
-  return [...counts.values()].sort((a,b)=>b.count-a.count||
-    a.title.localeCompare(b.title,'pt-BR'))
-}
-
-
-function useTypes(apiFetch:ProductApiFetch,origins:FilterOrigins,source:string) {
-  const q=useQuery({
-    queryKey:['collection-filter','origin-types',source],
-    queryFn:()=>fetchCatalogNavigation(apiFetch,{groupBy:'actType',...(source?{source}:{})}),
-    retry:false,staleTime:30000,
-  })
+function useTypes(_apiFetch:ProductApiFetch,origins:FilterOrigins,source:string) {
   return {
-    types:unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.canonicalType),
-      ...origins.allTypes,...(q.data?.items??[]).map(x=>normalizeFilterText(x.value))]),
-    error:q.isError,
+    types:unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.actName??x.canonicalType),
+      ...(origins.actNames??[]).filter(x=>!source||x.sourceCode===source).map(x=>x.name)]),
+    error:origins.actNames===undefined,
   }
 }
 function SourceSelect({origins,value,onChange,label,optional=false}:{
@@ -88,7 +53,7 @@ function TypeSelect({types,value,onChange,label,optional=false}:{
 }) {
   return <select aria-label={label} required={!optional} value={value}
     onChange={e=>onChange(e.target.value)}>
-    <option value="">{optional?'Todos os tipos':'Selecione o tipo'}</option>
+    <option value="">{optional?'Todos os nomes':'Selecione o Nome do ato'}</option>
     {unique([...types,value]).map(v=><option value={v} key={v}>{v}</option>)}
   </select>
 }
@@ -119,7 +84,7 @@ export function TypesEditor(p:EditorProps) {
   const saveRule=async(rule:CollectionFilterRule)=>{
     setError('')
     try {
-      if(rule.sourceCode.toLowerCase()!=='dou'&&rule.mode!=='KEEP_ALWAYS') {
+      if(!['dou','doe-sp'].includes(rule.sourceCode.toLowerCase())&&rule.mode!=='KEEP_ALWAYS') {
         setError('Para alterar uma regra que pode descartar publicações de outra fonte, é necessária a prévia dessa fonte.')
         return
       }
@@ -140,15 +105,15 @@ export function TypesEditor(p:EditorProps) {
     if(mode==='KEEP_ALWAYS')setType('')
   }
   return <section className="cf-card">
-    <div className="cf-card-title"><div><h2>Tipos de ato</h2>
-      <p>Fonte, seção e tipo definem a regra. Adicione, edite o modo ou filtre por coluna; alterações são gravadas na política ativa.</p>
+    <div className="cf-card-title"><div><h2>Nomes de ato</h2>
+      <p>Fonte, seção e Nome do ato definem a regra. Adicione, edite o modo ou filtre por coluna; alterações são gravadas na política ativa.</p>
     </div></div>
     <form className="cf-inline-form" onSubmit={e=>{void add(e)}}>
       <SourceSelect origins={origins} label="Fonte do tipo" value={source}
         onChange={v=>{setSource(v);setType('')}}/>
       <input aria-label="Seção do tipo" placeholder="Seção" value={section}
         onChange={e=>setSection(e.target.value)}/>
-      <TypeSelect types={types} value={type} label="Tipo canônico" onChange={setType}/>
+      <TypeSelect types={types} value={type} label="Nome do ato" onChange={setType}/>
       <select aria-label="Modo do tipo" value={mode}
         onChange={e=>setMode(e.target.value as CollectionFilterMode)}>
         {Object.entries(FILTER_MODES).map(([v,l])=><option key={v} value={v}>{l}</option>)}
@@ -158,10 +123,10 @@ export function TypesEditor(p:EditorProps) {
     </form>
     {error&&<p className="cf-error" role="alert">{error}</p>}
     {originError&&<p className="cf-origin-note">Acervo indisponível para atualização dos tipos; exibindo os dados cadastrados.</p>}
-    <FilterGrid title="Tipos de ato" rows={rows} columns={[
+    <FilterGrid title="Nomes de ato" rows={rows} columns={[
       {key:'source',label:'Fonte',value:r=>r.rule.sourceCode},
       {key:'section',label:'Seção',value:r=>r.rule.section},
-      {key:'type',label:'Tipo',value:r=>r.rule.canonicalType},
+      {key:'type',label:'Nome do ato',value:r=>r.rule.actName??r.rule.canonicalType},
       {key:'mode',label:'Modo',value:r=>FILTER_MODES[r.rule.mode],
         render:r=><select aria-label={`Modo ${r.rule.canonicalType}`} value={r.rule.mode}
           disabled={busy} onChange={e=>{void saveRule({...r.rule,mode:e.target.value as CollectionFilterMode})}}>
@@ -183,11 +148,11 @@ export function TypesEditor(p:EditorProps) {
         <SourceSelect origins={origins} value={source} label="Fonte do alias" onChange={v=>{setSource(v);setType('')}}/>
         <input aria-label="Seção do alias" value={section} onChange={e=>setSection(e.target.value)}/>
         <input aria-label="Grafia encontrada" placeholder="Grafia encontrada" value={alias} onChange={e=>setAlias(e.target.value)}/>
-        <TypeSelect types={types} value={type} label="Tipo canônico do alias" onChange={setType}/>
+        <TypeSelect types={types} value={type} label="Nome do ato do alias" onChange={setType}/>
         <button type="submit" disabled={busy||!alias.trim()||!type||!source||!section.trim()}>Adicionar alias</button>
       </form>
       <div className="cf-chip-list">{aliases.map((a,i)=><span className="cf-chip" key={i}>
-        {a.alias} → {a.canonicalType}
+        {a.actName??a.alias} → {a.targetActName??a.canonicalType}
         <button type="button" aria-label={`Remover alias ${a.alias}`}
           onClick={()=>{void p.onAlias('ALIAS_DELETE',a).catch(onError)}}>×</button>
       </span>)}</div>
@@ -224,7 +189,7 @@ export function TermForm({apiFetch,origins,initial,submitLabel='Adicionar',onSub
     </select>
     <SourceSelect origins={origins} optional label="Fonte do termo" value={source}
       onChange={v=>{setSource(v);setType('')}}/>
-    <TypeSelect optional types={types} label="Tipo do termo" value={type} onChange={setType}/>
+    <TypeSelect optional types={types} label="Nome do ato do termo" value={type} onChange={setType}/>
     <button type="submit" disabled={working||excludedFilterSources.has(source)}>{submitLabel}</button>
   </form>{error&&<p className="cf-origin-note">Exibindo tipos cadastrados; atualização do acervo indisponível.</p>}</>
 }
@@ -254,7 +219,7 @@ export function TermsEditor(p:EditorProps) {
       {key:'strength',label:'Força',value:r=>STRENGTHS[r.term.strength]},
       {key:'source',label:'Fonte',value:r=>r.term.sourceCode||'Todas as fontes'},
       {key:'section',label:'Seção',value:r=>r.term.section||'Todas'},
-      {key:'type',label:'Tipo',value:r=>r.term.canonicalType||'Todos os tipos'},
+      {key:'type',label:'Nome do ato',value:r=>(r.term.actName??r.term.canonicalType)||'Todos os nomes'},
       {key:'location',label:'Local',value:r=>r.term.locationScope||'ANY'},
     ]} actions={r=><div className="cf-row-actions">
       <button type="button" aria-label={`Editar termo ${r.term.text}`} onClick={()=>{
@@ -291,16 +256,15 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
   pending:boolean;error:string|null
 }) {
   const [action,setAction]=useState<'help'|'classify'|'merge'|'term'|null>(null)
-  const [canonical,setCanonical]=useState(item.normalized_type)
-  const prefixOptions=useMemo(()=>titlePrefixOptions(item),[item])
+  const [canonical,setCanonical]=useState(item.act_name||item.sample_raw_type||item.normalized_type)
   const targets=unique(mergeRules.filter(r=>r.sourceCode===item.source_code&&
     r.section===item.section&&r.canonicalType!==item.normalized_type).map(r=>r.canonicalType))
   const open=(v:typeof action)=>{
-    rememberDialogTrigger();setCanonical(v==='merge'?'':item.normalized_type);setAction(v)
+    rememberDialogTrigger();setCanonical(v==='merge'?'':item.act_name||item.sample_raw_type||item.normalized_type);setAction(v)
   }
   const descriptions={
     help:'Entenda as ações disponíveis para este novo tipo.',
-    classify:'Escolha tipo genérico ou prefixo observado nos títulos; a próxima janela solicita prévia antes de salvar sem excluir.',
+    classify:'O Nome do ato vem do backend. A próxima janela solicita prévia antes de salvar sem excluir.',
     merge:'Registra a correspondência com um tipo já configurado nesta fonte e seção diretamente na política ativa.',
     term:'Adiciona uma palavra ou expressão diretamente à política ativa.',
   }
@@ -313,12 +277,12 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
       onClick={()=>open('help')}><CircleHelp size={17}/> Ajuda</button>
   </div>
   {action&&<FilterDialog title={{
-    help:'Ajuda: ações de novos tipos',classify:'Classificar novo tipo',
+    help:'Ajuda: ações de novos tipos',classify:'Classificar novo Nome do ato',
     merge:'Mesclar novo tipo',term:'Criar termo tributário',
   }[action]} description={descriptions[action]} onClose={()=>setAction(null)}>
     {action==='help'?<dl className="cf-action-help">
       <dt>Classificar</dt><dd>Configura a regra na política ativa; se descartar, exige prévia e confirmação em lotes.</dd>
-      <dt>Mesclar</dt><dd>Associa a grafia ao tipo de destino na política ativa.</dd>
+      <dt>Mesclar</dt><dd>Associa a grafia ao Nome do ato de destino na política ativa.</dd>
       <dt>Criar termo</dt><dd>Salva um termo tributário na política ativa, sem encerrar a classificação do novo tipo.</dd>
     </dl>:action==='term'?<TermForm apiFetch={apiFetch} origins={origins}
       initial={{sourceCode:item.source_code,canonicalType:item.normalized_type}}
@@ -331,28 +295,11 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
       try{await onMerge(canonical);setAction(null)}catch{/* parent displays error */}
     }}>
       <p><strong>{item.sample_raw_type}</strong> · {item.source_code} · {item.section}</p>
-      {action==='classify'&&<fieldset aria-label="Sugestões de tipo pelos títulos">
-        <legend>Escolher classificação</legend>
-        <label>
-          <input type="radio" name={'prefix-'+item.id}
-            checked={normalizeFilterText(canonical)===normalizeFilterText(item.normalized_type)}
-            onChange={()=>setCanonical(item.normalized_type)}/>
-          {' Genérico: '+item.normalized_type+' (todos: '+Number(item.occurrence_count).toLocaleString('pt-BR')+')'}
-        </label>
-        {prefixOptions.map(option=><label key={option.title}>
-          <input type="radio" name={'prefix-'+item.id}
-            checked={normalizeFilterText(canonical)===normalizeFilterText(option.title)}
-            onChange={()=>setCanonical(option.title)}/>
-          {' '+option.title+' ('+option.count+' na amostra)'}
-        </label>)}
-        <p className="cf-origin-note">Prefixos e contagens dos até 3 títulos de exemplo.
-          As contagens por prefixo não representam o acervo completo.</p>
-      </fieldset>}
-      <label>Tipo canônico
+      <label>Nome do ato
         {action==='merge'?<TypeSelect types={targets}
-          value={canonical} label={'Tipo canônico para '+item.sample_raw_type}
+          value={canonical} label={'Nome do ato para '+item.sample_raw_type}
           onChange={setCanonical}/>:<input type="text" maxLength={300}
-          aria-label={'Tipo canônico para '+item.sample_raw_type}
+          aria-label={'Nome do ato para '+item.sample_raw_type}
           value={canonical} onChange={e=>setCanonical(e.target.value)}/>}
       </label>
       {action==='merge'&&!targets.length&&<p>Cadastre primeiro um tipo de destino para esta fonte e seção.</p>}
