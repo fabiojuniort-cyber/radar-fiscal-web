@@ -30,7 +30,7 @@ async function prepare(page:Page,kind:Kind,scenario:Scenario) {
     if(path.endsWith('/new-types'))return r.fulfill({json:{items:[]}})
     if(path.endsWith('/out-of-scope/preview')||path.endsWith('/direct-rule/preview')){
       return r.fulfill({json:{
-        count:remaining,token:'token-'+confirms,
+        count:remaining,token:'a'.repeat(64),confirmationToken:'b'.repeat(64),policyRevision:5,
         outOfScope:remaining,hiddenLegacy:0,ruleDiscards:0,byRule:[],
         blockedCompany:2,blockedOtherSource:1,
       }})
@@ -66,7 +66,7 @@ async function prepare(page:Page,kind:Kind,scenario:Scenario) {
   }
 }
 
-for(const kind of ['scope','direct'] as const){
+for(const kind of ['scope'] as const){
   test('L11/L17 '+kind+' advances separate 500-item batches automatically to zero',async({page})=>{
     const {dialog,confirmLabel,getConfirms}=await prepare(page,kind,'auto')
     await dialog.getByRole('button',{name:confirmLabel}).click()

@@ -264,6 +264,12 @@ export interface CollectionFilterDirectPreview {
   blockedCompany: number
   blockedOtherSource: number
   token: string
+  confirmationToken?: string
+  policyRevision?: number
+  samples?: Array<{
+    id:string; title:string; sourceCode:string; section:string
+    officialType:string|null; pattern:string; protection:string|null
+  }>
 }
 
 export async function previewDirectCollectionFilterRule(
@@ -277,6 +283,22 @@ export async function previewDirectCollectionFilterRule(
       body: JSON.stringify(input),
     }),
   )
+}
+
+// Classification is a safe policy write. No existing publication is deleted.
+// Historical purges use a separate backend command and are NEVER part of save.
+export async function saveDirectCollectionFilterRule(
+  apiFetch: ProductApiFetch,
+  input: CollectionFilterDirectRuleInput,
+  preview: CollectionFilterDirectPreview,
+): Promise<{revision:number;deletedCount:0;historicalPurgeRequired:true}> {
+  return readJson<{revision:number;deletedCount:0;historicalPurgeRequired:true}>(await apiFetch('/api/v1/admin/collection-filter/direct-rule/save', {
+    method:'POST',
+    headers:{Accept:'application/json','Content-Type':'application/json'},
+    body:JSON.stringify({...input,expectedCount:preview.count,
+      previewToken:preview.token,confirmationToken:preview.confirmationToken,
+      policyRevision:preview.policyRevision}),
+  }))
 }
 
 export interface CollectionFilterDirectConfirmResult {
