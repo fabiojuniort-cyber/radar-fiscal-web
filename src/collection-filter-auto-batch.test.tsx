@@ -121,54 +121,55 @@ it('L17 HTTP error: reports stage and status; only Continue may restart after re
   expect(confirmations).toEqual([800,800,300])
 })
 
-it('L11 auto: direct classification runs until zero with a single Confirmar',async()=>{
-  const counts=[1001,501,1]
-  const results=[{apagadas:500,restantes:501},{apagadas:500,restantes:1},
-    {apagadas:1,restantes:0}]
-  const confirms:number[]=[]
+it('F3 safe save shows preview, protected samples and never calls purge',async()=>{
+  const requests:string[]=[]
   const apiFetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
-    const path=String(input)
-    if(path.endsWith('/direct-rule/preview'))return json(preview(counts.shift()!,'direct'))
-    if(path.endsWith('/direct-rule/confirm')){
-      confirms.push(JSON.parse(String(init?.body)).expectedCount)
-      return json({changed:false,...results.shift()})
+    const path=String(input);requests.push(path)
+    if(path.endsWith('/direct-rule/preview')) return json({
+      count:12,token:'a'.repeat(64),confirmationToken:'b'.repeat(64),
+      policyRevision:190,blockedCompany:1,blockedOtherSource:2,
+      samples:[{id:'p1',title:'EXTRATO DE CONVÊNIO',sourceCode:'dou',
+        section:'DO3',officialType:'EXTRATO DE CONVÊNIO',
+        pattern:'EXTRATO DE TERMO ADITIVO',protection:null}],
+    })
+    if(path.endsWith('/direct-rule/save')){
+      const payload=JSON.parse(String(init?.body))
+      expect(payload.confirmationToken).toEqual('b'.repeat(64))
+      expect(payload.policyRevision).toEqual(190)
+      expect(payload.expectedCount).toEqual(12)
+      return json({revision:191,deletedCount:0,historicalPurgeRequired:true})
     }
-    throw new Error('unexpected: '+path)
+    throw new Error('unexpected and destructive endpoint: '+path)
   }) as ProductApiFetch
-  const onApplied=vi.fn(async()=>{})
-  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={rule} onClose={vi.fn()} onApplied={onApplied}/>)
-  fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  await screen.findByText(/1001 publicações serão apagadas/)
-  fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação e exclusão'}))
+  const onApplied=vi.fn(async()=>{}),onClose=vi.fn()
+  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={rule}
+    onClose={onClose} onApplied={onApplied}/>)
+  fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
+  expect(await screen.findByText(/12 publicações históricas correspondem à regra/)).toBeInTheDocument()
+  expect(screen.getByText(/EXTRATO DE CONVÊNIO/)).toBeInTheDocument()
+  expect(screen.getByText(/Não serão apagadas ao salvar/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
   await waitFor(()=>expect(onApplied).toHaveBeenCalledTimes(1))
-  expect(confirms).toEqual([1001,501,1])
+  expect(onClose).toHaveBeenCalledTimes(1)
+  expect(requests).toEqual([
+    '/api/v1/admin/collection-filter/direct-rule/preview',
+    '/api/v1/admin/collection-filter/direct-rule/save'])
+  expect(requests.some(path=>path.endsWith('/direct-rule/confirm'))).toBe(false)
 })
 
-it('L11 pause: waits for the current direct batch and requires Continue',async()=>{
-  const pending=pendingResponse()
-  let previewCalls=0,confirmCalls=0
+it('F3 rejects legacy preview lacking revision/token; never saves or purges',async()=>{
+  const paths:string[]=[]
   const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
-    const path=String(input)
-    if(path.endsWith('/direct-rule/preview'))return json(preview(++previewCalls===1?800:300,'direct'))
-    if(path.endsWith('/direct-rule/confirm')){
-      confirmCalls++
-      return confirmCalls===1?pending.promise:json({changed:false,apagadas:300,restantes:0})
-    }
+    const path=String(input);paths.push(path)
+    if(path.endsWith('/direct-rule/preview'))return json(preview(800,'legacy'))
     throw new Error('unexpected: '+path)
   }) as ProductApiFetch
   const onApplied=vi.fn(async()=>{})
-  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={rule} onClose={vi.fn()} onApplied={onApplied}/>)
-  fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  await screen.findByText(/800 publicações serão apagadas/)
-  fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação e exclusão'}))
-  await waitFor(()=>expect(confirmCalls).toBe(1))
-  fireEvent.click(screen.getByRole('button',{name:'Pausar'}))
-  pending.resolve(json({changed:false,apagadas:500,restantes:300}))
-  await screen.findByRole('button',{name:'Continuar'})
-  expect(confirmCalls).toBe(1)
-  expect(screen.getByText('500 de 800 apagadas')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button',{name:'Continuar'}))
-  await waitFor(()=>expect(onApplied).toHaveBeenCalledTimes(1))
-  expect(confirmCalls).toBe(2)
-  expect(previewCalls).toBe(2)
+  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={rule}
+    onClose={vi.fn()} onApplied={onApplied}/>)
+  fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
+  expect(await screen.findByRole('alert')).toHaveTextContent(/prévia F3 segura/)
+  expect(screen.queryByRole('button',{name:'Salvar classificação sem excluir'})).toBeNull()
+  expect(paths).toHaveLength(1)
+  expect(onApplied).not.toHaveBeenCalled()
 })
