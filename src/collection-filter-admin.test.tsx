@@ -34,6 +34,21 @@ function mount(apiFetch:ProductApiFetch) {
   </MemoryRouter></QueryClientProvider>)
 }
 
+it('inventory warming never presents an empty queue as completed',async()=>{
+  const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+    const path=String(input);
+    if(path.includes('/admin/me'))return json({platformAdmin:true});
+    if(path.endsWith('/state'))return json({...state,inventory:{status:'WARMING',key:null}});
+    if(path.includes('/new-types'))return json({items:[],inventory:{status:'WARMING',key:null}});
+    return json({sources:[],actTypes:[]});
+  }) as ProductApiFetch;
+  mount(apiFetch);
+  fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}));
+  expect(await screen.findByText('Preparando os Nomes de ato em segundo plano…')).toBeInTheDocument();
+  expect(screen.queryByText('Nenhum tipo novo pendente.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Classificar'})).not.toBeInTheDocument();
+});
+
 describe('L-11 filtro direto DOU',()=>{
   it('mostra prévia F3 e salva regra sem excluir, uma única chamada safe-save',async()=>{
     const calls:string[]=[]

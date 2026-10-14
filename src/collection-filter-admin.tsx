@@ -54,7 +54,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
   const newTypes=useQuery({
     queryKey:['collection-filter','new-types'],
     queryFn:()=>fetchCollectionFilterNewTypes(apiFetch,'OPEN'),
-    refetchInterval:30000,
+    refetchInterval:q=>q.state.data?.inventory?.status==='WARMING'||q.state.data?.inventory?.status==='REFRESHING'?3000:30000,
     enabled:me.data?.platformAdmin===true,retry:false,
   })
   const facets=useQuery({
@@ -164,7 +164,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         <article><span>Política publicada</span>
           <strong>v{document.version} · revisão {document.revision}</strong></article>
         <article><span>Novos tipos</span>
-          <strong>{state.data?.newTypesOpen??0}</strong></article>
+          <strong>{state.data?.inventory?.status==='WARMING'?'Atualizando…':state.data?.newTypesOpen??0}</strong></article>
         <article><span>Regra de segurança</span>
           <strong>Desconhecido = manter</strong></article>
       </section>
@@ -197,7 +197,9 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         <div className="cf-card-title"><div><h2>Novos tipos</h2>
           <p>Nomes de ato ainda não configurados são mantidos automaticamente até sua classificação.</p>
         </div></div>
-        {newTypes.isPending?<p>Carregando…</p>:
+        {newTypes.data?.inventory?.status==='REFRESHING'&&<p role="status">Atualizando as contagens em segundo plano. Exibindo o último inventário concluído.</p>}
+        {newTypes.isPending||newTypes.data?.inventory?.status==='WARMING'?<p role="status">Preparando os Nomes de ato em segundo plano…</p>:
+          newTypes.data?.inventory?.status==='FAILED'?<p className="cf-error" role="alert">Não foi possível atualizar o inventário. Nova tentativa será feita automaticamente.</p>:
           newTypes.isError?<p className="cf-error">Não foi possível carregar novos tipos.</p>:
           newTypes.data?.items.length?<div className="cf-list">
             {newTypes.data.items.map(item=><article key={item.id} className="cf-new-type">

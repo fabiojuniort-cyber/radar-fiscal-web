@@ -58,7 +58,10 @@ export interface CollectionFilterDocument {
   terms: CollectionFilterTerm[]
 }
 
+export interface InventoryStatus {status:'WARMING'|'REFRESHING'|'READY'|'FAILED';key:string|null}
+
 export interface CollectionFilterState {
+  inventory?: InventoryStatus
   actNames?: Array<{name:string;sourceCode:string;section:string;count:number}>
   policies: Array<{
     id: string
@@ -139,7 +142,7 @@ export async function fetchCollectionFilterNewTypes(
   apiFetch: ProductApiFetch,
   status: 'OPEN' | 'RESOLVED' | 'MERGED' = 'OPEN',
 ) {
-  return readJson<{ items: CollectionFilterNewType[] }>(
+  return readJson<{ items: CollectionFilterNewType[];inventory?:InventoryStatus }>(
     await apiFetch(
       `/api/v1/admin/collection-filter/new-types?status=${status}`,
       { headers: { Accept: 'application/json' } },
