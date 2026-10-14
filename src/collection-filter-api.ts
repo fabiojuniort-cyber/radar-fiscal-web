@@ -12,6 +12,7 @@ export type CollectionFilterStrength =
   | 'NEGATIVE'
 
 export interface CollectionFilterRule {
+  actName?: string
   sourceCode: string
   section: string
   canonicalType: string
@@ -20,6 +21,8 @@ export interface CollectionFilterRule {
 }
 
 export interface CollectionFilterAlias {
+  actName?: string
+  targetActName?: string
   sourceCode: string
   section: string
   alias: string
@@ -27,6 +30,7 @@ export interface CollectionFilterAlias {
 }
 
 export interface CollectionFilterTerm {
+  actName?: string | null
   text: string
   normalizedTerm?: string
   strength: CollectionFilterStrength
@@ -54,7 +58,11 @@ export interface CollectionFilterDocument {
   terms: CollectionFilterTerm[]
 }
 
+export interface InventoryStatus {status:'WARMING'|'REFRESHING'|'READY'|'FAILED';key:string|null}
+
 export interface CollectionFilterState {
+  inventory?: InventoryStatus
+  actNames?: Array<{name:string;sourceCode:string;section:string;count:number}>
   policies: Array<{
     id: string
     version: number
@@ -66,14 +74,16 @@ export interface CollectionFilterState {
 }
 
 export interface CollectionFilterNewType {
+  act_name?: string
+  queue_basis?: 'ARCHIVE_ACT_NAME'
   id: string
   source_code: string
   section: string
   normalized_type: string
   sample_raw_type: string
   occurrence_count: number | string
-  first_seen_at: string
-  last_seen_at: string
+  first_seen_at: string | null
+  last_seen_at: string | null
   sample_publication_ids: string[]
   examples: Array<{
     id: string
@@ -132,7 +142,7 @@ export async function fetchCollectionFilterNewTypes(
   apiFetch: ProductApiFetch,
   status: 'OPEN' | 'RESOLVED' | 'MERGED' = 'OPEN',
 ) {
-  return readJson<{ items: CollectionFilterNewType[] }>(
+  return readJson<{ items: CollectionFilterNewType[];inventory?:InventoryStatus }>(
     await apiFetch(
       `/api/v1/admin/collection-filter/new-types?status=${status}`,
       { headers: { Accept: 'application/json' } },
@@ -247,6 +257,8 @@ export async function fetchCollectionFilterDiscardAlerts(
 // L-11 direct rule editing; the server must re-evaluate the current archive
 // at confirmation time. The front end never supplies publication IDs to delete.
 export interface CollectionFilterDirectRuleInput {
+  actName?: string
+  queueBasis?: 'ARCHIVE_ACT_NAME'
   sourceCode: string
   section: string
   canonicalType: string
@@ -255,19 +267,20 @@ export interface CollectionFilterDirectRuleInput {
 }
 
 export interface CollectionFilterDirectPreview {
+  actName?: string
   count: number
   outOfScope?: number
   hiddenLegacy?: number
   suspectDoe?: number
   ruleDiscards?: number
-  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number}>
+  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number;actName?:string}>
   blockedCompany: number
   blockedOtherSource: number
   token: string
   confirmationToken?: string
   policyRevision?: number
   samples?: Array<{
-    id:string; title:string; sourceCode:string; section:string
+    id:string; title:string; sourceCode:string; section:string; actName?:string
     officialType?:string|null; canonicalType?:string; pattern?:string; protection?:string|null
   }>
 }
@@ -303,7 +316,7 @@ export async function saveDirectCollectionFilterRule(
 
 export interface CollectionFilterDirectConfirmResult {
   ruleDiscards?: number
-  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number}>
+  byRule?: Array<{sourceCode?:string;section:string;canonicalType:string;mode:string;count:number;actName?:string}>
   changed: boolean
   outOfScope?: number
   hiddenLegacy?: number
@@ -378,4 +391,3 @@ export async function confirmOutOfScopePublications(
     },
   ))
 }
-

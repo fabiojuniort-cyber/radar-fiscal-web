@@ -164,12 +164,12 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
     <div className="cf-modal-form">
       {preview&&<div className="cf-preview-summary" role="status">
         <p><strong>{numberBr(preview.count)} não passam no filtro atual / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
-        {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por tipo">
-          {(preview.byRule??[]).map((r,i)=><li key={i}>{r.sourceCode ? r.sourceCode+' / ' : ''}{r.section} / {r.canonicalType}: {numberBr(r.count)}</li>)}
+        {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por Nome do ato">
+          {(preview.byRule??[]).map((r,i)=><li key={i}>{r.sourceCode ? r.sourceCode+' / ' : ''}{r.section} / {r.actName??r.canonicalType}: {numberBr(r.count)}</li>)}
         </ul>}
-        {(preview.samples??[]).length>0&&<ul aria-label="Amostras por tipo">
+        {(preview.samples??[]).length>0&&<ul aria-label="Amostras por Nome do ato">
           {(preview.samples??[]).map(sample=><li key={sample.id}>
-            {sample.canonicalType??sample.officialType??'Tipo não informado'}: {sample.title}
+            {sample.actName??sample.canonicalType??'Nome do ato não informado'}: {sample.title}
           </li>)}
         </ul>}
         {preview.blockedCompany>0&&<p>{numberBr(preview.blockedCompany)} vinculadas a clientes</p>}

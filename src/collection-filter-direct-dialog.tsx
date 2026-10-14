@@ -25,7 +25,7 @@ export function CollectionFilterDirectDialog({
   onApplied:()=>Promise<void>
 }){
   const [rule,setRule]=useState<Omit<CollectionFilterDirectRuleInput,'mode'> &
-    {mode:CollectionFilterMode|''}>({...initial,mode:initial.newTypeId?'':initial.mode})
+    {mode:CollectionFilterMode|''}>({...initial,mode:initial.newTypeId||initial.queueBasis?'':initial.mode})
   const [preview,setPreview]=useState<CollectionFilterDirectPreview|null>(null)
   const [working,setWorking]=useState(false)
   const [error,setError]=useState<string|null>(null)
@@ -63,7 +63,7 @@ export function CollectionFilterDirectDialog({
   }
 
   return (
-    <FilterDialog title="Classificar tipo de publicação"
+    <FilterDialog title="Classificar Nome do ato"
       description="A prévia mostra o impacto da regra F3. Salvar a classificação não apaga publicações existentes; exclusões históricas exigem autorização separada."
       onClose={onClose}>
       <div className="cf-modal-form">
@@ -78,9 +78,9 @@ export function CollectionFilterDirectDialog({
           <input aria-label="Seção" value={rule.section} maxLength={50} required
             onChange={e=>setRule(r=>({...r,section:e.target.value}))}/>
         </label>
-        <label>Tipo
-          <input aria-label="Tipo" value={rule.canonicalType} maxLength={300} required
-            onChange={e=>setRule(r=>({...r,canonicalType:e.target.value}))}/>
+        <label>Nome do ato
+          <input aria-label="Nome do ato" value={rule.actName??rule.canonicalType} maxLength={300} required
+            onChange={e=>setRule(r=>({...r,canonicalType:e.target.value,actName:undefined}))}/>
         </label>
         <label>Modo
           <select aria-label="Modo" value={rule.mode}
@@ -96,9 +96,9 @@ export function CollectionFilterDirectDialog({
           {preview.blockedCompany>0&&<p>{numberBr(preview.blockedCompany)} com empresa cliente.</p>}
           {preview.blockedOtherSource>0&&<p>{numberBr(preview.blockedOtherSource)} com outra origem oficial.</p>}
           {Boolean(preview.samples?.length)&&<div>
-            <p>Amostras da prévia:</p>
+            <p>Nome do ato: {preview.actName||rule.actName||rule.canonicalType}</p><p>Amostras da prévia:</p>
             <ul>{(preview.samples??[]).map(item=><li key={item.id}>
-              {item.title} ({item.section}; {item.officialType||'tipo oficial não informado'})
+              {item.title} ({item.section}; {item.actName||'Nome do ato não informado'})
               {item.protection? ` — protegida: ${item.protection}`:''}
             </li>)}</ul>
           </div>}
