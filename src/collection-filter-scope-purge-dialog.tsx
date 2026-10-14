@@ -158,16 +158,19 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
     }
   }
 
-  return <FilterDialog title="Apagar fora do escopo"
-    description="DOU: fora do escopo e descartadas pelas regras. Qualquer fonte: ocultas pela regra antiga (029). DOE-SP: tipo provavelmente errado. Vínculos com clientes e publicações de múltiplas fontes permanecem protegidos."
+  return <FilterDialog title="Reaplicar filtro ao acervo"
+    description="Reaplica ao acervo o mesmo filtro da coleta. Consulte a prévia antes de confirmar; publicações vinculadas a clientes ou com outra origem oficial são preservadas."
     onClose={close}>
     <div className="cf-modal-form">
       {preview&&<div className="cf-preview-summary" role="status">
-        <p><strong>{numberBr(preview.outOfScope??0)} fora do escopo + {numberBr(preview.ruleDiscards??0)} pelas regras + {numberBr(preview.hiddenLegacy??0)} ocultas pela regra antiga + {numberBr(preview.suspectDoe??0)} tipo provavelmente errado / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
-        <p>Ocultas pela regra antiga (029), qualquer fonte: {numberBr(preview.hiddenLegacy??0)}</p>
-        <p>DOE-SP — tipo provavelmente errado: {numberBr(preview.suspectDoe??0)}</p>
-        {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por regra">
-          {(preview.byRule??[]).map((r,i)=><li key={i}>{r.section} / {r.canonicalType} / {r.mode}: {numberBr(r.count)}</li>)}
+        <p><strong>{numberBr(preview.count)} não passam no filtro atual / {numberBr(preview.blockedCompany+preview.blockedOtherSource)} protegidas</strong></p>
+        {(preview.byRule??[]).length>0&&<ul aria-label="Quantidades por tipo">
+          {(preview.byRule??[]).map((r,i)=><li key={i}>{r.sourceCode ? r.sourceCode+' / ' : ''}{r.section} / {r.canonicalType}: {numberBr(r.count)}</li>)}
+        </ul>}
+        {(preview.samples??[]).length>0&&<ul aria-label="Amostras por tipo">
+          {(preview.samples??[]).map(sample=><li key={sample.id}>
+            {sample.canonicalType??sample.officialType??'Tipo não informado'}: {sample.title}
+          </li>)}
         </ul>}
         {preview.blockedCompany>0&&<p>{numberBr(preview.blockedCompany)} vinculadas a clientes</p>}
         {preview.blockedOtherSource>0&&<p>{numberBr(preview.blockedOtherSource)} com outra origem oficial</p>}
@@ -191,3 +194,4 @@ export function CollectionFilterScopePurgeDialog({apiFetch,onClose,onApplied}:{
     </div>
   </FilterDialog>
 }
+

@@ -156,7 +156,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
       <nav aria-label="Áreas administrativas">
         <Link to="/admin/taxonomia">Taxonomia</Link>
         <Link to="/admin/administradores">Administradores</Link>
-        <button type="button" onClick={()=>setScopePurgeOpen(true)}>Apagar fora do escopo</button>
+        <button type="button" onClick={()=>setScopePurgeOpen(true)}>Reaplicar filtro ao acervo</button>
       </nav>
     </header>
     <main className="cf-main">
@@ -252,3 +252,4 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
     </main>
   </div>
 }
+

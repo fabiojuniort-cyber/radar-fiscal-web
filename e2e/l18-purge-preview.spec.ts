@@ -1,7 +1,7 @@
 import {expect,test} from '@playwright/test'
 
 // MON/L18: screenshot uses mocked preview only; never calls the destructive endpoint.
-test('L18 2/2b renders distinct categories and protected totals before merge',async({page},testInfo)=>{
+test('F3 archive reapply renders one filter total and type samples without confirming',async({page},testInfo)=>{
   const policyId='11111111-1111-4111-8111-111111111111'
   await page.route('**/auth/refresh',r=>r.fulfill({json:{
     accessToken:'admin-token',tokenType:'Bearer',expiresIn:900,
@@ -22,19 +22,20 @@ test('L18 2/2b renders distinct categories and protected totals before merge',as
     }
     if(path.endsWith('/new-types'))return r.fulfill({json:{items:[]}})
     if(path.endsWith('/out-of-scope/preview'))return r.fulfill({json:{
-      count:60,token:'a'.repeat(64),outOfScope:0,ruleDiscards:0,
-      hiddenLegacy:39,suspectDoe:21,byRule:[],
+      count:60,token:'a'.repeat(64),outOfScope:0,
+      hiddenLegacy:0,suspectDoe:0,ruleDiscards:60,byRule:[{sourceCode:"dou",section:"DO3",canonicalType:"EXTRATO",mode:"EXCLUDE_ALWAYS",count:60}],samples:[{id:"sample",title:"EXTRATO DE CONTRATO 33/2026",sourceCode:"dou",section:"DO3",canonicalType:"EXTRATO"}],
       blockedCompany:2,blockedOtherSource:3,
     }})
     if(path.endsWith('/out-of-scope/confirm'))throw new Error('L18 screenshot MUST NOT confirm a deletion')
     return r.fulfill({json:{items:[]}})
   })
   await page.goto('/admin/filtro-coleta')
-  await page.getByRole('button',{name:'Apagar fora do escopo'}).click()
-  const dialog=page.getByRole('dialog',{name:'Apagar fora do escopo'})
+  await page.getByRole('button',{name:'Reaplicar filtro ao acervo'}).click()
+  const dialog=page.getByRole('dialog',{name:'Reaplicar filtro ao acervo'})
   await dialog.getByRole('button',{name:'Consultar quantidade'}).click()
-  await expect(dialog.getByText('Ocultas pela regra antiga (029), qualquer fonte: 39')).toBeVisible()
-  await expect(dialog.getByText('DOE-SP — tipo provavelmente errado: 21')).toBeVisible()
+  await expect(dialog.getByText('60 não passam no filtro atual / 5 protegidas')).toBeVisible()
+  await expect(dialog.getByText('EXTRATO: EXTRATO DE CONTRATO 33/2026')).toBeVisible()
   await expect(dialog.getByText(/5 protegidas/)).toBeVisible()
   await page.screenshot({path:testInfo.outputPath('l18-preview.png'),fullPage:true})
 })
+

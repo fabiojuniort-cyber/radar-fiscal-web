@@ -22,17 +22,20 @@ const preview = (count:number, token:string) => ({
 })
 const rule = {sourceCode:'dou',section:'DO1',canonicalType:'PORTARIA',mode:'EXCLUDE_ALWAYS' as const}
 
-it('L18 preview distinguishes 029 any-source and DOE-SP probably wrong type',async()=>{
+it('F3 archive preview uses one total and shows samples by type without confirming',async()=>{
   const apiFetch=vi.fn(async()=>json({
-    count:60,token:'a'.repeat(64),outOfScope:0,ruleDiscards:0,
-    hiddenLegacy:39,suspectDoe:21,blockedCompany:2,blockedOtherSource:3,byRule:[],
+    count:60,token:'a'.repeat(64),ruleDiscards:60,
+    blockedCompany:2,blockedOtherSource:3,
+    byRule:[{sourceCode:'dou',section:'DO3',canonicalType:'EXTRATO',mode:'EXCLUDE_ALWAYS',count:60}],
+    samples:[{id:'sample',title:'EXTRATO DE CONTRATO 33/2026',sourceCode:'dou',section:'DO3',canonicalType:'EXTRATO'}],
   })) as ProductApiFetch
   render(<CollectionFilterScopePurgeDialog apiFetch={apiFetch}
     onClose={vi.fn()} onApplied={vi.fn(async()=>{})}/>)
   fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  expect(await screen.findByText(/Ocultas pela regra antiga \(029\), qualquer fonte: 39/)).toBeInTheDocument()
-  expect(screen.getByText(/DOE-SP — tipo provavelmente errado: 21/)).toBeInTheDocument()
-  expect(screen.getByText(/3 com outra origem oficial/)).toBeInTheDocument()
+  expect(await screen.findByText('60 não passam no filtro atual / 5 protegidas')).toBeInTheDocument()
+  expect(screen.getByText('EXTRATO: EXTRATO DE CONTRATO 33/2026')).toBeInTheDocument()
+  expect(screen.queryByText(/regra antiga|provavelmente errado/)).not.toBeInTheDocument()
+  expect(apiFetch).toHaveBeenCalledTimes(1)
 })
 
 it('L17 auto: three separate 500-bounded requests finish the scope purge without another click',async()=>{
@@ -56,7 +59,7 @@ it('L17 auto: three separate 500-bounded requests finish the scope purge without
   const onClose=vi.fn(), onApplied=vi.fn(async()=>{})
   render(<CollectionFilterScopePurgeDialog apiFetch={apiFetch} onClose={onClose} onApplied={onApplied}/>)
   fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  await screen.findByText(/1.050 fora do escopo/)
+  await screen.findByText(/1.050 não passam no filtro atual/)
   fireEvent.click(screen.getByRole('button',{name:'Confirmar exclusão'}))
   await waitFor(()=>expect(onApplied).toHaveBeenCalledTimes(1))
   expect(onClose).toHaveBeenCalledTimes(1)
@@ -79,7 +82,7 @@ it('L17 pause: completes only the in-flight batch and resumes from a fresh previ
   const onClose=vi.fn(),onApplied=vi.fn(async()=>{})
   render(<CollectionFilterScopePurgeDialog apiFetch={apiFetch} onClose={onClose} onApplied={onApplied}/>)
   fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  await screen.findByText(/650 fora do escopo/)
+  await screen.findByText(/650 não passam no filtro atual/)
   fireEvent.click(screen.getByRole('button',{name:'Confirmar exclusão'}))
   await waitFor(()=>expect(confirms).toBe(1))
   fireEvent.click(screen.getByRole('button',{name:'Pausar'}))
@@ -111,7 +114,7 @@ it('L17 HTTP error: reports stage and status; only Continue may restart after re
   const onApplied=vi.fn(async()=>{})
   render(<CollectionFilterScopePurgeDialog apiFetch={apiFetch} onClose={vi.fn()} onApplied={onApplied}/>)
   fireEvent.click(screen.getByRole('button',{name:'Consultar quantidade'}))
-  await screen.findByText(/800 fora do escopo/)
+  await screen.findByText(/800 não passam no filtro atual/)
   fireEvent.click(screen.getByRole('button',{name:'Confirmar exclusão'}))
   await screen.findByRole('button',{name:'Continuar'})
   expect(screen.getByRole('alert')).toHaveTextContent('Etapa 1: HTTP 503')
@@ -173,3 +176,4 @@ it('F3 rejects legacy preview lacking revision/token; never saves or purges',asy
   expect(paths).toHaveLength(1)
   expect(onApplied).not.toHaveBeenCalled()
 })
+
