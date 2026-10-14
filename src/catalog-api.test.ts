@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { fetchCatalogArchive, fetchCatalogNavigation } from './catalog-api'
+import { fetchCatalogArchive, fetchCatalogFacets, fetchCatalogNavigation } from './catalog-api'
 import type { ProductApiFetch } from './product-api'
 
 function okFetch() {
@@ -86,5 +86,23 @@ describe('fetchCatalogNavigation', () => {
     expect(url.searchParams.get('source')).toBe('confaz')
     expect(url.searchParams.get('actType')).toBe('Convênio ICMS')
     expect(url.searchParams.get('year')).toBe('2026')
+  })
+})
+
+describe('fetchCatalogFacets', () => {
+  it('uses the search filters, including NCM conversion and dates', async () => {
+    const apiFetch = okFetch()
+    for (const filters of [
+      { q: 'convênio', scope: 'full' as const, source: 'confaz', actType: 'Convênio ICMS', publishedOn: '2026-10-01', tag: 'ICMS' },
+      { q: '2203.00.00', jurisdiction: 'STATE' as const, uf: 'SP', publishedFrom: '2020-01-01', publishedTo: '2026-10-01' },
+    ]) {
+      await fetchCatalogArchive(apiFetch, filters)
+      await fetchCatalogFacets(apiFetch, filters)
+      const calls = apiFetch.mock.calls.slice(-2)
+      const archive = new URL(String(calls[0]?.[0]), 'http://x')
+      const facets = new URL(String(calls[1]?.[0]), 'http://x')
+      expect(facets.pathname).toBe('/api/v2/archive/facets')
+      expect(facets.search).toBe(archive.search)
+    }
   })
 })

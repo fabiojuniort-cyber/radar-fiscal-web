@@ -68,7 +68,7 @@ function ArchiveDateBridgeActive({ host }: { host: HTMLElement }) {
     void queryClient.invalidateQueries({
       predicate: (query) => {
         const key = query.queryKey
-        return key[0] === 'launch' && key[1] === 'archive-v2' && key.length > 3
+        return key[0] === 'launch' && (key[1] === 'archive-v2' || key[1] === 'archive-facets') && key.length > 3
       },
     })
   }, [
