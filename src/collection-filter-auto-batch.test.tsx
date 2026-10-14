@@ -142,12 +142,12 @@ it('F3 safe save shows preview, protected samples and never calls purge',async()
     throw new Error('unexpected and destructive endpoint: '+path)
   }) as ProductApiFetch
   const onApplied=vi.fn(async()=>{}),onClose=vi.fn()
-  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={rule}
+  render(<CollectionFilterDirectDialog apiFetch={apiFetch} initial={{...rule,mode:'KEEP_IF_TAX_TERM'}}
     onClose={onClose} onApplied={onApplied}/>)
   fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
   expect(await screen.findByText(/12 publicações históricas correspondem à regra/)).toBeInTheDocument()
   expect(screen.getByText(/EXTRATO DE CONVÊNIO/)).toBeInTheDocument()
-  expect(screen.getByText(/Não serão apagadas ao salvar/)).toBeInTheDocument()
+  expect(screen.getByText(/Nenhuma publicação será apagada ao salvar/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
   await waitFor(()=>expect(onApplied).toHaveBeenCalledTimes(1))
   expect(onClose).toHaveBeenCalledTimes(1)
@@ -173,3 +173,4 @@ it('F3 rejects legacy preview lacking revision/token; never saves or purges',asy
   expect(paths).toHaveLength(1)
   expect(onApplied).not.toHaveBeenCalled()
 })
+

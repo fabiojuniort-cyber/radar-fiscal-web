@@ -60,10 +60,10 @@ describe('L-11 filtro direto DOU',()=>{
     fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
     fireEvent.click(await screen.findByRole('button',{name:'Confirmar classificação'}))
-    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
+    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'KEEP_IF_TAX_TERM'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     await screen.findByText(/12 publicações históricas correspondem à regra/)
-    expect(screen.getByText(/Não serão apagadas ao salvar/)).toBeInTheDocument()
+    expect(screen.getByText(/Nenhuma publicação será apagada ao salvar/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
     await waitFor(()=>expect(calls.some(v=>v.endsWith('/direct-rule/save'))).toBe(true))
     expect(calls.some(v=>v.endsWith('/direct-rule/confirm'))).toBe(false)
@@ -210,3 +210,4 @@ describe('L-15 new scoped purge button',()=>{
     expect(confirmed).toBe(0)
   })
 })
+
