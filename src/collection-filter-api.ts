@@ -292,7 +292,7 @@ export async function saveDirectCollectionFilterRule(
   input: CollectionFilterDirectRuleInput,
   preview: CollectionFilterDirectPreview,
 ): Promise<{revision:number;deletedCount:0;historicalPurgeRequired:true}> {
-  return readJson(await apiFetch('/api/v1/admin/collection-filter/direct-rule/save', {
+  return readJson<{revision:number;deletedCount:0;historicalPurgeRequired:true}>(await apiFetch('/api/v1/admin/collection-filter/direct-rule/save', {
     method:'POST',
     headers:{Accept:'application/json','Content-Type':'application/json'},
     body:JSON.stringify({...input,expectedCount:preview.count,
