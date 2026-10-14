@@ -324,6 +324,8 @@ export async function applyDirectCollectionFilterRule(
   input: CollectionFilterDirectRuleInput & {
     expectedCount: number
     previewToken: string
+    confirmationToken: string
+    policyRevision: number
     resume?: boolean
   },
 ): Promise<CollectionFilterDirectConfirmResult> {
@@ -378,3 +380,4 @@ export async function confirmOutOfScopePublications(
     },
   ))
 }
+
