@@ -40,7 +40,6 @@ import {
   patchGroup,
   publishDraft,
   setClassificationEnabled,
-  setExcludedSources,
   type AliasType,
   type CatalogCheck,
   type CurationConcept,
@@ -1673,14 +1672,9 @@ function ClassificationTab({
   justification: string
   onChanged: () => Promise<void>
 }) {
-  const [excluded, setExcluded] = useState(state.settings.classificationExcludedSources.join(', '))
   const enabled = state.settings.classificationEnabled
   const toggle = useMutation({
     mutationFn: () => setClassificationEnabled(apiFetch, !enabled, justification),
-    onSuccess: onChanged,
-  })
-  const saveExcluded = useMutation({
-    mutationFn: () => setExcludedSources(apiFetch, splitList(excluded).map((s) => s.toLowerCase()), justification),
     onSuccess: onChanged,
   })
   const progress = state.progress
@@ -1693,8 +1687,9 @@ function ClassificationTab({
         <div>
           <h3>Classificação automática {enabled ? 'ligada' : 'desligada'}</h3>
           <p>
-            Quando ligada, cada legislação gravada recebe as tags da versão {state.published?.version ?? '—'} e o
-            acervo antigo é classificado em segundo plano, das mais recentes para as mais antigas. Publicar uma
+            Quando ligada, toda legislação visível no Acervo recebe as tags da versão {state.published?.version ?? '—'} e o
+            acervo antigo é classificado em segundo plano, das mais recentes para as mais antigas, incluindo todas
+            as fontes, como DOU e DOE-SP. Publicar uma
             nova versão reclassifica tudo sem apagar o histórico.
           </p>
         </div>
@@ -1725,8 +1720,7 @@ function ClassificationTab({
           <p>
             {percent}% · {progress.classified.toLocaleString('pt-BR')} classificadas ·{' '}
             {progress.pending.toLocaleString('pt-BR')} pendentes · {progress.withoutTags.toLocaleString('pt-BR')}{' '}
-            sem tags · {progress.failed.toLocaleString('pt-BR')} falhas · {progress.excluded.toLocaleString('pt-BR')}{' '}
-            de fontes excluídas
+            sem tags · {progress.failed.toLocaleString('pt-BR')} falhas
           </p>
           <small>
             Motor {state.engine.key} v{state.engine.version}
@@ -1734,20 +1728,14 @@ function ClassificationTab({
         </section>
       )}
 
-      <section className="tc-excluded">
-        <h3>Fontes fora da classificação</h3>
+      <section className="tc-archive-scope">
+        <h3>Todo o Acervo</h3>
         <p>
-          O DOE-SP fica excluído até o fechamento formal da sua reconstrução, que recusa histórico de
-          classificação. Informe os códigos das fontes separados por vírgula.
+          A classificação considera sempre todas as publicações visíveis no Acervo, sem exclusões por fonte
+          ou tipo de ato. Novas publicações entram automaticamente nesse conjunto.
         </p>
-        <div className="tc-actions">
-          <input value={excluded} onChange={(e) => setExcluded(e.target.value)} />
-          <button type="button" disabled={!justified || saveExcluded.isPending} onClick={() => saveExcluded.mutate()}>
-            Salvar
-          </button>
-          {saveExcluded.isError && <span className="tc-error">{errorText(saveExcluded.error)}</span>}
-        </div>
       </section>
     </div>
   )
 }
+

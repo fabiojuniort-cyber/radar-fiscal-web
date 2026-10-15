@@ -122,6 +122,23 @@ const state = {
 }
 
 describe('Curadoria da taxonomia', () => {
+  it('always describes the full Acervo and offers no source exclusions, even with legacy settings', async () => {
+    const apiFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/admin/me') return json({ platformAdmin: true, taxonomyCurator: true, licenseBypass: true, curatorDatabase: true })
+      if (url === '/api/v1/admin/taxonomy/state') return json(state)
+      if (url === '/api/v1/admin/taxonomy/releases/rel-12') return json(view)
+      return json({ error: 'not_found' }, 404)
+    }) as unknown as ProductApiFetch
+    renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Classificação automática' }))
+    expect(await screen.findByRole('heading', { name: 'Todo o Acervo' })).toBeInTheDocument()
+    expect(screen.getByText(/sem exclusões por fonte ou tipo de ato/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Fontes fora da classificação' })).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('doe-sp')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ligar classificação' })).toBeEnabled()
+  })
+
   it('blocks users without the curator role', async () => {
     const apiFetch = vi.fn(async () => json({ platformAdmin: false, taxonomyCurator: false, licenseBypass: false, curatorDatabase: true })) as unknown as ProductApiFetch
     renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
@@ -455,3 +472,4 @@ describe('Acervo por tag e formatação', () => {
     expect(formatOfficialCode('DOCUMENT_MODEL', '55')).toBe('55')
   })
 })
+
