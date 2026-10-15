@@ -165,7 +165,7 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText('Desligada')).toBeInTheDocument()
     expect(await screen.findByDisplayValue('Fertilizantes e corretivos')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('3102.10')).toBeInTheDocument()
+    expect(screen.getByText('3102.10')).toBeInTheDocument()
     expect(screen.getByText('carbamida')).toBeInTheDocument()
     // One kind of synonym: every stored synonym shows in the grid, untagged.
     expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).not.toHaveClass('is-search-only')
@@ -173,7 +173,8 @@ describe('Curadoria da taxonomia', () => {
     expect(screen.getByRole('columnheader', { name: /Código TriFaros/ })).toBeInTheDocument()
 
     // Edit a cell and add two synonyms at once (comma separated).
-    fireEvent.change(screen.getByDisplayValue('3102.10'), { target: { value: '3102.10, 3102.90' } })
+    fireEvent.change(screen.getByRole('textbox',{name:'Adicionar código oficial'}), { target: { value: '3102.90' } })
+    fireEvent.keyDown(screen.getByRole('textbox',{name:'Adicionar código oficial'}), {key:'Enter'})
     fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia granulada;' } })
     fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia agrícola' } })
     fireEvent.keyDown(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { key: 'Enter' })
@@ -209,7 +210,7 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText(/Salvo no rascunho: 1 novos · 1 alterados/)).toBeInTheDocument()
   })
 
-  it('links the Segmento column to the Segmento table: drop-down per group, saved with the grid', async () => {
+  it('links multiple Segmento chips to the Segmento table, saved with the grid', async () => {
     const sectorConcept = (code: string, label: string, officialCodes: string[], releaseConceptId: string) => ({
       ...view.concepts[0]!,
       releaseConceptId,
@@ -265,12 +266,11 @@ describe('Curadoria da taxonomia', () => {
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
     const row = screen.getByDisplayValue('Ureia').closest('tr')!
-    const select = within(row).getByRole('combobox', { name: 'Segmento' })
-    expect(select).toHaveValue('sector.agribusiness')
-    const offered = within(select).getAllByRole('option').map((option) => option.textContent)
-    expect(offered).toEqual(['— sem segmento —', 'Agronegócio', 'Agropecuária, pesca e insumos agrícolas'])
-
-    fireEvent.change(select, { target: { value: 'sector.trifaros_agro' } })
+    const segmentInput = within(row).getByRole('textbox',{name:'Adicionar segmento'})
+    expect(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'})).toBeInTheDocument()
+    fireEvent.click(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'}))
+    fireEvent.change(segmentInput,{target:{value:'Agropecuária, pesca e insumos agrícolas'}})
+    fireEvent.keyDown(segmentInput,{key:'Enter'})
     fireEvent.click(screen.getByRole('button', { name: /Salvar alterações \(1\)/ }))
 
     await waitFor(() => expect(calls.some((call) => call.url.endsWith('/dimensions/product/rows'))).toBe(true))
