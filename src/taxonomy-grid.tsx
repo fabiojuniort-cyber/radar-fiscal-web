@@ -754,7 +754,7 @@ export function CurationGrid({
   )
 }
 
-function SynonymCell({
+export function SynonymCell({
   aliases,
   editable,
   cellId,
