@@ -322,7 +322,9 @@ export function CurationGrid({
     return [...newRows, ...sorted]
   }, [baseRows, edits, filters, groupOrder, isCnae, newRows, normalizedQuery, rowKind, segmentOf, sort])
   useEffect(() => { setPage(0) }, [query, filters, sort, rowKind])
-  const paginated = isCnae && visibleRows.length > 50
+  // Paginate every dimension, especially Produto (4,000+ rows), not only CNAE.
+  // Rendering 50 DOM rows instead of thousands is independent of API semantics.
+  const paginated = visibleRows.length > 50
   const lastPage = paginated ? Math.ceil(visibleRows.length / 50) - 1 : 0
   const currentPage = Math.min(page, lastPage)
   const pageRows = paginated ? visibleRows.slice(currentPage * 50, (currentPage + 1) * 50) : visibleRows
