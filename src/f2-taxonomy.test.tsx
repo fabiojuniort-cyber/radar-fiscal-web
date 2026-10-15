@@ -195,7 +195,7 @@ describe('F2-TAB-02 B1 — distinct subgroup identities and missing parent links
       parent,
       ...groups.map((group,i)=>({
         ...parent,code:'sector.cnae_100000'+i,label:'Atividade '+i,
-        officialCodes:['100000'+i+'1'],groupId:group.id,classifyByLabel:true,
+        officialCodes:['10000'+i+'1'],groupId:group.id,classifyByLabel:true,
       })),
     ] as CurationConcept[]
     render(<CurationGrid
