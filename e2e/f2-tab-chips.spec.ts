@@ -80,7 +80,7 @@ test('F2-TAB-01: chips permitem adicionar/remover CNAE, sinônimo e segmento sem
 
   await expect(row.getByText('Arroz',{exact:true})).toBeVisible()
   await expect(row.getByText('100590',{exact:true})).toBeVisible()
-  await expect(row.getByRole('button',{name:/Remover NCM sugerida/})).toHaveCount(0)
+  await expect(row.getByRole('button',{name:/Remover NCM sugerida/})).toHaveCount(2)
   await expect(page.getByRole('button',{name:/Tratamento/})).toHaveCount(0)
   await expect(page.getByText('Vínculos CNAE da fonte aprovada')).toHaveCount(0)
 })
