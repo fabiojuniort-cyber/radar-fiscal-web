@@ -50,11 +50,12 @@ import {
   type ReleaseView,
 } from './taxonomy-api'
 import './panel-experience.css'
-import { CurationGrid, displaySegmentSubsegment } from './taxonomy-grid'
+import { CurationGrid, SynonymCell, displaySegmentSubsegment } from './taxonomy-grid'
 import { importSegmentPackage, parseSegmentPackage } from './segment-import'
 import './taxonomy-admin.css'
 
 const DEFAULT_REASON = 'Curadoria da taxonomia'
+const F2_REMOVED_DIMENSIONS=new Set(['treatment','act_type','platform','tax_species','sphere'])
 
 type Tab = 'tabelas' | 'revisar' | 'catalogos' | 'classificacao'
 
@@ -300,7 +301,7 @@ function TablesTab({
   justification: string
   onChanged: () => Promise<void>
 }) {
-  const [dimensionCode, setDimensionCode] = useState(view.dimensions[0]?.code ?? '')
+  const [dimensionCode, setDimensionCode] = useState(view.dimensions.find(item=>!F2_REMOVED_DIMENSIONS.has(item.code))?.code ?? '')
   const [gridDirty, setGridDirty] = useState(false)
   const [creatingActuacao, setCreatingActuacao] = useState(false)
   const [importingOrigins, setImportingOrigins] = useState(false)
@@ -308,12 +309,12 @@ function TablesTab({
   const [actuacaoError, setActuacaoError] = useState<string | null>(null)
   const hasActuacao = view.dimensions.some(item => item.code === 'actuacao')
   const pendingActuacao = dimensionCode === 'actuacao' && !hasActuacao
-  const dimension = view.dimensions.find((d) => d.code === dimensionCode) ??
-    (pendingActuacao ? undefined : view.dimensions[0])
+  const dimension = view.dimensions.find((d) => d.code === dimensionCode && !F2_REMOVED_DIMENSIONS.has(d.code)) ??
+    (pendingActuacao ? undefined : view.dimensions.find(d=>!F2_REMOVED_DIMENSIONS.has(d.code)))
 
   const sortedDimensions = useMemo(
     () =>
-      [...view.dimensions].sort(
+      view.dimensions.filter(d=>!F2_REMOVED_DIMENSIONS.has(d.code)).sort(
         (left, right) =>
           Number(right.profileVisible) - Number(left.profileVisible) ||
           left.profileOrder - right.profileOrder ||
@@ -963,7 +964,13 @@ function ConceptDrawer({
           <label>
             {dimension.officialCodeType ? OFFICIAL_CODE_TYPE_LABELS[dimension.officialCodeType] : 'Código oficial'} (pode
             ficar em branco; separe vários por vírgula)
-            <input disabled={!editable} value={form.codes} onChange={(e) => setForm({ ...form, codes: e.target.value })} />
+            <SynonymCell
+              aliases={splitList(form.codes).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+              editable={editable}
+              cellId="concept-drawer-official-codes"
+              noun="código oficial"
+              onChange={(items)=>setForm({...form,codes:items.map(x=>x.text).join(', ')})}
+            />
           </label>
           <label>
             Definição
@@ -1274,7 +1281,13 @@ function GroupDrawer({
           <label>
             {dimension.officialCodeType ? OFFICIAL_CODE_TYPE_LABELS[dimension.officialCodeType] : 'Código oficial'} do grupo
             (prefixo, opcional)
-            <input value={form.codes} onChange={(e) => setForm({ ...form, codes: e.target.value })} />
+            <SynonymCell
+              aliases={splitList(form.codes).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+              editable={true}
+              cellId="group-drawer-official-codes"
+              noun="código oficial"
+              onChange={(items)=>setForm({...form,codes:items.map(x=>x.text).join(', ')})}
+            />
           </label>
           <label>
             Ajuda exibida ao cliente
@@ -1283,25 +1296,15 @@ function GroupDrawer({
           {segments.length > 0 && (
             <fieldset>
               <legend>{dimension.code === 'sector' ? 'Segmento deste subsegmento' : 'Segmentos atendidos por este grupo'}</legend>
-              <div className="tc-segment-grid">
-                {segments.map((segment) => (
-                  <label key={segment.code} className="tc-check">
-                    <input
-                      type="checkbox"
-                      checked={form.segmentCodes.includes(segment.code)}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          segmentCodes: e.target.checked
-                            ? [...form.segmentCodes, segment.code]
-                            : form.segmentCodes.filter((code) => code !== segment.code),
-                        })
-                      }
-                    />
-                    {segment.label}
-                  </label>
-                ))}
-              </div>
+              <SynonymCell
+                aliases={form.segmentCodes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                editable={true}
+                cellId="group-drawer-segments"
+                noun="segmento"
+                suggestions={segments.map(segment=>({text:segment.code,label:segment.label}))}
+                displayText={(code)=>segments.find(segment=>segment.code===code)?.label??code}
+                onChange={(items)=>setForm({...form,segmentCodes:items.map(x=>x.text)})}
+              />
             </fieldset>
           )}
         </div>
