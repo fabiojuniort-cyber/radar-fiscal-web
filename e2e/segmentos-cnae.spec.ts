@@ -57,9 +57,7 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   await expect(table.locator('td.is-segment').getByText('Agropecuária', {exact:true})).toBeVisible()
   // Segmentos atendidos por um grupo aceitam VÁRIOS códigos (segmentCodes[]).
   // O editor reutiliza os chips de Sinônimos; teste adicionar e remover sem salvar.
-  const segmentCell = table.locator('td.is-segment').filter({
-    has: table.getByText('Agropecuária', { exact: true }),
-  }).first()
+  const segmentCell = table.locator('td.is-segment').filter({ hasText: 'Agropecuária' }).first()
   const segmentInput = segmentCell.getByLabel('Adicionar segmento')
   await expect(segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_agro' })).toBeVisible()
   await segmentInput.fill('Indústria')
