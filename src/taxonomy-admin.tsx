@@ -32,8 +32,6 @@ import {
   importCatalog,
   importDimensionCsv,
   initializeF2Actuacao,
-  importF2ActuacaoCnaeOrigins,
-  F2_DRYRUN_REPORT_MAX_BYTES,
   readCsvFile,
   patchConcept,
   patchDimension,
@@ -304,8 +302,6 @@ function TablesTab({
   const [dimensionCode, setDimensionCode] = useState(view.dimensions.find(item=>!F2_REMOVED_DIMENSIONS.has(item.code))?.code ?? '')
   const [gridDirty, setGridDirty] = useState(false)
   const [creatingActuacao, setCreatingActuacao] = useState(false)
-  const [importingOrigins, setImportingOrigins] = useState(false)
-  const [originsMessage, setOriginsMessage] = useState<string | null>(null)
   const [actuacaoError, setActuacaoError] = useState<string | null>(null)
   const hasActuacao = view.dimensions.some(item => item.code === 'actuacao')
   const pendingActuacao = dimensionCode === 'actuacao' && !hasActuacao
@@ -368,51 +364,6 @@ function TablesTab({
             <b>Atuação</b>
             <span>Não inicializada · independente de Segmento</span>
           </button>
-        )}
-        {hasActuacao && editable && (
-          <div className="tc-atuacao-intro">
-            <label htmlFor="tc-f2-origin-report">Vínculos CNAE da fonte aprovada (JSON do dry-run F2)</label>
-            <input
-              id="tc-f2-origin-report"
-              type="file"
-              accept=".json,application/json"
-              aria-label="Importar vínculos CNAE da Atuação"
-              disabled={importingOrigins}
-              onChange={event => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                if (!file) return
-                setImportingOrigins(true)
-                setOriginsMessage(null)
-                void (async () => {
-                  if (file.size > F2_DRYRUN_REPORT_MAX_BYTES) throw new Error('Relatório excede limite seguro')
-                  const raw: unknown = JSON.parse(await file.text())
-                  if (!raw || typeof raw !== 'object') throw new Error('JSON de dry-run inválido')
-                  const report = raw as Record<string, unknown>
-                  const provenance = report.provenance as Record<string, unknown> | null
-                  const origins = report.actuationOrigins
-                  const summary = report.summary as Record<string, unknown> | null
-                  if (report.mode !== 'DRY_RUN_ONLY' || !provenance ||
-                      typeof provenance.segmentoSha256 !== 'string' ||
-                      !Array.isArray(origins) || origins.length !== 1332 ||
-                      summary?.segmentRows !== 1332) {
-                    throw new Error('O arquivo precisa ser o relatório completo do dry-run F2 com 1.332 CNAEs')
-                  }
-                  if (!window.confirm('Gravar no RASCUNHO os 1.332 vínculos CNAE–Atuação verificados pelo servidor? Não publica normas.')) return
-                  const result = await importF2ActuacaoCnaeOrigins(
-                    apiFetch, justification, provenance.segmentoSha256,
-                    origins as Array<{ sourceLine: number; cnaeCode: string; atuacaoLabel: string }>,
-                  )
-                  setOriginsMessage(result.reusedExisting
-                    ? '1.332 vínculos já conferidos no rascunho; sem nova gravação.'
-                    : `1.332 vínculos de origem CNAE gravados no rascunho (SHA verificado).`)
-                  await onChanged()
-                })().catch(error => setOriginsMessage(`Falha: ${errorText(error)}`))
-                  .finally(() => setImportingOrigins(false))
-              }}
-            />
-            {originsMessage && <p role="status">{originsMessage}</p>}
-          </div>
         )}
       </aside>
       {pendingActuacao ? (
