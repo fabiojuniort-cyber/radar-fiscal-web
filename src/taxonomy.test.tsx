@@ -262,7 +262,7 @@ describe('Curadoria da taxonomia', () => {
 
     renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
 
-    expect(await screen.findByDisplayValue('Ureia')).toBeInTheDocument()
+    expect(await screen.findByRole('button',{name:'Remover item Ureia'})).toBeInTheDocument()
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
     const row = screen.getByRole('button',{name:'Remover item Ureia'}).closest('tr')!
