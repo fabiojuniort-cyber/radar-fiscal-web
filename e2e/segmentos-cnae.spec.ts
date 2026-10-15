@@ -37,7 +37,7 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   await expect(page.getByRole('heading', { name: 'Curadoria da Taxonomia' })).toBeVisible()
   const payload = {
     format: 'trifaros-segmentos-cnae-v1', sourceWorkbook: 'test.xlsx', sourceUrl: 'https://servicodados.ibge.gov.br/api/v2/cnae/subclasses',
-    segments: [{ id: 'AGRO', name: 'Agropecuária', definition: 'Produção agrícola.' }],
+    segments: [{ id: 'AGRO', name: 'Agropecuária', definition: 'Produção agrícola.' }, { id: 'IND', name: 'Indústria', definition: 'Produção industrial.' }],
     subsegments: [{ id: 'AGRO-PROD', name: 'Agropecuária / Produção', segmentId: 'AGRO' }],
     rows: [{ cnae: '0111301', description: 'Cultivo de arroz', segmentId: 'AGRO', subsegmentId: 'AGRO-PROD', synonyms: ['produção de arroz', 'rizicultura'] }],
   }
@@ -46,14 +46,26 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   const table = page.getByRole('table', { name: 'Itens de Segmento' })
   const headers = await table.getByRole('columnheader').allTextContents()
   expect(headers.indexOf('CNAE')).toBeLessThan(headers.indexOf('Descrição do CNAE'))
-  await expect(table.getByLabel('CNAE', { exact: true })).toHaveValue('0111-3/01')
+  await expect(table.getByText('0111-3/01', { exact: true })).toBeVisible()
+  await expect(table.getByRole('textbox', {name:'Adicionar CNAE'})).toBeVisible()
   await expect(table.getByLabel('Descrição do CNAE', { exact: true })).toHaveValue('Cultivo de arroz')
   // T01: the editor shows only the child; source group identity stays untouched.
   await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Produção')
   await expect(table.getByLabel('Segmento e subsegmento')).toHaveText('Agropecuária – Produção')
   expect(groups[0]?.label).toBe('Agropecuária / Produção')
-  // Segmento column: drop-down of the Segmento table, showing the subsegment's segment.
-  await expect(table.getByRole('combobox', { name: 'Segmento' }).locator('option:checked')).toHaveText('Agropecuária')
+  // Segmento column now reuses the chip editor; association and identity remain unchanged.
+  await expect(table.locator('td.is-segment').getByText('Agropecuária', {exact:true})).toBeVisible()
+  // Segmentos atendidos por um grupo aceitam VÁRIOS códigos (segmentCodes[]).
+  // O editor reutiliza os chips de Sinônimos; teste adicionar e remover sem salvar.
+  const segmentCell = table.locator('td.is-segment').filter({ hasText: 'Agropecuária' }).first()
+  const segmentInput = segmentCell.getByLabel('Adicionar segmento')
+  await expect(segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_agro' })).toBeVisible()
+  await segmentInput.fill('Indústria')
+  await segmentInput.press('Enter')
+  await expect(segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_ind' })).toBeVisible()
+  await segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_ind' }).click()
+  await expect(segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_ind' })).toHaveCount(0)
+  await expect(segmentCell.getByRole('button', { name: 'Remover segmento sector.trifaros_agro' })).toBeVisible()
   await expect(table.getByText('rizicultura', { exact: true })).toBeVisible()
   await expect(page.getByText('Desligada', { exact: true })).toBeVisible()
 })

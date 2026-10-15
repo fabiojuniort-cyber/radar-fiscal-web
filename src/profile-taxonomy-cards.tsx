@@ -93,6 +93,8 @@ export function TaxonomyDimensionPicker({
 }) {
   const [query, setQuery] = useState('')
   const needle = normalize(query)
+  const removedTaxonomyDimensions=new Set(['treatment','act_type','platform','tax_species','sphere'])
+  const hidden=removedTaxonomyDimensions.has(dimension.code)
   const derivedCodes = new Set(derived.map((tag) => tag.code))
   const isTaken = (code: string) => selected.has(code) || derivedCodes.has(code)
   const chosen = dimension.concepts.filter((concept) => selected.has(concept.code) && !derivedCodes.has(concept.code))
@@ -120,6 +122,7 @@ export function TaxonomyDimensionPicker({
 
   const flatShown = needle ? available.slice(0, 80) : available.slice(0, 40)
 
+  if(hidden) return null
   return (
     <section className="tp-taxonomy-dimension" aria-label={dimension.name}>
       <div>

@@ -140,39 +140,16 @@ function SegmentCell({
   groupNoun: string
   onChange: (codes: string[]) => void
 }) {
-  const unknown = codes.filter((code) => !labelOf(code))
-  const value = codes.length === 1 ? codes[0]! : codes.length > 1 ? '__many__' : ''
-  return (
-    <select
-      aria-label="Segmento"
-      className={unknown.length ? 'is-invalid' : undefined}
-      value={value}
-      disabled={disabled}
-      title={
-        !group.trim()
-          ? `Informe o ${groupNoun} para escolher o segmento.`
-          : `Segmento do ${groupNoun} “${group.trim()}”: vale para todos os itens dele.`
-      }
-      onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
-    >
-      <option value="">— sem segmento —</option>
-      {codes.length > 1 && (
-        <option value="__many__" disabled>
-          {codes.map((code) => labelOf(code) ?? code).join(', ')}
-        </option>
-      )}
-      {unknown.length === 1 && codes.length === 1 && (
-        <option value={unknown[0]} disabled>
-          {unknown[0]} (fora da tabela Segmento)
-        </option>
-      )}
-      {options.map((segment) => (
-        <option key={segment.code} value={segment.code}>
-          {segment.label}
-        </option>
-      ))}
-    </select>
-  )
+  return <SynonymCell
+    aliases={codes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+    editable={!disabled}
+    cellId={`segment-${normalize(group)}`}
+    noun="segmento"
+    suggestions={options.map(option=>({text:option.code,label:option.label}))}
+    displayText={(code)=>labelOf(code)??code}
+    onChange={(items)=>onChange(items.map(item=>item.text))}
+  />
+
 }
 
 export function CurationGrid({
@@ -653,7 +630,15 @@ export function CurationGrid({
                   )}
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
-                      {row[key] || <span className="tc-source-pending">—</span>}
+                      {key==='atuacao'
+                         ? (row[key] || <span className="tc-source-pending">—</span>)
+                         : <SynonymCell
+                             aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                             editable={false}
+                             cellId={`${row.key}:${key}`}
+                             noun={key==='suggestedNcms'?'NCM sugerida':'produto sugerido'}
+                             onChange={()=>{}}
+                           />}
                     </td>
                   ))}
                   {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
@@ -667,12 +652,12 @@ export function CurationGrid({
                     />
                     {concept?.releaseNotes && <small className="tc-note">{concept.releaseNotes}</small>}
                   </td> : <td key="codes" className="is-codes">
-                    <input
-                      {...cellProps('codes')}
-                      aria-label={isCnae ? 'CNAE' : 'Código oficial'}
-                      value={row.codes}
-                      placeholder="—"
-                      onChange={(event) => updateRow(row, { codes: event.target.value })}
+                    <SynonymCell
+                      aliases={splitList(row.codes).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                      editable={rowEditable}
+                      cellId={`${row.key}:codes`}
+                      noun={isCnae?'CNAE':'código oficial'}
+                      onChange={(items)=>updateRow(row,{codes:items.map(x=>x.text).join(', ')})}
                     />
                   </td>)}
                   <td className="is-synonyms">
@@ -769,28 +754,41 @@ export function CurationGrid({
   )
 }
 
-function SynonymCell({
+export function SynonymCell({
   aliases,
   editable,
   cellId,
   onChange,
+  noun='sinônimo',
+  suggestions,
+  displayText,
 }: {
   aliases: Alias[]
   editable: boolean
   cellId: string
   onChange: (aliases: Alias[]) => void
+  noun?: string
+  suggestions?: Array<{text:string;label:string}>
+  displayText?: (value:string)=>string
 }) {
   const [text, setText] = useState('')
+  const knownSuggestions = new Map((suggestions??[]).flatMap(item=>[
+    [normalize(item.text),item.text] as const,
+    [normalize(item.label),item.text] as const,
+  ]))
 
   const add = (raw: string) => {
-    const parts = raw
-      .split(/[,;\n]/)
+    const parts = (suggestions && knownSuggestions.has(normalize(raw.trim()))
+      ? [raw.trim()]
+      : raw.split(/[,;\n]/))
       .map((part) => part.trim())
       .filter(Boolean)
     if (parts.length === 0) return
     const known = new Set(aliases.map((alias) => normalize(alias.text)))
     const added = parts
-      .filter((part) => !known.has(normalize(part)))
+      .map(part=>suggestions ? knownSuggestions.get(normalize(part)) : part)
+      .filter((part):part is string=>Boolean(part))
+      .filter((part)=>!known.has(normalize(part)))
       .map((part) => ({ text: part, aliasType: 'EXACT_LEXICAL' as AliasType }))
     if (added.length) onChange([...aliases, ...added])
     setText('')
@@ -800,11 +798,11 @@ function SynonymCell({
     <div className="tc-synonyms">
       {aliases.map((alias) => (
         <span key={`${alias.aliasType}:${alias.text}`} className="tc-chip">
-          {alias.text}
+          {displayText?.(alias.text)??alias.text}
           {editable && (
             <button
               type="button"
-              aria-label={`Remover sinônimo ${alias.text}`}
+              aria-label={`Remover ${noun} ${alias.text}`}
               onClick={() => onChange(aliases.filter((item) => item !== alias))}
             >
               <X size={11} />
@@ -815,12 +813,15 @@ function SynonymCell({
       {editable && (
         <input
           data-cell={cellId}
-          aria-label="Adicionar sinônimo"
+          aria-label={`Adicionar ${noun}`}
           value={text}
-          placeholder={aliases.length ? '+' : 'adicionar sinônimo'}
+          placeholder={aliases.length ? '+' : `adicionar ${noun}`}
+          list={suggestions ? `tc-options-${cellId}` : undefined}
           onChange={(event) => {
             const value = event.target.value
-            if (/[,;]/.test(value)) add(value)
+            // Official segment names can include commas; an exact datalist match
+            // is one item and must never be split into separate values.
+            if (/[,;]/.test(value) && !(suggestions && knownSuggestions.has(normalize(value)))) add(value)
             else setText(value)
           }}
           onKeyDown={(event) => {
@@ -841,6 +842,9 @@ function SynonymCell({
           }}
         />
       )}
+      {editable && suggestions && <datalist id={`tc-options-${cellId}`}>
+        {suggestions.map(item=><option key={item.text} value={item.label}/>)}
+      </datalist>}
     </div>
   )
 }

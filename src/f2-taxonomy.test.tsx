@@ -154,8 +154,11 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
       expect(within(grid).getByRole('columnheader', { name: label })).toBeInTheDocument()
     }
     expect(within(grid).getByText('Produção agropecuária')).toBeInTheDocument()
-    expect(within(grid).getByText('Arroz em casca; Arroz beneficiado')).toBeInTheDocument()
-    expect(within(grid).getByText('1006.10;1006.20')).toBeInTheDocument()
+    expect(within(grid).getByText('Arroz em casca')).toBeInTheDocument()
+    expect(within(grid).getByText('Arroz beneficiado')).toBeInTheDocument()
+    expect(within(grid).getByText('1006.10')).toBeInTheDocument()
+    expect(within(grid).getByText('1006.20')).toBeInTheDocument()
+    expect(within(grid).queryByRole('button',{name:/Remover NCM sugerida/})).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Descrição do CNAE'), { target: { value: 'Cultivo revisado' } })
     fireEvent.click(screen.getByRole('button', { name: /Salvar alterações/ }))
     await waitFor(() => expect(vi.mocked(apiFetch)).toHaveBeenCalled())
