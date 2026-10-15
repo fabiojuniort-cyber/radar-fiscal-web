@@ -61,7 +61,7 @@ test('F2-TAB-01: chips permitem adicionar/remover CNAE, sinônimo e segmento sem
   await row.getByRole('button',{name:'Remover sinônimo rizicultura'}).click()
   await expect(row.getByRole('button',{name:'Remover sinônimo rizicultura'})).toHaveCount(0)
 
-  const segment=row.getByRole('textbox',{name:'Adicionar segmento'})
+  const segment=row.getByRole('combobox',{name:'Adicionar segmento'})
   await row.getByRole('button',{name:'Remover segmento sector.agro'}).click()
   await segment.fill('Indústria')
   await segment.press('Enter')
