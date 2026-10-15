@@ -442,6 +442,21 @@ export async function patchConcept(
   )
 }
 
+/** Edits live on the taxonomy DRAFT, never on the immutable F2 staging batch. */
+export async function patchF2DraftSuggestions(
+  apiFetch: ProductApiFetch,
+  conceptCode: string,
+  justification: string,
+  input: { suggestedProducts: string[]; suggestedNcms: string[] },
+) {
+  return readJson<{suggestedProducts:string[];suggestedNcms:string[];published:false;stagingModified:false}>(
+    await apiFetch(
+      `${ADMIN}/drafts/current/f2-suggestions/${encodeURIComponent(conceptCode)}`,
+      jsonInit('PATCH', { justification, ...input }),
+    ),
+  )
+}
+
 export type GridRowInput = {
   code: string | null
   group?: string | null
