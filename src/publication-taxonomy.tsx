@@ -128,6 +128,7 @@ export function PublicationTaxonomySection({
       .filter(
         (concept) =>
           concept.membershipStatus === 'INCLUDED' &&
+          !['treatment','act_type','platform','tax_species','sphere'].includes(concept.dimensionCode) &&
           !tagged.has(concept.code) &&
           hasSection(concept) &&
           concept.label.toLocaleLowerCase('pt-BR').includes(query),
@@ -207,7 +208,11 @@ export function PublicationTaxonomySection({
     )
   }
 
-  const sections = view?.sections ?? []
+  const hiddenDimensions=new Set(['treatment','act_type','platform','tax_species','sphere'])
+  const sections = (view?.sections ?? []).map(section=>({
+    ...section,
+    tags:section.tags.filter(tag=>!hiddenDimensions.has(tag.dimensionCode)),
+  })).filter(section=>section.tags.length>0)
   const hasTags = sections.some((section) => section.tags.length > 0)
 
   return (
