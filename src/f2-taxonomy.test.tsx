@@ -176,3 +176,40 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
     expect(screen.getByText(/carga isolada T03 não publica esses dados automaticamente/)).toBeInTheDocument()
   })
 })
+
+describe('F2-TAB-02 B1 — distinct subgroup identities and missing parent links', () => {
+  it('keeps similarly-prefixed subgroups distinct, warning only on missing persisted segment link', () => {
+    const prefix='a'.repeat(60)
+    const parent={
+      code:'sector.agro',label:'Agronegócio',dimensionCode:'sector',
+      officialCodes:[],aliases:[],membershipStatus:'INCLUDED',groupId:null,
+      profileVisible:true,classifyByLabel:false,
+    } as unknown as CurationConcept
+    const groups=[
+      {id:'group-one',code:'legacy',label:prefix+' A',dimensionCode:'sector',
+        displayOrder:1,segmentCodes:['sector.agro']},
+      {id:'group-two',code:'collision_f2hash',label:prefix+' B',dimensionCode:'sector',
+        displayOrder:2,segmentCodes:[]},
+    ] as CurationGroup[]
+    const concepts=[
+      parent,
+      ...groups.map((group,i)=>({
+        ...parent,code:'sector.cnae_100000'+i,label:'Atividade '+i,
+        officialCodes:['10000'+i+'1'],groupId:group.id,classifyByLabel:true,
+      })),
+    ] as CurationConcept[]
+    render(<CurationGrid
+      apiFetch={(() => { throw new Error('unexpected mutation') }) as ProductApiFetch}
+      dimension={{code:'sector',name:'Segmento',usesGroups:true,officialCodeType:'CNAE'} as CurationDimension}
+      concepts={concepts} groups={groups} segments={[parent]}
+      editable={false} justification="Auditoria" showRetired={false} query=""
+      onChanged={async()=>{}} onOpenDetail={()=>{}} />)
+    const warnings=screen.getAllByText('Segmento sem vínculo no rascunho')
+    expect(warnings).toHaveLength(1)
+    const table=screen.getByRole('table',{name:'Itens de Segmento'})
+    const inputs=within(table).getAllByLabelText('Subsegmento',{exact:true})
+    expect(inputs).toHaveLength(2)
+    expect(inputs[0]).toHaveValue(prefix+' A')
+    expect(inputs[1]).toHaveValue(prefix+' B')
+  })
+})
