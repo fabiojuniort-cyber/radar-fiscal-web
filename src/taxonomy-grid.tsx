@@ -7,6 +7,7 @@ import {
   TaxonomyApiError,
   formatOfficialCode,
   saveDimensionRows,
+  patchF2DraftSuggestions,
   type AliasType,
   type CurationConcept,
   type CurationDimension,
@@ -402,6 +403,12 @@ export function CurationGrid({
       ...newRows.filter((row) => row.label.trim() || row.codes.trim() || row.aliases.length).map(toInput),
       ...editedKeys.filter((key) => !retire.has(key)).map((key) => toInput(edits[key]!)),
     ]
+    const originalByCode=new Map(baseRows.map(row=>[row.key,row]))
+    const suggestionEdits = isCnae
+      ? editedKeys.filter(key=>!retire.has(key)&&
+          (edits[key]?.suggestedProducts!==originalByCode.get(key)?.suggestedProducts||
+           edits[key]?.suggestedNcms!==originalByCode.get(key)?.suggestedNcms))
+      : []
     setSaving(true)
     setMessage(null)
     try {
@@ -410,6 +417,13 @@ export function CurationGrid({
         retire: [...retire],
         groupSegments: changedSegments.map(([, edit]) => ({ group: edit.group.trim(), segmentCodes: edit.codes })),
       })
+      for (const key of suggestionEdits) {
+        const row=edits[key]!
+        await patchF2DraftSuggestions(apiFetch,key,justification,{
+          suggestedProducts:splitList(row.suggestedProducts),
+          suggestedNcms:splitList(row.suggestedNcms),
+        })
+      }
       setSegmentEdits({})
       setEdits({})
       setNewRows([])
@@ -424,7 +438,7 @@ export function CurationGrid({
           (result.groupsUpdated ? ` · segmento de ${result.groupsUpdated} grupo(s)` : ''),
       })
     } catch (error) {
-      setMessage({ kind: 'error', text: `Nada foi salvo. ${errorText(error)}` })
+      setMessage({ kind: 'error', text: `Não foi possível concluir todos os salvamentos. Confira o rascunho antes de repetir. ${errorText(error)}` })
     } finally {
       setSaving(false)
     }
@@ -643,22 +657,44 @@ export function CurationGrid({
                          ? (row[key] || <span className="tc-source-pending">—</span>)
                          : <SynonymCell
                              aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
-                             editable={false}
+                             editable={rowEditable&&row.code!==null}
                              cellId={`${row.key}:${key}`}
                              noun={key==='suggestedNcms'?'NCM sugerida':'produto sugerido'}
-                             onChange={()=>{}}
+                             onChange={items=>updateRow(row,{[key]:items.map(item=>item.text).join(', ')})}
                            />}
                     </td>
                   ))}
                   {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
-                    <input
-                      {...cellProps('label')}
-                      aria-label={isCnae ? 'Descrição do CNAE' : 'Item'}
-                      title={row.label}
-                      value={row.label}
-                      placeholder={isNew ? 'nome do item' : ''}
-                      onChange={(event) => updateRow(row, { label: event.target.value })}
-                    />
+                    {dimension.code==='product'&&row.code!==null ? (
+                      <SynonymCell
+                        aliases={[
+                          ...(row.label?[{text:row.label,aliasType:'EXACT_LEXICAL' as AliasType}]:[]),
+                          ...row.aliases.filter(alias=>alias.aliasType==='EXACT_LEXICAL'&&normalize(alias.text)!==normalize(row.label)),
+                        ]}
+                        editable={rowEditable}
+                        cellId={`${row.key}:label`}
+                        noun="item"
+                        onChange={items=>{
+                          const names=items.map(item=>item.text)
+                          updateRow(row,{
+                            label:names[0]??'',
+                            aliases:[
+                              ...row.aliases.filter(alias=>alias.aliasType!=='EXACT_LEXICAL'),
+                              ...names.slice(1).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType})),
+                            ],
+                          })
+                        }}
+                      />
+                    ):(
+                      <input
+                        {...cellProps('label')}
+                        aria-label={isCnae ? 'Descrição do CNAE' : 'Item'}
+                        title={row.label}
+                        value={row.label}
+                        placeholder={isNew ? 'nome do item' : ''}
+                        onChange={(event) => updateRow(row, { label: event.target.value })}
+                      />
+                    )}
                     {concept?.releaseNotes && <small className="tc-note">{concept.releaseNotes}</small>}
                   </td> : <td key="codes" className="is-codes">
                     <SynonymCell
