@@ -46,14 +46,16 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   const table = page.getByRole('table', { name: 'Itens de Segmento' })
   const headers = await table.getByRole('columnheader').allTextContents()
   expect(headers.indexOf('CNAE')).toBeLessThan(headers.indexOf('Descrição do CNAE'))
-  await expect(table.getByLabel('CNAE', { exact: true })).toHaveValue('0111-3/01')
+  await expect(table.getByText('0111-3/01', { exact: true })).toBeVisible()
+  await expect(table.getByRole('textbox', {name:'Adicionar CNAE'})).toBeVisible()
   await expect(table.getByLabel('Descrição do CNAE', { exact: true })).toHaveValue('Cultivo de arroz')
   // T01: the editor shows only the child; source group identity stays untouched.
   await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Produção')
   await expect(table.getByLabel('Segmento e subsegmento')).toHaveText('Agropecuária – Produção')
   expect(groups[0]?.label).toBe('Agropecuária / Produção')
-  // Segmento column: drop-down of the Segmento table, showing the subsegment's segment.
-  await expect(table.getByRole('combobox', { name: 'Segmento' }).locator('option:checked')).toHaveText('Agropecuária')
+  // Segmento column now reuses the chip editor; association and identity remain unchanged.
+  await expect(table.locator('td.is-segment').getByText('Agropecuária', {exact:true})).toBeVisible()
+  await expect(table.getByRole('combobox', {name:'Adicionar segmento'})).toBeVisible()
   await expect(table.getByText('rizicultura', { exact: true })).toBeVisible()
   await expect(page.getByText('Desligada', { exact: true })).toBeVisible()
 })
