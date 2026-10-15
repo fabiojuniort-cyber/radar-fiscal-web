@@ -778,8 +778,9 @@ export function SynonymCell({
   ]))
 
   const add = (raw: string) => {
-    const parts = raw
-      .split(/[,;\n]/)
+    const parts = (suggestions && knownSuggestions.has(normalize(raw.trim()))
+      ? [raw.trim()]
+      : raw.split(/[,;\n]/))
       .map((part) => part.trim())
       .filter(Boolean)
     if (parts.length === 0) return
@@ -818,7 +819,9 @@ export function SynonymCell({
           list={suggestions ? `tc-options-${cellId}` : undefined}
           onChange={(event) => {
             const value = event.target.value
-            if (/[,;]/.test(value)) add(value)
+            // Official segment names can include commas; an exact datalist match
+            // is one item and must never be split into separate values.
+            if (/[,;]/.test(value) && !(suggestions && knownSuggestions.has(normalize(value)))) add(value)
             else setText(value)
           }}
           onKeyDown={(event) => {
