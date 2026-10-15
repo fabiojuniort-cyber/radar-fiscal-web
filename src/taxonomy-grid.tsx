@@ -622,9 +622,16 @@ export function CurationGrid({
                         onChange={(event) => updateRow(row, { group: resolveGroupInput(event.target.value) })}
                       />
                       {isCnae && row.group.trim() && (
-                        <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
-                          {displaySegmentSubsegment(segmentOf(row.group), row.group)}
-                        </small>
+                        <>
+                          <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
+                            {displaySegmentSubsegment(segmentOf(row.group), row.group)}
+                          </small>
+                          {segmentCodesOf(row.group).length===0 && (
+                            <small className="tc-source-pending" role="note">
+                              Segmento sem vínculo no rascunho
+                            </small>
+                          )}
+                        </>
                       )}
                     </td>
                   )}
