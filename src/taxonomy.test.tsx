@@ -164,7 +164,7 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText('Curadoria da Taxonomia')).toBeInTheDocument()
     expect(await screen.findByText('Desligada')).toBeInTheDocument()
     expect(await screen.findByDisplayValue('Fertilizantes e corretivos')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'Remover item Ureia'})).toBeInTheDocument()
     expect(screen.getByText('3102.10')).toBeInTheDocument()
     expect(screen.getByText('carbamida')).toBeInTheDocument()
     // One kind of synonym: every stored synonym shows in the grid, untagged.
@@ -265,7 +265,7 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByDisplayValue('Ureia')).toBeInTheDocument()
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
-    const row = screen.getByDisplayValue('Ureia').closest('tr')!
+    const row = screen.getByRole('button',{name:'Remover item Ureia'}).closest('tr')!
     const segmentInput = within(row).getByRole('combobox',{name:'Adicionar segmento'})
     expect(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'})).toBeInTheDocument()
     fireEvent.click(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'}))
