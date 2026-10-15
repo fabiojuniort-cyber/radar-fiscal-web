@@ -266,7 +266,7 @@ describe('Curadoria da taxonomia', () => {
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
     const row = screen.getByDisplayValue('Ureia').closest('tr')!
-    const segmentInput = within(row).getByRole('textbox',{name:'Adicionar segmento'})
+    const segmentInput = within(row).getByRole('combobox',{name:'Adicionar segmento'})
     expect(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'})).toBeInTheDocument()
     fireEvent.click(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'}))
     fireEvent.change(segmentInput,{target:{value:'Agropecuária, pesca e insumos agrícolas'}})
