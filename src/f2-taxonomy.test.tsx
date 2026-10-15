@@ -135,7 +135,7 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
     expect(vi.mocked(apiFetch).mock.calls.some(([url]) => String(url).includes('/actuacao/initialize'))).toBe(false)
   })
 
-  it('T03 shows all read-only columns and never passes source suggestions to curator writes', async () => {
+  it('T03 shows F2 suggestion chips and regular curator saves never write staging', async () => {
     const enriched = {
       ...activity, f2Source: {
         atuacao: 'Produção agropecuária',
@@ -158,7 +158,7 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
     expect(within(grid).getByText('Arroz beneficiado')).toBeInTheDocument()
     expect(within(grid).getByText('1006.10')).toBeInTheDocument()
     expect(within(grid).getByText('1006.20')).toBeInTheDocument()
-    expect(within(grid).queryByRole('button',{name:/Remover NCM sugerida/})).not.toBeInTheDocument()
+    expect(within(grid).getAllByRole('button',{name:/Remover NCM sugerida/}).length).toBeGreaterThan(0)
     fireEvent.change(screen.getByLabelText('Descrição do CNAE'), { target: { value: 'Cultivo revisado' } })
     fireEvent.click(screen.getByRole('button', { name: /Salvar alterações/ }))
     await waitFor(() => expect(vi.mocked(apiFetch)).toHaveBeenCalled())
