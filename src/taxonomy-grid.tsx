@@ -62,7 +62,7 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
     atuacao: concept.f2Source?.atuacao ?? '',
-    atuacaoCodes: concept.actuacaoCodes ?? [],
+    atuacaoCodes: concept.atuacaoCodes ?? [],
     suggestedProducts: concept.f2Source?.suggestedProducts ?? '',
     suggestedNcms: concept.f2Source?.suggestedNcms ?? '',
   }
@@ -677,7 +677,7 @@ export function CurationGrid({
                                displayText={code=>actuacoes.find(item=>item.code===code)?.label??code}
                                onChange={items=>{
                                  const codes=items.map(item=>item.text)
-                                 if(row.code===null)updateRow(row,{actuacaoCodes:codes})
+                                 if(row.code===null)updateRow(row,{atuacaoCodes:codes})
                                  else void saveActuacoes(row,codes)
                                }}
                              />
