@@ -97,6 +97,7 @@ export type CurationConcept = {
   helpText: string | null
   classifyByLabel: boolean
   officialCodes: string[]
+  actuacaoCodes?: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   /** Optional, evidence-backed CNAE source data. Absent until approved
    * T03 staging is explicitly linked by the API; not a classification result.
