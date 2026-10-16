@@ -478,6 +478,7 @@ export type GridRowInput = {
   group?: string | null
   label: string
   officialCodes: string[]
+  actuacaoCodes?: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   profileVisible: boolean
   classifyByLabel: boolean
