@@ -374,6 +374,7 @@ export function CurationGrid({
       classifyByLabel: true,
       displayOrder: '',
       atuacao: '',
+      atuacaoCodes: [],
       suggestedProducts: '',
       suggestedNcms: '',
     }
