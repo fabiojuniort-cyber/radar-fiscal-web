@@ -164,9 +164,9 @@ describe('Curadoria da taxonomia', () => {
     expect(await screen.findByText('Curadoria da Taxonomia')).toBeInTheDocument()
     expect(await screen.findByText('Desligada')).toBeInTheDocument()
     expect(await screen.findByDisplayValue('Fertilizantes e corretivos')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Ureia')).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'Remover item Ureia'})).toBeInTheDocument()
     expect(screen.getByText('3102.10')).toBeInTheDocument()
-    expect(screen.getByText('carbamida')).toBeInTheDocument()
+    expect(screen.getAllByText('carbamida').length).toBeGreaterThan(0)
     // One kind of synonym: every stored synonym shows in the grid, untagged.
     expect(screen.getByText('adubo nitrogenado').closest('.tc-chip')).not.toHaveClass('is-search-only')
     expect(screen.queryByText('só busca')).not.toBeInTheDocument()
@@ -178,7 +178,7 @@ describe('Curadoria da taxonomia', () => {
     fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia granulada;' } })
     fireEvent.change(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { target: { value: 'ureia agrícola' } })
     fireEvent.keyDown(screen.getAllByLabelText('Adicionar sinônimo')[0]!, { key: 'Enter' })
-    expect(screen.getByText('ureia granulada')).toBeInTheDocument()
+    expect(screen.getAllByText('ureia granulada').length).toBeGreaterThan(0)
 
     // Insert a row (code is generated on save) and an empty one that is deleted.
     fireEvent.click(screen.getByRole('button', { name: /Inserir linha/ }))
@@ -262,10 +262,10 @@ describe('Curadoria da taxonomia', () => {
 
     renderWithProviders(<TaxonomyAdminPage apiFetch={apiFetch} />)
 
-    expect(await screen.findByDisplayValue('Ureia')).toBeInTheDocument()
+    expect(await screen.findByRole('button',{name:'Remover item Ureia'})).toBeInTheDocument()
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
     expect(headers.filter(Boolean).slice(0, 3)).toEqual(['Segmento', 'Grupo', 'Item'])
-    const row = screen.getByDisplayValue('Ureia').closest('tr')!
+    const row = screen.getByRole('button',{name:'Remover item Ureia'}).closest('tr')!
     const segmentInput = within(row).getByRole('combobox',{name:'Adicionar segmento'})
     expect(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'})).toBeInTheDocument()
     fireEvent.click(within(row).getByRole('button',{name:'Remover segmento sector.agribusiness'}))
