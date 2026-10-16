@@ -31,12 +31,15 @@ const unique=(arr:string[])=>[...new Set(arr.filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b,'pt-BR'))
 const reason=(error:unknown)=>error instanceof Error?error.message:'Não foi possível alterar a política ativa.'
 
-function useTypes(_apiFetch:ProductApiFetch,origins:FilterOrigins,source:string) {
-  return {
-    types:unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.actName??x.canonicalType),
-      ...(origins.actNames??[]).filter(x=>!source||x.sourceCode===source).map(x=>x.name)]),
-    error:origins.actNames===undefined,
-  }
+function useTypes(_apiFetch:ProductApiFetch,origins:FilterOrigins,source:string,requireSource=false) {
+  // A new rule requires selecting a source first. Avoid sorting/rendering
+  // the potentially large all-source archive inventory before that choice.
+  const types=useMemo(()=>{
+    if(requireSource&&!source)return []
+    return unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.actName??x.canonicalType),
+      ...(origins.actNames??[]).filter(x=>!source||x.sourceCode===source).map(x=>x.name)])
+  },[origins.rules,origins.actNames,source,requireSource])
+  return {types,error:origins.actNames===undefined}
 }
 function SourceSelect({origins,value,onChange,label,optional=false}:{
   origins:FilterOrigins;value:string;onChange:(s:string)=>void;label:string;optional?:boolean
@@ -78,7 +81,7 @@ export function TypesEditor(p:EditorProps) {
   const [mode,setMode]=useState<CollectionFilterMode>('KEEP_ALWAYS')
   const [alias,setAlias]=useState('')
   const [error,setError]=useState('')
-  const {types,error:originError}=useTypes(apiFetch,origins,source)
+  const {types,error:originError}=useTypes(apiFetch,origins,source,true)
   const rows=useMemo(()=>rules.map((rule,index)=>({rule,index})),[rules])
   const onError=(e:unknown)=>setError(reason(e))
   const saveRule=async(rule:CollectionFilterRule)=>{
