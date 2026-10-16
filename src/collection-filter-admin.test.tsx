@@ -34,6 +34,23 @@ function mount(apiFetch:ProductApiFetch) {
   </MemoryRouter></QueryClientProvider>)
 }
 
+it('carrega opções de Nome do ato somente após selecionar uma fonte na aba Tipos',async()=>{
+  const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+    const path=String(input)
+    if(path.includes('/admin/me'))return json({platformAdmin:true})
+    if(path.endsWith('/state'))return json(state)
+    if(path.includes('/new-types'))return json(newTypes)
+    return json({sources:[{code:'dou',name:'DOU'}],actTypes:[]})
+  }) as ProductApiFetch
+  mount(apiFetch)
+  const source=await screen.findByRole('combobox',{name:'Fonte do tipo'})
+  const name=screen.getByRole('combobox',{name:'Nome do ato'}) as HTMLSelectElement
+  expect(name.options).toHaveLength(1)
+  fireEvent.change(source,{target:{value:'dou'}})
+  await waitFor(()=>expect(name.options.length).toBeGreaterThan(1))
+  expect([...name.options].some(option=>option.value==='PORTARIA')).toBe(true)
+})
+
 it('inventory warming never presents an empty queue as completed',async()=>{
   const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
     const path=String(input);
