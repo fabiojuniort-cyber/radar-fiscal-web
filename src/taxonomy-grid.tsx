@@ -670,9 +670,6 @@ export function CurationGrid({
                       />
                       {isCnae && row.group.trim() && (
                         <>
-                          <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
-                            {displaySegmentSubsegment(segmentOf(row.group), row.group)}
-                          </small>
                           {segmentCodesOf(row.group).length===0 && (
                             <small className="tc-source-pending" role="note">
                               Segmento sem vínculo no rascunho
@@ -685,7 +682,20 @@ export function CurationGrid({
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
                       {key==='atuacao'
-                         ? (row[key] || <span className="tc-source-pending">—</span>)
+                         ? <SynonymCell
+                             aliases={row.atuacaoCodes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                             editable={canEditActuacao&&rowEditable&&row.code!==null}
+                             cellId={`${row.key}:atuacao`}
+                             noun="Atuação"
+                             suggestions={actuacoes.filter(item=>item.membershipStatus==='INCLUDED')
+                               .map(item=>({text:item.code,label:item.label}))}
+                             displayText={code=>actuacaoLabel.get(code)??code}
+                             minItems={1}
+                             onChange={items=>updateRow(row,{
+                               atuacaoCodes:items.map(item=>item.text),
+                               atuacao:items.map(item=>actuacaoLabel.get(item.text)??item.text).join(', '),
+                             })}
+                           />
                          : <SynonymCell
                              aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
                              editable={rowEditable&&row.code!==null}
@@ -816,7 +826,7 @@ export function CurationGrid({
       </nav>}
       {isCnae && (
         <p className="tc-hint">
-          Atuação, Produtos sugeridos e NCMs sugeridos são campos de origem F2 (somente leitura).
+          Produtos sugeridos e NCMs sugeridos são dados da fonte F2; Atuação admite múltiplos vínculos apenas no rascunho v1.8.0.
           Traço indica ausência de vínculo auditado por CNAE na versão exibida;
           a carga isolada T03 não publica esses dados automaticamente.
         </p>
@@ -836,6 +846,7 @@ export function SynonymCell({
   cellId,
   onChange,
   noun='sinônimo',
+  minItems=0,
   suggestions,
   displayText,
 }: {
@@ -844,6 +855,7 @@ export function SynonymCell({
   cellId: string
   onChange: (aliases: Alias[]) => void
   noun?: string
+  minItems?: number
   suggestions?: Array<{text:string;label:string}>
   displayText?: (value:string)=>string
 }) {
@@ -879,7 +891,9 @@ export function SynonymCell({
             <button
               type="button"
               aria-label={`Remover ${noun} ${alias.text}`}
-              onClick={() => onChange(aliases.filter((item) => item !== alias))}
+              disabled={aliases.length<=minItems}
+              title={aliases.length<=minItems?'Mantenha pelo menos uma Atuação.':undefined}
+              onClick={() => {if(aliases.length>minItems)onChange(aliases.filter((item) => item !== alias))}}
             >
               <X size={11} />
             </button>
@@ -904,7 +918,7 @@ export function SynonymCell({
             if (event.key === 'Enter') {
               event.preventDefault()
               add(text)
-            } else if (event.key === 'Backspace' && !text && aliases.length) {
+            } else if (event.key === 'Backspace' && !text && aliases.length>minItems) {
               onChange(aliases.slice(0, -1))
             }
           }}
