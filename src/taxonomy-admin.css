@@ -1423,6 +1423,43 @@
 
 /* F2 visual smoke: source suggestions are read-only, never editable taxonomy tags.
    Keep long legal/NCM suggestions legible inside the horizontally scrollable grid. */
+/* F2-TAB: Segmento uses multi-value chips. Long segment names must wrap
+   INSIDE the Segmento column, never paint over the adjacent Subsegmento cell.
+   Keep the fix scoped here: Produto/NCM sugeridos retain their current UI. */
+.tc-grid th.is-segment,
+.tc-grid td.is-segment {
+  min-width: 240px;
+  width: 280px;
+  max-width: 320px;
+}
+
+.tc-grid td.is-segment .tc-synonyms {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.tc-grid td.is-segment .tc-chip {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tc-grid td.is-segment .tc-chip button {
+  flex-shrink: 0;
+}
+
+.tc-grid td.is-segment .tc-synonyms input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0 !important;
+  flex: 1 1 100%;
+  box-sizing: border-box;
+}
+
 .tc-grid th.is-f2-source,
 .tc-grid td.is-f2-source {
   min-width: 180px;
