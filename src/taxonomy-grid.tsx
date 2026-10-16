@@ -404,6 +404,7 @@ export function CurationGrid({
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
+        ...(canEditActuacao && row.code===null ? { actuacaoCodes: row.atuacaoCodes } : {}),
         aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
@@ -685,7 +686,7 @@ export function CurationGrid({
                          ? <SynonymCell
                              aliases={(row.atuacaoCodes.length?row.atuacaoCodes:canEditActuacao?[]:splitList(row.atuacao))
                                .map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
-                             editable={canEditActuacao&&rowEditable&&row.code!==null}
+                             editable={canEditActuacao&&rowEditable}
                              cellId={`${row.key}:atuacao`}
                              noun="Atuação"
                              suggestions={actuacoes.filter(item=>item.membershipStatus==='INCLUDED')
