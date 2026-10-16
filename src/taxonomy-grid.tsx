@@ -415,6 +415,7 @@ export function CurationGrid({
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
+        ...(isCnae&&row.code===null&&releaseVersion==='v1.8.0' ? {atuacaoCodes:row.atuacaoCodes} : {}),
         aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
@@ -665,16 +666,20 @@ export function CurationGrid({
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
                       {key==='atuacao'
-                         ? row.atuacaoCodes.length>0
+                         ? (row.atuacaoCodes.length>0 || (rowEditable&&releaseVersion==='v1.8.0'))
                            ? <SynonymCell
                                aliases={row.atuacaoCodes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
-                               editable={rowEditable&&releaseVersion==='v1.8.0'&&row.code!==null&&savingActuacao!==row.key}
+                               editable={rowEditable&&releaseVersion==='v1.8.0'&&savingActuacao!==row.key}
                                minItems={1}
                                cellId={`${row.key}:atuacao`}
                                noun="Atuação"
                                suggestions={actuacoes.filter(item=>item.membershipStatus==='INCLUDED').map(item=>({text:item.code,label:item.label}))}
                                displayText={code=>actuacoes.find(item=>item.code===code)?.label??code}
-                               onChange={items=>void saveActuacoes(row,items.map(item=>item.text))}
+                               onChange={items=>{
+                                 const codes=items.map(item=>item.text)
+                                 if(row.code===null)updateRow(row,{actuacaoCodes:codes})
+                                 else void saveActuacoes(row,codes)
+                               }}
                              />
                            : (row[key] || <span className="tc-source-pending">—</span>)
                          : <SynonymCell
