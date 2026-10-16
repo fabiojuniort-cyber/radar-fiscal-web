@@ -132,7 +132,7 @@ test('F2-TAB-02 B1/B3: Produto Item chips + página com 4208 conceitos abre até
 
 test('F2-TAB-03: CNAE aceita várias Atuações, bloqueia remover a última e preserva v1.7',async({page})=>{
   const row=await setup(page,false,true)
-  const add=row.getByRole('textbox',{name:'Adicionar Atuação'})
+  const add=row.getByRole('combobox',{name:'Adicionar Atuação'})
   await expect(row.getByRole('button',{name:'Remover Atuação actuacao.produtor_rural'})).toBeDisabled()
   await add.fill('Serviço')
   await add.press('Enter')
