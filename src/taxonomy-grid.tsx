@@ -8,6 +8,7 @@ import {
   formatOfficialCode,
   saveDimensionRows,
   patchF2DraftSuggestions,
+  patchF2DraftCnaeActuacoes,
   type AliasType,
   type CurationConcept,
   type CurationDimension,
@@ -34,6 +35,7 @@ type RowDraft = {
   displayOrder: string
   /** F2 source suggestions; read-only, never included in curator writes. */
   atuacao: string
+  atuacaoCodes: string[]
   suggestedProducts: string
   suggestedNcms: string
 }
@@ -48,7 +50,7 @@ function splitList(value: string): string[] {
     .filter(Boolean)
 }
 
-function draftFrom(concept: CurationConcept, dimension: CurationDimension, groupLabel: string): RowDraft {
+function draftFrom(concept: CurationConcept, dimension: CurationDimension, groupLabel: string, actuacoes: CurationConcept[]): RowDraft {
   return {
     key: concept.code,
     code: concept.code,
@@ -60,6 +62,8 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
     atuacao: concept.f2Source?.atuacao ?? '',
+    atuacaoCodes: concept.f2Source?.actuacaoCodes ??
+      actuacoes.filter(item=>item.label===concept.f2Source?.atuacao).map(item=>item.code),
     suggestedProducts: concept.f2Source?.suggestedProducts ?? '',
     suggestedNcms: concept.f2Source?.suggestedNcms ?? '',
   }
@@ -159,6 +163,8 @@ export function CurationGrid({
   concepts,
   groups,
   segments = [],
+  actuacoes = [],
+  releaseVersion,
   editable,
   justification,
   showRetired,
@@ -173,6 +179,8 @@ export function CurationGrid({
   groups: CurationGroup[]
   /** Segment concepts: a group's segments show in the first column. */
   segments?: CurationConcept[]
+  actuacoes?: CurationConcept[]
+  releaseVersion?: string
   editable: boolean
   justification: string
   showRetired: boolean
@@ -218,6 +226,8 @@ export function CurationGrid({
   const showSegment =
     SEGMENT_COLUMN_DIMENSIONS.has(dimension.code) && dimension.usesGroups && segments.length > 0
   const isCnae = dimension.code === 'sector' && dimension.officialCodeType === 'CNAE'
+  const canEditActuacao = isCnae && releaseVersion === 'v1.8.0'
+  const actuacaoLabel=new Map(actuacoes.map(item=>[item.code,item.label]))
   const [rowKind, setRowKind] = useState<'cnae' | 'general' | 'all'>(() =>
     isCnae && concepts.some(c => c.officialCodes.some(code => /^\d{7}$/.test(code))) ? 'cnae' : 'all',
   )
@@ -236,8 +246,8 @@ export function CurationGrid({
     () =>
       concepts
         .filter((concept) => showRetired || concept.membershipStatus === 'INCLUDED')
-        .map((concept) => draftFrom(concept, dimension, groupLabel.get(concept.groupId ?? '') ?? '')),
-    [concepts, dimension, groupLabel, showRetired],
+        .map((concept) => draftFrom(concept, dimension, groupLabel.get(concept.groupId ?? '') ?? '',actuacoes)),
+    [concepts, dimension, groupLabel, showRetired, actuacoes],
   )
   const baseByKey = useMemo(() => new Map(baseRows.map((row) => [row.key, row])), [baseRows])
 
@@ -353,6 +363,7 @@ export function CurationGrid({
       classifyByLabel: true,
       displayOrder: '',
       atuacao: '',
+      atuacaoCodes: [],
       suggestedProducts: '',
       suggestedNcms: '',
     }
