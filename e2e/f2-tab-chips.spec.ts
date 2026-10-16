@@ -1,7 +1,7 @@
 import {expect,test,type Page} from '@playwright/test'
 
 /** F2-TAB-01: frontend-only e2e; all API calls mocked, zero DB writes. */
-async function setup(page:Page,largeProduct=false){
+async function setup(page:Page,largeProduct=false,longSegment=false){
   await page.route('**/auth/refresh',r=>r.fulfill({json:{accessToken:'admin-token',tokenType:'Bearer',expiresIn:900}}))
   await page.route('**/auth/me',r=>r.fulfill({json:{user:{id:'admin',email:'admin@example.test'},memberships:[]}}))
   await page.route('**/api/v1/admin/me',r=>r.fulfill({json:{platformAdmin:true,taxonomyCurator:true,licenseBypass:true,curatorDatabase:true}}))
@@ -25,7 +25,7 @@ async function setup(page:Page,largeProduct=false){
     displayOrder:1,definition:'',governanceStatus:'APPROVED',evidenceStatus:'DOCUMENTED',officialCodes:[]}
   const concepts=[
     {...base,releaseConceptId:'rc-agro',code:'sector.agro',dimensionCode:'sector',
-      label:'Agropecuária',officialCodes:[]},
+      label:longSegment?'Agropecuária, pesca, indústria e insumos agrícolas para atividades de produção em diferentes regiões':'Agropecuária',officialCodes:[]},
     {...base,releaseConceptId:'rc-ind',code:'sector.industria',dimensionCode:'sector',
       label:'Indústria',officialCodes:[]},
     {...base,releaseConceptId:'rc-cnae',code:'sector.cnae_0111301',dimensionCode:'sector',
@@ -116,4 +116,31 @@ test('F2-TAB-02 B1/B3: Produto Item chips + página com 4208 conceitos abre até
   await expect(row.getByRole('button',{name:'Remover item Produto equivalente'})).toBeVisible()
   await row.getByRole('button',{name:'Remover item Produto equivalente'}).click()
   await expect(row.getByRole('button',{name:'Remover item Produto equivalente'})).toHaveCount(0)
+})
+
+test('F2-TAB: Segmento longo não invade Subsegmento em desktop ou mobile',async({page})=>{
+  const row=await setup(page,false,true)
+  const segment=row.locator('td.is-segment')
+  const subsegment=row.locator('td.is-group')
+  const chip=segment.locator('.tc-chip').first()
+  await expect(chip).toContainText('Agropecuária, pesca, indústria')
+  await expect(subsegment.getByRole('textbox',{name:'Subsegmento'})).toBeVisible()
+
+  const bounds=await row.evaluate(element=>{
+    const segment=element.querySelector('td.is-segment')!
+    const subsegment=element.querySelector('td.is-group')!
+    const chip=segment.querySelector('.tc-chip')!
+    const input=segment.querySelector('input')!
+    return {
+      segmentRight:segment.getBoundingClientRect().right,
+      subsegmentLeft:subsegment.getBoundingClientRect().left,
+      chipRight:chip.getBoundingClientRect().right,
+      inputRight:input.getBoundingClientRect().right,
+      chipHeight:chip.getBoundingClientRect().height,
+    }
+  })
+  expect(bounds.segmentRight).toBeLessThanOrEqual(bounds.subsegmentLeft+1)
+  expect(bounds.chipRight).toBeLessThanOrEqual(bounds.segmentRight+1)
+  expect(bounds.inputRight).toBeLessThanOrEqual(bounds.segmentRight+1)
+  expect(bounds.chipHeight).toBeGreaterThan(20) // long name wraps, not clipped/overlapped
 })
