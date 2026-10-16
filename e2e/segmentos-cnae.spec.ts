@@ -51,7 +51,8 @@ test('curator imports segment hierarchy and sees CNAE code before description', 
   await expect(table.getByLabel('Descrição do CNAE', { exact: true })).toHaveValue('Cultivo de arroz')
   // T01: the editor shows only the child; source group identity stays untouched.
   await expect(table.getByLabel('Subsegmento', { exact: true })).toHaveValue('Produção')
-  await expect(table.getByLabel('Segmento e subsegmento')).toHaveText('Agropecuária – Produção')
+  await expect(table.getByLabel('Segmento e subsegmento')).toHaveCount(0)
+  await expect(table.getByText('Agropecuária – Produção', { exact: true })).toHaveCount(0)
   expect(groups[0]?.label).toBe('Agropecuária / Produção')
   // Segmento column now reuses the chip editor; association and identity remain unchanged.
   await expect(table.locator('td.is-segment').getByText('Agropecuária', {exact:true})).toBeVisible()
