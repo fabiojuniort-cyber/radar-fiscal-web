@@ -420,14 +420,34 @@ export function CurationGrid({
           (edits[key]?.suggestedProducts!==originalByCode.get(key)?.suggestedProducts||
            edits[key]?.suggestedNcms!==originalByCode.get(key)?.suggestedNcms))
       : []
+    const actuacaoEdits = canEditActuacao
+      ? editedKeys.filter(key=>!retire.has(key) && JSON.stringify(edits[key]?.atuacaoCodes)!==JSON.stringify(originalByCode.get(key)?.atuacaoCodes))
+      : []
+    if(actuacaoEdits.some(key=>(edits[key]?.atuacaoCodes.length??0)<1)){
+      setMessage({kind:'error',text:'Cada CNAE precisa manter pelo menos uma Atuação.'})
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
+      const changedRows=rows.filter(row=>{
+        const original=originalByCode.get(row.code??'')
+        const edited=edits[row.code??'']
+        return !original||!edited||
+          JSON.stringify({...original,atuacao:'',atuacaoCodes:[]})!==
+          JSON.stringify({...edited,atuacao:'',atuacaoCodes:[]})
+      })
       const result = await saveDimensionRows(apiFetch, dimension.code, justification, {
-        rows,
+        rows:changedRows,
         retire: [...retire],
         groupSegments: changedSegments.map(([, edit]) => ({ group: edit.group.trim(), segmentCodes: edit.codes })),
       })
+      for (const key of actuacaoEdits) {
+        const row=edits[key]!
+        const cnae=splitList(row.codes).find(code=>/^\d{7}$/.test(code.replace(/\D/g,'')))
+        if(!cnae)throw Error('CNAE obrigatório para vincular Atuação.')
+        await patchF2DraftCnaeActuacoes(apiFetch,cnae.replace(/\D/g,''),justification,row.atuacaoCodes)
+      }
       for (const key of suggestionEdits) {
         const row=edits[key]!
         await patchF2DraftSuggestions(apiFetch,key,justification,{
