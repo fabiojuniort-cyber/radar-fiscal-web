@@ -99,7 +99,7 @@ export type CurationConcept = {
   officialCodes: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   /** v1.8+ release-scoped CNAE → Atuação codes (1 or more). */
-  actuacaoCodes?: string[]
+  atuacaoCodes?: string[]
   /** Optional, evidence-backed CNAE source data. Absent until approved
    * T03 staging is explicitly linked by the API; not a classification result.
    */
@@ -478,7 +478,7 @@ export type GridRowInput = {
   group?: string | null
   label: string
   officialCodes: string[]
-  actuacaoCodes?: string[]
+  atuacaoCodes?: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   profileVisible: boolean
   classifyByLabel: boolean
