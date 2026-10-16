@@ -42,6 +42,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
   const [tab,setTab]=useState<Tab>('types')
   const [directRule,setDirectRule]=useState<CollectionFilterDirectRuleInput|null>(null)
   const [scopePurgeOpen,setScopePurgeOpen]=useState(false)
+  const [dismissedNewTypes,setDismissedNewTypes]=useState<Set<string>>(()=>new Set())
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const me=useQuery({queryKey:['admin','me'],queryFn:()=>fetchAdminMe(apiFetch),retry:false})
@@ -55,7 +56,8 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
     queryKey:['collection-filter','new-types'],
     queryFn:()=>fetchCollectionFilterNewTypes(apiFetch,'OPEN'),
     refetchInterval:q=>q.state.data?.inventory?.status==='WARMING'||q.state.data?.inventory?.status==='REFRESHING'?3000:30000,
-    enabled:me.data?.platformAdmin===true,retry:false,
+    // Fetch the archive-backed queue only when the administrator opens its tab.
+    enabled:me.data?.platformAdmin===true&&tab==='new-types',retry:false,
   })
   const facets=useQuery({
     queryKey:['collection-filter','origin-facets'],
@@ -88,6 +90,10 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
     return {actNames:state.data?.actNames,sources:[...sources.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')),
       rules:allRules,allTypes:(facets.data?.actTypes??[]).map(normalizeFilterText)}
   },[rules,terms,newTypes.data,facets.data,state.data?.actNames])
+
+  // Keep successfully classified items hidden even while the server inventory
+  // is refreshing from its previous cached policy revision.
+  const visibleNewTypes=(newTypes.data?.items??[]).filter(item=>!dismissedNewTypes.has(item.id))
 
   const refresh=async()=>{
     await Promise.all([
@@ -164,7 +170,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         <article><span>Política publicada</span>
           <strong>v{document.version} · revisão {document.revision}</strong></article>
         <article><span>Novos tipos</span>
-          <strong>{state.data?.inventory?.status==='WARMING'?'Atualizando…':state.data?.newTypesOpen??0}</strong></article>
+          <strong>{state.data?.inventory?.status==='WARMING'?'Atualizando…':(newTypes.data?visibleNewTypes.length:state.data?.newTypesOpen??0)}</strong></article>
         <article><span>Regra de segurança</span>
           <strong>Desconhecido = manter</strong></article>
       </section>
@@ -173,7 +179,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         {([
           ['types','Tipos'],
           ['terms','Termos'],
-          ['new-types',`Novos tipos (${newTypes.data?.items.length??0})`],
+          ['new-types',`Novos tipos (${newTypes.data?visibleNewTypes.length:state.data?.newTypesOpen??0})`],
           ['discarded','Desconsiderados'],
           ['discard-alerts','Alertas de descarte'],
         ] as Array<[Tab,string]>).map(([value,label])=>
@@ -201,8 +207,8 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         {newTypes.isPending||newTypes.data?.inventory?.status==='WARMING'?<p role="status">Preparando os Nomes de ato em segundo plano…</p>:
           newTypes.data?.inventory?.status==='FAILED'?<p className="cf-error" role="alert">Não foi possível atualizar o inventário. Nova tentativa será feita automaticamente.</p>:
           newTypes.isError?<p className="cf-error">Não foi possível carregar novos tipos.</p>:
-          newTypes.data?.items.length?<div className="cf-list">
-            {newTypes.data.items.map(item=><article key={item.id} className="cf-new-type">
+          visibleNewTypes.length?<div className="cf-list">
+            {visibleNewTypes.map(item=><article key={item.id} className="cf-new-type">
               <div><strong>{item.act_name||item.sample_raw_type}</strong>
                 <span>{item.source_code}{item.section?` · ${item.section}`:''} · {Number(item.occurrence_count)} ocorrência(s)</span>
                 <small>Primeira: {item.first_seen_at?new Date(item.first_seen_at).toLocaleString('pt-BR'):'—'} · Última: {item.last_seen_at?new Date(item.last_seen_at).toLocaleString('pt-BR'):'—'}</small>
@@ -243,7 +249,25 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
         apiFetch={apiFetch} onClose={()=>setScopePurgeOpen(false)} onApplied={refresh}/>}
       {directRule&&<CollectionFilterDirectDialog
         apiFetch={apiFetch} initial={directRule}
-        onClose={()=>setDirectRule(null)} onApplied={refresh}/>}
+        onClose={()=>setDirectRule(null)} onApplied={saved=>{
+          // A classification with the same source, section and Nome do ato
+          // resolves this queue item. Never hide a different rule edited by hand.
+          if((directRule.newTypeId||directRule.queueBasis)&&
+            saved.sourceCode===directRule.sourceCode&&
+            normalizeFilterText(saved.section)===normalizeFilterText(directRule.section)&&
+            normalizeFilterText(saved.canonicalType)===
+              normalizeFilterText(directRule.actName??directRule.canonicalType)){
+            const savedName=normalizeFilterText(saved.canonicalType)
+            const matchingIds=(newTypes.data?.items??[])
+              .filter(item=>item.source_code===saved.sourceCode&&
+                normalizeFilterText(item.section)===normalizeFilterText(saved.section)&&
+                normalizeFilterText(item.act_name||item.sample_raw_type)===savedName)
+              .map(item=>item.id)
+            if(matchingIds.length)setDismissedNewTypes(previous=>
+              new Set([...previous,...matchingIds]))
+          }
+          void refresh()
+        }}/>}
     </main>
   </div>
 }

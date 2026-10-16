@@ -31,12 +31,15 @@ const unique=(arr:string[])=>[...new Set(arr.filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b,'pt-BR'))
 const reason=(error:unknown)=>error instanceof Error?error.message:'Não foi possível alterar a política ativa.'
 
-function useTypes(_apiFetch:ProductApiFetch,origins:FilterOrigins,source:string) {
-  return {
-    types:unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.actName??x.canonicalType),
-      ...(origins.actNames??[]).filter(x=>!source||x.sourceCode===source).map(x=>x.name)]),
-    error:origins.actNames===undefined,
-  }
+function useTypes(_apiFetch:ProductApiFetch,origins:FilterOrigins,source:string,requireSource=false) {
+  // A new rule requires selecting a source first. Avoid sorting/rendering
+  // the potentially large all-source archive inventory before that choice.
+  const types=useMemo(()=>{
+    if(requireSource&&!source)return []
+    return unique([...origins.rules.filter(x=>!source||x.sourceCode===source).map(x=>x.actName??x.canonicalType),
+      ...(origins.actNames??[]).filter(x=>!source||x.sourceCode===source).map(x=>x.name)])
+  },[origins.rules,origins.actNames,source,requireSource])
+  return {types,error:origins.actNames===undefined}
 }
 function SourceSelect({origins,value,onChange,label,optional=false}:{
   origins:FilterOrigins;value:string;onChange:(s:string)=>void;label:string;optional?:boolean
@@ -78,7 +81,7 @@ export function TypesEditor(p:EditorProps) {
   const [mode,setMode]=useState<CollectionFilterMode>('KEEP_ALWAYS')
   const [alias,setAlias]=useState('')
   const [error,setError]=useState('')
-  const {types,error:originError}=useTypes(apiFetch,origins,source)
+  const {types,error:originError}=useTypes(apiFetch,origins,source,true)
   const rows=useMemo(()=>rules.map((rule,index)=>({rule,index})),[rules])
   const onError=(e:unknown)=>setError(reason(e))
   const saveRule=async(rule:CollectionFilterRule)=>{
@@ -255,7 +258,7 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
   onMerge:(type:string)=>Promise<void>;onTerm:(term:CollectionFilterTerm)=>Promise<void>;
   pending:boolean;error:string|null
 }) {
-  const [action,setAction]=useState<'help'|'classify'|'merge'|'term'|null>(null)
+  const [action,setAction]=useState<'help'|'merge'|'term'|null>(null)
   const [canonical,setCanonical]=useState(item.act_name||item.sample_raw_type||item.normalized_type)
   const targets=unique(mergeRules.filter(r=>r.sourceCode===item.source_code&&
     r.section===item.section&&r.canonicalType!==item.normalized_type).map(r=>r.canonicalType))
@@ -264,12 +267,14 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
   }
   const descriptions={
     help:'Entenda as ações disponíveis para este novo tipo.',
-    classify:'O Nome do ato vem do backend. A próxima janela solicita prévia antes de salvar sem excluir.',
     merge:'Registra a correspondência com um tipo já configurado nesta fonte e seção diretamente na política ativa.',
     term:'Adiciona uma palavra ou expressão diretamente à política ativa.',
   }
   return <><div className="cf-row-actions">
-    <button type="button" onClick={()=>open('classify')}>Classificar</button>
+    <button type="button" onClick={()=>{
+      rememberDialogTrigger()
+      onClassify(item.act_name||item.sample_raw_type||item.normalized_type)
+    }}>Classificar</button>
     <button type="button" className="is-secondary-quiet" onClick={()=>open('merge')}>Mesclar</button>
     <button type="button" className="is-secondary-quiet" onClick={()=>open('term')}>Criar termo</button>
     <button type="button" className="is-secondary-quiet"
@@ -277,7 +282,7 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
       onClick={()=>open('help')}><CircleHelp size={17}/> Ajuda</button>
   </div>
   {action&&<FilterDialog title={{
-    help:'Ajuda: ações de novos tipos',classify:'Classificar novo Nome do ato',
+    help:'Ajuda: ações de novos tipos',
     merge:'Mesclar novo tipo',term:'Criar termo tributário',
   }[action]} description={descriptions[action]} onClose={()=>setAction(null)}>
     {action==='help'?<dl className="cf-action-help">
@@ -291,7 +296,6 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
       }}/>:<form className="cf-modal-form" onSubmit={async e=>{
       e.preventDefault()
       if(!canonical||pending)return
-      if(action==='classify'){setAction(null);onClassify(canonical);return}
       try{await onMerge(canonical);setAction(null)}catch{/* parent displays error */}
     }}>
       <p><strong>{item.sample_raw_type}</strong> · {item.source_code} · {item.section}</p>
@@ -308,7 +312,7 @@ export function NewTypeActions({item,origins,mergeRules,apiFetch,onClassify,onMe
         onClick={()=>setAction(null)}>Cancelar</button>
         <button type="submit" disabled={pending||!canonical||
           (action==='merge'&&!targets.length)}>
-          {pending?'Registrando…':'Confirmar '+(action==='merge'?'mesclagem':'classificação')}
+          {pending?'Registrando…':'Confirmar mesclagem'}
         </button>
       </div>
     </form>}

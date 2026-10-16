@@ -34,6 +34,23 @@ function mount(apiFetch:ProductApiFetch) {
   </MemoryRouter></QueryClientProvider>)
 }
 
+it('carrega opções de Nome do ato somente após selecionar uma fonte na aba Tipos',async()=>{
+  const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
+    const path=String(input)
+    if(path.includes('/admin/me'))return json({platformAdmin:true})
+    if(path.endsWith('/state'))return json(state)
+    if(path.includes('/new-types'))return json(newTypes)
+    return json({sources:[{code:'dou',name:'DOU'}],actTypes:[]})
+  }) as ProductApiFetch
+  mount(apiFetch)
+  const source=await screen.findByRole('combobox',{name:'Fonte do tipo'})
+  const name=screen.getByRole('combobox',{name:'Nome do ato'}) as HTMLSelectElement
+  expect(name.options).toHaveLength(1)
+  fireEvent.change(source,{target:{value:'dou'}})
+  await waitFor(()=>expect(name.options.length).toBeGreaterThan(1))
+  expect([...name.options].some(option=>option.value==='PORTARIA')).toBe(true)
+})
+
 it('inventory warming never presents an empty queue as completed',async()=>{
   const apiFetch=vi.fn(async(input:RequestInfo|URL)=>{
     const path=String(input);
@@ -74,7 +91,8 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
-    fireEvent.click(await screen.findByRole('button',{name:'Confirmar classificação'}))
+    expect(screen.getByText('Classificar Nome do ato')).toBeInTheDocument()
+    expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     await screen.findByText(/12 publicações históricas correspondem à regra/)
@@ -82,6 +100,7 @@ describe('L-11 filtro direto DOU',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
     await waitFor(()=>expect(calls.some(v=>v.endsWith('/direct-rule/save'))).toBe(true))
     expect(calls.some(v=>v.endsWith('/direct-rule/confirm'))).toBe(false)
+    await waitFor(()=>expect(screen.queryByRole('button',{name:'Classificar'})).not.toBeInTheDocument())
   })
 
   it('sem token F3 no backend antigo não oferece botão salvar',async()=>{
@@ -99,7 +118,7 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
-    fireEvent.click(await screen.findByRole('button',{name:'Confirmar classificação'}))
+    expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     expect(await screen.findByRole('alert')).toHaveTextContent(/prévia F3 segura/)
@@ -189,8 +208,8 @@ it('L-11: modo em branco exige seleção após classificar novo tipo',async()=>{
   }) as ProductApiFetch
   mount(apiFetch)
   fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
-  fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
-  fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
+  // The queue is deliberately lazy-loaded when its tab is selected.
+  fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
   const mode=screen.getByLabelText('Modo') as HTMLSelectElement
   expect(mode.value).toBe('')
   expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
@@ -268,11 +287,11 @@ describe('F3-UX-01 sugestões de títulos na classificação',()=>{
       fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
       fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
       expect(screen.queryByRole('radio')).toBeNull()
-      const typeInput=screen.getByRole('textbox',{name:'Nome do ato para Despacho'}) as HTMLInputElement
+      expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
+      const typeInput=screen.getByRole('textbox',{name:'Nome do ato'}) as HTMLInputElement
       expect(typeInput.value).toBe('Despacho do Secretário')
       fireEvent.change(typeInput,{target:{value:'Despacho do Secretário Adjunto'}})
       expect(typeInput.value).toBe('Despacho do Secretário Adjunto')
-      fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
       expect(screen.getByRole('combobox',{name:'Fonte'})).toHaveValue(source)
       expect(screen.getByRole('textbox',{name:'Nome do ato'})).toHaveValue('Despacho do Secretário Adjunto')
       fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
