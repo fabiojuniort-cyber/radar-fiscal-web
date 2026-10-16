@@ -48,7 +48,7 @@ import {
   type ReleaseView,
 } from './taxonomy-api'
 import './panel-experience.css'
-import { CurationGrid, SynonymCell, displaySegmentSubsegment } from './taxonomy-grid'
+import { CurationGrid, SynonymCell, subsegmentName } from './taxonomy-grid'
 import { importSegmentPackage, parseSegmentPackage } from './segment-import'
 import './taxonomy-admin.css'
 
@@ -692,7 +692,7 @@ function DimensionEditor({
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {dimension.code === 'sector'
-                    ? displaySegmentSubsegment(
+                    ? subsegmentName(
                         group.segmentCodes.map(code => view.concepts.find(item => item.code === code)?.label ?? code).join(', '),
                         group.label,
                       )
@@ -1152,6 +1152,9 @@ function GroupDrawer({
   onClose: () => void
   onChanged: () => Promise<void>
 }) {
+  const segmentParent = group?.segmentCodes.map(code=>segments.find(segment=>segment.code===code)?.label??code).join(', ')??''
+  const visibleSubsegment = (label:string) => dimension.code==='sector'
+    ? subsegmentName(segmentParent,label) : label
   const [form, setForm] = useState({
     label: group?.label ?? '',
     displayOrder: group ? String(group.displayOrder) : '',
@@ -1194,13 +1197,13 @@ function GroupDrawer({
       <aside
         className="tc-drawer"
         role="dialog"
-        aria-label={group ? `${dimension.code === 'sector' ? 'Subsegmento' : 'Grupo'} ${group.label}` : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}
+        aria-label={group ? `${dimension.code === 'sector' ? 'Subsegmento' : 'Grupo'} ${visibleSubsegment(group.label)}` : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
           <div>
             <small>{dimension.name}</small>
-            <h3>{group ? group.label : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}</h3>
+            <h3>{group ? visibleSubsegment(group.label) : dimension.code === 'sector' ? 'Novo subsegmento' : 'Novo grupo'}</h3>
           </div>
           <button type="button" aria-label="Fechar" onClick={onClose}>
             <X size={18} />
@@ -1209,7 +1212,7 @@ function GroupDrawer({
         <div className="tc-drawer-body">
           <label>
             Nome do {dimension.code === 'sector' ? 'subsegmento' : 'grupo'}
-            <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+            <input value={visibleSubsegment(form.label)} onChange={(e) => setForm({ ...form, label: e.target.value })} />
           </label>
           <div className="tc-two">
             <label>

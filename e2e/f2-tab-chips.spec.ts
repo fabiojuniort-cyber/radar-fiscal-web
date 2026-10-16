@@ -78,6 +78,11 @@ test('F2-TAB-01: chips permitem adicionar/remover CNAE, sinônimo e segmento sem
   await row.getByRole('button',{name:'Remover segmento sector.industria'}).click()
   await expect(row.getByRole('button',{name:'Remover segmento sector.industria'})).toHaveCount(0)
 
+  // Atuação uses the same read-only chip presentation, with no removal or add control.
+  const atuacao=row.locator('td.is-f2-source').first()
+  await expect(atuacao.locator('.tc-chip')).toHaveText('Produtor rural')
+  await expect(atuacao.getByRole('button',{name:/Remover atuação/})).toHaveCount(0)
+  await expect(atuacao.getByRole('textbox',{name:'Adicionar atuação'})).toHaveCount(0)
   await expect(row.getByText('Arroz',{exact:true})).toBeVisible()
   await expect(row.getByText('100590',{exact:true})).toBeVisible()
   await expect(row.getByRole('button',{name:/Remover NCM sugerida/})).toHaveCount(2)

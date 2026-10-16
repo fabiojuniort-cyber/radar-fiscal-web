@@ -634,14 +634,11 @@ export function CurationGrid({
                         list={datalistId}
                         value={isCnae ? subsegmentName(segmentOf(row.group), row.group) : row.group}
                         placeholder={isCnae ? 'sem subsegmento' : 'sem grupo'}
-                        title={isCnae ? displaySegmentSubsegment(segmentOf(row.group), row.group) : row.group}
+                        title={isCnae ? subsegmentName(segmentOf(row.group), row.group) : row.group}
                         onChange={(event) => updateRow(row, { group: resolveGroupInput(event.target.value) })}
                       />
                       {isCnae && row.group.trim() && (
                         <>
-                          <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
-                            {displaySegmentSubsegment(segmentOf(row.group), row.group)}
-                          </small>
                           {segmentCodesOf(row.group).length===0 && (
                             <small className="tc-source-pending" role="note">
                               Segmento sem vínculo no rascunho
@@ -653,15 +650,17 @@ export function CurationGrid({
                   )}
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
-                      {key==='atuacao'
-                         ? (row[key] || <span className="tc-source-pending">—</span>)
-                         : <SynonymCell
-                             aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
-                             editable={rowEditable&&row.code!==null}
-                             cellId={`${row.key}:${key}`}
-                             noun={key==='suggestedNcms'?'NCM sugerida':'produto sugerido'}
-                             onChange={items=>updateRow(row,{[key]:items.map(item=>item.text).join(', ')})}
-                           />}
+                      {row[key]
+                        ? <SynonymCell
+                            aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                            editable={key!=='atuacao'&&rowEditable&&row.code!==null}
+                            cellId={`${row.key}:${key}`}
+                            noun={key==='atuacao'?'atuação':key==='suggestedNcms'?'NCM sugerida':'produto sugerido'}
+                            onChange={items=>{
+                              if(key!=='atuacao')updateRow(row,{[key]:items.map(item=>item.text).join(', ')})
+                            }}
+                          />
+                        : <span className="tc-source-pending">—</span>}
                     </td>
                   ))}
                   {(isCnae ? ['codes', 'label'] as const : ['label', 'codes'] as const).map(column => column === 'label' ? <td key="label" className="is-label">
