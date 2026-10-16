@@ -66,7 +66,7 @@ test('F2-TAB-04: CNAE subsegment and segment chip never overlap at any viewport'
   if(baseline)return // baseline is expected to fail the new visual requirements
 
   const segmentLabel='Agropecuária, produção agrícola e comercialização de grãos e cereais com descrição extensa para teste responsivo'
-  const subsegment=row.getByRole('textbox',{name:'Subsegmento'})
+  const subsegment=row.getByLabel('Subsegmento',{exact:true})
   await expect(subsegment).toHaveValue('Grãos e cereais')
   await expect(subsegment).toHaveAttribute('title','Grãos e cereais')
   await expect(row.locator('.tc-subsegment-context')).toHaveCount(0)
