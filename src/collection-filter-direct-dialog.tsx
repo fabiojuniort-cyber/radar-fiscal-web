@@ -22,7 +22,7 @@ export function CollectionFilterDirectDialog({
   apiFetch:ProductApiFetch
   initial:CollectionFilterDirectRuleInput
   onClose:()=>void
-  onApplied:()=>Promise<void>
+  onApplied:(saved:CollectionFilterDirectRuleInput)=>void
 }){
   const [rule,setRule]=useState<Omit<CollectionFilterDirectRuleInput,'mode'> &
     {mode:CollectionFilterMode|''}>({...initial,mode:initial.newTypeId||initial.queueBasis?'':initial.mode})
@@ -54,7 +54,9 @@ export function CollectionFilterDirectDialog({
         ...rule,mode:rule.mode as CollectionFilterMode,
       },preview)
       if(result.deletedCount!==0)throw new Error('A API relatou exclusão inesperada: revisão necessária.')
-      await onApplied()
+      // The backend has committed the safe save. Do not block the dialog
+      // on background inventory refresh; the parent can update the list now.
+      onApplied({...rule,mode:rule.mode as CollectionFilterMode})
       onClose()
     } catch(e){
       setPreview(null)
