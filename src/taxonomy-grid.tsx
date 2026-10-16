@@ -404,7 +404,8 @@ export function CurationGrid({
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
-        ...(canEditActuacao && row.code===null ? { actuacaoCodes: row.atuacaoCodes } : {}),
+        ...(canEditActuacao && row.code===null && splitList(row.codes).some(code=>/^\d{7}$/.test(code.replace(/\D/g,'')))
+          ? { actuacaoCodes: row.atuacaoCodes } : {}),
         aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
