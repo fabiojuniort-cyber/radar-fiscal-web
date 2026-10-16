@@ -98,6 +98,8 @@ export type CurationConcept = {
   classifyByLabel: boolean
   officialCodes: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
+  /** v1.8+ release-scoped CNAE → Atuação codes (1 or more). */
+  actuacaoCodes?: string[]
   /** Optional, evidence-backed CNAE source data. Absent until approved
    * T03 staging is explicitly linked by the API; not a classification result.
    */
@@ -291,6 +293,20 @@ export async function createCurationDraft(apiFetch: ProductApiFetch, justificati
   return readJson<{ draft: ReleaseSummary; initialCuration: Record<string, number> | null }>(
     await apiFetch(`${ADMIN}/drafts`, jsonInit('POST', { justification })),
   )
+}
+
+/** F2-TAB-03: saves 1+ Atuação concepts for one CNAE in draft v1.8.0 only. */
+export async function patchCnaeActuacoes(
+  apiFetch:ProductApiFetch,
+  conceptCode:string,
+  justification:string,
+  atuacaoCodes:string[],
+):Promise<{cnaeCode:string;atuacaoCodes:string[];reusedExisting:boolean;published:false}> {
+  const response=await apiFetch(
+    `${ADMIN}/drafts/current/cnaes/${encodeURIComponent(conceptCode)}/actuacoes`,
+    jsonInit('PATCH',{justification,atuacaoCodes}),
+  )
+  return readJson(response)
 }
 
 // F2-T02: creates an independent Atuação dimension only in the current draft.
