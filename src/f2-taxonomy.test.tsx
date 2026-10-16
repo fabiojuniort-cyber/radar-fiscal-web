@@ -204,8 +204,7 @@ describe('F2-TAB-02 B1 — distinct subgroup identities and missing parent links
       concepts={concepts} groups={groups} segments={[parent]}
       editable={false} justification="Auditoria" showRetired={false} query=""
       onChanged={async()=>{}} onOpenDetail={()=>{}} />)
-    const warnings=screen.getAllByText('Segmento sem vínculo no rascunho')
-    expect(warnings).toHaveLength(1)
+    expect(screen.queryByText('Segmento sem vínculo no rascunho')).not.toBeInTheDocument()
     const table=screen.getByRole('table',{name:'Itens de Segmento'})
     const inputs=within(table).getAllByLabelText('Subsegmento',{exact:true})
     expect(inputs).toHaveLength(2)
