@@ -139,7 +139,8 @@ test('F2-TAB-03: CNAE aceita várias Atuações, bloqueia remover a última e pr
   await expect(row.getByRole('button',{name:'Remover Atuação actuacao.servico'})).toBeVisible()
   await row.getByRole('button',{name:'Remover Atuação actuacao.servico'}).click()
   await expect(row.getByRole('button',{name:'Remover Atuação actuacao.produtor_rural'})).toBeDisabled()
-  await expect(row.getByRole('textbox',{name:'Subsegmento'})).toHaveValue('Grãos')
+  // Subsegmento has an HTML datalist, so its accessible role is combobox (one value).
+  await expect(row.getByRole('combobox',{name:'Subsegmento'})).toHaveValue('Grãos')
   await expect(row.getByText('Agropecuária – Grãos',{exact:true})).toHaveCount(0)
   await expect(page.getByRole('button',{name:/Segmento.*\d+ itens/})).toBeVisible()
 })
