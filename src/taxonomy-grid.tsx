@@ -683,7 +683,8 @@ export function CurationGrid({
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
                       {key==='atuacao'
                          ? <SynonymCell
-                             aliases={row.atuacaoCodes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                             aliases={(row.atuacaoCodes.length?row.atuacaoCodes:canEditActuacao?[]:splitList(row.atuacao))
+                               .map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
                              editable={canEditActuacao&&rowEditable&&row.code!==null}
                              cellId={`${row.key}:atuacao`}
                              noun="Atuação"
