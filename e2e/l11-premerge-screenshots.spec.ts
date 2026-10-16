@@ -7,7 +7,7 @@ import path from 'node:path'
  * Fábio must approve the five screenshots before merge.
  * GitHub Actions collects playwright-artifacts with the full CI.
  */
-test('L11 pré-merge: screenshots Tipos, Termos, Novos tipos com popup, Desconsiderados e Alertas',async({
+test('L11 pré-merge: screenshots Tipos, Termos, Novos tipos com classificação direta, Desconsiderados e Alertas',async({
   page,
 },testInfo)=>{
   const policyId='11111111-1111-4111-8111-111111111111'
@@ -84,12 +84,11 @@ test('L11 pré-merge: screenshots Tipos, Termos, Novos tipos com popup, Desconsi
   await page.getByRole('button',{name:/Novos tipos/}).click()
   await expect(page.getByRole('button',{name:'Classificar'})).toBeVisible()
   await page.getByRole('button',{name:'Classificar'}).click()
-  await expect(page.getByRole('dialog',{name:'Classificar novo Nome do ato'})).toBeVisible()
-  await page.screenshot({path:path.join(files,'03a-novos-tipos-escolher-tipo.png'),fullPage:true})
-  await page.getByRole('dialog',{name:'Classificar novo Nome do ato'})
-    .getByRole('button',{name:'Confirmar classificação'}).click()
+  // F3 UX: a ação Classificar deve abrir DIRETAMENTE o formulário final.
+  await expect(page.getByRole('dialog',{name:'Classificar novo Nome do ato'})).toHaveCount(0)
   const confirm=page.getByRole('dialog',{name:'Classificar Nome do ato'})
   await expect(confirm).toBeVisible()
+  await expect(confirm.getByLabel('Nome do ato')).toHaveValue('Aviso de Licitação - Pregão')
   await expect(confirm.getByLabel('Modo')).toBeVisible()
   await page.screenshot({path:path.join(files,'03-novos-tipos-popup.png'),fullPage:true})
   await confirm.getByRole('button',{name:'Cancelar'}).click()
