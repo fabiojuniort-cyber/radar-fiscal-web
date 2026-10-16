@@ -191,7 +191,8 @@ it('L-11: modo em branco exige seleção após classificar novo tipo',async()=>{
   }) as ProductApiFetch
   mount(apiFetch)
   fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
-  fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
+  // The queue is deliberately lazy-loaded when its tab is selected.
+  fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
   const mode=screen.getByLabelText('Modo') as HTMLSelectElement
   expect(mode.value).toBe('')
   expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
