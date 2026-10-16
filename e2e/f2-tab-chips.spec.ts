@@ -32,7 +32,7 @@ async function setup(page:Page,largeProduct=false,atuacaoV18=false){
     {...base,releaseConceptId:'rc-cnae',code:'sector.cnae_0111301',dimensionCode:'sector',
       label:'Cultivo de arroz',groupId:'g1',groupCode:'graos',officialCodes:['0111301'],
       aliases:[{text:'plantação de arroz',aliasType:'EXACT_LEXICAL'}],
-      ...(atuacaoV18?{actuacaoCodes:['actuacao.produtor_rural']}:{}),
+      ...(atuacaoV18?{atuacaoCodes:['actuacao.produtor_rural']}:{}),
       f2Source:{atuacao:'Produtor rural',suggestedProducts:'Arroz;Milho',suggestedNcms:'1006;100590'}},
     {...base,releaseConceptId:'rc-trt',code:'treatment.example',dimensionCode:'treatment',label:'Antigo'},
   ]
@@ -53,7 +53,7 @@ async function setup(page:Page,largeProduct=false,atuacaoV18=false){
     if(url.pathname.includes('/cnaes/')&&url.pathname.endsWith('/actuacoes')&&r.request().method()==='PATCH'){
       const input=r.request().postDataJSON() as {atuacaoCodes:string[]}
       if(input.atuacaoCodes.length===0)return r.fulfill({status:422,json:{error:'f2_tab03_last_actuacao_required'}})
-      Object.assign(concepts[2],{actuacaoCodes:input.atuacaoCodes})
+      Object.assign(concepts[2],{atuacaoCodes:input.atuacaoCodes})
       return r.fulfill({json:{atuacaoCodes:input.atuacaoCodes,published:false}})
     }
     if(url.pathname.endsWith('/state'))return r.fulfill({json:state})
