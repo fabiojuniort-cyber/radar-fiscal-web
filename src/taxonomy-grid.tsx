@@ -131,6 +131,7 @@ function SegmentCell({
   labelOf,
   disabled,
   groupNoun,
+  compact = false,
   onChange,
 }: {
   group: string
@@ -139,6 +140,7 @@ function SegmentCell({
   labelOf: (code: string) => string | undefined
   disabled: boolean
   groupNoun: string
+  compact?: boolean
   onChange: (codes: string[]) => void
 }) {
   return <SynonymCell
@@ -146,6 +148,7 @@ function SegmentCell({
     editable={!disabled}
     cellId={`segment-${normalize(group)}`}
     noun="segmento"
+    truncateChipLabels={compact}
     suggestions={options.map(option=>({text:option.code,label:option.label}))}
     displayText={(code)=>labelOf(code)??code}
     onChange={(items)=>onChange(items.map(item=>item.text))}
@@ -516,7 +519,7 @@ export function CurationGrid({
       )}
 
       <div className="tc-grid-wrap">
-        <table className="tc-grid" aria-label={`Itens de ${dimension.name}`}>
+        <table className="tc-grid" data-f2-cnae={isCnae ? 'true' : undefined} aria-label={`Itens de ${dimension.name}`}>
           <thead>
             <tr>
               <th className="is-select">
@@ -616,6 +619,7 @@ export function CurationGrid({
                         labelOf={(code) => segmentLabel.get(code)}
                         disabled={!rowEditable || !row.group.trim()}
                         groupNoun={isCnae ? 'subsegmento' : 'grupo'}
+                        compact={isCnae}
                         onChange={(codes) => {
                           setMessage(null)
                           setSegmentEdits((current) => ({
@@ -634,14 +638,11 @@ export function CurationGrid({
                         list={datalistId}
                         value={isCnae ? subsegmentName(segmentOf(row.group), row.group) : row.group}
                         placeholder={isCnae ? 'sem subsegmento' : 'sem grupo'}
-                        title={isCnae ? displaySegmentSubsegment(segmentOf(row.group), row.group) : row.group}
+                        title={isCnae ? subsegmentName(segmentOf(row.group), row.group) : row.group}
                         onChange={(event) => updateRow(row, { group: resolveGroupInput(event.target.value) })}
                       />
                       {isCnae && row.group.trim() && (
                         <>
-                          <small className="tc-subsegment-context" aria-label="Segmento e subsegmento">
-                            {displaySegmentSubsegment(segmentOf(row.group), row.group)}
-                          </small>
                           {segmentCodesOf(row.group).length===0 && (
                             <small className="tc-source-pending" role="note">
                               Segmento sem vínculo no rascunho
@@ -807,6 +808,7 @@ export function SynonymCell({
   noun='sinônimo',
   suggestions,
   displayText,
+  truncateChipLabels = false,
 }: {
   aliases: Alias[]
   editable: boolean
@@ -815,6 +817,7 @@ export function SynonymCell({
   noun?: string
   suggestions?: Array<{text:string;label:string}>
   displayText?: (value:string)=>string
+  truncateChipLabels?: boolean
 }) {
   const [text, setText] = useState('')
   const knownSuggestions = new Map((suggestions??[]).flatMap(item=>[
@@ -843,7 +846,11 @@ export function SynonymCell({
     <div className="tc-synonyms">
       {aliases.map((alias) => (
         <span key={`${alias.aliasType}:${alias.text}`} className="tc-chip">
-          {displayText?.(alias.text)??alias.text}
+          {truncateChipLabels ? (
+            <span className="tc-chip-label" title={displayText?.(alias.text) ?? alias.text}>
+              {displayText?.(alias.text) ?? alias.text}
+            </span>
+          ) : (displayText?.(alias.text) ?? alias.text)}
           {editable && (
             <button
               type="button"

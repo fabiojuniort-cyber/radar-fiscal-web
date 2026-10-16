@@ -91,6 +91,20 @@ jobs:
         if: steps.ci-plan.outputs.full_regression == 'true'
         run: npm run test:e2e
 
+      # F2-TAB-04 only: capture a genuine BEFORE image from the exact PR base
+      # commit, using the same read-only mocked Playwright fixture that captured
+      # the AFTER image in the regular Browser tests above.
+      - name: F2-TAB-04 baseline screenshots (four viewports)
+        if: ${{ steps.ci-plan.outputs.full_regression == 'true' && github.event_name == 'pull_request' && startsWith(github.head_ref, 'fix/f2-tab-04-') }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git show "$BASE_SHA:src/taxonomy-grid.tsx" > src/taxonomy-grid.tsx
+          git show "$BASE_SHA:src/taxonomy-admin.css" > src/taxonomy-admin.css
+          VITE_ENABLE_DEMO_ACCESS=true npm run build
+          F2_TAB_04_BASELINE=1 npx playwright test e2e/f2-tab-04-layout.spec.ts --reporter=line
+
       - name: Record browser evidence metadata
         if: ${{ !cancelled() && steps.ci-plan.outputs.full_regression == 'true' }}
         run: |

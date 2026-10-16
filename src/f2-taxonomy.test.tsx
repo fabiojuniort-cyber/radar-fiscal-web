@@ -29,7 +29,7 @@ describe('F2-T01 — Segmento e Subsegmento existentes', () => {
       dimension={dimension} concepts={[sector, cnae]} groups={groups} segments={[sector]}
       editable={false} justification="teste" showRetired={false} query=""
       onChanged={async () => {}} onOpenDetail={() => {}} />)
-    expect(screen.getByLabelText('Segmento e subsegmento')).toHaveTextContent('Agronegócio – Grãos')
+    expect(screen.queryByLabelText('Segmento e subsegmento')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Subsegmento')).toHaveValue('Grãos')
   })
 })
@@ -93,7 +93,7 @@ describe('F2 visual smoke regressions — T01/T02/T03', () => {
       concepts={[sector, activity]} segments={[sector]} editable justification="Revisão visual"
       showRetired={false} query="" onChanged={async () => {}} onOpenDetail={() => {}} />)
     expect(screen.getByLabelText('Subsegmento')).toHaveValue(child)
-    expect(screen.getByLabelText('Segmento e subsegmento')).toHaveTextContent(`${parent} – ${child}`)
+    expect(screen.queryByLabelText('Segmento e subsegmento')).not.toBeInTheDocument()
     expect(screen.queryByText(`${parent} – ${legacyLabel}`)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Descrição do CNAE'), { target: { value: 'Cultivo de arroz revisado' } })
     fireEvent.click(screen.getByRole('button', { name: /Salvar alterações/ }))
