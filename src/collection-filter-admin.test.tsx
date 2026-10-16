@@ -192,7 +192,6 @@ it('L-11: modo em branco exige seleção após classificar novo tipo',async()=>{
   mount(apiFetch)
   fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
   fireEvent.click(screen.getByRole('button',{name:'Classificar'}))
-  fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
   const mode=screen.getByLabelText('Modo') as HTMLSelectElement
   expect(mode.value).toBe('')
   expect(screen.getByRole('option',{name:'Selecione o modo'})).toBeInTheDocument()
@@ -270,11 +269,11 @@ describe('F3-UX-01 sugestões de títulos na classificação',()=>{
       fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
       fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
       expect(screen.queryByRole('radio')).toBeNull()
-      const typeInput=screen.getByRole('textbox',{name:'Nome do ato para Despacho'}) as HTMLInputElement
+      expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
+      const typeInput=screen.getByRole('textbox',{name:'Nome do ato'}) as HTMLInputElement
       expect(typeInput.value).toBe('Despacho do Secretário')
       fireEvent.change(typeInput,{target:{value:'Despacho do Secretário Adjunto'}})
       expect(typeInput.value).toBe('Despacho do Secretário Adjunto')
-      fireEvent.click(screen.getByRole('button',{name:'Confirmar classificação'}))
       expect(screen.getByRole('combobox',{name:'Fonte'})).toHaveValue(source)
       expect(screen.getByRole('textbox',{name:'Nome do ato'})).toHaveValue('Despacho do Secretário Adjunto')
       fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
