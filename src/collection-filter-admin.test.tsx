@@ -74,7 +74,8 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
-    fireEvent.click(await screen.findByRole('button',{name:'Confirmar classificação'}))
+    expect(screen.getByText('Classificar Nome do ato')).toBeInTheDocument()
+    expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     await screen.findByText(/12 publicações históricas correspondem à regra/)
@@ -82,6 +83,7 @@ describe('L-11 filtro direto DOU',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
     await waitFor(()=>expect(calls.some(v=>v.endsWith('/direct-rule/save'))).toBe(true))
     expect(calls.some(v=>v.endsWith('/direct-rule/confirm'))).toBe(false)
+    await waitFor(()=>expect(screen.queryByRole('button',{name:'Classificar'})).not.toBeInTheDocument())
   })
 
   it('sem token F3 no backend antigo não oferece botão salvar',async()=>{
@@ -99,7 +101,7 @@ describe('L-11 filtro direto DOU',()=>{
     mount(apiFetch)
     fireEvent.click(await screen.findByRole('button',{name:/Novos tipos/}))
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
-    fireEvent.click(await screen.findByRole('button',{name:'Confirmar classificação'}))
+    expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     expect(await screen.findByRole('alert')).toHaveTextContent(/prévia F3 segura/)
