@@ -2238,10 +2238,13 @@ function CompanySection({
         <DangerConfirmDialog
           title="Excluir empresa?"
           description={
-            'A empresa ' + deleteCandidate.legalName +
-            ' será desativada junto com seus estabelecimentos. O histórico será preservado.'
+            'ATENÇÃO: a exclusão da empresa ' + deleteCandidate.legalName +
+            ' é permanente e irreversível. Matriz, filiais, CNAEs, perfil tributário, ' +
+            'produtos, NCMs e demais dados próprios deste cadastro serão eliminados. ' +
+            'Ao cadastrar novamente esse CNPJ, o novo perfil começará do zero. ' +
+            'As publicações oficiais compartilhadas do Acervo não serão apagadas.'
           }
-          confirmLabel="Excluir empresa"
+          confirmLabel="Excluir definitivamente"
           pending={deleteMutation.isPending}
           error={deleteMutation.error}
           onCancel={() => {
