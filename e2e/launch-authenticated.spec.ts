@@ -563,8 +563,18 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByLabel('Fonte').selectOption('dou')
   await expect(page.getByText(/Nenhum resultado com os filtros atuais · busca “Convênio” · fonte DOU · tipo IN/)).toBeVisible()
 
-  await expect(page.getByLabel('Tipo de base legal').locator('option')).toHaveCount(1)
-  await expect(page.getByLabel('Tipo de base legal')).toContainText('Todos')
+  // A new act type can be selected without clearing any of the other filters.
+  const actTypeSelect = page.getByLabel('Tipo de base legal')
+  await expect(actTypeSelect.locator('option')).toHaveCount(3)
+  await expect(actTypeSelect).toContainText('Todos')
+  await expect(actTypeSelect).toContainText('Convênio ICMS')
+  await actTypeSelect.selectOption('Convênio ICMS')
+  await expect.poll(() => archiveRequests.some((url) =>
+    url.searchParams.get('actType') === 'Convênio ICMS' &&
+    url.searchParams.get('source') === 'dou' &&
+    url.searchParams.get('q') === 'Convênio',
+  )).toBe(true)
+  await actTypeSelect.selectOption('IN')
 
   // Acervo filters do not leak into Publicações.
   await page.getByRole('button', { name: 'Publicações', exact: true }).click()
