@@ -2073,6 +2073,37 @@ function CompanySection({
   const [editLegalName, setEditLegalName] = useState('')
   const [editBusinessLocationCode, setEditBusinessLocationCode] = useState('')
   const [deleteCandidate, setDeleteCandidate] = useState<AccountCompany | null>(null)
+  const [welcomeTransition, setWelcomeTransition] = useState<{
+    companyId: string
+    legalName: string
+    cnaeText: string
+    phase: number
+  } | null>(null)
+  const openProfileRef = useRef(onOpenProfile)
+  openProfileRef.current = onOpenProfile
+
+  // The 6-second onboarding animation is presentation only: no data is
+  // pretended to be consulted during this interval. The company was saved
+  // successfully before the animation begins.
+  useEffect(() => {
+    if (!welcomeTransition) return
+    const timers = [
+      window.setTimeout(() => setWelcomeTransition((current) =>
+        current ? { ...current, phase: 1 } : null), 2000),
+      window.setTimeout(() => setWelcomeTransition((current) =>
+        current ? { ...current, phase: 2 } : null), 4000),
+      window.setTimeout(() => {
+        setWelcomeTransition(null)
+        openProfileRef.current()
+      }, 6000),
+    ]
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [welcomeTransition?.companyId])
+
+  const skipTransition = () => {
+    setWelcomeTransition(null)
+    openProfileRef.current()
+  }
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -2083,9 +2114,13 @@ function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      // ONB-01: loading animation/wizard are subsequent blocks.
-      // Existing tax profile is the safe transition target.
-      onOpenProfile()
+      const principalCnae = result.establishment.cnaes.find((item) => item.isPrimary)
+      setWelcomeTransition({
+        companyId: result.company.id,
+        legalName: result.company.legalName,
+        cnaeText: principalCnae?.description ?? 'Atividade principal ainda não informada',
+        phase: 0,
+      })
     },
   })
 
@@ -2183,6 +2218,33 @@ function CompanySection({
             </p>
           )}
         </form>
+      )}
+
+      {welcomeTransition && (
+        <Dialog.Root open onOpenChange={(open) => { if (!open) skipTransition() }}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="tp-acervo-help-overlay" />
+            <Dialog.Content className="tp-acervo-help-dialog">
+              <Dialog.Title>Empresa cadastrada com sucesso!</Dialog.Title>
+              <Dialog.Description>
+                {welcomeTransition.legalName}
+              </Dialog.Description>
+              <p role="status" aria-live="polite">
+                {welcomeTransition.phase === 0
+                  ? 'Primeiro sinal captado: sua empresa já faz parte do TriFaros.'
+                  : welcomeTransition.phase === 1
+                    ? 'Atividade principal: ' + welcomeTransition.cnaeText + '. O radar já sabe por onde começar.'
+                    : 'Agora você confirma os produtos, NCMs e demais informações do seu Perfil Tributário.'}
+              </p>
+              <div className="tp-onboarding-steps" aria-label="Etapa do cadastro">
+                <span className="tp-onboarding-progress" style={{ width: ((welcomeTransition.phase + 1) / 3 * 100) + '%' }} />
+              </div>
+              <button className="btn" type="button" onClick={skipTransition}>
+                Continuar para Perfil Tributário
+              </button>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       )}
 
       <div className="tp-company-list">
@@ -3038,7 +3100,12 @@ function TaxProfileSection({
 
       <section className="tp-profile-context">
         <div className="tp-profile-section-title">
-          <h3>Contexto cadastral</h3>
+          <h3>Contexto cadastral automático</h3>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> O que são estes dados?</summary>
+            <p>São informações do cadastro da empresa e de seus estabelecimentos.
+              O CNAE sugere atividades, mas não comprova quais produtos ela comercializa.</p>
+          </details>
         </div>
         <div className="tp-context-grid">
           <article><span>CNPJ da matriz</span><strong>{formatCnpj(company.cnpj)}</strong></article>
@@ -3071,7 +3138,12 @@ function TaxProfileSection({
 
       <section className="tp-profile-declared">
         <div className="tp-profile-section-title">
-          <h3>Contexto fiscal</h3>
+          <h3>Informações fiscais declaradas</h3>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> Como preencher?</summary>
+            <p>Informe o regime tributário e palavras-chave conforme a realidade da empresa.
+              Estes dados são declarados por você, não confirmados por consulta ao CNPJ.</p>
+          </details>
         </div>
         <div className="launch-form-grid">
           <label>
@@ -3098,8 +3170,16 @@ function TaxProfileSection({
 
       <section className="tp-profile-taxonomy">
         <div className="tp-profile-section-title">
-          <h3>Marcadores do perfil</h3>
-          <p>Selecione apenas conceitos que descrevem a empresa e suas operações.</p>
+          <h3>Taxonomia TriFaros</h3>
+          <p>Revise as sugestões por CNAE e selecione somente o que realmente se aplica.
+            Os conceitos vêm da versão publicada da Taxonomia TriFaros.</p>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> Como as sugestões são usadas?</summary>
+            <p>Segmento, produto e NCM são sinais diferentes para comparar o perfil com
+              as legislações. Uma sugestão não significa que a empresa pratica aquela
+              atividade: confirme antes de salvar. Alguns segmentos derivados dos CNAEs
+              também são registrados ao salvar o perfil.</p>
+          </details>
         </div>
 
         {taxonomyOptions.release ? (
