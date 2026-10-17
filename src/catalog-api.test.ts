@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { fetchCatalogArchive, fetchCatalogFacets, fetchCatalogNavigation } from './catalog-api'
+import { fetchCatalogArchive, fetchCatalogFacetOptions, fetchCatalogFacets, fetchCatalogNavigation } from './catalog-api'
 import type { ProductApiFetch } from './product-api'
 
 function okFetch() {
@@ -11,6 +11,23 @@ function okFetch() {
     ),
   )
 }
+
+describe('Acervo facet options stay available across selected filters', () => {
+  it('does not send the selected actType, source or UF to the option catalogue', async () => {
+    const requests: string[] = []
+    const apiFetch: ProductApiFetch = async (input) => {
+      requests.push(String(input))
+      return new Response(JSON.stringify({ ufs: ['GO', 'SP'], sources: [{ code: 'dou', name: 'DOU' }], actTypes: ['Convênio ICMS', 'Lei Complementar'] }), { status: 200 })
+    }
+    const options = await fetchCatalogFacetOptions(apiFetch)
+    expect(options.actTypes).toEqual(['Convênio ICMS', 'Lei Complementar'])
+    const url = new URL(requests[0]!, 'http://x')
+    expect(url.pathname).toBe('/api/v2/archive/facets')
+    for (const key of ['actType', 'source', 'uf', 'q', 'jurisdiction', 'tag']) {
+      expect(url.searchParams.has(key), key + ' must not prune dropdown options').toBe(false)
+    }
+  })
+})
 
 describe('fetchCatalogArchive', () => {
   it('asks for full-text search only when there is a query', async () => {
