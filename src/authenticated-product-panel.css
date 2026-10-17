@@ -2805,3 +2805,14 @@
 }
 .tp-establishment-override .tp-taxonomy-grid { min-width: 0; }
 .tp-establishment-profile select { max-width: 100%; }
+
+.tp-onboarding-welcome {
+  display: grid;
+  gap: .5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(35, 112, 50, .3);
+  border-radius: 12px;
+}
+.tp-onboarding-welcome > p { margin: 0; }
+.tp-onboarding-welcome .btn { justify-self: start; }
