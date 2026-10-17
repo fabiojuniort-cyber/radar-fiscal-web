@@ -8,6 +8,7 @@ import {
   formatOfficialCode,
   saveDimensionRows,
   patchF2DraftSuggestions,
+  patchF2DraftCnaeActuacoes,
   type AliasType,
   type CurationConcept,
   type CurationDimension,
@@ -34,6 +35,7 @@ type RowDraft = {
   displayOrder: string
   /** F2 source suggestions; read-only, never included in curator writes. */
   atuacao: string
+  atuacaoCodes: string[]
   suggestedProducts: string
   suggestedNcms: string
 }
@@ -48,7 +50,7 @@ function splitList(value: string): string[] {
     .filter(Boolean)
 }
 
-function draftFrom(concept: CurationConcept, dimension: CurationDimension, groupLabel: string): RowDraft {
+function draftFrom(concept: CurationConcept, dimension: CurationDimension, groupLabel: string, actuacoes: CurationConcept[]): RowDraft {
   return {
     key: concept.code,
     code: concept.code,
@@ -60,6 +62,8 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
     atuacao: concept.f2Source?.atuacao ?? '',
+    atuacaoCodes: concept.f2Source?.actuacaoCodes ??
+      actuacoes.filter(item=>item.label===concept.f2Source?.atuacao).map(item=>item.code),
     suggestedProducts: concept.f2Source?.suggestedProducts ?? '',
     suggestedNcms: concept.f2Source?.suggestedNcms ?? '',
   }
@@ -162,6 +166,8 @@ export function CurationGrid({
   concepts,
   groups,
   segments = [],
+  actuacoes = [],
+  releaseVersion,
   editable,
   justification,
   showRetired,
@@ -176,6 +182,8 @@ export function CurationGrid({
   groups: CurationGroup[]
   /** Segment concepts: a group's segments show in the first column. */
   segments?: CurationConcept[]
+  actuacoes?: CurationConcept[]
+  releaseVersion?: string
   editable: boolean
   justification: string
   showRetired: boolean
@@ -221,6 +229,8 @@ export function CurationGrid({
   const showSegment =
     SEGMENT_COLUMN_DIMENSIONS.has(dimension.code) && dimension.usesGroups && segments.length > 0
   const isCnae = dimension.code === 'sector' && dimension.officialCodeType === 'CNAE'
+  const canEditActuacao = isCnae && releaseVersion === 'v1.8.0'
+  const actuacaoLabel=new Map(actuacoes.map(item=>[item.code,item.label]))
   const [rowKind, setRowKind] = useState<'cnae' | 'general' | 'all'>(() =>
     isCnae && concepts.some(c => c.officialCodes.some(code => /^\d{7}$/.test(code))) ? 'cnae' : 'all',
   )
@@ -239,8 +249,8 @@ export function CurationGrid({
     () =>
       concepts
         .filter((concept) => showRetired || concept.membershipStatus === 'INCLUDED')
-        .map((concept) => draftFrom(concept, dimension, groupLabel.get(concept.groupId ?? '') ?? '')),
-    [concepts, dimension, groupLabel, showRetired],
+        .map((concept) => draftFrom(concept, dimension, groupLabel.get(concept.groupId ?? '') ?? '',actuacoes)),
+    [concepts, dimension, groupLabel, showRetired, actuacoes],
   )
   const baseByKey = useMemo(() => new Map(baseRows.map((row) => [row.key, row])), [baseRows])
 
@@ -356,6 +366,7 @@ export function CurationGrid({
       classifyByLabel: true,
       displayOrder: '',
       atuacao: '',
+      atuacaoCodes: [],
       suggestedProducts: '',
       suggestedNcms: '',
     }
@@ -396,6 +407,8 @@ export function CurationGrid({
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
+        ...(canEditActuacao && row.code===null && splitList(row.codes).some(code=>/^\d{7}$/.test(code.replace(/\D/g,'')))
+          ? { actuacaoCodes: row.atuacaoCodes } : {}),
         aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
@@ -412,14 +425,34 @@ export function CurationGrid({
           (edits[key]?.suggestedProducts!==originalByCode.get(key)?.suggestedProducts||
            edits[key]?.suggestedNcms!==originalByCode.get(key)?.suggestedNcms))
       : []
+    const actuacaoEdits = canEditActuacao
+      ? editedKeys.filter(key=>!retire.has(key) && JSON.stringify(edits[key]?.atuacaoCodes)!==JSON.stringify(originalByCode.get(key)?.atuacaoCodes))
+      : []
+    if(actuacaoEdits.some(key=>(edits[key]?.atuacaoCodes.length??0)<1)){
+      setMessage({kind:'error',text:'Cada CNAE precisa manter pelo menos uma Atuação.'})
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
+      const changedRows=rows.filter(row=>{
+        const original=originalByCode.get(row.code??'')
+        const edited=edits[row.code??'']
+        return !original||!edited||
+          JSON.stringify({...original,atuacao:'',atuacaoCodes:[]})!==
+          JSON.stringify({...edited,atuacao:'',atuacaoCodes:[]})
+      })
       const result = await saveDimensionRows(apiFetch, dimension.code, justification, {
-        rows,
+        rows:changedRows,
         retire: [...retire],
         groupSegments: changedSegments.map(([, edit]) => ({ group: edit.group.trim(), segmentCodes: edit.codes })),
       })
+      for (const key of actuacaoEdits) {
+        const row=edits[key]!
+        const cnae=splitList(row.codes).find(code=>/^\d{7}$/.test(code.replace(/\D/g,'')))
+        if(!cnae)throw Error('CNAE obrigatório para vincular Atuação.')
+        await patchF2DraftCnaeActuacoes(apiFetch,cnae.replace(/\D/g,''),justification,row.atuacaoCodes)
+      }
       for (const key of suggestionEdits) {
         const row=edits[key]!
         await patchF2DraftSuggestions(apiFetch,key,justification,{
@@ -655,7 +688,21 @@ export function CurationGrid({
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
                       {key==='atuacao'
-                         ? (row[key] || <span className="tc-source-pending">—</span>)
+                         ? <SynonymCell
+                             aliases={(row.atuacaoCodes.length?row.atuacaoCodes:canEditActuacao?[]:splitList(row.atuacao))
+                               .map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                             editable={canEditActuacao&&rowEditable}
+                             cellId={`${row.key}:atuacao`}
+                             noun="Atuação"
+                             suggestions={actuacoes.filter(item=>item.membershipStatus==='INCLUDED')
+                               .map(item=>({text:item.code,label:item.label}))}
+                             displayText={code=>actuacaoLabel.get(code)??code}
+                             minItems={1}
+                             onChange={items=>updateRow(row,{
+                               atuacaoCodes:items.map(item=>item.text),
+                               atuacao:items.map(item=>actuacaoLabel.get(item.text)??item.text).join(', '),
+                             })}
+                           />
                          : <SynonymCell
                              aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
                              editable={rowEditable&&row.code!==null}
@@ -786,7 +833,7 @@ export function CurationGrid({
       </nav>}
       {isCnae && (
         <p className="tc-hint">
-          Atuação, Produtos sugeridos e NCMs sugeridos são campos de origem F2 (somente leitura).
+          Produtos sugeridos e NCMs sugeridos são dados da fonte F2; Atuação admite múltiplos vínculos apenas no rascunho v1.8.0.
           Traço indica ausência de vínculo auditado por CNAE na versão exibida;
           a carga isolada T03 não publica esses dados automaticamente.
         </p>
@@ -806,6 +853,7 @@ export function SynonymCell({
   cellId,
   onChange,
   noun='sinônimo',
+  minItems=0,
   suggestions,
   displayText,
   truncateChipLabels = false,
@@ -815,6 +863,7 @@ export function SynonymCell({
   cellId: string
   onChange: (aliases: Alias[]) => void
   noun?: string
+  minItems?: number
   suggestions?: Array<{text:string;label:string}>
   displayText?: (value:string)=>string
   truncateChipLabels?: boolean
@@ -855,7 +904,9 @@ export function SynonymCell({
             <button
               type="button"
               aria-label={`Remover ${noun} ${alias.text}`}
-              onClick={() => onChange(aliases.filter((item) => item !== alias))}
+              disabled={aliases.length<=minItems}
+              title={aliases.length<=minItems?'Mantenha pelo menos uma Atuação.':undefined}
+              onClick={() => {if(aliases.length>minItems)onChange(aliases.filter((item) => item !== alias))}}
             >
               <X size={11} />
             </button>
@@ -880,7 +931,7 @@ export function SynonymCell({
             if (event.key === 'Enter') {
               event.preventDefault()
               add(text)
-            } else if (event.key === 'Backspace' && !text && aliases.length) {
+            } else if (event.key === 'Backspace' && !text && aliases.length>minItems) {
               onChange(aliases.slice(0, -1))
             }
           }}

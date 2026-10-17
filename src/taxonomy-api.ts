@@ -97,12 +97,14 @@ export type CurationConcept = {
   helpText: string | null
   classifyByLabel: boolean
   officialCodes: string[]
+  actuacaoCodes?: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   /** Optional, evidence-backed CNAE source data. Absent until approved
    * T03 staging is explicitly linked by the API; not a classification result.
    */
   f2Source?: {
     atuacao: string
+    actuacaoCodes?: string[]
     suggestedProducts: string
     suggestedNcms: string
   } | null
@@ -453,6 +455,21 @@ export async function patchF2DraftSuggestions(
     await apiFetch(
       `${ADMIN}/drafts/current/f2-suggestions/${encodeURIComponent(conceptCode)}`,
       jsonInit('PATCH', { justification, ...input }),
+    ),
+  )
+}
+
+/** Curator-only change for a CNAE of the v1.8.0 draft. Origin XLSX stays immutable. */
+export async function patchF2DraftCnaeActuacoes(
+  apiFetch: ProductApiFetch,
+  cnaeCode: string,
+  justification: string,
+  actuacaoCodes: string[],
+) {
+  return readJson<{draftId:string;cnaeCode:string;actuacaoCodes:string[];published:false}>(
+    await apiFetch(
+      `${ADMIN}/drafts/current/cnaes/${encodeURIComponent(cnaeCode)}/actuacoes`,
+      jsonInit('PATCH',{justification,actuacaoCodes}),
     ),
   )
 }
