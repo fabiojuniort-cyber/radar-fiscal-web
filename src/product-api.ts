@@ -201,6 +201,13 @@ export type TaxProfile = {
     keywords?: string[]
     /** NCMs of the card NCM, compared with the NCMs that legislation mentions. */
     ncmCodes?: string[]
+    /** Optional overrides by active establishment; otherwise inherit company profile. */
+    establishmentOverrides?: Array<{
+      establishmentId: string
+      taxRegime: string
+      conceptCodes: string[]
+      ncmCodes: string[]
+    }>
     taxonomy?: {
       releaseId: string
       releaseVersion: string
@@ -715,6 +722,12 @@ export async function saveTaxProfile(
       obligations: string[]
       keywords: string[]
       ncmCodes: string[]
+      establishmentOverrides?: Array<{
+        establishmentId: string
+        taxRegime: string
+        conceptCodes: string[]
+        ncmCodes: string[]
+      }>
       taxonomy: {
         releaseId: string
         releaseVersion: string
