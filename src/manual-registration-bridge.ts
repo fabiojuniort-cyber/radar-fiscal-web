@@ -10,6 +10,8 @@ export type ManualRegistrationCommon = {
   searchCnaes?: (term: string) => Promise<ManualCnaeOption[]>
   cnpj: string
   businessLocationCode?: string | null
+  /** Sanitized status of the preceding automatic registry lookup. */
+  lookupFailure?: { code: string; httpStatus: number }
 }
 
 export type ManualCompanyForm = {
