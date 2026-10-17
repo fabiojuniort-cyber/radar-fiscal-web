@@ -303,9 +303,23 @@ export function ManualRegistrationHost() {
           <h2 id="tp-manual-title">
             Continuar manualmente
           </h2>
+          {request.lookupFailure && (
+            <p role="alert" className="auth-error">
+              {request.lookupFailure.code === 'cnpj_not_found'
+                ? 'A consulta cadastral não localizou este CNPJ nas fontes consultadas.'
+                : request.lookupFailure.code === 'cnpj_provider_invalid_response'
+                  ? 'A API de consulta CNPJ retornou dados inválidos.'
+                  : request.lookupFailure.code === 'reactivation_required'
+                    ? 'Há um cadastro anterior com este CNPJ. A operação requer verificação.'
+                    : request.lookupFailure.code === 'invalid_cnae'
+                      ? 'A API retornou CNAE não validado no catálogo oficial.'
+                      : 'A API de consulta CNPJ está temporariamente indisponível.'}
+              {' Código: ' + request.lookupFailure.code + ' · HTTP ' + request.lookupFailure.httpStatus + '.'}
+            </p>
+          )}
           <p>
-            A consulta automática do CNPJ não respondeu. Você pode concluir o cadastro
-            agora e atualizar os dados cadastrais por uma nova consulta depois.
+            Você pode concluir o cadastro manualmente agora e atualizar os dados
+            cadastrais com uma nova consulta depois.
           </p>
         </div>
 
