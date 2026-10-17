@@ -2782,3 +2782,26 @@
 @media (prefers-reduced-motion: reduce) {
   .tp-onboarding-progress { transition: none; }
 }
+
+/* ONB-02 P07 — establishment-level overrides remain visually distinct from
+   company-wide defaults and retain full usability on narrow mobile widths. */
+.tp-establishment-profile {
+  display: grid;
+  gap: 1rem;
+}
+.tp-establishment-profile > label,
+.tp-establishment-override > label {
+  display: grid;
+  gap: .35rem;
+  max-width: 520px;
+}
+.tp-establishment-override {
+  display: grid;
+  gap: .9rem;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(37,87,70,.22));
+  padding: clamp(.85rem,2vw,1.35rem);
+}
+.tp-establishment-override .tp-taxonomy-grid { min-width: 0; }
+.tp-establishment-profile select { max-width: 100%; }
