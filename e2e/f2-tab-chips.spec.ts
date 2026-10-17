@@ -1,12 +1,12 @@
 import {expect,test,type Page} from '@playwright/test'
 
 /** F2-TAB-01: frontend-only e2e; all API calls mocked, zero DB writes. */
-async function setup(page:Page,largeProduct=false){
+async function setup(page:Page,largeProduct=false,atuacaoV18=false){
   await page.route('**/auth/refresh',r=>r.fulfill({json:{accessToken:'admin-token',tokenType:'Bearer',expiresIn:900}}))
   await page.route('**/auth/me',r=>r.fulfill({json:{user:{id:'admin',email:'admin@example.test'},memberships:[]}}))
   await page.route('**/api/v1/admin/me',r=>r.fulfill({json:{platformAdmin:true,taxonomyCurator:true,licenseBypass:true,curatorDatabase:true}}))
-  const release={id:'52791d3b-afdc-496f-8ada-c6cd5c819dff',version:'v1.7.0',status:'DRAFT',createdAt:'2026-10-15T01:00:00Z',publishedAt:null}
-  const state={published:{...release,id:'published',version:'v1.6.0',status:'PUBLISHED'},draft:release,
+  const release={id:'52791d3b-afdc-496f-8ada-c6cd5c819dff',version:atuacaoV18?'v1.8.0':'v1.7.0',status:'DRAFT',createdAt:'2026-10-15T01:00:00Z',publishedAt:null}
+  const state={published:{...release,id:'published',version:atuacaoV18?'v1.7.0':'v1.6.0',status:'PUBLISHED'},draft:release,
     curatorDatabase:true,settings:{classificationEnabled:false,classificationExcludedSources:[]},
     progress:{total:0,classified:0,pending:0,withoutTags:0,failed:0,excluded:0},catalogs:[]}
   const dimensions=[
@@ -17,6 +17,7 @@ async function setup(page:Page,largeProduct=false){
       officialCodeType:null,usesGroups:false,detailSection:'Benefícios',detailOrder:1,conceptCount:1,
       helpText:'',description:null,revisionNo:1,configured:true},
   ]
+  if(atuacaoV18)dimensions.push({id:'d-act',code:'actuacao',name:'Atuação',profileVisible:false,profileOrder:9,officialCodeType:null,usesGroups:false,detailSection:'Atuação',detailOrder:9,conceptCount:2,helpText:'',description:null,revisionNo:1,configured:true})
   if(largeProduct)dimensions.push({id:'d-product',code:'product',name:'Produto',
     profileVisible:true,profileOrder:3,officialCodeType:'NCM',usesGroups:true,
     detailSection:'Produtos',detailOrder:3,conceptCount:4208,helpText:'',description:null,
@@ -31,9 +32,14 @@ async function setup(page:Page,largeProduct=false){
     {...base,releaseConceptId:'rc-cnae',code:'sector.cnae_0111301',dimensionCode:'sector',
       label:'Cultivo de arroz',groupId:'g1',groupCode:'graos',officialCodes:['0111301'],
       aliases:[{text:'plantação de arroz',aliasType:'EXACT_LEXICAL'}],
+      ...(atuacaoV18?{atuacaoCodes:['actuacao.produtor_rural']}:{}),
       f2Source:{atuacao:'Produtor rural',suggestedProducts:'Arroz;Milho',suggestedNcms:'1006;100590'}},
     {...base,releaseConceptId:'rc-trt',code:'treatment.example',dimensionCode:'treatment',label:'Antigo'},
   ]
+  if(atuacaoV18)concepts.push(
+    {...base,releaseConceptId:'rc-act1',code:'actuacao.produtor_rural',dimensionCode:'actuacao',label:'Produtor rural'},
+    {...base,releaseConceptId:'rc-act2',code:'actuacao.servico',dimensionCode:'actuacao',label:'Serviço'},
+  )
   if(largeProduct)for(let i=0;i<4208;i++)concepts.push({
     ...base,releaseConceptId:`rc-product-${i}`,code:`product.item_${i}`,
     dimensionCode:'product',label:`Produto ${String(i).padStart(4,'0')}`,
@@ -44,6 +50,12 @@ async function setup(page:Page,largeProduct=false){
   const view={release,dimensions,concepts,groups}
   await page.route('**/api/v1/admin/taxonomy/**',r=>{
     const url=new URL(r.request().url())
+    if(url.pathname.includes('/cnaes/')&&url.pathname.endsWith('/actuacoes')&&r.request().method()==='PATCH'){
+      const input=r.request().postDataJSON() as {atuacaoCodes:string[]}
+      if(input.atuacaoCodes.length===0)return r.fulfill({status:422,json:{error:'f2_tab03_last_actuacao_required'}})
+      Object.assign(concepts[2],{atuacaoCodes:input.atuacaoCodes})
+      return r.fulfill({json:{atuacaoCodes:input.atuacaoCodes,published:false}})
+    }
     if(url.pathname.endsWith('/state'))return r.fulfill({json:state})
     if(url.pathname.endsWith('/releases/'+release.id))return r.fulfill({json:view})
     return r.fulfill({status:403,json:{error:'readonly_playwright_test'}})
@@ -116,4 +128,19 @@ test('F2-TAB-02 B1/B3: Produto Item chips + página com 4208 conceitos abre até
   await expect(row.getByRole('button',{name:'Remover item Produto equivalente'})).toBeVisible()
   await row.getByRole('button',{name:'Remover item Produto equivalente'}).click()
   await expect(row.getByRole('button',{name:'Remover item Produto equivalente'})).toHaveCount(0)
+})
+
+test('F2-TAB-03: CNAE aceita várias Atuações, bloqueia remover a última e preserva v1.7',async({page})=>{
+  const row=await setup(page,false,true)
+  const add=row.getByRole('combobox',{name:'Adicionar Atuação'})
+  await expect(row.getByRole('button',{name:'Remover Atuação actuacao.produtor_rural'})).toBeDisabled()
+  await add.fill('Serviço')
+  await add.press('Enter')
+  await expect(row.getByRole('button',{name:'Remover Atuação actuacao.servico'})).toBeVisible()
+  await row.getByRole('button',{name:'Remover Atuação actuacao.servico'}).click()
+  await expect(row.getByRole('button',{name:'Remover Atuação actuacao.produtor_rural'})).toBeDisabled()
+  // Subsegmento has an HTML datalist, so its accessible role is combobox (one value).
+  await expect(row.getByRole('combobox',{name:'Subsegmento'})).toHaveValue('Grãos')
+  await expect(row.getByText('Agropecuária – Grãos',{exact:true})).toHaveCount(0)
+  await expect(page.getByRole('button',{name:/Segmento.*\d+ itens/})).toBeVisible()
 })

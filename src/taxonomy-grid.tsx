@@ -8,6 +8,7 @@ import {
   formatOfficialCode,
   saveDimensionRows,
   patchF2DraftSuggestions,
+  patchCnaeActuacoes,
   type AliasType,
   type CurationConcept,
   type CurationDimension,
@@ -34,6 +35,7 @@ type RowDraft = {
   displayOrder: string
   /** F2 source suggestions; read-only, never included in curator writes. */
   atuacao: string
+  atuacaoCodes: string[]
   suggestedProducts: string
   suggestedNcms: string
 }
@@ -60,6 +62,7 @@ function draftFrom(concept: CurationConcept, dimension: CurationDimension, group
     classifyByLabel: concept.classifyByLabel,
     displayOrder: concept.displayOrder === null ? '' : String(concept.displayOrder),
     atuacao: concept.f2Source?.atuacao ?? '',
+    atuacaoCodes: concept.atuacaoCodes ?? [],
     suggestedProducts: concept.f2Source?.suggestedProducts ?? '',
     suggestedNcms: concept.f2Source?.suggestedNcms ?? '',
   }
@@ -162,6 +165,8 @@ export function CurationGrid({
   concepts,
   groups,
   segments = [],
+  actuacoes = [],
+  releaseVersion,
   editable,
   justification,
   showRetired,
@@ -176,6 +181,8 @@ export function CurationGrid({
   groups: CurationGroup[]
   /** Segment concepts: a group's segments show in the first column. */
   segments?: CurationConcept[]
+  actuacoes?: CurationConcept[]
+  releaseVersion?: string
   editable: boolean
   justification: string
   showRetired: boolean
@@ -233,7 +240,21 @@ export function CurationGrid({
   const [sort, setSort] = useState<{ column: ColumnKey; direction: 1 | -1 } | null>(null)
   const [filters, setFilters] = useState<Partial<Record<ColumnKey, string>>>({})
   const [saving, setSaving] = useState(false)
+  const [savingActuacao,setSavingActuacao] = useState<string|null>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+
+  const saveActuacoes=async(row:RowDraft,atuacaoCodes:string[])=>{
+    if(!row.code||releaseVersion!=='v1.8.0'||atuacaoCodes.length<1||
+       atuacaoCodes.some(code=>!actuacoes.some(item=>item.code===code)))return
+    setSavingActuacao(row.key)
+    setMessage(null)
+    try{
+      await patchCnaeActuacoes(apiFetch,row.code,justification,atuacaoCodes)
+      await onChanged()
+    }catch(error){
+      setMessage({kind:'error',text:errorText(error)})
+    }finally{setSavingActuacao(null)}
+  }
 
   const baseRows = useMemo(
     () =>
@@ -356,6 +377,7 @@ export function CurationGrid({
       classifyByLabel: true,
       displayOrder: '',
       atuacao: '',
+      atuacaoCodes: [],
       suggestedProducts: '',
       suggestedNcms: '',
     }
@@ -396,6 +418,7 @@ export function CurationGrid({
         ...(dimension.usesGroups ? { group: row.group.trim() || null } : {}),
         label: row.label.trim(),
         officialCodes: splitList(row.codes),
+        ...(isCnae&&row.code===null&&releaseVersion==='v1.8.0' ? {atuacaoCodes:row.atuacaoCodes} : {}),
         aliases: row.aliases,
         profileVisible: row.profileVisible,
         classifyByLabel: row.classifyByLabel,
@@ -655,7 +678,22 @@ export function CurationGrid({
                   {isCnae && (['atuacao', 'suggestedProducts', 'suggestedNcms'] as const).map((key) => (
                     <td className="is-f2-source" key={key} title={row[key] || 'Sem vínculo auditado com a fonte F2 nesta versão'}>
                       {key==='atuacao'
-                         ? (row[key] || <span className="tc-source-pending">—</span>)
+                         ? (row.atuacaoCodes.length>0 || (rowEditable&&releaseVersion==='v1.8.0'))
+                           ? <SynonymCell
+                               aliases={row.atuacaoCodes.map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
+                               editable={rowEditable&&releaseVersion==='v1.8.0'&&savingActuacao!==row.key}
+                               minItems={1}
+                               cellId={`${row.key}:atuacao`}
+                               noun="Atuação"
+                               suggestions={actuacoes.filter(item=>item.membershipStatus==='INCLUDED').map(item=>({text:item.code,label:item.label}))}
+                               displayText={code=>actuacoes.find(item=>item.code===code)?.label??code}
+                               onChange={items=>{
+                                 const codes=items.map(item=>item.text)
+                                 if(row.code===null)updateRow(row,{atuacaoCodes:codes})
+                                 else void saveActuacoes(row,codes)
+                               }}
+                             />
+                           : (row[key] || <span className="tc-source-pending">—</span>)
                          : <SynonymCell
                              aliases={splitList(row[key]).map(text=>({text,aliasType:'EXACT_LEXICAL' as AliasType}))}
                              editable={rowEditable&&row.code!==null}
@@ -786,7 +824,7 @@ export function CurationGrid({
       </nav>}
       {isCnae && (
         <p className="tc-hint">
-          Atuação, Produtos sugeridos e NCMs sugeridos são campos de origem F2 (somente leitura).
+          Atuação pode ser editada no rascunho v1.8.0; Produtos e NCMs sugeridos são campos de origem F2.
           Traço indica ausência de vínculo auditado por CNAE na versão exibida;
           a carga isolada T03 não publica esses dados automaticamente.
         </p>
@@ -809,6 +847,7 @@ export function SynonymCell({
   suggestions,
   displayText,
   truncateChipLabels = false,
+  minItems=0,
 }: {
   aliases: Alias[]
   editable: boolean
@@ -818,6 +857,7 @@ export function SynonymCell({
   suggestions?: Array<{text:string;label:string}>
   displayText?: (value:string)=>string
   truncateChipLabels?: boolean
+  minItems?: number
 }) {
   const [text, setText] = useState('')
   const knownSuggestions = new Map((suggestions??[]).flatMap(item=>[
@@ -854,8 +894,9 @@ export function SynonymCell({
           {editable && (
             <button
               type="button"
+              disabled={aliases.length<=minItems}
               aria-label={`Remover ${noun} ${alias.text}`}
-              onClick={() => onChange(aliases.filter((item) => item !== alias))}
+              onClick={() => {if(aliases.length>minItems)onChange(aliases.filter((item) => item !== alias))}}
             >
               <X size={11} />
             </button>
@@ -881,7 +922,7 @@ export function SynonymCell({
               event.preventDefault()
               add(text)
             } else if (event.key === 'Backspace' && !text && aliases.length) {
-              onChange(aliases.slice(0, -1))
+              if(aliases.length>minItems)onChange(aliases.slice(0, -1))
             }
           }}
           onBlur={() => add(text)}

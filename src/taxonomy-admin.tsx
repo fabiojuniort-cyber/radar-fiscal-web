@@ -760,6 +760,8 @@ function DimensionEditor({
         concepts={dimensionConcepts}
         groups={groups}
         segments={segments}
+        actuacoes={view.concepts.filter(item=>item.dimensionCode==='actuacao')}
+        releaseVersion={view.release.version}
         editable={editable}
         justification={justification}
         showRetired={showRetired}

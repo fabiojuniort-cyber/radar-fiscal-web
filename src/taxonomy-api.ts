@@ -98,6 +98,8 @@ export type CurationConcept = {
   classifyByLabel: boolean
   officialCodes: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
+  /** v1.8+ release-scoped CNAE → Atuação codes (1 or more). */
+  atuacaoCodes?: string[]
   /** Optional, evidence-backed CNAE source data. Absent until approved
    * T03 staging is explicitly linked by the API; not a classification result.
    */
@@ -293,6 +295,20 @@ export async function createCurationDraft(apiFetch: ProductApiFetch, justificati
   )
 }
 
+/** F2-TAB-03: saves 1+ Atuação concepts for one CNAE in draft v1.8.0 only. */
+export async function patchCnaeActuacoes(
+  apiFetch:ProductApiFetch,
+  conceptCode:string,
+  justification:string,
+  atuacaoCodes:string[],
+):Promise<{cnaeCode:string;atuacaoCodes:string[];reusedExisting:boolean;published:false}> {
+  const response=await apiFetch(
+    `${ADMIN}/drafts/current/cnaes/${encodeURIComponent(conceptCode)}/actuacoes`,
+    jsonInit('PATCH',{justification,atuacaoCodes}),
+  )
+  return readJson(response)
+}
+
 // F2-T02: creates an independent Atuação dimension only in the current draft.
 // No publication or automatic lexical classification is triggered by this call.
 export async function initializeF2Actuacao(apiFetch: ProductApiFetch, justification: string) {
@@ -462,6 +478,7 @@ export type GridRowInput = {
   group?: string | null
   label: string
   officialCodes: string[]
+  atuacaoCodes?: string[]
   aliases: Array<{ text: string; aliasType: AliasType }>
   profileVisible: boolean
   classifyByLabel: boolean
