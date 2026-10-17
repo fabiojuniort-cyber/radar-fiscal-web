@@ -2172,6 +2172,28 @@ function CompanySection({
         </form>
       )}
 
+      {createMutation.isError && createMutation.error.message !== 'manual_registration_cancelled' && (
+        <Dialog.Root open onOpenChange={(open) => { if (!open) createMutation.reset() }}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="tp-acervo-help-overlay" />
+            <Dialog.Content className="tp-acervo-help-dialog">
+              <Dialog.Title>Erro na consulta do CNPJ</Dialog.Title>
+              <Dialog.Description>
+                {registrationErrorMessage(createMutation.error, 'empresa')}
+                {' '}Confira o CNPJ ou tente novamente. Se a fonte oficial estiver indisponível,
+                use o cadastro manual quando ele for oferecido.
+              </Dialog.Description>
+              {/^[a-z][a-z0-9_]{0,63}$/.test(createMutation.error.message) && (
+                <p>Referência do erro: {createMutation.error.message}</p>
+              )}
+              <Dialog.Close asChild>
+                <button className="btn" type="button">Entendi</button>
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
       <div className="tp-company-list">
         {account.companies.map((company) => (
           <article
