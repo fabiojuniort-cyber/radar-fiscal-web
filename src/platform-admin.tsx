@@ -20,6 +20,7 @@ import {
   type PlatformAdministrator,
 } from './platform-admin-api'
 import { fetchAdminMe } from './taxonomy-api'
+import { DouDownloadLimitsCard } from './dou-download-limits-card'
 import './platform-admin.css'
 
 const ERROR_TEXT: Record<string, string> = {
@@ -165,6 +166,8 @@ export function PlatformAdministratorsPage({
             licença. O último administrador ativo nunca pode ser removido.
           </p>
         </section>
+
+        <DouDownloadLimitsCard apiFetch={apiFetch} />
 
         <section className="pa-card">
           <div className="pa-card-heading">
