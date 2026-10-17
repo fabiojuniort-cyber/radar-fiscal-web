@@ -26,7 +26,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -2074,38 +2073,6 @@ function CompanySection({
   const [editLegalName, setEditLegalName] = useState('')
   const [editBusinessLocationCode, setEditBusinessLocationCode] = useState('')
   const [deleteCandidate, setDeleteCandidate] = useState<AccountCompany | null>(null)
-  const [welcomeTransition, setWelcomeTransition] = useState<{
-    companyId: string
-    legalName: string
-    cnaeText: string
-    phase: number
-  } | null>(null)
-  const openProfileRef = useRef(onOpenProfile)
-  openProfileRef.current = onOpenProfile
-
-  // The 6-second onboarding animation is presentation only: no data is
-  // pretended to be consulted during this interval. The company was saved
-  // successfully before the animation begins.
-  useEffect(() => {
-    if (!welcomeTransition) return
-    const timers = [
-      window.setTimeout(() => setWelcomeTransition((current) =>
-        current ? { ...current, phase: 1 } : null), 2000),
-      window.setTimeout(() => setWelcomeTransition((current) =>
-        current ? { ...current, phase: 2 } : null), 4000),
-      window.setTimeout(() => {
-        setWelcomeTransition(null)
-        openProfileRef.current()
-      }, 6000),
-    ]
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [welcomeTransition?.companyId])
-
-  const skipTransition = () => {
-    setWelcomeTransition(null)
-    openProfileRef.current()
-  }
-
   const createMutation = useMutation({
     mutationFn: () =>
       createCompanyFromCnpj(apiFetch, tenantId, cnpj, businessLocationCode),
@@ -2116,12 +2083,15 @@ function CompanySection({
       setBusinessLocationCode('')
       onChanged()
       const principalCnae = result.establishment.cnaes.find((item) => item.isPrimary)
-      setWelcomeTransition({
-        companyId: result.company.id,
-        legalName: result.company.legalName,
-        cnaeText: principalCnae?.description ?? 'Atividade principal ainda não informada',
-        phase: 0,
-      })
+      try {
+        sessionStorage.setItem('tribusca.onboarding.welcome', JSON.stringify({
+          companyId: result.company.id,
+          cnaeText: principalCnae?.description ?? 'Atividade principal ainda não informada',
+        }))
+      } catch {
+        // The profile remains available even when session storage is disabled.
+      }
+      onOpenProfile()
     },
   })
 
@@ -2219,33 +2189,6 @@ function CompanySection({
             </p>
           )}
         </form>
-      )}
-
-      {welcomeTransition && (
-        <Dialog.Root open onOpenChange={(open) => { if (!open) skipTransition() }}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="tp-acervo-help-overlay" />
-            <Dialog.Content className="tp-acervo-help-dialog">
-              <Dialog.Title>Empresa cadastrada com sucesso!</Dialog.Title>
-              <Dialog.Description>
-                {welcomeTransition.legalName}
-              </Dialog.Description>
-              <p role="status" aria-live="polite">
-                {welcomeTransition.phase === 0
-                  ? 'Primeiro sinal captado: sua empresa já faz parte do TriFaros.'
-                  : welcomeTransition.phase === 1
-                    ? 'Atividade principal: ' + welcomeTransition.cnaeText + '. O radar já sabe por onde começar.'
-                    : 'Agora você confirma os produtos, NCMs e demais informações do seu Perfil Tributário.'}
-              </p>
-              <div className="tp-onboarding-steps" aria-label="Etapa do cadastro">
-                <span className="tp-onboarding-progress" style={{ width: ((welcomeTransition.phase + 1) / 3 * 100) + '%' }} />
-              </div>
-              <button className="btn" type="button" onClick={skipTransition}>
-                Continuar para Perfil Tributário
-              </button>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
       )}
 
       <div className="tp-company-list">
@@ -2869,6 +2812,37 @@ function TaxProfileSection({
       : establishments[0]?.id ?? '')
   }, [establishments])
   const [segmentRemoval, setSegmentRemoval] = useState<DerivedTag | null>(null)
+  const [profileWelcome, setProfileWelcome] = useState<{
+    companyId: string; cnaeText: string; phase: number
+  } | null>(null)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('tribusca.onboarding.welcome')
+      const value = raw ? JSON.parse(raw) as { companyId: string; cnaeText: string } : null
+      setProfileWelcome(value?.companyId === company.id
+        ? { companyId: value.companyId, cnaeText: value.cnaeText, phase: 0 }
+        : null)
+    } catch { setProfileWelcome(null) }
+  }, [company.id])
+  useEffect(() => {
+    if (!profileWelcome) return
+    const timers = [
+      window.setTimeout(() => setProfileWelcome((current) =>
+        current ? { ...current, phase: 1 } : null), 2000),
+      window.setTimeout(() => setProfileWelcome((current) =>
+        current ? { ...current, phase: 2 } : null), 4000),
+      window.setTimeout(() => {
+        try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
+        setProfileWelcome(null)
+      }, 6000),
+    ]
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [profileWelcome?.companyId])
+  const dismissProfileWelcome = () => {
+    try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
+    setProfileWelcome(null)
+  }
+
 
   useEffect(() => {
     setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
@@ -3139,6 +3113,24 @@ function TaxProfileSection({
         </div>
         {profile && <span className="tp-profile-version">Perfil v{profile.versionNo}</span>}
       </div>
+
+      {profileWelcome && (
+        <section className="tp-onboarding-welcome" role="status" aria-live="polite">
+          <strong>Empresa cadastrada com sucesso!</strong>
+          <p>
+            {profileWelcome.phase === 0
+              ? 'Primeiro sinal captado: sua empresa já faz parte do TriFaros.'
+              : profileWelcome.phase === 1
+                ? 'Atividade principal: ' + profileWelcome.cnaeText + '. O radar já sabe por onde começar.'
+                : 'Agora revise produtos, NCMs e outras informações reais do seu Perfil Tributário.'}
+          </p>
+          <div className="tp-onboarding-steps" aria-hidden="true">
+            <span className="tp-onboarding-progress"
+              style={{ width: ((profileWelcome.phase + 1) / 3 * 100) + '%' }} />
+          </div>
+          <button type="button" className="btn" onClick={dismissProfileWelcome}>Dispensar boas-vindas</button>
+        </section>
+      )}
 
       <section className="tp-profile-context">
         <div className="tp-profile-section-title">
