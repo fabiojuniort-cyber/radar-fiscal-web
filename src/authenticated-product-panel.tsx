@@ -2843,6 +2843,31 @@ function TaxProfileSection({
     ) as Record<string, string>
   const [cnaeSegments, setCnaeSegments] = useState<Record<string, string>>(savedCnaeSegments)
   const [profileNcms, setProfileNcms] = useState<string[]>(() => profile?.personalization.ncmCodes ?? [])
+  type UnitOverride = { taxRegime: string; conceptCodes: string[]; ncmCodes: string[] }
+  const emptyOverride = (): UnitOverride =>
+    ({ taxRegime: 'NAO_INFORMADO', conceptCodes: [], ncmCodes: [] })
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, UnitOverride>>(
+    () => Object.fromEntries(
+      (profile?.personalization.establishmentOverrides ?? [])
+        .map((unit) => [unit.establishmentId, {
+          taxRegime: unit.taxRegime,
+          conceptCodes: unit.conceptCodes,
+          ncmCodes: unit.ncmCodes,
+        }]),
+    ),
+  )
+  const [unitId, setUnitId] = useState(establishments[0]?.id ?? '')
+  const updateUnit = (id: string, update: (current: UnitOverride) => UnitOverride) => {
+    setUnitOverrides((current) => ({
+      ...current,
+      [id]: update(current[id] ?? emptyOverride()),
+    }))
+  }
+  useEffect(() => {
+    setUnitId((current) => establishments.some((unit) => unit.id === current)
+      ? current
+      : establishments[0]?.id ?? '')
+  }, [establishments])
   const [segmentRemoval, setSegmentRemoval] = useState<DerivedTag | null>(null)
 
   useEffect(() => {
@@ -2855,6 +2880,14 @@ function TaxProfileSection({
       ),
     )
     setProfileNcms(profile?.personalization.ncmCodes ?? [])
+    setUnitOverrides(Object.fromEntries(
+      (profile?.personalization.establishmentOverrides ?? [])
+        .map((unit) => [unit.establishmentId, {
+          taxRegime: unit.taxRegime,
+          conceptCodes: unit.conceptCodes,
+          ncmCodes: unit.ncmCodes,
+        }]),
+    ))
   }, [profile])
 
   // TAX-11: the API returns only the dimensions the curator made visible, in
@@ -3025,6 +3058,14 @@ function TaxProfileSection({
           obligations: selectedLabels('obligation'),
           keywords: splitCsv(keywords),
           ncmCodes: profileNcms,
+          establishmentOverrides: Object.entries(unitOverrides)
+            .filter(([id]) => establishments.some((unit) => unit.id === id && unit.isActive))
+            .map(([establishmentId, values]) => ({
+              establishmentId,
+              taxRegime: values.taxRegime,
+              conceptCodes: [...new Set(values.conceptCodes)].sort(),
+              ncmCodes: [...new Set(values.ncmCodes)].sort(),
+            })),
           taxonomy: taxonomyOptions.release
             ? {
                 releaseId: taxonomyOptions.release.id,
@@ -3219,6 +3260,92 @@ function TaxProfileSection({
             <strong>Taxonomia indisponível</strong>
           </div>
         )}
+      </section>
+
+      <section className="tp-profile-taxonomy tp-establishment-profile">
+        <div className="tp-profile-section-title">
+          <h3>Particularidades dos estabelecimentos</h3>
+          <p>O perfil da empresa é o padrão. Aqui você pode registrar características
+            específicas de uma matriz ou filial, sem alterar as demais.</p>
+        </div>
+        <label>
+          Estabelecimento
+          <select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
+            {establishments.filter((unit) => unit.isActive).map((unit) => (
+              <option value={unit.id} key={unit.id}>
+                {unit.name} · {unit.uf} · {formatCnpj(unit.cnpj)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {establishments.filter((unit) => unit.isActive).map((unit) => {
+          if (unit.id !== unitId) return null
+          const current = unitOverrides[unit.id] ?? emptyOverride()
+          const selectedForUnit = new Set(current.conceptCodes)
+          const relevantDimensions = profileDimensions.filter((dim) =>
+            ['sector', 'product', 'operation', 'tax', 'document', 'obligation'].includes(dim.code))
+          const toggle = (code: string) => updateUnit(unit.id, (value) => ({
+            ...value,
+            conceptCodes: value.conceptCodes.includes(code)
+              ? value.conceptCodes.filter((item) => item !== code)
+              : [...value.conceptCodes, code],
+          }))
+          const setManyUnit = (codes: string[], checked: boolean) => {
+            updateUnit(unit.id, (value) => ({
+              ...value,
+              conceptCodes: [...new Set(
+                checked
+                  ? [...value.conceptCodes, ...codes]
+                  : value.conceptCodes.filter((code) => !codes.includes(code)),
+              )],
+            }))
+          }
+          return (
+            <div key={unit.id} className="tp-establishment-override">
+              <p><strong>{unit.name}</strong> — {unit.uf}
+                {unit.municipalityName ? ' / ' + unit.municipalityName : ''}.
+                As seleções abaixo só se aplicam a esta unidade.</p>
+              <label>
+                Regime tributário desta unidade
+                <select value={current.taxRegime}
+                  onChange={(event) => updateUnit(unit.id, (value) => ({
+                    ...value, taxRegime: event.target.value,
+                  }))}>
+                  <option value="NAO_INFORMADO">Herdar / Não informado</option>
+                  <option value="LUCRO_REAL">Lucro Real</option>
+                  <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
+                  <option value="SIMPLES_NACIONAL">Simples Nacional</option>
+                  <option value="IMUNE_ISENTA">Imune/Isenta</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </label>
+              {taxonomyOptions.release ? (
+                <div className="tp-taxonomy-grid">
+                  {relevantDimensions.map((dimension) => (
+                    <TaxonomyDimensionPicker
+                      key={unit.id + ':' + dimension.code}
+                      dimension={dimension}
+                      selected={selectedForUnit}
+                      onToggle={toggle}
+                      onSetMany={setManyUnit}
+                    />
+                  ))}
+                  <NcmProfileCard
+                    key={unit.id + ':ncm'}
+                    apiFetch={apiFetch}
+                    codes={current.ncmCodes}
+                    onChange={(codes) => updateUnit(unit.id, (value) => ({
+                      ...value, ncmCodes: codes,
+                    }))}
+                    derived={[]}
+                  />
+                </div>
+              ) : (
+                <p>Aguardando a publicação de uma versão da Taxonomia TriFaros.</p>
+              )}
+            </div>
+          )
+        })}
       </section>
 
       {segmentRemoval && (
