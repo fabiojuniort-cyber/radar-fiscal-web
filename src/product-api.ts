@@ -263,8 +263,7 @@ function canUseManualCnpjFallback(
     code === 'cnpj_provider_unavailable' ||
     code === 'cnpj_provider_invalid_response' ||
     code === 'cnpj_not_found' ||
-    code === 'invalid_cnae' ||
-    code === 'reactivation_required'
+    code === 'invalid_cnae'
   )
 }
 
@@ -582,7 +581,6 @@ export async function createEstablishmentFromCnpj(
             stateRegistration:
               manual.stateRegistration,
             cnaes: manual.cnaes,
-            reactivateInactive: manual.reactivateInactive,
             businessLocationCode:
               normalizedBusinessLocation ?? undefined,
           }),

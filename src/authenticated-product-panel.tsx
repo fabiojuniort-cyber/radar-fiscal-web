@@ -2066,7 +2066,7 @@ function CompanySection({
   onOpenProfile: () => void
   onChanged: () => void
 }) {
-  const [cnpj, setCnpj] = useState(account.onboarding?.cnpj ?? '')
+  const [cnpj, setCnpj] = useState('')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
   const [editing, setEditing] = useState<AccountCompany | null>(null)
