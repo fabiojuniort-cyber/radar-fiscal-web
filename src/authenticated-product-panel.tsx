@@ -2080,6 +2080,7 @@ function CompanySection({
   onOpenProfile: () => void
   onChanged: () => void
 }) {
+  const auditQueryClient = useQueryClient()
   const [cnpj, setCnpj] = useState('')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
@@ -2097,6 +2098,7 @@ function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
+      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
       // ONB-01: loading animation/wizard are subsequent blocks.
       // Existing tax profile is the safe transition target.
       onOpenProfile()
@@ -2114,6 +2116,7 @@ function CompanySection({
     onSuccess: () => {
       setEditing(null)
       onChanged()
+      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
     },
   })
 
@@ -2128,6 +2131,7 @@ function CompanySection({
       setCreating(!hasRemainingCompany)
       onSelect('')
       onChanged()
+      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
     },
   })
 
