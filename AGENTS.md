@@ -143,3 +143,11 @@ O componente demonstrativo de Sonar deve se comportar como uma varredura real:
 Durante implementação, trabalhe em PR **draft** e envie blocos coerentes de commits. O draft roda checks rápidos e termina com `DRAFT_FAST_ONLY`: aviso intencional de regressão completa pendente, não uma falha do produto. **Não rerodar esse CI nem criar commits só para eliminar o aviso.**
 
 Quando estiver pronto, marque **Ready for review** para disparar todos os gates completos; cada atualização posterior do head também roda a regressão completa. Só faça merge com CI completo verde no head atual e revisão exigida pela governança. Main mantém a regressão completa. Procedimento, seleção PG18 e rollback: `docs/ci-cost-02.md`.
+
+## Histórico de auditoria R7
+
+Buscar nome atual por ID/tenant no endpoint de histórico; nunca ler snapshot de nome
+ou CNPJ da auditoria/onboarding. Empresa excluída exige evidência COMPANY_PURGED
+no mesmo tenant. Erro HTTP/consulta ou ausência sem evidência = Indisponível.
+O deploy e o backfill produtivo têm autorizações separadas; a exclusão fica
+temporariamente indisponível enquanto houver legado pendente.

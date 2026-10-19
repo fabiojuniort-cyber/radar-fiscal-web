@@ -1,3 +1,4 @@
+import { CompanyAuditHistory } from './company-audit-history';
 import {
   useMutation,
   useQuery,
@@ -2307,6 +2308,7 @@ function CompanySection({
           </div>
         </form>
       )}
+      <CompanyAuditHistory apiFetch={apiFetch} tenantId={tenantId} />
     </div>
   )
 }
