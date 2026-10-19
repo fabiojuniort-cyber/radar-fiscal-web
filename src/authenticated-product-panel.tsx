@@ -2002,10 +2002,11 @@ function registrationAddress(item: Establishment) {
   return [first, second].filter(Boolean).join(' — ') || 'Endereço não informado'
 }
 
-function DangerConfirmDialog({
+export function DangerConfirmDialog({
   title,
   description,
   confirmLabel,
+  confirmationText,
   pending,
   error,
   onCancel,
@@ -2014,11 +2015,15 @@ function DangerConfirmDialog({
   title: string
   description: string
   confirmLabel: string
+  confirmationText?: string
   pending: boolean
   error?: Error | null
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const [typedName, setTypedName] = useState('')
+  const confirmed = confirmationText === undefined ||
+    typedName.normalize('NFC') === confirmationText.normalize('NFC')
   return (
     <div
       className="tp-confirm-overlay"
@@ -2033,12 +2038,20 @@ function DangerConfirmDialog({
           <h3 id="tp-confirm-title">{title}</h3>
           <p>{description}</p>
         </div>
+        {confirmationText !== undefined && (
+          <label>Digite o nome da empresa para confirmar: {confirmationText}
+            <input aria-label="Nome da empresa para confirmar exclusão" autoComplete="off"
+              value={typedName} disabled={pending}
+              onChange={(event) => setTypedName(event.target.value)} />
+          </label>
+        )}
         {error && <p className="auth-error" role="alert">Não foi possível concluir a exclusão.</p>}
         <div className="tp-confirm-actions">
           <button className="launch-secondary-button" type="button" disabled={pending} onClick={onCancel}>
             Cancelar
           </button>
-          <button className="tp-danger-button" type="button" disabled={pending} onClick={onConfirm}>
+          <button className="tp-danger-button" type="button" disabled={pending || !confirmed}
+            onClick={() => { if (confirmed && !pending) onConfirm() }}>
             {pending ? 'Excluindo…' : confirmLabel}
           </button>
         </div>
@@ -2236,12 +2249,13 @@ function CompanySection({
 
       {deleteCandidate && (
         <DangerConfirmDialog
-          title="Excluir empresa?"
+          title="Excluir definitivamente?"
+          confirmationText={deleteCandidate.legalName}
           description={
             'A empresa ' + deleteCandidate.legalName +
-            ' será desativada junto com seus estabelecimentos. O histórico será preservado.'
+            ' e seus estabelecimentos, perfis tributários e vínculos serão excluídos definitivamente. Esta ação não pode ser desfeita. Um novo cadastro começará do zero. A auditoria será mantida de forma minimizada.'
           }
-          confirmLabel="Excluir empresa"
+          confirmLabel="Excluir definitivamente"
           pending={deleteMutation.isPending}
           error={deleteMutation.error}
           onCancel={() => {

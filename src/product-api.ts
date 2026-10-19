@@ -402,7 +402,7 @@ export async function deleteCompany(
 ): Promise<void> {
   const response = await apiFetch('/api/v1/companies/' + companyId, {
     method: 'DELETE',
-    headers: tenantHeaders(tenantId),
+    headers: tenantHeaders(tenantId, { 'X-Company-Delete-Intent': 'permanent-v1' }),
   })
 
   if (!response.ok) {

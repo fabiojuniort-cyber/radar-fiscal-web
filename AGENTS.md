@@ -109,7 +109,7 @@ Use confirmação própria da interface, com:
 - mensagem de erro visível quando a API falhar;
 - comportamento consistente em Safari/iPhone e desktop.
 
-A exclusão de empresa continua sendo soft-delete no backend; a confirmação deve informar que o histórico é preservado.
+A exclusão de empresa é definitiva: a confirmação deve dizer “Excluir definitivamente. Esta ação não pode ser desfeita”, exigir o nome completo da empresa digitado e explicar que perfis/unidades são removidos e o recadastro começa vazio. A auditoria é retida de forma minimizada. Enviar X-Company-Delete-Intent: permanent-v1 somente pelo fluxo novo; clientes antigos são bloqueados pelo backend.
 
 ## Sonar visual
 
