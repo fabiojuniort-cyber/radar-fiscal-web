@@ -122,7 +122,7 @@ describe('ManualRegistrationHost', () => {
     ).not.toBeInTheDocument()
   })
   it('rejects an inactive company without ever exposing a reactivation action', async () => {
-    const submit = vi.fn(async () => {
+    const submit = vi.fn(async (_input: ManualCompanyForm) => {
       throw new Error('company_inactive_requires_deletion')
     })
     const operation = requestManualRegistration({
