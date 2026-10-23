@@ -23,8 +23,8 @@ it('shows support guidance for a legacy company conflict without retrying or del
   fireEvent.change(screen.getByLabelText('CNPJ da matriz'), { target: { value: '11222333000181' } })
   fireEvent.click(screen.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }))
   expect(await screen.findByText(message)).toBeInTheDocument()
-  expect(api).toHaveBeenCalledTimes(1)
-  expect(api.mock.calls[0]?.[1]?.method).toBe('POST')
+  expect(api.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(1)
+  expect(api.mock.calls.some((call) => call[1]?.method === 'DELETE')).toBe(false)
   expect(changed).not.toHaveBeenCalled()
 })
 
