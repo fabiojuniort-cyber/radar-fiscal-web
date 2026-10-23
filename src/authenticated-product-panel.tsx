@@ -2063,7 +2063,7 @@ export function DangerConfirmDialog({
   )
 }
 
-function CompanySection({
+export function CompanySection({
   apiFetch,
   tenantId,
   account,
