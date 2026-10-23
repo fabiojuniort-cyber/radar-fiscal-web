@@ -170,8 +170,9 @@ export function ManualRegistrationHost() {
           ? cause.message
           : 'manual_registration_failed'
 
-      if (code === 'company_inactive_requires_deletion' ||
-          code === 'establishment_inactive_requires_deletion' ||
+      if (code === 'company_inactive_requires_deletion') {
+        setError('Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.')
+      } else if (code === 'establishment_inactive_requires_deletion' ||
           code === 'reactivation_removed') {
         setError('Cadastro inativo. Para cadastrar novamente, exclua definitivamente o cadastro antigo antes de iniciar um novo.')
       } else if (code === 'cnae_catalog_unavailable') {
