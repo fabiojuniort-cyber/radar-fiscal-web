@@ -109,7 +109,7 @@ Use confirmação própria da interface, com:
 - mensagem de erro visível quando a API falhar;
 - comportamento consistente em Safari/iPhone e desktop.
 
-A exclusão de empresa continua sendo soft-delete no backend; a confirmação deve informar que o histórico é preservado.
+A exclusão de empresa é definitiva: a confirmação deve dizer “Excluir definitivamente. Esta ação não pode ser desfeita”, exigir o nome completo da empresa digitado e explicar que perfis/unidades são removidos e o recadastro começa vazio. A auditoria é retida de forma minimizada. Enviar X-Company-Delete-Intent: permanent-v1 somente pelo fluxo novo; clientes antigos são bloqueados pelo backend.
 
 ## Sonar visual
 
@@ -143,3 +143,11 @@ O componente demonstrativo de Sonar deve se comportar como uma varredura real:
 Durante implementação, trabalhe em PR **draft** e envie blocos coerentes de commits. O draft roda checks rápidos e termina com `DRAFT_FAST_ONLY`: aviso intencional de regressão completa pendente, não uma falha do produto. **Não rerodar esse CI nem criar commits só para eliminar o aviso.**
 
 Quando estiver pronto, marque **Ready for review** para disparar todos os gates completos; cada atualização posterior do head também roda a regressão completa. Só faça merge com CI completo verde no head atual e revisão exigida pela governança. Main mantém a regressão completa. Procedimento, seleção PG18 e rollback: `docs/ci-cost-02.md`.
+
+## Histórico de auditoria R7
+
+Buscar nome atual por ID/tenant no endpoint de histórico; nunca ler snapshot de nome
+ou CNPJ da auditoria/onboarding. Empresa excluída exige evidência COMPANY_PURGED
+no mesmo tenant. Erro HTTP/consulta ou ausência sem evidência = Indisponível.
+O deploy e o backfill produtivo têm autorizações separadas; a exclusão fica
+temporariamente indisponível enquanto houver legado pendente.
