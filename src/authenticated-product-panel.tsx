@@ -53,7 +53,7 @@ import {
 } from './public-api-v2'
 import {
   fetchCatalogArchive,
-  fetchCatalogFacets,
+  fetchCatalogFacetOptions,
   fetchCatalogNavigation,
   type CatalogNavigationFilters,
   type CatalogNavigationGroup,
@@ -578,24 +578,11 @@ export function AuthenticatedProductPanel({
     refetchInterval: 60_000,
   })
 
+  // Keep dropdown options independent of every active search filter.
+  // The archive query below still applies all selected criteria to results.
   const facetsQuery = useQuery({
-    queryKey: ['launch', 'archive-facets', appliedQuery, fullText, jurisdiction, uf, source, actType, archiveTag?.code],
-    queryFn: () => fetchCatalogFacets(apiFetch, {
-        q: appliedQuery.trim().length >= 2
-          ? appliedQuery.trim()
-          : undefined,
-        scope: fullText ? 'full' : 'title',
-        jurisdiction:
-          jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
-            ? jurisdiction
-            : undefined,
-        uf: uf || undefined,
-        source: source || undefined,
-        actType: actType || undefined,
-        tag: archiveTag?.code,
-        page: 1,
-        limit: 25,
-      }),
+    queryKey: ['launch', 'archive-facets', 'all'],
+    queryFn: () => fetchCatalogFacetOptions(apiFetch),
     enabled: screen === 'acervo',
     retry: false,
     staleTime: CATALOG_AGGREGATE_STALE_MS,
@@ -2186,6 +2173,28 @@ export function CompanySection({
             </p>
           )}
         </form>
+      )}
+
+      {createMutation.isError && createMutation.error.message !== 'manual_registration_cancelled' && (
+        <Dialog.Root open onOpenChange={(open) => { if (!open) createMutation.reset() }}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="tp-acervo-help-overlay" />
+            <Dialog.Content className="tp-acervo-help-dialog">
+              <Dialog.Title>Erro na consulta do CNPJ</Dialog.Title>
+              <Dialog.Description>
+                {registrationErrorMessage(createMutation.error, 'empresa')}
+                {' '}Confira o CNPJ ou tente novamente. Se a fonte oficial estiver indisponível,
+                use o cadastro manual quando ele for oferecido.
+              </Dialog.Description>
+              {/^[a-z][a-z0-9_]{0,63}$/.test(createMutation.error.message) && (
+                <p>Referência do erro: {createMutation.error.message}</p>
+              )}
+              <Dialog.Close asChild>
+                <button className="btn" type="button">Entendi</button>
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       )}
 
       <div className="tp-company-list">
