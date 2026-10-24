@@ -1,0 +1,47 @@
+/* ANAT-ADMIN-01 P4 — follows the existing admin pages (platform-admin, collection-filter) palette and spacing. */
+.ar-app { min-height: 100vh; background: #f6f7f9; color: #1d2433; padding: 24px 16px 48px; font-family: Inter, system-ui, sans-serif; }
+.ar-header { max-width: 1280px; margin: 0 auto 16px; }
+.ar-header h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+.ar-back { display: inline-flex; gap: 6px; align-items: center; color: #3554d1; text-decoration: none; font-size: .9rem; }
+.ar-note { margin: 0; color: #5b6475; font-size: .9rem; }
+.ar-layout { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 16px; align-items: start; }
+.ar-column, .ar-stack { display: grid; gap: 16px; min-width: 0; }
+.ar-card { background: #fff; border: 1px solid #e2e5eb; border-radius: 10px; padding: 16px; min-width: 0; }
+.ar-card h2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 1.05rem; margin: 0 0 12px; }
+.ar-card h3 { font-size: .95rem; margin: 12px 0 6px; }
+.ar-history { max-width: 1280px; margin: 16px auto 0; }
+.ar-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.ar-list button { width: 100%; text-align: left; display: grid; gap: 4px; background: #f9fafc; border: 1px solid #e2e5eb; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; color: inherit; }
+.ar-list button[aria-pressed='true'] { border-color: #3554d1; box-shadow: 0 0 0 1px #3554d1 inset; }
+.ar-compact li { font-size: .88rem; color: #3a4252; }
+.ar-hashes { font-size: .8rem; color: #5b6475; word-break: break-all; }
+.ar-field { display: grid; gap: 4px; font-size: .85rem; color: #3a4252; margin: 8px 0; min-width: 0; }
+.ar-field textarea, .ar-field input, .ar-field select { font: inherit; font-size: .85rem; border: 1px solid #cfd4dd; border-radius: 6px; padding: 6px 8px; width: 100%; box-sizing: border-box; background: #fff; }
+.ar-field textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ar-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.ar-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.ar-actions button, .ar-card > button { display: inline-flex; gap: 6px; align-items: center; font: inherit; font-size: .9rem; border-radius: 6px; padding: 7px 12px; border: 1px solid #3554d1; background: #3554d1; color: #fff; cursor: pointer; }
+.ar-secondary, .ar-actions .ar-secondary { background: #fff !important; color: #3554d1 !important; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.ar-muted { color: #5b6475; font-size: .88rem; margin: 6px 0; }
+.ar-empty { color: #5b6475; background: #fff; border: 1px dashed #cfd4dd; border-radius: 10px; padding: 24px; }
+.ar-error { color: #a1221b; background: #fdecea; border-radius: 6px; padding: 6px 8px; font-size: .88rem; }
+.ar-ok { color: #1d6b3a; background: #e8f5ec; border-radius: 6px; padding: 6px 8px; font-size: .88rem; }
+.ar-warn { color: #7a4b00; background: #fff4de; border-radius: 6px; padding: 6px 8px; font-size: .88rem; }
+.ar-badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: .75rem; font-weight: 600; border: 1px solid transparent; }
+.ar-out-pass, .ar-state-approved, .ar-state-active { background: #e8f5ec; color: #1d6b3a; border-color: #b9dfc6; }
+.ar-out-fail, .ar-out-failed, .ar-state-rejected { background: #fdecea; color: #a1221b; border-color: #f2c1bd; }
+.ar-out-partial, .ar-out-inconclusive { background: #fff4de; color: #7a4b00; border-color: #f0d49b; }
+.ar-out-cancelled, .ar-state-superseded, .ar-state-frozen, .ar-state-simulated { background: #eef0f4; color: #3a4252; border-color: #d5d9e1; }
+.ar-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin: 8px 0; display: block; overflow-x: auto; }
+.ar-table caption { text-align: left; color: #5b6475; padding-bottom: 4px; }
+.ar-table th, .ar-table td { text-align: left; border-bottom: 1px solid #eef0f4; padding: 6px; vertical-align: top; }
+.ar-table pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-width: 280px; font-size: .78rem; }
+.ar-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: .88rem; }
+.ar-meta dd { margin: 0; word-break: break-all; }
+.ar-diff { border: 1px solid #eef0f4; border-radius: 8px; padding: 6px 10px; margin: 8px 0; }
+.ar-blockers { color: #7a4b00; font-size: .85rem; padding-left: 18px; }
+.ar-limits { font-size: .85rem; color: #3a4252; padding-left: 18px; }
+.ar-confirm { border: 1px solid #f0d49b; background: #fffbf2; border-radius: 8px; padding: 12px; }
+.ar-denied { max-width: 520px; margin: 80px auto; text-align: center; display: grid; gap: 8px; justify-items: center; }
+@media (max-width: 860px) { .ar-layout { grid-template-columns: 1fr; } .ar-app { padding: 16px 16px 40px; } }
