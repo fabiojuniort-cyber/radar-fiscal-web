@@ -1,4 +1,3 @@
-import { CompanyAuditHistory } from './company-audit-history';
 import {
   useMutation,
   useQuery,
@@ -2009,7 +2008,6 @@ export function DangerConfirmDialog({
   title,
   description,
   confirmLabel,
-  confirmationText,
   pending,
   error,
   onCancel,
@@ -2018,15 +2016,11 @@ export function DangerConfirmDialog({
   title: string
   description: string
   confirmLabel: string
-  confirmationText?: string
   pending: boolean
   error?: Error | null
   onCancel: () => void
   onConfirm: () => void
 }) {
-  const [typedName, setTypedName] = useState('')
-  const confirmed = confirmationText === undefined ||
-    typedName.normalize('NFC') === confirmationText.normalize('NFC')
   return (
     <div
       className="tp-confirm-overlay"
@@ -2041,20 +2035,13 @@ export function DangerConfirmDialog({
           <h3 id="tp-confirm-title">{title}</h3>
           <p>{description}</p>
         </div>
-        {confirmationText !== undefined && (
-          <label>Digite o nome da empresa para confirmar: {confirmationText}
-            <input aria-label="Nome da empresa para confirmar exclusão" autoComplete="off"
-              value={typedName} disabled={pending}
-              onChange={(event) => setTypedName(event.target.value)} />
-          </label>
-        )}
         {error && <p className="auth-error" role="alert">Não foi possível concluir a exclusão.</p>}
         <div className="tp-confirm-actions">
           <button className="launch-secondary-button" type="button" disabled={pending} onClick={onCancel}>
             Cancelar
           </button>
-          <button className="tp-danger-button" type="button" disabled={pending || !confirmed}
-            onClick={() => { if (confirmed && !pending) onConfirm() }}>
+          <button className="tp-danger-button" type="button" disabled={pending}
+            onClick={() => { if (!pending) onConfirm() }}>
             {pending ? 'Excluindo…' : confirmLabel}
           </button>
         </div>
@@ -2082,7 +2069,6 @@ export function CompanySection({
   onOpenProfile: () => void
   onChanged: () => void
 }) {
-  const auditQueryClient = useQueryClient()
   const [cnpj, setCnpj] = useState('')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
@@ -2100,7 +2086,6 @@ export function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
       // ONB-01: loading animation/wizard are subsequent blocks.
       // Existing tax profile is the safe transition target.
       onOpenProfile()
@@ -2118,7 +2103,6 @@ export function CompanySection({
     onSuccess: () => {
       setEditing(null)
       onChanged()
-      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
     },
   })
 
@@ -2133,7 +2117,6 @@ export function CompanySection({
       setCreating(!hasRemainingCompany)
       onSelect('')
       onChanged()
-      void auditQueryClient.invalidateQueries({ queryKey: ['company-audit-history', tenantId] })
     },
   })
 
@@ -2257,12 +2240,8 @@ export function CompanySection({
       {deleteCandidate && (
         <DangerConfirmDialog
           title="Excluir definitivamente?"
-          confirmationText={deleteCandidate.legalName}
-          description={
-            'A empresa ' + deleteCandidate.legalName +
-            ' e seus estabelecimentos, perfis tributários e vínculos serão excluídos definitivamente. Esta ação não pode ser desfeita. Um novo cadastro começará do zero. A auditoria será mantida de forma minimizada.'
-          }
-          confirmLabel="Excluir definitivamente"
+          description="Excluir definitivamente. Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
           pending={deleteMutation.isPending}
           error={deleteMutation.error}
           onCancel={() => {
@@ -2314,7 +2293,6 @@ export function CompanySection({
           </div>
         </form>
       )}
-      <CompanyAuditHistory apiFetch={apiFetch} tenantId={tenantId} />
     </div>
   )
 }
