@@ -141,7 +141,7 @@ describe('ManualRegistrationHost', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar CNAE selecionado' }))
     fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('exclua definitivamente')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.')
     expect(screen.queryByRole('button', { name: /reativa/i })).not.toBeInTheDocument()
     expect(submit).toHaveBeenCalledTimes(1)
     expect(submit.mock.calls[0]?.[0]).not.toHaveProperty('reactivateInactive')

@@ -1974,6 +1974,8 @@ function registrationErrorMessage(
       : 'Não foi possível adicionar o estabelecimento.'
 
   switch (error.message) {
+    case 'company_inactive_requires_deletion':
+      return 'Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.'
     case 'cnpj_not_found':
       return prefix + ' CNPJ não encontrado na base cadastral.'
     case 'cnpj_provider_unavailable':
@@ -2061,7 +2063,7 @@ export function DangerConfirmDialog({
   )
 }
 
-function CompanySection({
+export function CompanySection({
   apiFetch,
   tenantId,
   account,
