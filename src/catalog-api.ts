@@ -163,6 +163,16 @@ export async function fetchCatalogArchive(
   return requireJson<CatalogArchiveResponse>(response)
 }
 
+/** Dropdown vocabularies remain complete while the archive results are filtered.
+ * Never pass active search/actType/UF/source filters to this lookup: users must
+ * be able to switch between legal bases without first clearing the search.
+ */
+export async function fetchCatalogFacetOptions(
+  apiFetch: ProductApiFetch,
+): Promise<CatalogFacets> {
+  return fetchCatalogFacets(apiFetch)
+}
+
 export async function fetchCatalogFacets(
   apiFetch: ProductApiFetch,
   filters: CatalogFilters = {},

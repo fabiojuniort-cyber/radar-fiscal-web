@@ -53,7 +53,7 @@ import {
 } from './public-api-v2'
 import {
   fetchCatalogArchive,
-  fetchCatalogFacets,
+  fetchCatalogFacetOptions,
   fetchCatalogNavigation,
   type CatalogNavigationFilters,
   type CatalogNavigationGroup,
@@ -578,24 +578,11 @@ export function AuthenticatedProductPanel({
     refetchInterval: 60_000,
   })
 
+  // Keep dropdown options independent of every active search filter.
+  // The archive query below still applies all selected criteria to results.
   const facetsQuery = useQuery({
-    queryKey: ['launch', 'archive-facets', appliedQuery, fullText, jurisdiction, uf, source, actType, archiveTag?.code],
-    queryFn: () => fetchCatalogFacets(apiFetch, {
-        q: appliedQuery.trim().length >= 2
-          ? appliedQuery.trim()
-          : undefined,
-        scope: fullText ? 'full' : 'title',
-        jurisdiction:
-          jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
-            ? jurisdiction
-            : undefined,
-        uf: uf || undefined,
-        source: source || undefined,
-        actType: actType || undefined,
-        tag: archiveTag?.code,
-        page: 1,
-        limit: 25,
-      }),
+    queryKey: ['launch', 'archive-facets', 'all'],
+    queryFn: () => fetchCatalogFacetOptions(apiFetch),
     enabled: screen === 'acervo',
     retry: false,
     staleTime: CATALOG_AGGREGATE_STALE_MS,
@@ -1973,6 +1960,8 @@ function registrationErrorMessage(
       : 'Não foi possível adicionar o estabelecimento.'
 
   switch (error.message) {
+    case 'company_inactive_requires_deletion':
+      return 'Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.'
     case 'cnpj_not_found':
       return prefix + ' CNPJ não encontrado na base cadastral.'
     case 'cnpj_provider_unavailable':
@@ -2002,7 +1991,7 @@ function registrationAddress(item: Establishment) {
   return [first, second].filter(Boolean).join(' — ') || 'Endereço não informado'
 }
 
-function DangerConfirmDialog({
+export function DangerConfirmDialog({
   title,
   description,
   confirmLabel,
@@ -2038,7 +2027,8 @@ function DangerConfirmDialog({
           <button className="launch-secondary-button" type="button" disabled={pending} onClick={onCancel}>
             Cancelar
           </button>
-          <button className="tp-danger-button" type="button" disabled={pending} onClick={onConfirm}>
+          <button className="tp-danger-button" type="button" disabled={pending}
+            onClick={() => { if (!pending) onConfirm() }}>
             {pending ? 'Excluindo…' : confirmLabel}
           </button>
         </div>
@@ -2047,7 +2037,7 @@ function DangerConfirmDialog({
   )
 }
 
-function CompanySection({
+export function CompanySection({
   apiFetch,
   tenantId,
   account,
@@ -2066,7 +2056,7 @@ function CompanySection({
   onOpenProfile: () => void
   onChanged: () => void
 }) {
-  const [cnpj, setCnpj] = useState(account.onboarding?.cnpj ?? '')
+  const [cnpj, setCnpj] = useState('')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
   const [editing, setEditing] = useState<AccountCompany | null>(null)
@@ -2082,7 +2072,7 @@ function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      const principalCnae = result.establishment.cnaes.find((item) => item.isPrimary)
+      const principalCnae = result.establishment.cnaes?.find((item) => item.isPrimary)
       try {
         sessionStorage.setItem('tribusca.onboarding.welcome', JSON.stringify({
           companyId: result.company.id,
@@ -2191,6 +2181,28 @@ function CompanySection({
         </form>
       )}
 
+      {createMutation.isError && createMutation.error.message !== 'manual_registration_cancelled' && (
+        <Dialog.Root open onOpenChange={(open) => { if (!open) createMutation.reset() }}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="tp-acervo-help-overlay" />
+            <Dialog.Content className="tp-acervo-help-dialog">
+              <Dialog.Title>Erro na consulta do CNPJ</Dialog.Title>
+              <Dialog.Description>
+                {registrationErrorMessage(createMutation.error, 'empresa')}
+                {' '}Confira o CNPJ ou tente novamente. Se a fonte oficial estiver indisponível,
+                use o cadastro manual quando ele for oferecido.
+              </Dialog.Description>
+              {/^[a-z][a-z0-9_]{0,63}$/.test(createMutation.error.message) && (
+                <p>Referência do erro: {createMutation.error.message}</p>
+              )}
+              <Dialog.Close asChild>
+                <button className="btn" type="button">Entendi</button>
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
       <div className="tp-company-list">
         {account.companies.map((company) => (
           <article
@@ -2242,12 +2254,9 @@ function CompanySection({
 
       {deleteCandidate && (
         <DangerConfirmDialog
-          title="Excluir empresa?"
-          description={
-            'A empresa ' + deleteCandidate.legalName +
-            ' será desativada junto com seus estabelecimentos. O histórico será preservado.'
-          }
-          confirmLabel="Excluir empresa"
+          title="Excluir definitivamente?"
+          description="Excluir definitivamente. Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
           pending={deleteMutation.isPending}
           error={deleteMutation.error}
           onCancel={() => {
@@ -2752,7 +2761,7 @@ function EstablishmentSection({
   )
 }
 
-function TaxProfileSection({
+export function TaxProfileSection({
   apiFetch,
   tenantId,
   company,
@@ -3202,7 +3211,7 @@ function TaxProfileSection({
         </div>
       </section>
 
-      <section className="tp-profile-taxonomy">
+      <section className="tp-profile-taxonomy" aria-label="Taxonomia da empresa">
         <div className="tp-profile-section-title">
           <h3>Taxonomia TriFaros</h3>
           <p>Revise as sugestões por CNAE e selecione somente o que realmente se aplica.
@@ -3254,11 +3263,11 @@ function TaxProfileSection({
         )}
       </section>
 
-      <section className="tp-profile-taxonomy tp-establishment-profile">
+      <section className="tp-profile-taxonomy tp-establishment-profile" aria-label="Perfil por estabelecimento">
         <div className="tp-profile-section-title">
           <h3>Particularidades dos estabelecimentos</h3>
-          <p>O perfil da empresa é o padrão. Aqui você pode registrar características
-            específicas de uma matriz ou filial, sem alterar as demais.</p>
+          <p>Cada matriz ou filial tem suas próprias seleções. Uma filial nova começa vazia,
+            sem copiar o perfil da matriz ou das demais unidades.</p>
         </div>
         <label>
           Estabelecimento
@@ -3303,7 +3312,7 @@ function TaxProfileSection({
                   onChange={(event) => updateUnit(unit.id, (value) => ({
                     ...value, taxRegime: event.target.value,
                   }))}>
-                  <option value="NAO_INFORMADO">Herdar / Não informado</option>
+                  <option value="NAO_INFORMADO">Não informado</option>
                   <option value="LUCRO_REAL">Lucro Real</option>
                   <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
                   <option value="SIMPLES_NACIONAL">Simples Nacional</option>

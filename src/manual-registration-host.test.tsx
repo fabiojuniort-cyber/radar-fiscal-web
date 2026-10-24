@@ -39,6 +39,7 @@ describe('ManualRegistrationHost', () => {
       kind: 'company',
       cnpj: '10515785000350',
       businessLocationCode: 'MATRIZ-001',
+      lookupFailure: { code: 'cnpj_provider_unavailable', httpStatus: 503 },
       searchCnaes: vi.fn(async () => [{ code: '0111301', description: 'Cultivo de arroz' }]),
       submit,
     })
@@ -50,6 +51,8 @@ describe('ManualRegistrationHost', () => {
         name: 'Continuar manualmente',
       }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('HTTP 503')
+    expect(screen.getByRole('alert')).toHaveTextContent('cnpj_provider_unavailable')
     expect(
       screen.getByDisplayValue('10.515.785/0003-50'),
     ).toHaveAttribute('readonly')
@@ -106,7 +109,6 @@ describe('ManualRegistrationHost', () => {
         district: undefined,
         stateRegistration: '123456789',
         cnaes: [{ code: '0111301', description: 'Cultivo de arroz', isPrimary: true }],
-        reactivateInactive: false,
       })
     })
 
@@ -122,10 +124,9 @@ describe('ManualRegistrationHost', () => {
       screen.queryByRole('dialog'),
     ).not.toBeInTheDocument()
   })
-  it('requires a second explicit confirmation before reactivating an inactive company', async () => {
-    const submit = vi.fn(async (input: ManualCompanyForm) => {
-      if (!input.reactivateInactive) throw new Error('reactivation_required')
-      return { company: { id: 'company-restored' } }
+  it('rejects an inactive company without ever exposing a reactivation action', async () => {
+    const submit = vi.fn(async (_input: ManualCompanyForm) => {
+      throw new Error('company_inactive_requires_deletion')
     })
     const operation = requestManualRegistration({
       kind: 'company',
@@ -143,13 +144,12 @@ describe('ManualRegistrationHost', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar CNAE selecionado' }))
     fireEvent.click(screen.getByRole('button', { name: 'Concluir cadastro' }))
-    await screen.findByRole('button', { name: 'Confirmar reativação' })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.')
+    expect(screen.queryByRole('button', { name: /reativa/i })).not.toBeInTheDocument()
     expect(submit).toHaveBeenCalledTimes(1)
-    expect(submit.mock.calls[0]?.[0]?.reactivateInactive).toBe(false)
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reativação' }))
-    await expect(operation).resolves.toMatchObject({ company: { id: 'company-restored' } })
-    expect(submit).toHaveBeenCalledTimes(2)
-    expect(submit.mock.calls[1]?.[0]?.reactivateInactive).toBe(true)
+    expect(submit.mock.calls[0]?.[0]).not.toHaveProperty('reactivateInactive')
+    // The modal remains open for corrections/cancel, not implicit reactivation.
+    expect(screen.getByRole('button', { name: 'Concluir cadastro' })).toBeInTheDocument()
+    void operation.catch(() => undefined)
   })
-
 })

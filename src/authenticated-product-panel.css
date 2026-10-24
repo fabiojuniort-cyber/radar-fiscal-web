@@ -2767,7 +2767,7 @@
 .tp-onboarding-progress {
   display: block;
   height: 100%;
-  background: #237032;
+  background: var(--tp-blue);
   transition: width .25s ease;
 }
 .tp-profile-help { margin-top: .35rem; max-width: 62ch; }
@@ -2784,7 +2784,7 @@
 }
 
 /* ONB-02 P07 — establishment-level overrides remain visually distinct from
-   company-wide defaults and retain full usability on narrow mobile widths. */
+   legacy company-wide selections and retain full usability on narrow mobile widths. */
 .tp-establishment-profile {
   display: grid;
   gap: 1rem;

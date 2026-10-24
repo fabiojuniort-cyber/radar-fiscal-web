@@ -66,6 +66,8 @@ describe('manual CNPJ fallback', () => {
     const pendingOperation = createCompanyFromCnpj(apiFetch, 'tenant-1', '10.515.785/0003-50')
     const pending = await waitForPending('company')
     expect(pending.request.kind).toBe('company')
+    expect(pending.request.lookupFailure).toEqual({ code: 'invalid_cnae', httpStatus: 400 })
+
     if (pending.request.kind !== 'company') throw new Error('expected_company_registration')
     if (!pending.request.searchCnaes) throw new Error('official_catalog_search_not_available')
     const options = await pending.request.searchCnaes('6201501')

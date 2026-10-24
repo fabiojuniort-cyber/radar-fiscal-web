@@ -62,7 +62,6 @@ export function ManualRegistrationHost() {
   const [selectedCnaes, setSelectedCnaes] = useState<ManualCnae[]>([])
   const [cnaesLoading, setCnaesLoading] = useState(false)
   const [cnaesError, setCnaesError] = useState<string | null>(null)
-  const [reactivationPending, setReactivationPending] = useState(false)
 
 
   useEffect(() => {
@@ -81,7 +80,6 @@ export function ManualRegistrationHost() {
     setSelectedCnaes([])
     setCnaesLoading(false)
     setCnaesError(null)
-    setReactivationPending(false)
   }, [pending])
 
   useEffect(() => {
@@ -163,8 +161,8 @@ export function ManualRegistrationHost() {
     setSubmitting(true)
     try {
       const result = request.kind === 'company'
-        ? await request.submit({ ...(manualInput as ManualCompanyForm), cnaes: selectedCnaes, reactivateInactive: reactivationPending })
-        : await request.submit({ ...(manualInput as ManualEstablishmentForm), cnaes: selectedCnaes, reactivateInactive: reactivationPending })
+        ? await request.submit({ ...(manualInput as ManualCompanyForm), cnaes: selectedCnaes, })
+        : await request.submit({ ...(manualInput as ManualEstablishmentForm), cnaes: selectedCnaes, })
       resolveManualRegistration(result)
     } catch (cause) {
       const code =
@@ -172,9 +170,11 @@ export function ManualRegistrationHost() {
           ? cause.message
           : 'manual_registration_failed'
 
-      if (code === 'reactivation_required') {
-        setReactivationPending(true)
-        setError('O cadastro está inativo. Confirme a reativação para preservar os dados existentes sem sobrescrevê-los.')
+      if (code === 'company_inactive_requires_deletion') {
+        setError('Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.')
+      } else if (code === 'establishment_inactive_requires_deletion' ||
+          code === 'reactivation_removed') {
+        setError('Cadastro inativo. Para cadastrar novamente, exclua definitivamente o cadastro antigo antes de iniciar um novo.')
       } else if (code === 'cnae_catalog_unavailable') {
         setError('O catálogo oficial de CNAEs está indisponível. Nenhum dado foi gravado.')
       } else if (code === 'invalid_cnae') {
@@ -269,7 +269,7 @@ export function ManualRegistrationHost() {
               <button type="button" className="launch-secondary-button" disabled={submitting}
                 onClick={() => setStep('details')}>Voltar aos dados</button>
               <button type="submit" className="btn" disabled={submitting || !selectedCnaes.length}>
-                {submitting ? 'Cadastrando…' : reactivationPending ? 'Confirmar reativação' : 'Concluir cadastro'}
+                {submitting ? 'Cadastrando…' : 'Concluir cadastro'}
               </button>
             </div>
           </form>
@@ -303,9 +303,23 @@ export function ManualRegistrationHost() {
           <h2 id="tp-manual-title">
             Continuar manualmente
           </h2>
+          {request.lookupFailure && (
+            <p role="alert" className="auth-error">
+              {request.lookupFailure.code === 'cnpj_not_found'
+                ? 'A consulta cadastral não localizou este CNPJ nas fontes consultadas.'
+                : request.lookupFailure.code === 'cnpj_provider_invalid_response'
+                  ? 'A API de consulta CNPJ retornou dados inválidos.'
+                  : request.lookupFailure.code === 'reactivation_required'
+                    ? 'Há um cadastro anterior com este CNPJ. A operação requer verificação.'
+                    : request.lookupFailure.code === 'invalid_cnae'
+                      ? 'A API retornou CNAE não validado no catálogo oficial.'
+                      : 'A API de consulta CNPJ está temporariamente indisponível.'}
+              {' Código: ' + request.lookupFailure.code + ' · HTTP ' + request.lookupFailure.httpStatus + '.'}
+            </p>
+          )}
           <p>
-            A consulta automática do CNPJ não respondeu. Você pode concluir o cadastro
-            agora e atualizar os dados cadastrais por uma nova consulta depois.
+            Você pode concluir o cadastro manualmente agora e atualizar os dados
+            cadastrais com uma nova consulta depois.
           </p>
         </div>
 

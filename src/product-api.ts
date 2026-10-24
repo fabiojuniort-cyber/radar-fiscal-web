@@ -201,7 +201,7 @@ export type TaxProfile = {
     keywords?: string[]
     /** NCMs of the card NCM, compared with the NCMs that legislation mentions. */
     ncmCodes?: string[]
-    /** Optional overrides by active establishment; otherwise inherit company profile. */
+    /** Independent selections by active establishment; absent units start empty. */
     establishmentOverrides?: Array<{
       establishmentId: string
       taxRegime: string
@@ -270,8 +270,7 @@ function canUseManualCnpjFallback(
     code === 'cnpj_provider_unavailable' ||
     code === 'cnpj_provider_invalid_response' ||
     code === 'cnpj_not_found' ||
-    code === 'invalid_cnae' ||
-    code === 'reactivation_required'
+    code === 'invalid_cnae'
   )
 }
 
@@ -353,6 +352,7 @@ export async function createCompanyFromCnpj(
 
   return requestManualRegistration<CnpjRegistryResult>({
     kind: 'company',
+    lookupFailure: { code, httpStatus: response.status },
     searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     businessLocationCode:
@@ -410,7 +410,7 @@ export async function deleteCompany(
 ): Promise<void> {
   const response = await apiFetch('/api/v1/companies/' + companyId, {
     method: 'DELETE',
-    headers: tenantHeaders(tenantId),
+    headers: tenantHeaders(tenantId, { 'X-Company-Delete-Intent': 'permanent-v1' }),
   })
 
   if (!response.ok) {
@@ -558,6 +558,7 @@ export async function createEstablishmentFromCnpj(
 
   await requestManualRegistration<void>({
     kind: 'establishment',
+    lookupFailure: { code, httpStatus: response.status },
     searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     typeCode: input.typeCode,
@@ -589,7 +590,6 @@ export async function createEstablishmentFromCnpj(
             stateRegistration:
               manual.stateRegistration,
             cnaes: manual.cnaes,
-            reactivateInactive: manual.reactivateInactive,
             businessLocationCode:
               normalizedBusinessLocation ?? undefined,
           }),
