@@ -702,7 +702,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await cnaeSegment.selectOption('sector.agri_inputs')
   // Card NCM between Produto and the next card.
   await expect(companyTaxonomy.getByRole('region', { name: 'NCM', exact: true })).toBeVisible()
-  await page.getByLabel('Regime tributário', { exact: true }).selectOption('LUCRO_REAL')
+  await page.locator('.tp-profile-declared').getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
     await companyTaxonomy.getByText(label, { exact: true }).click()
