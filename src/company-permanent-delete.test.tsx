@@ -27,10 +27,11 @@ describe('ONB-02 R9 permanent company deletion', () => {
     render(<DangerConfirmDialog title="Excluir definitivamente?"
       description="Excluir definitivamente. Esta ação não pode ser desfeita."
       confirmLabel="Excluir" pending={true} onCancel={cancel} onConfirm={confirm} />)
-    const button = screen.getByRole('button', { name: 'Excluindo.' })
+    const button = screen.getByRole('button', { name: 'Excluindo…' })
     expect(button).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
     fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(confirm).not.toHaveBeenCalled()
     expect(cancel).not.toHaveBeenCalled()
   })
