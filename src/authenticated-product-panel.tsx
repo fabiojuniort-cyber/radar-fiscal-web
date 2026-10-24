@@ -1960,6 +1960,8 @@ function registrationErrorMessage(
       : 'Não foi possível adicionar o estabelecimento.'
 
   switch (error.message) {
+    case 'company_inactive_requires_deletion':
+      return 'Este CNPJ está bloqueado por um cadastro antigo. Contate o suporte.'
     case 'cnpj_not_found':
       return prefix + ' CNPJ não encontrado na base cadastral.'
     case 'cnpj_provider_unavailable':
@@ -1989,7 +1991,7 @@ function registrationAddress(item: Establishment) {
   return [first, second].filter(Boolean).join(' — ') || 'Endereço não informado'
 }
 
-function DangerConfirmDialog({
+export function DangerConfirmDialog({
   title,
   description,
   confirmLabel,
@@ -2025,7 +2027,8 @@ function DangerConfirmDialog({
           <button className="launch-secondary-button" type="button" disabled={pending} onClick={onCancel}>
             Cancelar
           </button>
-          <button className="tp-danger-button" type="button" disabled={pending} onClick={onConfirm}>
+          <button className="tp-danger-button" type="button" disabled={pending}
+            onClick={() => { if (!pending) onConfirm() }}>
             {pending ? 'Excluindo…' : confirmLabel}
           </button>
         </div>
@@ -2034,7 +2037,7 @@ function DangerConfirmDialog({
   )
 }
 
-function CompanySection({
+export function CompanySection({
   apiFetch,
   tenantId,
   account,
@@ -2053,7 +2056,7 @@ function CompanySection({
   onOpenProfile: () => void
   onChanged: () => void
 }) {
-  const [cnpj, setCnpj] = useState(account.onboarding?.cnpj ?? '')
+  const [cnpj, setCnpj] = useState('')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
   const [editing, setEditing] = useState<AccountCompany | null>(null)
@@ -2245,12 +2248,9 @@ function CompanySection({
 
       {deleteCandidate && (
         <DangerConfirmDialog
-          title="Excluir empresa?"
-          description={
-            'A empresa ' + deleteCandidate.legalName +
-            ' será desativada junto com seus estabelecimentos. O histórico será preservado.'
-          }
-          confirmLabel="Excluir empresa"
+          title="Excluir definitivamente?"
+          description="Excluir definitivamente. Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
           pending={deleteMutation.isPending}
           error={deleteMutation.error}
           onCancel={() => {
