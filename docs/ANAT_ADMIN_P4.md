@@ -38,3 +38,12 @@ Draft → freeze → simulate (with cancel) → compare → review → preview �
 - On narrow viewports the before/after JSON columns of a difference are narrow (readable, cramped).
 - The "not supported" reasons come from the API in English.
 - The real-flow spec is not run in CI: it needs the backend harness and its database.
+
+## R1 corrections (COORD review of `1269b69`)
+
+| Finding | Correction | Evidence |
+|---|---|---|
+| **P4-R1-01:** a preview could survive a change of candidate | `CandidatePanel` remounts per candidate (`key`). The preview is held together with its candidate, action and scope: it is shown and confirmable only under that candidate, and a late response for a previous selection is dropped. The confirmation names the candidate, the action and the scope | Unit test `P4-R1-01`. **Reproduced on `1269b69`** with A and B both cached: A's preview stayed visible under B |
+| **P4-R1-02:** freeze ignored unsaved edits | Freeze is disabled while the visible JSON differs from the content last loaded or saved, or while a save is in flight ("Há alterações não salvas…"). The saved content is exactly what was sent | Unit test `P4-R1-02`: edit after saving, save in flight, switching drafts. **Reproduced on `1269b69`**: freeze stayed enabled after an edit |
+
+After the fixes, the real-API e2e (backend `1196cd6`, fresh disposable PostgreSQL 16) passed 12 of 12, with 8 skipped by design. Evidence screenshots were regenerated.

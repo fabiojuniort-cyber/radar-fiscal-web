@@ -76,7 +76,7 @@ export function AnatomyRulesAdminPage({ apiFetch, userId }: { apiFetch: ProductA
       </header>
       <div className="ar-layout">
         <section className="ar-column" aria-label="Versões"><DraftsPanel api={api} onFrozen={setSelected} /><CandidatesPanel api={api} selected={selected} onSelect={setSelected} /></section>
-        <section className="ar-column ar-main" aria-label="Candidato">{selected ? <CandidatePanel api={api} id={selected} userId={userId} /> : <p className="ar-empty">Selecione ou congele um candidato.</p>}</section>
+        <section className="ar-column ar-main" aria-label="Candidato">{selected ? <CandidatePanel key={selected} api={api} id={selected} userId={userId} /> : <p className="ar-empty">Selecione ou congele um candidato.</p>}</section>
       </div>
       <HistoryPanel api={api} />
     </div>
@@ -89,20 +89,27 @@ function DraftsPanel({ api, onFrozen }: { api: ReturnType<typeof anatomyRulesApi
   const [editing, setEditing] = useState<Draft | null>(null)
   const [profiles, setProfiles] = useState('[]'); const [examples, setExamples] = useState('[]')
   const [local, setLocal] = useState<string | null>(null)
-  const load = (d: Draft | null) => { setEditing(d); setProfiles(JSON.stringify(d?.profiles ?? [], null, 2)); setExamples(JSON.stringify(d?.examples ?? [], null, 2)); setLocal(null) }
+  // P4-R1-02: what the server holds for `editing` (as shown when loaded or last saved). Freeze needs visible == saved.
+  const [savedText, setSavedText] = useState<{ profiles: string; examples: string } | null>(null)
+  const load = (d: Draft | null) => {
+    const p = JSON.stringify(d?.profiles ?? [], null, 2); const e = JSON.stringify(d?.examples ?? [], null, 2)
+    setEditing(d); setProfiles(p); setExamples(e); setLocal(null); setSavedText(d ? { profiles: p, examples: e } : null)
+  }
   const save = useMutation({
-    mutationFn: async () => {
-      const p = parseJsonArray(profiles, 'Perfis'); const e = parseJsonArray(examples, 'Exemplos')
+    mutationFn: async (sent: { profiles: string; examples: string }) => {
+      const p = parseJsonArray(sent.profiles, 'Perfis'); const e = parseJsonArray(sent.examples, 'Exemplos')
       const problem = p.error ?? e.error ?? (e.value && e.value.length > 20 ? 'Exemplos: no máximo 20.' : null)
       if (problem) { setLocal(problem); throw new Error('local') }
       setLocal(null)
       return editing ? api.updateDraft(editing.id, editing.revision, p.value!, e.value!) : api.createDraft(p.value!, e.value!)
     },
-    onSuccess: async (r) => {
+    onSuccess: async (r, sent) => {
+      setSavedText(sent) // exactly the content that was sent, even if the user kept typing meanwhile
       await qc.invalidateQueries({ queryKey: ['anat', 'drafts'] })
       setEditing((d) => (d ? { ...d, id: r.id, revision: r.revision } : { id: r.id, revision: r.revision, author: '', updatedAt: '', profiles: [], examples: [] }))
     },
   })
+  const dirty = savedText === null || savedText.profiles !== profiles || savedText.examples !== examples
   const freeze = useMutation({
     mutationFn: () => api.freeze(editing!.id, editing!.revision),
     onSuccess: async (r) => { await qc.invalidateQueries({ queryKey: ['anat', 'candidates'] }); onFrozen(r.candidateId) },
@@ -122,9 +129,10 @@ function DraftsPanel({ api, onFrozen }: { api: ReturnType<typeof anatomyRulesApi
       {save.isError && !local && <p className="ar-error" role="alert">{errorText(save.error)}</p>}
       {save.isSuccess && <p className="ar-ok" role="status">Rascunho salvo (revisão {save.data.revision}).</p>}
       <div className="ar-actions">
-        <button type="button" onClick={() => save.mutate()} disabled={save.isPending}>Salvar rascunho</button>
-        <button type="button" onClick={() => freeze.mutate()} disabled={!editing || freeze.isPending}><Snowflake size={15} /> Congelar candidato</button>
+        <button type="button" onClick={() => save.mutate({ profiles, examples })} disabled={save.isPending}>Salvar rascunho</button>
+        <button type="button" onClick={() => freeze.mutate()} disabled={!editing || dirty || save.isPending || freeze.isPending}><Snowflake size={15} /> Congelar candidato</button>
       </div>
+      {editing && dirty && <p className="ar-warn" role="note">Há alterações não salvas: salve antes de congelar.</p>}
       {freeze.isError && <p className="ar-error" role="alert">{errorText(freeze.error)}</p>}
       {freeze.isSuccess && <p className="ar-ok" role="status">{freeze.data.created ? 'Candidato congelado.' : 'Candidato já existia com os mesmos hashes.'}</p>}
     </div>
@@ -252,10 +260,18 @@ function ActivationPanel({ api, detail, onDone }: { api: ReturnType<typeof anato
   const [chosen, setReviewId] = useState('')
   const reviewId = approved.some((r) => r.id === chosen) ? chosen : (approved[0]?.id ?? '')
   const [scope, setScope] = useState('global'); const [action, setAction] = useState<'activate' | 'rollback'>('activate')
-  const [pending, setPending] = useState<Preview | null>(null); const [justification, setJustification] = useState('')
-  const preview = useMutation({ mutationFn: () => api.preview({ action, candidateId: detail.candidate.id, reviewId, scope }), onSuccess: (p) => setPending(p) })
+  // P4-R1-01: a preview is bound to the candidate, action and scope it was generated for; it is never shown (nor
+  // confirmable) under another candidate, and a late response for a previous selection is dropped.
+  const [held, setPending] = useState<{ preview: Preview; candidateId: string; action: 'activate' | 'rollback'; scope: string } | null>(null)
+  const [justification, setJustification] = useState('')
+  const candidateId = detail.candidate.id
+  const pending = held && held.candidateId === candidateId ? held : null
+  const preview = useMutation({
+    mutationFn: async () => ({ preview: await api.preview({ action, candidateId, reviewId, scope }), candidateId, action, scope }),
+    onSuccess: (p) => { if (p.candidateId === candidateId) setPending(p) },
+  })
   const confirm = useMutation({
-    mutationFn: () => api.confirm({ token: pending!.token, intentHash: pending!.intentHash, justification }),
+    mutationFn: () => { if (!pending || pending.candidateId !== candidateId) throw new Error('preview_not_for_this_candidate'); return api.confirm({ token: pending.preview.token, intentHash: pending.preview.intentHash, justification }) },
     onSuccess: async () => { setPending(null); await onDone() },
     onError: (e) => { if (e instanceof AnatomyRulesApiError && ['PREVIEW_EXPIRED', 'PREVIEW_STALE', 'PREVIEW_CONSUMED'].includes(e.code)) setPending(null) },
   })
@@ -275,14 +291,15 @@ function ActivationPanel({ api, detail, onDone }: { api: ReturnType<typeof anato
         {confirm.isSuccess && <p className="ar-ok" role="status">{confirm.data.replayed ? 'Ativação já registrada (repetição).' : 'Ativação registrada.'}</p>}
       </>) : (
         <div className="ar-confirm" role="region" aria-label="Confirmar ativação">
-          <p><strong>Prévia {shortHash(pending.previewId)}</strong> · expira {new Date(pending.expiresAt).toLocaleTimeString('pt-BR')} · base: {pending.affectedScope.basis === 'active_candidate' ? 'regra ativa' : 'perfis padrão do motor'}</p>
+          <p><strong>Candidato {shortHash(pending.candidateId)}</strong> · {pending.action === 'activate' ? 'Ativar' : 'Retornar'} · escopo {pending.scope}</p>
+          <p>Prévia {shortHash(pending.preview.previewId)} · expira {new Date(pending.preview.expiresAt).toLocaleTimeString('pt-BR')} · base: {pending.preview.affectedScope.basis === 'active_candidate' ? 'regra ativa' : 'perfis padrão do motor'}</p>
           <table className="ar-table"><thead><tr><th>Fonte</th><th>Família</th><th>Perfil efetivo</th></tr></thead><tbody>
-            {pending.affectedScope.targets.map((t) => <tr key={`${t.source}|${t.family ?? ''}`}><td>{t.source}</td><td>{t.family ?? 'todas'}</td><td>{t.changed ? 'muda' : 'igual'}</td></tr>)}
+            {pending.preview.affectedScope.targets.map((t) => <tr key={`${t.source}|${t.family ?? ''}`}><td>{t.source}</td><td>{t.family ?? 'todas'}</td><td>{t.changed ? 'muda' : 'igual'}</td></tr>)}
           </tbody></table>
           <ul className="ar-limits">
-            <li>Publicações afetadas: <strong>não suportado</strong> — {pending.affectedScope.publications.reason}</li>
-            <li>Análises existentes: <strong>não suportado</strong> — {pending.affectedScope.analyses.reason}</li>
-            <li>Família desconhecida: {pending.affectedScope.unknownFamily}</li>
+            <li>Publicações afetadas: <strong>não suportado</strong> — {pending.preview.affectedScope.publications.reason}</li>
+            <li>Análises existentes: <strong>não suportado</strong> — {pending.preview.affectedScope.analyses.reason}</li>
+            <li>Família desconhecida: {pending.preview.affectedScope.unknownFamily}</li>
             <li>Nada é reprocessado ao ativar ou retornar.</li>
           </ul>
           <label className="ar-field">Justificativa da ativação (10 a 4000 caracteres)<textarea value={justification} onChange={(e) => setJustification(e.target.value)} rows={2} /></label>

@@ -155,3 +155,87 @@ describe('estado vazio e carregamento', () => {
     await waitFor(() => expect(screen.getByText('Nenhum rascunho ainda.')).toBeInTheDocument())
   })
 })
+
+// ANAT-ADMIN-01 P4 R1 regressions (COORD review of 1269b69). Fixtures only.
+describe('P4 R1', () => {
+  const B = '66666666-6666-4666-8666-666666666666'
+  const approvedReview = { id: 'r1', simulationId: SIM, reviewer: REVIEWER, outcome: 'approved' as const, rationale: 'ok', createdAt: '', comparisonIds: [CMP], decisions: [] }
+  function twoCandidates() {
+    const a = detail({ reviews: [approvedReview] })
+    const b = detail({ reviews: [{ ...approvedReview, id: 'r2' }] }); b.candidate = { ...b.candidate, id: B, state: 'approved', ruleHash: h('7') }
+    a.candidate = { ...a.candidate, state: 'approved' }
+    const calls: { url: string; body: unknown }[] = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input); calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      if (url.endsWith('/api/v1/admin/me')) return json({ platformAdmin: true, taxonomyCurator: false, licenseBypass: true, curatorDatabase: false })
+      if (url.endsWith('/drafts')) return json([])
+      if (url.endsWith('/candidates')) return json([a.candidate, b.candidate])
+      if (url.endsWith(`/candidates/${CAND}`)) return json(a)
+      if (url.endsWith(`/candidates/${B}`)) return json(b)
+      if (url.endsWith('/activations') || url.endsWith('/audit')) return json([])
+      if (url.endsWith('/activation/preview')) {
+        const body = JSON.parse(String(init!.body)) as { candidateId: string }
+        return json({ previewId: 'p-' + body.candidateId.slice(0, 4), intentHash: h('8'), expiresAt: '2026-10-24T00:10:00Z', token: `tok-${body.candidateId.slice(0, 4)}`,
+          affectedScope: { basis: 'shipped_defaults', targets: [], publications: { status: 'unsupported', reason: 'r' }, analyses: { status: 'unsupported', reason: 'r' }, unknownFamily: 'u', reprocessing: 'none' } }, 201)
+      }
+      if (url.endsWith('/activation/confirm')) return json({ activationId: 'a1', replayed: false })
+      return json({ error: 'not_mocked' }, 404)
+    }) as unknown as ProductApiFetch
+    return { apiFetch, calls }
+  }
+
+  it('P4-R1-01: uma prévia de A nunca pode ser confirmada na tela de B', async () => {
+    const { apiFetch, calls } = twoCandidates()
+    renderPage(apiFetch, REVIEWER)
+    const buttons = await screen.findAllByRole('button', { name: /aprovado/u })
+    // Warm both candidates in the query cache first (the review's precondition), then go back to A.
+    fireEvent.click(buttons[1]!)
+    await screen.findByText(/Candidato 66666666/u)
+    fireEvent.click(buttons[0]!)
+    await screen.findByText(/Candidato 33333333/u)
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar prévia' }))
+    const region = await screen.findByRole('region', { name: 'Confirmar ativação' })
+    expect(within(region).getByText(/33333333/u)).toBeInTheDocument()
+    expect(within(region).getByText(/Ativar · escopo global/u)).toBeInTheDocument()
+    // Both candidates are cached; switch to B.
+    fireEvent.click(buttons[1]!)
+    await screen.findByText(/Candidato 66666666/u)
+    expect(screen.queryByRole('region', { name: 'Confirmar ativação' })).toBeNull()
+    expect(calls.some((c) => c.url.endsWith('/activation/confirm'))).toBe(false)
+    // Back to A: the old token is gone too (a new preview is required).
+    fireEvent.click(buttons[0]!)
+    await screen.findByText(/Candidato 33333333/u)
+    expect(screen.queryByRole('region', { name: 'Confirmar ativação' })).toBeNull()
+  })
+
+  it('P4-R1-02: congelar exige que o conteúdo visível esteja salvo', async () => {
+    let release: (() => void) | null = null
+    const draft = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', author: AUTHOR, revision: 1, updatedAt: '', profiles: [{ a: 1 }], examples: [{ id: 'ex-a' }] }
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/v1/admin/me')) return json({ platformAdmin: true, taxonomyCurator: false, licenseBypass: true, curatorDatabase: false })
+      if (url.endsWith('/drafts') && (init?.method ?? 'GET') === 'GET') return json([draft])
+      if (url.endsWith(`/drafts/${draft.id}`) && init?.method === 'PUT') { await new Promise<void>((r) => { release = r }); return json({ id: draft.id, revision: 2 }) }
+      if (url.endsWith('/candidates') || url.endsWith('/activations') || url.endsWith('/audit')) return json([])
+      return json({ error: 'not_mocked' }, 404)
+    }) as unknown as ProductApiFetch
+    renderPage(apiFetch, AUTHOR)
+    fireEvent.click(await screen.findByRole('button', { name: /Rascunho dddddddd/u }))
+    const freezeButton = screen.getByRole('button', { name: /Congelar candidato/u })
+    expect(freezeButton).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('Perfis (JSON, ANAT-PROFILE/1)'), { target: { value: '[{"a":2}]' } })
+    expect(freezeButton).toBeDisabled()
+    expect(screen.getByText('Há alterações não salvas: salve antes de congelar.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await waitFor(() => expect(release).not.toBeNull())
+    expect(freezeButton).toBeDisabled() // save still in flight
+    release!()
+    await screen.findByText(/Rascunho salvo \(revisão 2\)/u)
+    await waitFor(() => expect(freezeButton).toBeEnabled())
+    // Switching drafts discards unsaved edits explicitly (the loaded content is the saved one).
+    fireEvent.change(screen.getByLabelText('Exemplos sintéticos (JSON, até 20)'), { target: { value: '[]' } })
+    expect(freezeButton).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: /Rascunho dddddddd/u }))
+    expect(freezeButton).toBeEnabled()
+  })
+})
