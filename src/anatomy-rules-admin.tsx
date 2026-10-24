@@ -91,21 +91,27 @@ function DraftsPanel({ api, onFrozen }: { api: ReturnType<typeof anatomyRulesApi
   const [local, setLocal] = useState<string | null>(null)
   // P4-R1-02: what the server holds for `editing` (as shown when loaded or last saved). Freeze needs visible == saved.
   const [savedText, setSavedText] = useState<{ profiles: string; examples: string } | null>(null)
+  // P4-R2-01: identity of the current edit session (bumped on every load). A save captures it with its target, and
+  // its response only touches this panel while that identity is still the one shown.
+  const session = useRef(0); const [sessionKey, setSessionKey] = useState(0)
   const load = (d: Draft | null) => {
     const p = JSON.stringify(d?.profiles ?? [], null, 2); const e = JSON.stringify(d?.examples ?? [], null, 2)
+    session.current += 1; setSessionKey(session.current)
     setEditing(d); setProfiles(p); setExamples(e); setLocal(null); setSavedText(d ? { profiles: p, examples: e } : null)
   }
+  type SaveRequest = { key: number; target: { id: string; revision: number } | null; profiles: string; examples: string }
   const save = useMutation({
-    mutationFn: async (sent: { profiles: string; examples: string }) => {
+    mutationFn: async (sent: SaveRequest) => {
       const p = parseJsonArray(sent.profiles, 'Perfis'); const e = parseJsonArray(sent.examples, 'Exemplos')
       const problem = p.error ?? e.error ?? (e.value && e.value.length > 20 ? 'Exemplos: no máximo 20.' : null)
       if (problem) { setLocal(problem); throw new Error('local') }
       setLocal(null)
-      return editing ? api.updateDraft(editing.id, editing.revision, p.value!, e.value!) : api.createDraft(p.value!, e.value!)
+      return sent.target ? api.updateDraft(sent.target.id, sent.target.revision, p.value!, e.value!) : api.createDraft(p.value!, e.value!)
     },
     onSuccess: async (r, sent) => {
-      setSavedText(sent) // exactly the content that was sent, even if the user kept typing meanwhile
       await qc.invalidateQueries({ queryKey: ['anat', 'drafts'] })
+      if (sent.key !== session.current) return // another draft is shown now: its selection and saved state are untouched
+      setSavedText({ profiles: sent.profiles, examples: sent.examples }) // exactly what was sent, even if typing continued
       setEditing((d) => (d ? { ...d, id: r.id, revision: r.revision } : { id: r.id, revision: r.revision, author: '', updatedAt: '', profiles: [], examples: [] }))
     },
   })
@@ -114,22 +120,25 @@ function DraftsPanel({ api, onFrozen }: { api: ReturnType<typeof anatomyRulesApi
     mutationFn: () => api.freeze(editing!.id, editing!.revision),
     onSuccess: async (r) => { await qc.invalidateQueries({ queryKey: ['anat', 'candidates'] }); onFrozen(r.candidateId) },
   })
+  const locked = save.isPending || freeze.isPending // no switching drafts or editing while a request for this one is in flight
+  const ownSave = save.variables?.key === sessionKey
   return (
     <div className="ar-card">
       <h2>Rascunhos</h2>
       {drafts.isPending ? <p className="ar-muted">Carregando…</p> : drafts.isError ? <p className="ar-error" role="alert">{errorText(drafts.error)}</p>
         : drafts.data.length === 0 ? <p className="ar-muted">Nenhum rascunho ainda.</p>
-        : <ul className="ar-list">{drafts.data.map((d) => <li key={d.id}><button type="button" onClick={() => load(d)} aria-pressed={editing?.id === d.id}>
+        : <ul className="ar-list">{drafts.data.map((d) => <li key={d.id}><button type="button" onClick={() => load(d)} aria-pressed={editing?.id === d.id} disabled={locked}>
             Rascunho {shortHash(d.id)} · revisão {d.revision}</button></li>)}</ul>}
-      <button type="button" className="ar-secondary" onClick={() => load(null)}>Novo rascunho</button>
-      <label className="ar-field">Perfis (JSON, ANAT-PROFILE/1)<textarea value={profiles} onChange={(e) => setProfiles(e.target.value)} rows={6} spellCheck={false} /></label>
-      <label className="ar-field">Exemplos sintéticos (JSON, até 20)<textarea value={examples} onChange={(e) => setExamples(e.target.value)} rows={6} spellCheck={false} /></label>
+      <button type="button" className="ar-secondary" onClick={() => load(null)} disabled={locked}>Novo rascunho</button>
+      <label className="ar-field">Perfis (JSON, ANAT-PROFILE/1)<textarea value={profiles} onChange={(e) => setProfiles(e.target.value)} readOnly={locked} rows={6} spellCheck={false} /></label>
+      <label className="ar-field">Exemplos sintéticos (JSON, até 20)<textarea value={examples} onChange={(e) => setExamples(e.target.value)} readOnly={locked} rows={6} spellCheck={false} /></label>
       <p className="ar-muted">{editing ? `Editando ${shortHash(editing.id)} · revisão ${editing.revision}` : 'Novo rascunho (não salvo)'}</p>
       {local && <p className="ar-error" role="alert">{local}</p>}
-      {save.isError && !local && <p className="ar-error" role="alert">{errorText(save.error)}</p>}
-      {save.isSuccess && <p className="ar-ok" role="status">Rascunho salvo (revisão {save.data.revision}).</p>}
+      {locked && <p className="ar-muted" role="status">Aguardando o servidor: edição e troca de rascunho bloqueadas.</p>}
+      {save.isError && !local && ownSave && <p className="ar-error" role="alert">{errorText(save.error)}</p>}
+      {save.isSuccess && ownSave && <p className="ar-ok" role="status">Rascunho salvo (revisão {save.data.revision}).</p>}
       <div className="ar-actions">
-        <button type="button" onClick={() => save.mutate({ profiles, examples })} disabled={save.isPending}>Salvar rascunho</button>
+        <button type="button" onClick={() => save.mutate({ key: sessionKey, target: editing && { id: editing.id, revision: editing.revision }, profiles, examples })} disabled={save.isPending}>Salvar rascunho</button>
         <button type="button" onClick={() => freeze.mutate()} disabled={!editing || dirty || save.isPending || freeze.isPending}><Snowflake size={15} /> Congelar candidato</button>
       </div>
       {editing && dirty && <p className="ar-warn" role="note">Há alterações não salvas: salve antes de congelar.</p>}

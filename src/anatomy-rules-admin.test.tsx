@@ -239,3 +239,97 @@ describe('P4 R1', () => {
     expect(freezeButton).toBeEnabled()
   })
 })
+
+describe('P4 R2', () => {
+  const A = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', author: AUTHOR, revision: 1, updatedAt: '', profiles: [{ a: 1 }], examples: [{ id: 'ex-a' }] }
+  const B = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', author: AUTHOR, revision: 4, updatedAt: '', profiles: [{ b: 1 }], examples: [{ id: 'ex-b' }] }
+  const NEW = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+  function slowDrafts() {
+    const gates: (() => void)[] = []
+    const calls: { url: string; method: string }[] = []
+    const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input); const method = init?.method ?? 'GET'; calls.push({ url, method })
+      if (url.endsWith('/api/v1/admin/me')) return json({ platformAdmin: true, taxonomyCurator: false, licenseBypass: true, curatorDatabase: false })
+      if (url.endsWith('/drafts') && method === 'GET') return json([A, B])
+      if (url.endsWith('/drafts') && method === 'POST') { await new Promise<void>((r) => gates.push(r)); return json({ id: NEW, revision: 1 }, 201) }
+      if (url.endsWith(`/drafts/${A.id}`) && method === 'PUT') { await new Promise<void>((r) => gates.push(r)); return json({ id: A.id, revision: 2 }) }
+      if (url.endsWith('/candidates') || url.endsWith('/activations') || url.endsWith('/audit')) return json([])
+      return json({ error: 'not_mocked' }, 404)
+    }) as unknown as ProductApiFetch
+    return { apiFetch, calls, gates }
+  }
+  const profilesBox = () => screen.getByLabelText('Perfis (JSON, ANAT-PROFILE/1)') as HTMLTextAreaElement
+  const freezeButton = () => screen.getByRole('button', { name: /Congelar candidato/u })
+
+  it('P4-R2-01: save lento de A e tentativa de selecionar B — a resposta de A não altera B', async () => {
+    const { apiFetch, gates } = slowDrafts()
+    renderPage(apiFetch, AUTHOR)
+    fireEvent.click(await screen.findByRole('button', { name: /Rascunho aaaaaaaa/u }))
+    fireEvent.change(profilesBox(), { target: { value: '[{"a":2}]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await waitFor(() => expect(gates).toHaveLength(1))
+    const bButton = screen.getByRole('button', { name: /Rascunho bbbbbbbb/u })
+    expect(bButton).toBeDisabled()
+    fireEvent.click(bButton)
+    gates[0]!()
+    await screen.findByText(/Rascunho salvo \(revisão 2\)/u)
+    expect(screen.getByText(/Editando aaaaaaaa\S* · revisão 2/u)).toBeInTheDocument()
+    expect(profilesBox().value).toBe('[{"a":2}]')
+    await waitFor(() => expect(freezeButton()).toBeEnabled())
+  })
+
+  it('P4-R2-01: criação em andamento e tentativa de abrir outro rascunho', async () => {
+    const { apiFetch, gates } = slowDrafts()
+    renderPage(apiFetch, AUTHOR)
+    await screen.findByRole('button', { name: /Rascunho aaaaaaaa/u })
+    fireEvent.click(screen.getByRole('button', { name: 'Novo rascunho' }))
+    fireEvent.change(profilesBox(), { target: { value: '[{"n":1}]' } })
+    fireEvent.change(screen.getByLabelText('Exemplos sintéticos (JSON, até 20)'), { target: { value: '[{"id":"ex-n"}]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await waitFor(() => expect(gates).toHaveLength(1))
+    const aButton = screen.getByRole('button', { name: /Rascunho aaaaaaaa/u })
+    expect(aButton).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Novo rascunho' })).toBeDisabled()
+    fireEvent.click(aButton)
+    gates[0]!()
+    await screen.findByText(/Editando cccccccc\S* · revisão 1/u)
+    expect(profilesBox().value).toBe('[{"n":1}]')
+    expect(screen.getByRole('button', { name: /Rascunho aaaaaaaa/u })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('P4-R2-01: edição bloqueada enquanto o save está pendente', async () => {
+    const { apiFetch, gates } = slowDrafts()
+    renderPage(apiFetch, AUTHOR)
+    fireEvent.click(await screen.findByRole('button', { name: /Rascunho aaaaaaaa/u }))
+    fireEvent.change(profilesBox(), { target: { value: '[{"a":2}]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await waitFor(() => expect(gates).toHaveLength(1))
+    expect(profilesBox()).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Exemplos sintéticos (JSON, até 20)')).toHaveAttribute('readonly')
+    expect(screen.getByText(/edição e troca de rascunho bloqueadas/u)).toBeInTheDocument()
+    gates[0]!()
+    await waitFor(() => expect(profilesBox()).not.toHaveAttribute('readonly'))
+    await waitFor(() => expect(freezeButton()).toBeEnabled())
+  })
+
+  it('P4-R2-01: resposta tardia de A não habilita congelar para o alvo errado', async () => {
+    const { apiFetch, calls, gates } = slowDrafts()
+    renderPage(apiFetch, AUTHOR)
+    fireEvent.click(await screen.findByRole('button', { name: /Rascunho aaaaaaaa/u }))
+    fireEvent.change(profilesBox(), { target: { value: '[{"a":2}]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await waitFor(() => expect(gates).toHaveLength(1))
+    fireEvent.click(screen.getByRole('button', { name: /Rascunho bbbbbbbb/u })) // blocked while A's save is in flight
+    gates[0]!()
+    await screen.findByText(/Rascunho salvo \(revisão 2\)/u)
+    // Whatever is shown, the identity, the content and the freeze target belong together (A, revision 2, A's text).
+    const shown = screen.getByText(/Editando /u).textContent!
+    expect(shown).toMatch(/aaaaaaaa\S* · revisão 2/u)
+    expect(profilesBox().value).not.toContain('"b"')
+    await waitFor(() => expect(freezeButton()).toBeEnabled())
+    fireEvent.click(freezeButton())
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/freeze'))).toBe(true))
+    expect(calls.filter((c) => c.url.includes('/freeze')).every((c) => c.url.includes(A.id))).toBe(true)
+  })
+})
+

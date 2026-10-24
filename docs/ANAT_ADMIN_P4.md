@@ -47,3 +47,11 @@ Draft → freeze → simulate (with cancel) → compare → review → preview �
 | **P4-R1-02:** freeze ignored unsaved edits | Freeze is disabled while the visible JSON differs from the content last loaded or saved, or while a save is in flight ("Há alterações não salvas…"). The saved content is exactly what was sent | Unit test `P4-R1-02`: edit after saving, save in flight, switching drafts. **Reproduced on `1269b69`**: freeze stayed enabled after an edit |
 
 After the fixes, the real-API e2e (backend `1196cd6`, fresh disposable PostgreSQL 16) passed 12 of 12, with 8 skipped by design. Evidence screenshots were regenerated.
+
+## R2 correction (COORD review of `2852d69`)
+
+| Finding | Correction | Evidence |
+|---|---|---|
+| **P4-R2-01:** a save's response could change another draft's selection and state | Two layers. (1) While a save or a freeze is in flight, the draft list, "Novo rascunho" and both text areas are locked, with the note "Aguardando o servidor…". (2) Each save captures its edit-session identity, target (ID and revision, or creation) and the exact text sent; its response updates the saved state and the identity only if that session is still the one shown, and the success or error message is shown only for it | Tests "P4 R2" (4): slow save of A with an attempt to select B; creation in flight with an attempt to open another draft; editing while the save is pending; a late response never enables freeze for the wrong target (freeze goes to A's ID). **Reproduced on `2852d69`:** after A's slow save, the screen showed "Editando A · revisão 2" with B's content |
+
+Results on this HEAD: web suite 257/257, typecheck, lint and build clean; real e2e against the harness on backend `2e8a15a` (fresh database, one worker): 4 passed, 4 skipped by design (the mutating flow runs on one viewport; the others check its result).
