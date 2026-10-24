@@ -2754,3 +2754,65 @@
   outline: 3px solid var(--tp-blue);
   outline-offset: 3px;
 }
+
+/* ONB-02 — visible progress is a timed welcome animation, not an API loading claim. */
+.tp-onboarding-steps {
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(40, 89, 78, .14);
+  margin-block: 1rem;
+}
+.tp-onboarding-progress {
+  display: block;
+  height: 100%;
+  background: var(--tp-blue);
+  transition: width .25s ease;
+}
+.tp-profile-help { margin-top: .35rem; max-width: 62ch; }
+.tp-profile-help summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .85rem;
+}
+.tp-profile-help p { margin: .4rem 0; line-height: 1.55; }
+@media (prefers-reduced-motion: reduce) {
+  .tp-onboarding-progress { transition: none; }
+}
+
+/* ONB-02 P07 — establishment-level overrides remain visually distinct from
+   legacy company-wide selections and retain full usability on narrow mobile widths. */
+.tp-establishment-profile {
+  display: grid;
+  gap: 1rem;
+}
+.tp-establishment-profile > label,
+.tp-establishment-override > label {
+  display: grid;
+  gap: .35rem;
+  max-width: 520px;
+}
+.tp-establishment-override {
+  display: grid;
+  gap: .9rem;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(37,87,70,.22));
+  padding: clamp(.85rem,2vw,1.35rem);
+}
+.tp-establishment-override .tp-taxonomy-grid { min-width: 0; }
+.tp-establishment-profile select { max-width: 100%; }
+
+.tp-onboarding-welcome {
+  display: grid;
+  gap: .5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(35, 112, 50, .3);
+  border-radius: 12px;
+}
+.tp-onboarding-welcome > p { margin: 0; }
+.tp-onboarding-welcome .btn { justify-self: start; }

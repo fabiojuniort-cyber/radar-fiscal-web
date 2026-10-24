@@ -688,7 +688,8 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(cnaeSegment).toHaveValue('sector.wholesale')
   await cnaeSegment.selectOption('sector.agri_inputs')
   // The CNAE segment shows as selected in the Segmento card, marked as from the CNAE.
-  const segmentCard = page.getByRole('region', { name: 'Setor', exact: true })
+  const companyTaxonomy = page.getByRole('region', { name: 'Taxonomia da empresa', exact: true })
+  const segmentCard = companyTaxonomy.getByRole('region', { name: 'Setor', exact: true })
   const segmentSelected = segmentCard.getByLabel('Selecionados')
   await expect(segmentSelected).toContainText('Insumos agrícolas')
   await expect(segmentSelected).toContainText('do CNAE 4683400')
@@ -700,11 +701,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(segmentSelected).not.toContainText('Insumos agrícolas')
   await cnaeSegment.selectOption('sector.agri_inputs')
   // Card NCM between Produto and the next card.
-  await expect(page.getByRole('region', { name: 'NCM', exact: true })).toBeVisible()
-  await page.getByLabel('Regime tributário').selectOption('LUCRO_REAL')
+  await expect(companyTaxonomy.getByRole('region', { name: 'NCM', exact: true })).toBeVisible()
+  await page.locator('.tp-profile-declared').getByLabel('Regime tributário').selectOption('LUCRO_REAL')
   await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
   for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
-    await page.getByText(label, { exact: true }).click()
+    await companyTaxonomy.getByText(label, { exact: true }).click()
   }
   await page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true }).click()
   await expect(page.getByText('Perfil v1')).toBeVisible()
