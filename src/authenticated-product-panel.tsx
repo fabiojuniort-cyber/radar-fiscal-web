@@ -1,3 +1,4 @@
+import { OnboardingAssistant } from './onboarding-assistant'
 import {
   useMutation,
   useQuery,
@@ -509,6 +510,8 @@ export function AuthenticatedProductPanel({
   const [archiveTag, setArchiveTag] = useState<{ code: string; label: string } | null>(
     persisted?.archiveTag ?? null,
   )
+  const [assistantOpen,setAssistantOpen]=useState(false)
+  const [assistantAnimate,setAssistantAnimate]=useState(false)
   const [orgTab, setOrgTab] = useState<OrgTab>(persisted?.orgTab ?? 'empresa')
   const [userMenu, setUserMenu] = useState(false)
   const [tenantMenu, setTenantMenu] = useState(false)
@@ -1626,31 +1629,11 @@ export function AuthenticatedProductPanel({
             </div>
 
             <div className="tp-org-tabs" role="tablist" aria-label="Organização">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={orgTab === 'empresa'}
-                onClick={() => setOrgTab('empresa')}
-              >
-                <b>1</b> Empresas
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={orgTab === 'estabelecimentos'}
-                onClick={() => setOrgTab('estabelecimentos')}
-              >
-                <b>2</b> Estabelecimentos
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={orgTab === 'perfil'}
-                onClick={() => setOrgTab('perfil')}
-              >
-                <b>3</b> Perfil tributário
-              </button>
+              <button role="tab" aria-selected={orgTab!=='perfil'} onClick={()=>setOrgTab('empresa')}>Empresa e filiais</button>
+              <button role="tab" aria-selected={orgTab==='perfil'} onClick={()=>setOrgTab('perfil')}>Perfil tributário</button>
+              {selectedCompany&&<button onClick={()=>{setAssistantAnimate(false);setAssistantOpen(true)}}>Abrir assistente</button>}
             </div>
+            {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} animate={assistantAnimate} onClose={()=>setAssistantOpen(false)} onSaved={()=>void queryClient.invalidateQueries({queryKey:['launch','tax-profile']})}/>}
 
             {!tenantId ? (
               <ErrorState title="Conta sem tenant ativo" />
@@ -1658,20 +1641,23 @@ export function AuthenticatedProductPanel({
               <LoadingState />
             ) : accountQuery.isError ? (
               <ErrorState />
-            ) : orgTab === 'empresa' ? (
+            ) : orgTab !== 'perfil' ? (
+              <>
               <CompanySection
                 apiFetch={apiFetch}
                 tenantId={tenantId}
                 account={account!}
                 selectedCompanyId={selectedCompany?.id ?? ''}
                 onSelect={setSelectedCompanyId}
-                onOpenEstablishments={() => setOrgTab('estabelecimentos')}
-                onOpenProfile={() => setOrgTab('perfil')}
+                onOpenEstablishments={() => setOrgTab('empresa')}
+                onOpenProfile={() => {setAssistantAnimate(true);setAssistantOpen(true);setOrgTab('empresa')}}
                 onChanged={() => {
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'account', tenantId] })
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                 }}
               />
+              {selectedCompany&&<EstablishmentSection apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} companyCnpj={selectedCompany.cnpj} items={establishmentsQuery.data??[]} types={typesQuery.data??[]} loading={establishmentsQuery.isPending||typesQuery.isPending} error={establishmentsQuery.isError||typesQuery.isError} onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','establishments']});void queryClient.invalidateQueries({queryKey:['launch','account']})}} onOpenProfile={()=>{setAssistantAnimate(true);setAssistantOpen(true)}}/>}
+              </>
             ) : !selectedCompany && selectedCompanyId ? (
               accountQuery.isFetching ? (
                 <LoadingState text="Carregando empresa selecionada…" />
@@ -1682,22 +1668,6 @@ export function AuthenticatedProductPanel({
               <EmptyState title="Cadastre a empresa primeiro">
                 O Perfil Tributário e os estabelecimentos dependem da empresa.
               </EmptyState>
-            ) : orgTab === 'estabelecimentos' ? (
-              <EstablishmentSection
-                apiFetch={apiFetch}
-                tenantId={tenantId}
-                companyId={selectedCompany.id}
-                companyCnpj={selectedCompany.cnpj}
-                items={establishmentsQuery.data ?? []}
-                types={typesQuery.data ?? []}
-                loading={establishmentsQuery.isPending || typesQuery.isPending}
-                error={establishmentsQuery.isError || typesQuery.isError}
-                onChanged={() => {
-                  void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
-                  void queryClient.invalidateQueries({ queryKey: ['launch', 'account'] })
-                }}
-                onOpenProfile={() => setOrgTab('perfil')}
-              />
             ) : (
               <TaxProfileSection
                 key={selectedCompany.id}
@@ -3030,6 +3000,7 @@ export function TaxProfileSection({
   const mutation = useMutation({
     mutationFn: () =>
       saveTaxProfile(apiFetch, tenantId, company.id, {
+        expectedVersion: profile?.versionNo ?? 0,
         taxRegime,
         segments: [...new Set([...derivedSegments.map((tag) => tag.label), ...selectedLabels('sector')])],
         activities: selectedLabels('operation'),

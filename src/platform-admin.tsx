@@ -1,3 +1,4 @@
+import {OnboardingPhraseEditor} from './onboarding-phrase-editor'
 import * as Dialog from '@radix-ui/react-dialog'
 import {
   ArrowLeft,
@@ -251,7 +252,7 @@ export function PlatformAdministratorsPage({
             </div>
           )}
         </section>
-      </main>
+      <OnboardingPhraseEditor apiFetch={apiFetch}/></main>
 
       <Dialog.Root
         open={Boolean(revokeTarget)}

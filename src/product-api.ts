@@ -711,6 +711,7 @@ export async function saveTaxProfile(
   tenantId: string,
   companyId: string,
   input: {
+    expectedVersion: number
     taxRegime: string
     segments: string[]
     activities: string[]
