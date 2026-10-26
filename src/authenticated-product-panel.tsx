@@ -2042,15 +2042,6 @@ export function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      const principalCnae = result.establishment.cnaes?.find((item) => item.isPrimary)
-      try {
-        sessionStorage.setItem('tribusca.onboarding.welcome', JSON.stringify({
-          companyId: result.company.id,
-          cnaeText: principalCnae?.description ?? 'Atividade principal ainda não informada',
-        }))
-      } catch {
-        // The profile remains available even when session storage is disabled.
-      }
       onOpenProfile()
     },
   })

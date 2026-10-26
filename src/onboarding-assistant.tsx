@@ -9,6 +9,7 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
   const [index,setIndex]=useState(0),[codes,setCodes]=useState<string[]>([]),[ncms,setNcms]=useState('')
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[importing,setImporting]=useState(animate)
   const [phrases,setPhrases]=useState<Phrase[]>([]),[phrase,setPhrase]=useState('Preparando seu perfil tributário.')
+  useEffect(()=>{try{sessionStorage.removeItem('tribusca.onboarding.welcome')}catch{/* Optional legacy UI state. */}},[])
   const path='/api/v1/companies/'+companyId+'/onboarding'
   const load=async()=>{const result=await assistantRequest<AssistantData>(apiFetch,tenantId,path);setData(result);setIndex(initialStep(result));setError('')}
   useEffect(()=>{let active=true;assistantRequest<AssistantData>(apiFetch,tenantId,path).then(result=>{if(active){setData(result);setIndex(initialStep(result))}}).catch(()=>{if(active)setError('Não foi possível carregar o assistente.')});assistantRequest<{items:Phrase[]}>(apiFetch,tenantId,'/api/v1/onboarding/phrases').then(r=>{if(active)setPhrases(r.items)}).catch(()=>{});return()=>{active=false}},[apiFetch,tenantId,path])
