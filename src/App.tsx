@@ -37,6 +37,8 @@ import { PanelExperience } from './panel-experience'
 import { PublicationDetailPage } from './publication-detail-page'
 import { PlatformAdministratorsPage } from './platform-admin'
 import { CollectionFilterAdminPage } from './collection-filter-admin'
+import { AnatomyRulesAdminPage } from './anatomy-rules-admin'
+import { anatomyRulesAdminEnabled } from './anatomy-rules-flag'
 import { TaxonomyAdminPage } from './taxonomy-admin'
 import {
   PRIVACY_POLICY,
@@ -159,6 +161,11 @@ function AppContent() {
     return <AuthenticatedCollectionFilterAdmin />
   }
 
+  // ANAT-ADMIN-01 P4: off unless the build sets VITE_ENABLE_ANAT_RULES_ADMIN=true (not enabled for real users).
+  if (location.pathname === '/admin/anatomia-regras') {
+    return anatomyRulesAdminEnabled() ? <AuthenticatedAnatomyRulesAdmin /> : <Navigate to="/" replace />
+  }
+
   return (
     <div className="app-shell">
       <PublicExperience onAuth={openAuth} />
@@ -247,6 +254,20 @@ function AuthenticatedCollectionFilterAdmin() {
   }
 
   return <CollectionFilterAdminPage sessionKey={`${me.user.id}:${sessionRevision}`} apiFetch={apiFetch} />
+}
+
+function AuthenticatedAnatomyRulesAdmin() {
+  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return <AnatomyRulesAdminPage apiFetch={apiFetch} userId={me.user.id} />
 }
 
 function AuthenticatedPublicationDetail({
