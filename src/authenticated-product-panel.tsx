@@ -2752,6 +2752,7 @@ export function TaxProfileSection({
   error: boolean
   onChanged: () => void
 }) {
+  const [baseVersion,setBaseVersion]=useState(profile?.versionNo??0)
   const [taxRegime, setTaxRegime] = useState(profile?.taxRegime ?? 'NAO_INFORMADO')
   const [keywords, setKeywords] = useState(profile?.personalization.keywords?.join(', ') ?? '')
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(
@@ -2824,6 +2825,7 @@ export function TaxProfileSection({
 
 
   useEffect(() => {
+    setBaseVersion(profile?.versionNo??0)
     setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
     setKeywords(profile?.personalization.keywords?.join(', ') ?? '')
     setSelectedCodes(new Set(profile?.personalization.taxonomy?.conceptCodes ?? []))
@@ -3000,7 +3002,7 @@ export function TaxProfileSection({
   const mutation = useMutation({
     mutationFn: () =>
       saveTaxProfile(apiFetch, tenantId, company.id, {
-        expectedVersion: profile?.versionNo ?? 0,
+        expectedVersion: baseVersion,
         taxRegime,
         segments: [...new Set([...derivedSegments.map((tag) => tag.label), ...selectedLabels('sector')])],
         activities: selectedLabels('operation'),
