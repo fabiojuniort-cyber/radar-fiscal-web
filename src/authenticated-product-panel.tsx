@@ -53,7 +53,7 @@ import {
 } from './public-api-v2'
 import {
   fetchCatalogArchive,
-  fetchCatalogFacets,
+  fetchCatalogFacetOptions,
   fetchCatalogNavigation,
   type CatalogNavigationFilters,
   type CatalogNavigationGroup,
@@ -578,24 +578,11 @@ export function AuthenticatedProductPanel({
     refetchInterval: 60_000,
   })
 
+  // Keep dropdown options independent of every active search filter.
+  // The archive query below still applies all selected criteria to results.
   const facetsQuery = useQuery({
-    queryKey: ['launch', 'archive-facets', appliedQuery, fullText, jurisdiction, uf, source, actType, archiveTag?.code],
-    queryFn: () => fetchCatalogFacets(apiFetch, {
-        q: appliedQuery.trim().length >= 2
-          ? appliedQuery.trim()
-          : undefined,
-        scope: fullText ? 'full' : 'title',
-        jurisdiction:
-          jurisdiction === 'FEDERAL' || jurisdiction === 'STATE'
-            ? jurisdiction
-            : undefined,
-        uf: uf || undefined,
-        source: source || undefined,
-        actType: actType || undefined,
-        tag: archiveTag?.code,
-        page: 1,
-        limit: 25,
-      }),
+    queryKey: ['launch', 'archive-facets', 'all'],
+    queryFn: () => fetchCatalogFacetOptions(apiFetch),
     enabled: screen === 'acervo',
     retry: false,
     staleTime: CATALOG_AGGREGATE_STALE_MS,
@@ -2076,7 +2063,6 @@ export function CompanySection({
   const [editLegalName, setEditLegalName] = useState('')
   const [editBusinessLocationCode, setEditBusinessLocationCode] = useState('')
   const [deleteCandidate, setDeleteCandidate] = useState<AccountCompany | null>(null)
-
   const createMutation = useMutation({
     mutationFn: () =>
       createCompanyFromCnpj(apiFetch, tenantId, cnpj, businessLocationCode),
@@ -2086,8 +2072,15 @@ export function CompanySection({
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      // ONB-01: loading animation/wizard are subsequent blocks.
-      // Existing tax profile is the safe transition target.
+      const principalCnae = result.establishment.cnaes?.find((item) => item.isPrimary)
+      try {
+        sessionStorage.setItem('tribusca.onboarding.welcome', JSON.stringify({
+          companyId: result.company.id,
+          cnaeText: principalCnae?.description ?? 'Atividade principal ainda não informada',
+        }))
+      } catch {
+        // The profile remains available even when session storage is disabled.
+      }
       onOpenProfile()
     },
   })
@@ -2186,6 +2179,28 @@ export function CompanySection({
             </p>
           )}
         </form>
+      )}
+
+      {createMutation.isError && createMutation.error.message !== 'manual_registration_cancelled' && (
+        <Dialog.Root open onOpenChange={(open) => { if (!open) createMutation.reset() }}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="tp-acervo-help-overlay" />
+            <Dialog.Content className="tp-acervo-help-dialog">
+              <Dialog.Title>Erro na consulta do CNPJ</Dialog.Title>
+              <Dialog.Description>
+                {registrationErrorMessage(createMutation.error, 'empresa')}
+                {' '}Confira o CNPJ ou tente novamente. Se a fonte oficial estiver indisponível,
+                use o cadastro manual quando ele for oferecido.
+              </Dialog.Description>
+              {/^[a-z][a-z0-9_]{0,63}$/.test(createMutation.error.message) && (
+                <p>Referência do erro: {createMutation.error.message}</p>
+              )}
+              <Dialog.Close asChild>
+                <button className="btn" type="button">Entendi</button>
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       )}
 
       <div className="tp-company-list">
@@ -2746,7 +2761,7 @@ function EstablishmentSection({
   )
 }
 
-function TaxProfileSection({
+export function TaxProfileSection({
   apiFetch,
   tenantId,
   company,
@@ -2780,7 +2795,63 @@ function TaxProfileSection({
     ) as Record<string, string>
   const [cnaeSegments, setCnaeSegments] = useState<Record<string, string>>(savedCnaeSegments)
   const [profileNcms, setProfileNcms] = useState<string[]>(() => profile?.personalization.ncmCodes ?? [])
+  type UnitOverride = { taxRegime: string; conceptCodes: string[]; ncmCodes: string[] }
+  const emptyOverride = (): UnitOverride =>
+    ({ taxRegime: 'NAO_INFORMADO', conceptCodes: [], ncmCodes: [] })
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, UnitOverride>>(
+    () => Object.fromEntries(
+      (profile?.personalization.establishmentOverrides ?? [])
+        .map((unit) => [unit.establishmentId, {
+          taxRegime: unit.taxRegime,
+          conceptCodes: unit.conceptCodes,
+          ncmCodes: unit.ncmCodes,
+        }]),
+    ),
+  )
+  const [unitId, setUnitId] = useState(establishments[0]?.id ?? '')
+  const updateUnit = (id: string, update: (current: UnitOverride) => UnitOverride) => {
+    setUnitOverrides((current) => ({
+      ...current,
+      [id]: update(current[id] ?? emptyOverride()),
+    }))
+  }
+  useEffect(() => {
+    setUnitId((current) => establishments.some((unit) => unit.id === current)
+      ? current
+      : establishments[0]?.id ?? '')
+  }, [establishments])
   const [segmentRemoval, setSegmentRemoval] = useState<DerivedTag | null>(null)
+  const [profileWelcome, setProfileWelcome] = useState<{
+    companyId: string; cnaeText: string; phase: number
+  } | null>(null)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('tribusca.onboarding.welcome')
+      const value = raw ? JSON.parse(raw) as { companyId: string; cnaeText: string } : null
+      setProfileWelcome(value?.companyId === company.id
+        ? { companyId: value.companyId, cnaeText: value.cnaeText, phase: 0 }
+        : null)
+    } catch { setProfileWelcome(null) }
+  }, [company.id])
+  useEffect(() => {
+    if (!profileWelcome) return
+    const timers = [
+      window.setTimeout(() => setProfileWelcome((current) =>
+        current ? { ...current, phase: 1 } : null), 2000),
+      window.setTimeout(() => setProfileWelcome((current) =>
+        current ? { ...current, phase: 2 } : null), 4000),
+      window.setTimeout(() => {
+        try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
+        setProfileWelcome(null)
+      }, 6000),
+    ]
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [profileWelcome?.companyId])
+  const dismissProfileWelcome = () => {
+    try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
+    setProfileWelcome(null)
+  }
+
 
   useEffect(() => {
     setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
@@ -2792,6 +2863,14 @@ function TaxProfileSection({
       ),
     )
     setProfileNcms(profile?.personalization.ncmCodes ?? [])
+    setUnitOverrides(Object.fromEntries(
+      (profile?.personalization.establishmentOverrides ?? [])
+        .map((unit) => [unit.establishmentId, {
+          taxRegime: unit.taxRegime,
+          conceptCodes: unit.conceptCodes,
+          ncmCodes: unit.ncmCodes,
+        }]),
+    ))
   }, [profile])
 
   // TAX-11: the API returns only the dimensions the curator made visible, in
@@ -2962,6 +3041,14 @@ function TaxProfileSection({
           obligations: selectedLabels('obligation'),
           keywords: splitCsv(keywords),
           ncmCodes: profileNcms,
+          establishmentOverrides: Object.entries(unitOverrides)
+            .filter(([id]) => establishments.some((unit) => unit.id === id && unit.isActive))
+            .map(([establishmentId, values]) => ({
+              establishmentId,
+              taxRegime: values.taxRegime,
+              conceptCodes: [...new Set(values.conceptCodes)].sort(),
+              ncmCodes: [...new Set(values.ncmCodes)].sort(),
+            })),
           taxonomy: taxonomyOptions.release
             ? {
                 releaseId: taxonomyOptions.release.id,
@@ -3036,9 +3123,32 @@ function TaxProfileSection({
         {profile && <span className="tp-profile-version">Perfil v{profile.versionNo}</span>}
       </div>
 
+      {profileWelcome && (
+        <section className="tp-onboarding-welcome" role="status" aria-live="polite">
+          <strong>Empresa cadastrada com sucesso!</strong>
+          <p>
+            {profileWelcome.phase === 0
+              ? 'Primeiro sinal captado: sua empresa já faz parte do TriFaros.'
+              : profileWelcome.phase === 1
+                ? 'Atividade principal: ' + profileWelcome.cnaeText + '. O radar já sabe por onde começar.'
+                : 'Agora revise produtos, NCMs e outras informações reais do seu Perfil Tributário.'}
+          </p>
+          <div className="tp-onboarding-steps" aria-hidden="true">
+            <span className="tp-onboarding-progress"
+              style={{ width: ((profileWelcome.phase + 1) / 3 * 100) + '%' }} />
+          </div>
+          <button type="button" className="btn" onClick={dismissProfileWelcome}>Dispensar boas-vindas</button>
+        </section>
+      )}
+
       <section className="tp-profile-context">
         <div className="tp-profile-section-title">
-          <h3>Contexto cadastral</h3>
+          <h3>Contexto cadastral automático</h3>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> O que são estes dados?</summary>
+            <p>São informações do cadastro da empresa e de seus estabelecimentos.
+              O CNAE sugere atividades, mas não comprova quais produtos ela comercializa.</p>
+          </details>
         </div>
         <div className="tp-context-grid">
           <article><span>CNPJ da matriz</span><strong>{formatCnpj(company.cnpj)}</strong></article>
@@ -3071,7 +3181,12 @@ function TaxProfileSection({
 
       <section className="tp-profile-declared">
         <div className="tp-profile-section-title">
-          <h3>Contexto fiscal</h3>
+          <h3>Informações fiscais declaradas</h3>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> Como preencher?</summary>
+            <p>Informe o regime tributário e palavras-chave conforme a realidade da empresa.
+              Estes dados são declarados por você, não confirmados por consulta ao CNPJ.</p>
+          </details>
         </div>
         <div className="launch-form-grid">
           <label>
@@ -3096,10 +3211,18 @@ function TaxProfileSection({
         </div>
       </section>
 
-      <section className="tp-profile-taxonomy">
+      <section className="tp-profile-taxonomy" aria-label="Taxonomia da empresa">
         <div className="tp-profile-section-title">
-          <h3>Marcadores do perfil</h3>
-          <p>Selecione apenas conceitos que descrevem a empresa e suas operações.</p>
+          <h3>Taxonomia TriFaros</h3>
+          <p>Revise as sugestões por CNAE e selecione somente o que realmente se aplica.
+            Os conceitos vêm da versão publicada da Taxonomia TriFaros.</p>
+          <details className="tp-profile-help">
+            <summary><HelpCircle size={14} /> Como as sugestões são usadas?</summary>
+            <p>Segmento, produto e NCM são sinais diferentes para comparar o perfil com
+              as legislações. Uma sugestão não significa que a empresa pratica aquela
+              atividade: confirme antes de salvar. Alguns segmentos derivados dos CNAEs
+              também são registrados ao salvar o perfil.</p>
+          </details>
         </div>
 
         {taxonomyOptions.release ? (
@@ -3138,6 +3261,92 @@ function TaxProfileSection({
             <strong>Taxonomia indisponível</strong>
           </div>
         )}
+      </section>
+
+      <section className="tp-profile-taxonomy tp-establishment-profile" aria-label="Perfil por estabelecimento">
+        <div className="tp-profile-section-title">
+          <h3>Particularidades dos estabelecimentos</h3>
+          <p>Cada matriz ou filial tem suas próprias seleções. Uma filial nova começa vazia,
+            sem copiar o perfil da matriz ou das demais unidades.</p>
+        </div>
+        <label>
+          Estabelecimento
+          <select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
+            {establishments.filter((unit) => unit.isActive).map((unit) => (
+              <option value={unit.id} key={unit.id}>
+                {unit.name} · {unit.uf} · {formatCnpj(unit.cnpj)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {establishments.filter((unit) => unit.isActive).map((unit) => {
+          if (unit.id !== unitId) return null
+          const current = unitOverrides[unit.id] ?? emptyOverride()
+          const selectedForUnit = new Set(current.conceptCodes)
+          const relevantDimensions = profileDimensions.filter((dim) =>
+            ['sector', 'product', 'operation', 'tax', 'document', 'obligation'].includes(dim.code))
+          const toggle = (code: string) => updateUnit(unit.id, (value) => ({
+            ...value,
+            conceptCodes: value.conceptCodes.includes(code)
+              ? value.conceptCodes.filter((item) => item !== code)
+              : [...value.conceptCodes, code],
+          }))
+          const setManyUnit = (codes: string[], checked: boolean) => {
+            updateUnit(unit.id, (value) => ({
+              ...value,
+              conceptCodes: [...new Set(
+                checked
+                  ? [...value.conceptCodes, ...codes]
+                  : value.conceptCodes.filter((code) => !codes.includes(code)),
+              )],
+            }))
+          }
+          return (
+            <div key={unit.id} className="tp-establishment-override">
+              <p><strong>{unit.name}</strong> — {unit.uf}
+                {unit.municipalityName ? ' / ' + unit.municipalityName : ''}.
+                As seleções abaixo só se aplicam a esta unidade.</p>
+              <label>
+                Regime tributário desta unidade
+                <select value={current.taxRegime}
+                  onChange={(event) => updateUnit(unit.id, (value) => ({
+                    ...value, taxRegime: event.target.value,
+                  }))}>
+                  <option value="NAO_INFORMADO">Não informado</option>
+                  <option value="LUCRO_REAL">Lucro Real</option>
+                  <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
+                  <option value="SIMPLES_NACIONAL">Simples Nacional</option>
+                  <option value="IMUNE_ISENTA">Imune/Isenta</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </label>
+              {taxonomyOptions.release ? (
+                <div className="tp-taxonomy-grid">
+                  {relevantDimensions.map((dimension) => (
+                    <TaxonomyDimensionPicker
+                      key={unit.id + ':' + dimension.code}
+                      dimension={dimension}
+                      selected={selectedForUnit}
+                      onToggle={toggle}
+                      onSetMany={setManyUnit}
+                    />
+                  ))}
+                  <NcmProfileCard
+                    key={unit.id + ':ncm'}
+                    apiFetch={apiFetch}
+                    codes={current.ncmCodes}
+                    onChange={(codes) => updateUnit(unit.id, (value) => ({
+                      ...value, ncmCodes: codes,
+                    }))}
+                    derived={[]}
+                  />
+                </div>
+              ) : (
+                <p>Aguardando a publicação de uma versão da Taxonomia TriFaros.</p>
+              )}
+            </div>
+          )
+        })}
       </section>
 
       {segmentRemoval && (

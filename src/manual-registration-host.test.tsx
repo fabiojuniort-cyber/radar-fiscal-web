@@ -39,6 +39,7 @@ describe('ManualRegistrationHost', () => {
       kind: 'company',
       cnpj: '10515785000350',
       businessLocationCode: 'MATRIZ-001',
+      lookupFailure: { code: 'cnpj_provider_unavailable', httpStatus: 503 },
       searchCnaes: vi.fn(async () => [{ code: '0111301', description: 'Cultivo de arroz' }]),
       submit,
     })
@@ -50,6 +51,8 @@ describe('ManualRegistrationHost', () => {
         name: 'Continuar manualmente',
       }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('HTTP 503')
+    expect(screen.getByRole('alert')).toHaveTextContent('cnpj_provider_unavailable')
     expect(
       screen.getByDisplayValue('10.515.785/0003-50'),
     ).toHaveAttribute('readonly')

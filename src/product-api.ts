@@ -201,6 +201,13 @@ export type TaxProfile = {
     keywords?: string[]
     /** NCMs of the card NCM, compared with the NCMs that legislation mentions. */
     ncmCodes?: string[]
+    /** Independent selections by active establishment; absent units start empty. */
+    establishmentOverrides?: Array<{
+      establishmentId: string
+      taxRegime: string
+      conceptCodes: string[]
+      ncmCodes: string[]
+    }>
     taxonomy?: {
       releaseId: string
       releaseVersion: string
@@ -345,6 +352,7 @@ export async function createCompanyFromCnpj(
 
   return requestManualRegistration<CnpjRegistryResult>({
     kind: 'company',
+    lookupFailure: { code, httpStatus: response.status },
     searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     businessLocationCode:
@@ -550,6 +558,7 @@ export async function createEstablishmentFromCnpj(
 
   await requestManualRegistration<void>({
     kind: 'establishment',
+    lookupFailure: { code, httpStatus: response.status },
     searchCnaes: (term: string) => searchOfficialCnaes(apiFetch, tenantId, term),
     cnpj: normalizedCnpj,
     typeCode: input.typeCode,
@@ -713,6 +722,12 @@ export async function saveTaxProfile(
       obligations: string[]
       keywords: string[]
       ncmCodes: string[]
+      establishmentOverrides?: Array<{
+        establishmentId: string
+        taxRegime: string
+        conceptCodes: string[]
+        ncmCodes: string[]
+      }>
       taxonomy: {
         releaseId: string
         releaseVersion: string
