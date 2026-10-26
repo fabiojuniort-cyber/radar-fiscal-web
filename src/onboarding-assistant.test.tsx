@@ -34,3 +34,19 @@ it('stale save is visible and never advances or retries automatically',async()=>
  expect(screen.getByRole('heading',{name:'Cultivo de arroz'})).toBeInTheDocument()
  expect(api.mock.calls.filter(([,init])=>init?.method==='PUT')).toHaveLength(1)
 })
+import {act} from '@testing-library/react'
+it('import animation uses the mapped phrases and lasts six seconds',async()=>{
+ vi.useFakeTimers();const random=vi.spyOn(Math,'random').mockReturnValue(0)
+ try{
+  const data=fixture();data.cards[0]!.phraseSegments=['agro','pecuaria']
+  const api=vi.fn(async(url:RequestInfo|URL)=>Response.json(String(url).endsWith('/phrases')?{items:[{segment:'agro',phrases:['Frase agro.'],version_no:1},{segment:'generico',phrases:['Frase genérica.'],version_no:1}]}:data))
+  const view=render(<OnboardingAssistant animate apiFetch={api} tenantId="tenant" companyId="company" units={[]} onClose={vi.fn()} onSaved={vi.fn()}/>)
+  await act(async()=>{await Promise.resolve();await Promise.resolve()})
+  expect(screen.getByRole('status')).toHaveTextContent('Frase agro.')
+  await act(async()=>{await vi.advanceTimersByTimeAsync(5999)})
+  expect(screen.getByRole('status')).toHaveTextContent('Frase agro.')
+  await act(async()=>{await vi.advanceTimersByTimeAsync(1)})
+  expect(screen.getByRole('heading',{name:'Cultivo de arroz'})).toBeInTheDocument()
+  view.unmount()
+ }finally{random.mockRestore();vi.useRealTimers()}
+})

@@ -4,7 +4,7 @@ export type AssistantData = {
   version: number; release: {id:string;version:string}; companyName:string
   state:{completed:boolean;cards:Record<string,CardChoice>;units:Record<string,{cards:Record<string,CardChoice>}>}
   concepts:{code:string;label:string;dimensionCode:string}[]
-  cards:{establishmentId:string;cnaeCode:string;description:string;phraseSegment:string;
+  cards:{establishmentId:string;cnaeCode:string;description:string;phraseSegment:string;phraseSegments?:string[];
     suggestions:{kind:string;target:string;segment:string}[]}[]
 }
 export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:string,path:string,body?:unknown):Promise<T>{
