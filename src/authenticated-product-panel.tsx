@@ -1656,7 +1656,7 @@ export function AuthenticatedProductPanel({
                   void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
                 }}
               />
-              {!selectedCompany&&selectedCompanyId&&(accountQuery.isFetching?<LoadingState text="Carregando empresa selecionada."/>:<ErrorState title="Empresa selecionada indisponível"/>)}
+              {!selectedCompany&&selectedCompanyId&&(accountQuery.isFetching?<LoadingState text="Carregando empresa selecionada…"/>:<ErrorState title="Empresa selecionada indisponível"/>)}
               {selectedCompany&&<EstablishmentSection apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} companyCnpj={selectedCompany.cnpj} items={establishmentsQuery.data??[]} types={typesQuery.data??[]} loading={establishmentsQuery.isPending||typesQuery.isPending} error={establishmentsQuery.isError||typesQuery.isError} onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','establishments']});void queryClient.invalidateQueries({queryKey:['launch','account']})}} onOpenProfile={()=>{setAssistantAnimate(true);setAssistantOpen(true)}}/>}
               </>
             ) : !selectedCompany && selectedCompanyId ? (
