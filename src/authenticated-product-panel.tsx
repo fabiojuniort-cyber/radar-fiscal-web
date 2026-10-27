@@ -557,7 +557,8 @@ export function AuthenticatedProductPanel({
 
   useEffect(() => {
     setSelectedCompanyId('')
-    setScreen('empresas')
+    setAssistantOpen(false)
+    setAssistantUnit(undefined)
   }, [tenantId])
 
   const sourcesQuery = useQuery({
