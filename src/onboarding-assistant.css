@@ -15,5 +15,5 @@
 @media(prefers-reduced-motion:reduce){.onb-loading-track i{animation:none}.onb-progress i{transition:none}}
 
 /* The notice must remain visible while the company page or a long card is scrolled. */
-.tp-app>.tp-version-notice{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 36px #18243833}
+.tp-app>.tp-version-notice{position:fixed;top:auto;bottom:12px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 36px #18243833}
 .onb-body>.tp-version-notice{position:sticky;top:0;z-index:2;margin:0 0 16px}
