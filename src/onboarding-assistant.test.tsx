@@ -1,7 +1,7 @@
 import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react'
 import {afterEach,expect,it,vi} from 'vitest'
 import {OnboardingAssistant} from './onboarding-assistant'
-import {initialStep,segmentSteps,type AssistantData} from './onboarding-assistant-api'
+import {segmentComplete,segmentChoice,initialStep,segmentSteps,type AssistantData} from './onboarding-assistant-api'
 afterEach(cleanup)
 const fixture=():AssistantData=>({version:7,release:{id:'release-19',version:'v1.9.0'},companyName:'Synthetic company',
  state:{completed:false,cards:{company:{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]},establishments:{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]}},units:{}},
@@ -45,3 +45,21 @@ it('animation uses mapped CSV phrases for six seconds',async()=>{
  expect(screen.getByRole('checkbox',{name:/Arroz/})).not.toBeChecked();view.unmount()
  }finally{random.mockRestore();vi.useRealTimers()}
 })
+
+it('one CNAE in two segments shows only each segment legacy selections',()=>{
+ const data=fixture();
+ data.cards.push({...data.cards[0]!,segmentCode:'sector.energy',segmentLabel:'Energia',suggestions:[{kind:'PRODUCT',target:'product.energy',segment:'Energia'},{kind:'NCM',target:'2716',segment:'Energia'}]});
+ data.state.units.head={cards:{'cnae:0111301':{status:'CONFIRMED',conceptCodes:['product.rice','product.energy','product.manual'],ncmCodes:['1006','2716','999']}}};
+ const groups=segmentSteps(data);expect(groups).toHaveLength(2);
+ expect(segmentChoice(data,groups[0]!,'head')).toEqual({status:'CONFIRMED',conceptCodes:['product.rice'],ncmCodes:['1006']});
+ expect(segmentChoice(data,groups[1]!,'head')).toEqual({status:'CONFIRMED',conceptCodes:['product.energy'],ncmCodes:['2716']});
+});
+
+it('resumes a partly completed old segment with prior choices and remaining activity still pending',()=>{
+ const data=fixture();data.cards.push({...data.cards[0]!,cnaeCode:'0111302'});
+ data.state.units.head={cards:{'cnae:0111301':{status:'CONFIRMED',conceptCodes:['product.rice'],ncmCodes:['1006']}}};
+ const group=segmentSteps(data)[0]!;
+ expect(segmentChoice(data,group,'head')?.conceptCodes).toEqual(['product.rice']);
+ expect(segmentComplete(data,group,'head')).toBe(false);
+ expect(initialStep(data)).toBe(2);
+});

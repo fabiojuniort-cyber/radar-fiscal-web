@@ -7,7 +7,7 @@ it('opening a later branch targets only its own CNAE and never selects the matri
  const data:AssistantData={version:9,release:{id:'v19',version:'v1.9.0'},companyName:'Synthetic',
  state:{completed:false,cards:{},units:{head:{cards:{'cnae:0111301':{status:'CONFIRMED',conceptCodes:['product.rice'],ncmCodes:['1006']}}}}},
  concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product'}],
- cards:[{establishmentId:'head',cnaeCode:'0111301',description:'Matriz arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[]},
+ cards:[{establishmentId:'head',cnaeCode:'0111301',description:'Matriz arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agro'},{kind:'NCM',target:'1006',segment:'Agro'}]},
  {establishmentId:'branch',cnaeCode:'0111301',description:'Filial arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agro'},{kind:'NCM',target:'1006',segment:'Agro'}]}]}
  const writes:unknown[]=[]
  const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{

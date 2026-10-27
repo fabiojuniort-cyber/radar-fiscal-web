@@ -18,13 +18,16 @@ export function assistantSteps(data:AssistantData){return [{id:'company',title:'
 export function choiceFor(data:AssistantData,id:string,unit?:string){return unit?data.state.units[unit]?.cards[id]:data.state.cards[id]}
 export function segmentChoice(data:AssistantData,segment:SegmentStep,unit:string):CardChoice|undefined{
  const direct=choiceFor(data,segment.id,unit);if(direct)return direct
- const old=segment.activities.filter(a=>a.establishmentId===unit).map(a=>choiceFor(data,'cnae:'+a.cnaeCode,unit))
- if(!old.length||old.some(c=>!c))return undefined
- return {status:old.every(c=>c!.status==='SKIPPED')?'SKIPPED':'CONFIRMED',conceptCodes:[...new Set(old.flatMap(c=>c!.conceptCodes))],ncmCodes:[...new Set(old.flatMap(c=>c!.ncmCodes))]}
+ const old=segment.activities.filter(a=>a.establishmentId===unit).map(a=>{const c=choiceFor(data,'cnae:'+a.cnaeCode,unit);if(!c)return undefined;const targets=new Set(a.suggestions.map(s=>s.target));return {...c,conceptCodes:c.conceptCodes.filter(code=>targets.has(code)),ncmCodes:c.ncmCodes.filter(code=>targets.has(code))}})
+ if(!old.some(Boolean))return undefined
+ return {status:old.filter(Boolean).every(c=>c!.status==='SKIPPED')?'SKIPPED':'CONFIRMED',conceptCodes:[...new Set(old.flatMap(c=>c?.conceptCodes??[]))],ncmCodes:[...new Set(old.flatMap(c=>c?.ncmCodes??[]))]}
+}
+export function segmentComplete(data:AssistantData,segment:SegmentStep,unit:string){
+ return !!choiceFor(data,segment.id,unit)||segment.activities.filter(a=>a.establishmentId===unit).every(a=>!!choiceFor(data,'cnae:'+a.cnaeCode,unit))
 }
 export function initialStep(data:AssistantData){
  const steps=assistantSteps(data)
- const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentChoice(data,step,id)):!choiceFor(data,step.id))
+ const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentComplete(data,step,id)):!choiceFor(data,step.id))
  return index<0?steps.length-1:index
 }
 export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:string,path:string,body?:unknown):Promise<T>{
