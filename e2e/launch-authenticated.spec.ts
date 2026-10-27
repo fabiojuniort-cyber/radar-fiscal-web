@@ -678,11 +678,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.getByRole('button', { name: 'Empresas', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
-  await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'generico',phrases:['Preparando o perfil.'],version_no:1}]}}))
+  await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'agro',phrases:['Contando os grãos da safra.','Conferindo se o trator tem NCM.','Regando o perfil tributário.'],version_no:1},{segment:'generico',phrases:['Preparando seu perfil.'],version_no:1}]}}))
   const assistantData={version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'AGREX — ambiente de teste',
     state:{completed:false,cards:{} as Record<string,unknown>,units:{} as Record<string,{cards:Record<string,unknown>}>},
     concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product'},{code:'sector.agro',label:'Agropecuária',dimensionCode:'sector'}],
-    cards:[{establishmentId,cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'generico',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]}]}
+    cards:[{establishmentId,cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]}]}
   // Synthetic Agrex acceptance fixture: nine segments produce twelve steps.
   // No production customer data or live registry response is used here.
   for(const [code,label,cnae] of [
@@ -747,6 +747,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await assistant.getByText('Ver as 1 atividades deste segmento',{exact:true}).click()
   await expect(assistant.getByText(/0111301.*Cultivo de arroz/)).toBeVisible()
   await expect(assistant.getByText('NCM 1006',{exact:true})).toBeVisible()
+  await page.screenshot({path:testInfo.outputPath('05a-sugestoes-sem-preselecao.png'),fullPage:true})
   await assistant.getByRole('checkbox',{name:/Arroz/}).check()
   await page.screenshot({path:testInfo.outputPath('05-cnae-0111301-arroz-1006.png'),fullPage:true})
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
