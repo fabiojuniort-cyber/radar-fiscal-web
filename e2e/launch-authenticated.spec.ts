@@ -296,7 +296,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           id: companyId,
           legalName: 'AGREX — ambiente de teste',
           tradeName: 'Empresa Launch',
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           isActive: true,
           establishmentCount: 1,
           businessLocationCode: 'MATRIZ-01',
@@ -310,7 +310,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       cnpj: string
       businessLocationCode?: string
     }
-    expect(payload.cnpj).toBe('11222333000181')
+    expect(payload.cnpj).toBe('10515785000199')
     expect(payload.businessLocationCode).toBe('MATRIZ-01')
     companyCreated = true
     await route.fulfill({
@@ -321,13 +321,13 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           id: companyId,
           legalName: 'AGREX — ambiente de teste',
           tradeName: 'Empresa Launch',
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           businessLocationCode: 'MATRIZ-01',
         },
         establishment: {
           id: establishmentId,
           companyId,
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           name: 'Matriz Goiânia',
           typeCode: 'HEAD_OFFICE',
           isHeadOffice: true,
@@ -368,7 +368,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       items: companyCreated ? [{
         id: establishmentId,
         companyId,
-        cnpj: '11222333000181',
+        cnpj: '10515785000199',
         name: 'Matriz Goiânia',
         typeCode: 'HEAD_OFFICE',
         isHeadOffice: true,
@@ -387,11 +387,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
         stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
         isActive: true,
-        cnaes: [{
-          code: '0111301',
-          description: 'Cultivo de arroz',
-          isPrimary: true,
-        },...extraSegmentActivities.map(([,label,code])=>({code,description:label+' — atividade sintética',isPrimary:false}))],
+        cnaes: agrex.cards.map(c=>({code:c.cnaeCode,description:c.description,isPrimary:c.cnaeCode===agrex.provenance.primaryCnae})),
       }, ...(branchAdded?[{
         id:branchId,companyId,cnpj:'11222333000262',name:'Filial teste',typeCode:'OFFICE',isHeadOffice:false,uf:'GO',
         municipalityName:'Goiânia',municipalityIbgeCode:'5208707',postalCode:null,street:null,streetNumber:null,complement:null,district:null,businessLocationCode:null,
@@ -700,7 +696,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     }
     await route.fulfill({json:{...assistantData,segmentCards:assistantData.cards}})
   })
-  await page.getByLabel('CNPJ da matriz').fill('11222333000181')
+  await page.getByLabel('CNPJ da matriz').fill('10515785000199')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
   await page.screenshot({path:testInfo.outputPath('01-cnpj.png'),fullPage:false})
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
@@ -833,7 +829,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       tenant: { id: tenantId, name: 'Empresa Launch', slug: 'empresa-launch', status: 'ACTIVE' },
       onboarding: { companyName: 'Empresa Launch', cnpj: null, createdAt: '2026-09-30T00:00:00.000Z' },
       companies: [
-        { id: companyId, legalName: 'AGREX — ambiente de teste', cnpj: '11222333000181', isActive: true, establishmentCount: 1 },
+        { id: companyId, legalName: 'AGREX — ambiente de teste', cnpj: '10515785000199', isActive: true, establishmentCount: 1 },
         { id: secondCompanyId, legalName: 'Segunda Empresa Ltda', cnpj: '04252011000110', isActive: true, establishmentCount: 1 },
       ],
     } })
