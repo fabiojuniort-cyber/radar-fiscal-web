@@ -746,6 +746,10 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(assistant.locator('.onb-counter')).toContainText('1 item')
   await expect(assistant.locator('.onb-counter')).toContainText('1 NCM')
   await page.screenshot({path:testInfo.outputPath('05-cnae-0111301-arroz-1006.png'),fullPage:false})
+  const independentNcms=assistant.locator('.onb-ncm-suggestions')
+  await independentNcms.getByRole('heading').scrollIntoViewIfNeeded()
+  await expect(independentNcms.getByRole('checkbox',{name:'NCM 10011090',exact:true})).not.toBeChecked()
+  await page.screenshot({path:testInfo.outputPath('05d-ncms-independentes-desmarcadas.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
   const otherSegments=[...new Set(agrex.cards.map(c=>c.segmentLabel))].filter(label=>label!=='Agropecuária, pesca e insumos agrícolas').sort((a,b)=>a.localeCompare(b,'pt-BR'))
   for(const [number,label] of otherSegments.entries()){
