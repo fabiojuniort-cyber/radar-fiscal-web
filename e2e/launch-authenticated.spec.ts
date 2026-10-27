@@ -764,7 +764,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.getByRole('tab',{name:/Estabelecimentos/})).toHaveCount(0)
   await expect(page.getByText('AGREX — ambiente de teste').first()).toBeVisible()
   await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
-  await expect(page.getByText('0111301')).toBeVisible()
+  await expect(page.getByText(agrex.provenance.primaryCnae,{exact:true})).toBeVisible()
   await expect(page.getByText('109876543')).toBeVisible()
   // Read-only reopen of a historical profile; only this isolated mocked record is edited.
   Object.assign(assistantData.effectiveProfiles[0]!,{conceptCodes:['product.rice','product.retired'],ncmCodes:['1006','2716'],legacyFields:{products:['Escolha manual anterior'],operations:['Revenda']},historicalCodes:['product.retired']})
