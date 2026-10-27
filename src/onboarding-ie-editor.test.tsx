@@ -73,3 +73,18 @@ it('saving one IE locks the other unit and card navigation until readback comple
  expect(screen.getByRole('button',{name:'Concluir perfil'})).toBeEnabled()
 })
 
+it('late establishment readback initializes IE CAS without overwriting a draft',async()=>{
+ const data=fixture(),patches:unknown[]=[]
+ const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PATCH'){patches.push(JSON.parse(String(init.body)));return Response.json({establishmentId:'head',stateRegistration:'456',stateRegistrationSource:'MANUAL'})}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
+ const props={apiFetch:api,tenantId:'tenant',companyId:'company',onClose:vi.fn(),onSaved:vi.fn()}
+ const view=render(<OnboardingAssistant {...props} units={[]}/>)
+ await screen.findByRole('heading',{name:'Confira seus estabelecimentos'})
+ view.rerender(<OnboardingAssistant {...props} units={[head]}/>)
+ const input=await screen.findByLabelText('Inscrição Estadual — Matriz');expect(input).toHaveValue('123')
+ fireEvent.change(input,{target:{value:'456'}})
+ view.rerender(<OnboardingAssistant {...props} units={[{...head,name:'Matriz'}]}/>)
+ expect(input).toHaveValue('456')
+ fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
+ await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
+ expect(patches).toEqual([{expectedStateRegistration:'123',stateRegistration:'456'}])
+})
