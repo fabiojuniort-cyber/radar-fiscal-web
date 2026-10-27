@@ -774,8 +774,10 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
 
   // Add a filial after the matrix was concluded: it has its own empty card.
-  await page.route('**/api/v1/establishments/from-cnpj',async route=>{
-    expect(route.request().postDataJSON().companyId).toBe(companyId)
+  await page.route(`**/api/v1/companies/${companyId}/establishments/from-cnpj`,async route=>{
+    expect(route.request().postDataJSON().cnpj).toBe('11222333000262')
+    expect(route.request().postDataJSON().typeCode).toBe('OFFICE')
+    expect(route.request().headers()['x-tenant-id']).toBe(tenantId)
     branchAdded=true;assistantData.state.completed=false
     assistantData.cards.push({establishmentId:branchId,cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'generico',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]})
     await route.fulfill({status:201,json:{establishment:{id:branchId}}})
