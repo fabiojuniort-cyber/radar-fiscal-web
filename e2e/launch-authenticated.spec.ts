@@ -668,16 +668,20 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.getByRole('button', { name: 'Empresas', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
+  await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'generico',phrases:['Preparando o perfil.'],version_no:1}]}}))
+  await page.route(`**/api/v1/companies/${companyId}/onboarding`,route=>route.fulfill({json:{version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'Empresa Launch Ltda',state:{completed:false,cards:{},units:{}},concepts:[],cards:[{establishmentId,cnaeCode:'4683400',description:'Insumos agrícolas',phraseSegment:'generico',suggestions:[]}]}}))
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
-  // ONB-01 forwards new organizations to the current Tax Profile screen.
-  await expect(page.getByRole('tab', { name: /Perfil tributário/ })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('tab', { name: /Empresas/ }).click()
+  // ONB-03 opens the assistant, leaving company and units on one screen.
+  const assistant=page.getByRole('dialog',{name:'Assistente do perfil tributário'})
+  await expect(assistant).toBeVisible()
+  await expect(assistant.getByRole('heading',{name:'Empresa',exact:true})).toBeVisible({timeout:10000})
+  await assistant.getByRole('button',{name:'Fechar assistente'}).click()
+  await expect(page.getByRole('tab',{name:'Empresa e filiais'})).toHaveAttribute('aria-selected','true')
+  await expect(page.getByRole('tab',{name:/Estabelecimentos/})).toHaveCount(0)
   await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
   await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
-
-  await page.getByRole('tab', { name: /Estabelecimentos/ }).click()
   await expect(page.getByText('4683400')).toBeVisible()
   await expect(page.getByText('10.123.456-2')).toBeVisible()
 
@@ -739,23 +743,27 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   }))
   await page.route(`**/api/v1/companies/${secondCompanyId}/**`, (route) => {
     const path = new URL(route.request().url()).pathname
-    const json = path.endsWith('/tax-profile') ? { profile: null }
+    const json = path.endsWith('/onboarding') ? {version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'Segunda Empresa Ltda',state:{completed:false,cards:{},units:{}},concepts:[],cards:[]}
+      : path.endsWith('/tax-profile') ? { profile: null }
       : path.endsWith('/taxonomy-suggestions') ? { cnaes: [], suggestions: [] }
         : { items: [] }
     return route.fulfill({ json })
   })
-  await page.getByRole('tab', { name: /Empresas/ }).click()
+  await page.getByRole('tab', { name: /Empresa e filiais/ }).click()
   await page.getByRole('button', { name: 'Adicionar empresa', exact: true }).click()
   await page.getByLabel('CNPJ da matriz').fill('04252011000110')
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
   await expect.poll(() => accountReadbackStarted).toBe(true)
-  await expect(page.getByRole('tab', { name: /Perfil tributário/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: /Empresa e filiais/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Carregando empresa selecionada…', { exact: true })).toBeVisible()
   await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Regime tributário')).toHaveCount(0)
   expect(oldCompanyWrites).toBe(0)
   releaseAccount()
+  await expect(page.getByRole('dialog',{name:'Assistente do perfil tributário'})).toBeVisible()
+  await page.getByRole('button',{name:'Fechar assistente'}).click()
+  await page.getByRole('tab',{name:/Perfil tributário/}).click()
   await expect(page.locator('.tp-tax-profile-editor')).toBeVisible()
   await expect(page.locator('.tp-profile-context')).toContainText('04.252.011/0001-10')
   await expect(page.locator('.tp-profile-context')).not.toContainText('11.222.333/0001-81')

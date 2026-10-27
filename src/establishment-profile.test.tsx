@@ -63,6 +63,7 @@ it('a later branch starts empty; saving its choices preserves the head office an
   const writes=api.mock.calls.filter(([,init])=>init?.method==='PUT')
   expect(writes).toHaveLength(1)
   const payload=JSON.parse(String(writes[0]?.[1]?.body))
+  expect(payload.expectedVersion).toBe(1)
   expect(payload.taxRegime).toBe('LUCRO_REAL')
   expect(payload.personalization.taxonomy.conceptCodes).toEqual(['product.soy'])
   expect(payload.personalization.establishmentOverrides).toEqual([
