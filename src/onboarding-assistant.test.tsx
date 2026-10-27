@@ -97,3 +97,18 @@ it('preloads an existing product without silently backfilling its linked NCM and
  expect(await screen.findByRole('checkbox',{name:/Arroz/})).toBeChecked();expect(screen.getByText(/Produto salvo; há NCM vinculada ainda não selecionada/)).toBeInTheDocument()
  expect(screen.getByRole('checkbox',{name:'NCM 2716'})).not.toBeChecked();expect(screen.getByRole('checkbox',{name:/Farelo/})).not.toBeChecked()
 })
+
+it('mark all selects only products and their own evidence, leaving independent CNAE NCMs explicit',async()=>{
+ const data=fixture();data.concepts.push({code:'product.bran',label:'Farelo',dimensionCode:'product',ncmCodes:['2302']})
+ data.cards[0]!.suggestions.push({kind:'PRODUCT',target:'product.bran',segment:'Agropecuária'},{kind:'NCM',target:'2302',segment:'Agropecuária'},{kind:'NCM',target:'2716',segment:'Agropecuária'})
+ const writes:unknown[]=[]
+ const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PUT'){writes.push(JSON.parse(String(init.body)));return Response.json({...data,version:8})}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
+ render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[]} onClose={vi.fn()} onSaved={vi.fn()}/>)
+ fireEvent.click(await screen.findByRole('button',{name:'Marcar todos'}))
+ expect(screen.getByRole('checkbox',{name:/Arroz/})).toBeChecked()
+ expect(screen.getByRole('checkbox',{name:/Farelo/})).toBeChecked()
+ expect(screen.getByRole('checkbox',{name:'NCM 2716'})).not.toBeChecked()
+ fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
+ await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
+ expect(writes).toEqual([{selectionMode:'EFFECTIVE',expectedVersion:7,releaseId:'release-19',cardId:'segment:sector.agro',status:'CONFIRMED',conceptCodes:[],ncmCodes:[],units:[{establishmentId:'head',conceptCodes:['product.rice','product.bran'],ncmCodes:['1006','2302']}]}])
+})
