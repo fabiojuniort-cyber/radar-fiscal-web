@@ -63,3 +63,10 @@ it('resumes a partly completed old segment with prior choices and remaining acti
  expect(segmentComplete(data,group,'head')).toBe(false);
  expect(initialStep(data)).toBe(2);
 });
+
+it('uses segmentCards while the legacy API field stays one row per CNAE',()=>{
+ const data=fixture();
+ data.segmentCards=[...data.cards,{...data.cards[0]!,segmentCode:'sector.food',segmentLabel:'Alimentos'}];
+ expect(data.cards).toHaveLength(1);
+ expect(segmentSteps(data)).toHaveLength(2);
+});

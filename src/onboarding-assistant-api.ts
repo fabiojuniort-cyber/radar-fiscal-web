@@ -3,11 +3,11 @@ export type CardChoice={status:'CONFIRMED'|'SKIPPED';conceptCodes:string[];ncmCo
 export type ActivityCard={establishmentId:string;cnaeCode:string;description:string;segmentCode?:string;segmentLabel?:string;phraseSegment:string;phraseSegments?:string[];suggestions:{kind:string;target:string;segment:string}[]}
 export type AssistantData={version:number;release:{id:string;version:string};companyName:string;companyCnpj?:string;
  state:{completed:boolean;cards:Record<string,CardChoice>;units:Record<string,{baseConceptCodes?:string[];baseNcmCodes?:string[];cards:Record<string,CardChoice>}>};
- concepts:{code:string;label:string;dimensionCode:string}[];cards:ActivityCard[]}
+ concepts:{code:string;label:string;dimensionCode:string}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
 export type SegmentStep={id:string;title:string;code:string;activities:ActivityCard[]}
 export function segmentSteps(data:AssistantData):SegmentStep[]{
  const groups=new Map<string,SegmentStep>()
- for(const card of data.cards){
+ for(const card of data.segmentCards??data.cards){
   const code=card.segmentCode??card.suggestions.find(s=>s.kind==='SEGMENT')?.target??'sector.sem_segmento'
   const title=card.segmentLabel??card.suggestions[0]?.segment??'Outras atividades'
   const group=groups.get(code)??{id:'segment:'+code,title,code,activities:[]};group.activities.push(card);groups.set(code,group)

@@ -704,7 +704,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       else assistantData.state.cards[b.cardId]=choice
       assistantData.version++;assistantData.state.completed=b.cardId==='summary'
     }
-    await route.fulfill({json:assistantData})
+    await route.fulfill({json:{...assistantData,segmentCards:assistantData.cards}})
   })
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
