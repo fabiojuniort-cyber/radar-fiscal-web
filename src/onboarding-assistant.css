@@ -16,4 +16,13 @@
 
 /* The notice must remain visible while the company page or a long card is scrolled. */
 .tp-app>.tp-version-notice{position:fixed;top:auto;bottom:12px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 36px #18243833}
-.onb-body>.tp-version-notice{position:sticky;top:0;z-index:2;margin:0 0 16px}
+.onb-body>.tp-version-notice{position:relative;top:auto;z-index:2;margin:0 0 16px}
+
+/* ONB-03.4: the update notice takes layout space; actions never sit under it. */
+.tp-app>.tp-version-notice{position:relative;top:auto;bottom:auto;left:auto;transform:none;width:auto;margin:12px 20px;z-index:70;box-shadow:none}
+.onb-progress i{transition:none}
+.onb-counter{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:11px!important;line-height:1.2}
+.onb-counter b{font-weight:400}
+.onb-suggestion{flex-wrap:wrap}.onb-suggestion em{display:block;width:100%;padding-left:30px;font-size:11px;color:#805d14;font-style:normal}
+.onb-ncm-suggestions,.onb-other-choices{margin-top:20px}.onb-body h3{font-size:15px;margin:18px 0 10px}.onb-other-choices summary{font-size:13px;color:#1F4FD8;cursor:pointer}.onb-profile-editor .onb-suggestion{margin:8px 0}.onb-profile-editor label{margin-top:10px}.onb-editor-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+@media(max-width:600px){.onb-footer{padding:12px 10px;gap:6px}.onb-footer>div{flex-wrap:nowrap;gap:6px;min-width:0}.onb-footer>.onb-secondary{padding:0 8px;font-size:11px}.onb-footer .onb-primary{padding:0 9px;font-size:11px!important;white-space:nowrap}.onb-footer .onb-link{font-size:11px!important}.onb-counter{font-size:9px!important}.onb-company-grid{grid-template-columns:1fr 1fr;gap:16px 12px;padding:16px}.onb-company-grid strong{font-size:12px}}

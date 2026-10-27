@@ -1,9 +1,10 @@
 import type {ProductApiFetch} from './product-api'
 export type CardChoice={status:'CONFIRMED'|'SKIPPED';conceptCodes:string[];ncmCodes:string[]}
 export type ActivityCard={establishmentId:string;cnaeCode:string;description:string;segmentCode?:string;segmentLabel?:string;phraseSegment:string;phraseSegments?:string[];suggestions:{kind:string;target:string;segment:string}[]}
+export type EffectiveProfile={establishmentId:string;name:string;isHeadOffice:boolean;taxRegime:string;conceptCodes:string[];ncmCodes:string[];legacyFields:Record<string,string[]>;cnaeSegments:{cnaeCode:string;segmentCode:string|null}[];historicalCodes:string[]}
 export type AssistantData={version:number;release:{id:string;version:string};companyName:string;companyCnpj?:string;
  state:{completed:boolean;cards:Record<string,CardChoice>;units:Record<string,{baseConceptCodes?:string[];baseNcmCodes?:string[];cards:Record<string,CardChoice>}>};
- concepts:{code:string;label:string;dimensionCode:string}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
+ effectiveProfiles?:EffectiveProfile[];historicalConcepts?:{code:string;label:string;dimensionCode:string}[];concepts:{code:string;label:string;dimensionCode:string;ncmCodes?:string[]}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
 export type SegmentStep={id:string;title:string;code:string;activities:ActivityCard[]}
 export function segmentSteps(data:AssistantData):SegmentStep[]{
  const groups=new Map<string,SegmentStep>()
@@ -23,7 +24,7 @@ export function segmentChoice(data:AssistantData,segment:SegmentStep,unit:string
  return {status:old.filter(Boolean).every(c=>c!.status==='SKIPPED')?'SKIPPED':'CONFIRMED',conceptCodes:[...new Set(old.flatMap(c=>c?.conceptCodes??[]))],ncmCodes:[...new Set(old.flatMap(c=>c?.ncmCodes??[]))]}
 }
 export function segmentComplete(data:AssistantData,segment:SegmentStep,unit:string){
- return !!choiceFor(data,segment.id,unit)||segment.activities.filter(a=>a.establishmentId===unit).every(a=>!!choiceFor(data,'cnae:'+a.cnaeCode,unit))
+ return !!choiceFor(data,'profile',unit)||!!choiceFor(data,segment.id,unit)||segment.activities.filter(a=>a.establishmentId===unit).every(a=>!!choiceFor(data,'cnae:'+a.cnaeCode,unit))
 }
 export function initialStep(data:AssistantData){
  const steps=assistantSteps(data)
@@ -34,3 +35,4 @@ export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:stri
  const response=await apiFetch(path,{method:body?'PUT':'GET',headers:{'x-tenant-id':tenantId,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})})
  const result=await response.json();if(!response.ok)throw new Error(result.error??'request_failed');return result
 }
+

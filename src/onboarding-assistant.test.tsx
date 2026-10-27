@@ -5,7 +5,7 @@ import {segmentComplete,segmentChoice,initialStep,segmentSteps,type AssistantDat
 afterEach(cleanup)
 const fixture=():AssistantData=>({version:7,release:{id:'release-19',version:'v1.9.0'},companyName:'Synthetic company',
  state:{completed:false,cards:{company:{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]},establishments:{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]}},units:{}},
- concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product'}],
+ concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product',ncmCodes:['1006']}],
  cards:[{establishmentId:'head',cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]}]})
 it('groups multiple CNAEs in one segment without preselecting published suggestions',async()=>{
  const data=fixture();data.cards.push({...data.cards[0]!,cnaeCode:'0111302',description:'Milho'})
@@ -24,7 +24,7 @@ it('an explicit row selection saves one segment atomically with its version and 
  render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[]} onClose={vi.fn()} onSaved={vi.fn()}/>)
  fireEvent.click(await screen.findByRole('checkbox',{name:/Arroz/}));fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
- expect(writes).toEqual([{expectedVersion:7,releaseId:'release-19',cardId:'segment:sector.agro',status:'CONFIRMED',conceptCodes:[],ncmCodes:[],units:[{establishmentId:'head',conceptCodes:['product.rice'],ncmCodes:['1006']}]}])
+ expect(writes).toEqual([{selectionMode:'EFFECTIVE',expectedVersion:7,releaseId:'release-19',cardId:'segment:sector.agro',status:'CONFIRMED',conceptCodes:[],ncmCodes:[],units:[{establishmentId:'head',conceptCodes:['product.rice'],ncmCodes:['1006']}]}])
 })
 it('a stale save keeps the current choices and shows the friendly version message once',async()=>{
  const data=fixture()
@@ -70,3 +70,30 @@ it('uses segmentCards while the legacy API field stays one row per CNAE',()=>{
  expect(data.cards).toHaveLength(1);
  expect(segmentSteps(data)).toHaveLength(2);
 });
+
+
+it('preloads legacy effective choices, shows the complete summary and offers explicit correction without a migration',async()=>{
+ const data=fixture();data.state.units.head={cards:{'segment:sector.agro':{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]}}}
+ data.effectiveProfiles=[{establishmentId:'head',name:'Matriz histórica',isHeadOffice:true,taxRegime:'LUCRO_REAL',conceptCodes:['product.retired','product.rice'],ncmCodes:['2716','1006'],legacyFields:{products:['Produto manual anterior'],operations:['Revenda']},cnaeSegments:[],historicalCodes:['product.retired']}]
+ data.historicalConcepts=[{code:'product.retired',label:'Produto aposentado',dimensionCode:'product'}]
+ const writes:Record<string,unknown>[]=[]
+ const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PUT'){const body=JSON.parse(String(init.body));writes.push(body);if(body.cardId==='profile'){data.effectiveProfiles![0]={...data.effectiveProfiles![0]!,conceptCodes:body.conceptCodes,ncmCodes:body.ncmCodes,legacyFields:body.legacyFields,historicalCodes:[]};data.version++}return Response.json(data)}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
+ render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[]} onClose={vi.fn()} onSaved={vi.fn()}/>)
+ await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
+ expect(screen.getByText(/Produto aposentado, Arroz, NCM 2716, NCM 1006/)).toBeInTheDocument()
+ expect(screen.getByText('Produtos informados anteriormente: Produto manual anterior')).toBeInTheDocument();expect(writes).toHaveLength(0)
+ fireEvent.click(screen.getByRole('button',{name:'Editar escolhas — Matriz histórica'}))
+ expect(screen.getByRole('checkbox',{name:/Produto aposentado/})).toBeChecked()
+ fireEvent.click(screen.getByRole('checkbox',{name:/Produto aposentado/}));fireEvent.click(screen.getByRole('checkbox',{name:/NCM 2716/}));fireEvent.click(screen.getByRole('checkbox',{name:/Produto manual anterior/}))
+ fireEvent.click(screen.getByRole('button',{name:'Salvar escolhas deste estabelecimento'}))
+ await waitFor(()=>expect(writes).toHaveLength(1))
+ expect(writes[0]).toMatchObject({selectionMode:'EFFECTIVE',expectedVersion:7,cardId:'profile',establishmentId:'head',conceptCodes:['product.rice'],ncmCodes:['1006'],legacyFields:{products:[],operations:['Revenda']}})
+})
+it('preloads an existing product without silently backfilling its linked NCM and keeps independent suggestions unchecked',async()=>{
+ const data=fixture();data.concepts.push({code:'product.bran',label:'Farelo',dimensionCode:'product',ncmCodes:['2302']});data.cards[0]!.suggestions.push({kind:'PRODUCT',target:'product.bran',segment:'Agropecuária'},{kind:'NCM',target:'2302',segment:'Agropecuária'},{kind:'NCM',target:'2716',segment:'Agropecuária'})
+ data.effectiveProfiles=[{establishmentId:'head',name:'Matriz',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:['product.rice'],ncmCodes:[],legacyFields:{},cnaeSegments:[],historicalCodes:[]}]
+ const api=vi.fn(async(url:RequestInfo|URL)=>Response.json(String(url).endsWith('/phrases')?{items:[]}:data))
+ render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[]} onClose={vi.fn()} onSaved={vi.fn()}/>)
+ expect(await screen.findByRole('checkbox',{name:/Arroz/})).toBeChecked();expect(screen.getByText(/Produto salvo; há NCM vinculada ainda não selecionada/)).toBeInTheDocument()
+ expect(screen.getByRole('checkbox',{name:'NCM 2716'})).not.toBeChecked();expect(screen.getByRole('checkbox',{name:/Farelo/})).not.toBeChecked()
+})
