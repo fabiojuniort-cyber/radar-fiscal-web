@@ -65,7 +65,7 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
   setData({...data,...result});onSaved();if(index<steps.length-1)setIndex(index+1);else onClose()
  }catch(e){setError(friendly(e))}finally{setBusy(false)}}
  const correctCompany=async()=>{setBusy(true);setError('');try{await updateCompany(apiFetch,tenantId,companyId,{legalName:name,businessLocationCode:location.trim()||null});const account=await fetchAccountSummary(apiFetch,tenantId);const saved=account.companies.find(c=>c.id===companyId);if(!saved)throw new Error('readback_failed');setData(d=>d?{...d,companyName:saved.legalName}:d);setEditingCompany(false);onSaved()}catch(e){setError(friendly(e))}finally{setBusy(false)}}
- const count=Object.values(drafts).reduce((n,c)=>n+c.conceptCodes.length+c.ncmCodes.length,0)
+ const count=current.conceptCodes.length+current.ncmCodes.length
  const blocked=busy||versionChanged||pendingIe||editingCompany
  const needsReview=!!segment&&members.some(id=>!reviewed.includes(id))
  const address=head?[head.street,head.streetNumber,head.district,head.municipalityName,head.uf].filter(Boolean).join(', '):'Aguardando cadastro'

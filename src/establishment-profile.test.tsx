@@ -18,6 +18,7 @@ it('opening a later branch targets only its own CNAE and never selects the matri
  await screen.findByRole('heading',{name:'Agropecuária: o que você compra, vende ou produz?'})
  expect(screen.getByLabelText('Estabelecimento')).toHaveValue('branch')
  expect(screen.getByRole('checkbox',{name:/Arroz/})).not.toBeChecked()
+ expect(screen.getByText('0 selecionados')).toBeInTheDocument()
  fireEvent.click(screen.getByRole('checkbox',{name:/Arroz/}))
  fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})

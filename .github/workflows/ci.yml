@@ -89,7 +89,7 @@ jobs:
 
       - name: Browser tests
         if: steps.ci-plan.outputs.full_regression == 'true'
-        run: npm run test:e2e
+        run: npm run test:e2e -- --max-failures=1
 
       # F2-TAB-04 only: capture a genuine BEFORE image from the exact PR base
       # commit, using the same read-only mocked Playwright fixture that captured
