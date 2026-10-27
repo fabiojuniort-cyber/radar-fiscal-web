@@ -677,6 +677,30 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const assistant=page.getByRole('dialog',{name:'Assistente do perfil tributário'})
   await expect(assistant).toBeVisible()
   await expect(assistant.getByRole('heading',{name:'Empresa',exact:true})).toBeVisible({timeout:10000})
+  // IE can be edited and read back without leaving the modal (all four viewports).
+  let currentIe='10.123.456-2'
+  await page.route(`**/api/v1/companies/${companyId}/establishments/${establishmentId}/state-registration`,async route=>{
+    expect(route.request().method()).toBe('PATCH')
+    expect(route.request().headers()['x-tenant-id']).toBe(tenantId)
+    const body=route.request().postDataJSON()
+    expect(Object.keys(body).sort()).toEqual(['expectedStateRegistration','stateRegistration'])
+    expect(body.expectedStateRegistration).toBe(currentIe)
+    currentIe=body.stateRegistration
+    await route.fulfill({json:{establishmentId,stateRegistration:currentIe,stateRegistrationSource:'MANUAL'}})
+  })
+  await assistant.getByRole('button',{name:'Salvar e próximo'}).click()
+  await expect(assistant.getByRole('heading',{name:'Estabelecimentos',exact:true})).toBeVisible()
+  const ie=assistant.getByLabel('Inscrição Estadual — Matriz Goiânia')
+  await ie.fill('109876543')
+  await expect(assistant.getByRole('button',{name:'Salvar e próximo'})).toBeDisabled()
+  await assistant.getByRole('button',{name:'Salvar IE',exact:true}).click()
+  await expect(ie).toHaveValue('109876543')
+  await expect(assistant.getByText('IE salva para Matriz Goiânia.')).toBeVisible()
+  await expect(assistant).toBeVisible()
+  // Restore the synthetic fixture so the existing account assertions stay unchanged.
+  await ie.fill('10.123.456-2')
+  await assistant.getByRole('button',{name:'Salvar IE',exact:true}).click()
+  await expect(assistant.getByRole('button',{name:'Salvar e próximo'})).toBeEnabled()
   await assistant.getByRole('button',{name:'Fechar assistente'}).click()
   await expect(page.getByRole('tab',{name:'Empresa e filiais'})).toHaveAttribute('aria-selected','true')
   await expect(page.getByRole('tab',{name:/Estabelecimentos/})).toHaveCount(0)

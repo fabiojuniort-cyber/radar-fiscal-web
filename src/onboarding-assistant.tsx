@@ -1,8 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useEffect,useState } from 'react'
+import { useCallback,useEffect,useState } from 'react'
 import type { ProductApiFetch,Establishment } from './product-api'
 import { assistantRequest,assistantSteps,choiceFor,initialStep,type AssistantData } from './onboarding-assistant-api'
 import './onboarding-assistant.css'
+import { OnboardingIeEditor } from './onboarding-ie-editor'
 type Phrase={segment:string;phrases:string[];version_no:number}
 export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,onSaved,animate=false}:{apiFetch:ProductApiFetch;tenantId:string;companyId:string;units:Establishment[];onClose:()=>void;onSaved:()=>void;animate?:boolean}){
   const [data,setData]=useState<AssistantData|null>(null)
@@ -10,6 +11,9 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[importing,setImporting]=useState(animate)
   const [phrases,setPhrases]=useState<Phrase[]>([]),[phrase,setPhrase]=useState('Preparando seu perfil tributário.')
   useEffect(()=>{try{sessionStorage.removeItem('tribusca.onboarding.welcome')}catch{/* Optional legacy UI state. */}},[])
+  const [ieEdits,setIeEdits]=useState<Record<string,boolean>>({})
+  const onIeDirty=useCallback((id:string,dirty:boolean)=>setIeEdits(prior=>prior[id]===dirty?prior:{...prior,[id]:dirty}),[])
+  const pendingIe=Object.values(ieEdits).some(Boolean)
   const path='/api/v1/companies/'+companyId+'/onboarding'
   const load=async()=>{const result=await assistantRequest<AssistantData>(apiFetch,tenantId,path);setData(result);setIndex(initialStep(result));setError('')}
   useEffect(()=>{let active=true;assistantRequest<AssistantData>(apiFetch,tenantId,path).then(result=>{if(active){setData(result);setIndex(initialStep(result))}}).catch(()=>{if(active)setError('Não foi possível carregar o assistente.')});assistantRequest<{items:Phrase[]}>(apiFetch,tenantId,'/api/v1/onboarding/phrases').then(r=>{if(active)setPhrases(r.items)}).catch(()=>{});return()=>{active=false}},[apiFetch,tenantId,path])
@@ -31,14 +35,16 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
     {importing?<div className="onb-import" role="status"><span className="onb-orbit"/>{phrase}</div>:!data||!step?<p role="status">Carregando assistente…</p>:<>
       <p>Card {index+1} de {steps.length} · Taxonomia {data.release.version}</p><h3>{step.title}</h3>
       {step.id==='company'&&<p>{data.companyName}. Confira o cadastro na tela de empresa antes de continuar.</p>}
-      {step.id==='establishments'&&<><p>Confira matriz, filiais e Inscrição Estadual. Quando a consulta estadual falhar, informe a IE manualmente na edição da unidade.</p><ul>{units.map(unit=><li key={unit.id}>{unit.name} · {unit.uf} · IE: {unit.stateRegistration??'Não informada'}</li>)}</ul></>}
+      {step.id==='establishments'&&<><p>Confira matriz, filiais e Inscrição Estadual. Se a consulta estadual falhar, informe e salve a IE aqui, sem fechar o assistente.</p>
+        {units.map(unit=><OnboardingIeEditor key={unit.id} apiFetch={apiFetch} tenantId={tenantId} companyId={companyId} unit={unit} locked={busy} onBusy={setBusy} onDirty={onIeDirty} onSaved={onSaved}/>)}
+        {pendingIe&&<p role="status">Salve ou descarte a edição da IE antes de mudar de card.</p>}</>}
       {card&&<><p>{units.find(u=>u.id===card.establishmentId)?.name} · CNAE {card.cnaeCode}</p><p>Sugestões publicadas. Marque apenas o que corresponde às operações desta unidade.</p>
         {!card.suggestions.length&&<p>Sem vínculos publicados para este CNAE. Você pode escolher manualmente ou pular.</p>}
         <button onClick={()=>{setCodes(suggested);setNcms(suggestedNcms.join(', '))}}>Selecionar sugestões para conferir</button>
         <label>Segmentos e produtos<select multiple aria-label="Segmentos e produtos" value={codes} onChange={e=>setCodes(Array.from(e.target.selectedOptions,o=>o.value))}>{data.concepts.filter(c=>['sector','product'].includes(c.dimensionCode)).map(c=><option key={c.code} value={c.code}>{c.label}{suggested.includes(c.code)?' (sugerido)':''}</option>)}</select></label>
         <label>NCMs (separadas por vírgula)<textarea value={ncms} onChange={e=>setNcms(e.target.value)} /></label></>}
       {step.id==='summary'&&<><p>Confira os cards antes de concluir. As escolhas pertencem à unidade indicada.</p><ul>{steps.slice(0,-1).map((s,i)=><li key={s.id+('unit'in s?s.unit:'')}><button onClick={()=>setIndex(i)}>{s.title}</button> · {choiceFor(data,s.id,'unit'in s?s.unit:undefined)?.status==='CONFIRMED'?'Confirmado':choiceFor(data,s.id,'unit'in s?s.unit:undefined)?.status==='SKIPPED'?'Pulado':'Pendente'}</li>)}</ul></>}
-      <footer><button disabled={busy||index===0} onClick={()=>setIndex(index-1)}>Voltar</button><button disabled={busy||step.id==='summary'} onClick={()=>void save(true)}>Pular</button><button disabled={busy} onClick={()=>void save(false)}>{busy?'Salvando…':step.id==='summary'?'Concluir':'Salvar e próximo'}</button></footer>
+      <footer><button disabled={busy||pendingIe||index===0} onClick={()=>setIndex(index-1)}>Voltar</button><button disabled={busy||pendingIe||step.id==='summary'} onClick={()=>void save(true)}>Pular</button><button disabled={busy||pendingIe} onClick={()=>void save(false)}>{busy?'Salvando…':step.id==='summary'?'Concluir':'Salvar e próximo'}</button></footer>
     </>}
   </Dialog.Content></Dialog.Portal></Dialog.Root>
 }
