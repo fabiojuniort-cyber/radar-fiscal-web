@@ -893,7 +893,6 @@ export function AuthenticatedProductPanel({
                     type="button"
                     onClick={() => {
                       setScreen('empresas')
-                      setScreen('empresas')
                       setTenantMenu(false)
                     }}
                   >
@@ -2404,7 +2403,7 @@ function EstablishmentSection({
           </label>
           <label>
             Tipo
-            <select value={typeCode} onChange={(event) => setTypeCode(event.target.value)}>
+            <select aria-label="Tipo" value={typeCode} onChange={(event) => setTypeCode(event.target.value)}>
               {types
                 .filter((type) => type.code !== 'HEAD_OFFICE')
                 .map((type) => (
