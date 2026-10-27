@@ -1,4 +1,4 @@
-import agrex from './fixtures/agrex-35.json'
+import agrex from './fixtures/agrex-35.json' with {type:'json'}
 import { expect, test } from '@playwright/test'
 
 test.use({video:'on',actionTimeout:15000})
