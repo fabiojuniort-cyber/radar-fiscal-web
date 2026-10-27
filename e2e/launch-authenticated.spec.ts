@@ -739,8 +739,10 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.screenshot({path:testInfo.outputPath('05a-sugestoes-sem-preselecao.png'),fullPage:false})
   await expect(assistant.locator('.onb-suggestions .onb-suggestion')).toHaveCount(8)
   await expect(assistant.getByRole('button',{name:/sugestões · mostrar mais/})).toBeVisible()
+  await assistant.getByRole('button',{name:/sugestões · mostrar mais/}).scrollIntoViewIfNeeded()
   await page.screenshot({path:testInfo.outputPath('05b-agro-15-cnaes-mostrar-mais.png'),fullPage:false})
   await assistant.getByRole('button',{name:/sugestões · mostrar mais/}).click()
+  await expect(assistant.locator('.onb-suggestions .onb-suggestion')).toHaveCount(33)
   await page.screenshot({path:testInfo.outputPath('05c-agro-expandido.png'),fullPage:false})
   await assistant.getByRole('checkbox',{name:/^Arroz NCM 1006$/}).check()
   await expect(assistant.locator('.onb-counter')).toContainText('1 item')
@@ -754,6 +756,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const otherSegments=[...new Set(agrex.cards.map(c=>c.segmentLabel))].filter(label=>label!=='Agropecuária, pesca e insumos agrícolas').sort((a,b)=>a.localeCompare(b,'pt-BR'))
   for(const [number,label] of otherSegments.entries()){
     await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible()
+    await assistant.locator('.onb-body').evaluate(el=>el.scrollTo(0,0))
     await page.screenshot({path:testInfo.outputPath('segmento-'+number+'.png'),fullPage:false})
     await assistant.getByRole('button',{name:'Pular',exact:true}).click()
   }
@@ -790,6 +793,8 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(assistant.getByRole('button',{name:'Cancelar edição'})).toHaveCount(0)
   expect(assistantData.effectiveProfiles[0]!.conceptCodes).toEqual(['product.rice'])
   expect(assistantData.effectiveProfiles[0]!.ncmCodes).toEqual(['1006'])
+  await assistant.locator('.onb-body').evaluate(el=>el.scrollTo(0,el.scrollHeight))
+  await page.screenshot({path:testInfo.outputPath('06d-legado-corrigido-salvo.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Fechar assistente'}).click()
 
   await expect(page.getByRole('tab',{name:/Perfil tributário/})).toHaveCount(0)
@@ -882,6 +887,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const overlap=await page.evaluate(()=>{const notice=document.querySelector('.tp-version-notice')!.getBoundingClientRect(),input=document.querySelector('input[aria-label=\"Razão social\"]')?.getBoundingClientRect();return input?notice.top<input.bottom&&notice.bottom>input.top:false})
   expect(overlap).toBe(false)
   await page.screenshot({path:testInfo.outputPath('08-nova-versao-rascunho.png'),fullPage:false})
+  await draft.scrollIntoViewIfNeeded()
+  await expect(draft).toHaveValue('Rascunho preservado')
+  await page.screenshot({path:testInfo.outputPath('08b-rascunho-acessivel-sem-sobreposicao.png'),fullPage:false})
 
   await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
   await page.getByRole('button', { name: 'Abrir configurações', exact: true }).click()
