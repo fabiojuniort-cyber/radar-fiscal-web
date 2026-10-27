@@ -1,3 +1,4 @@
+import { NEW_VERSION_MESSAGE } from './build-version'
 import { useEffect, useState } from 'react'
 import type { Establishment, ProductApiFetch } from './product-api'
 import { fetchEstablishments } from './product-api'
@@ -28,7 +29,7 @@ export function OnboardingIeEditor({apiFetch, tenantId, companyId, unit, locked,
       setBaseline(result.stateRegistration); setValue(result.stateRegistration ?? '')
       setSource(result.stateRegistrationSource); setSaved(true); onDirty(unit.id, false); onSaved()
     } catch (e) {
-      setError(e instanceof Error && e.message === 'state_registration_conflict'
+      setError(e instanceof Error && e.message === 'app_version_changed' ? NEW_VERSION_MESSAGE : e instanceof Error && e.message === 'state_registration_conflict'
         ? 'A IE mudou em outra tela. Recarregue a IE antes de tentar novamente.'
         : 'Não foi possível salvar a IE. Sua edição foi mantida.')
     } finally { setBusy(false); onBusy(false) }

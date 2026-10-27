@@ -23,7 +23,7 @@ it('saves only the selected unit IE inside the popup, preserving card version an
  const {api,close,saved}=mount(patch)
  const input=await screen.findByLabelText('Inscrição Estadual — Filial')
  fireEvent.change(input,{target:{value:' 456 '}})
- expect(screen.getByRole('button',{name:'Salvar e próximo'})).toBeDisabled()
+ expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeDisabled()
  const saves=screen.getAllByRole('button',{name:'Salvar IE'})
  fireEvent.click(saves[1]!)
  await screen.findByText('IE salva para Filial.')
@@ -35,7 +35,7 @@ it('saves only the selected unit IE inside the popup, preserving card version an
  expect(call[1]?.headers).toMatchObject({'X-Tenant-Id':'tenant'})
  expect(JSON.parse(String(call[1]?.body))).toEqual({expectedStateRegistration:null,stateRegistration:'456'})
  expect(api.mock.calls.filter(([,init])=>init?.method==='PUT')).toHaveLength(0)
- expect(screen.getByRole('button',{name:'Salvar e próximo'})).toBeEnabled()
+ expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
 })
 it('retains failed edits, prevents navigation and does not retry or close automatically',async()=>{
  const patch=vi.fn(async()=>Response.json({error:'unavailable'},{status:503}))
@@ -47,7 +47,7 @@ it('retains failed edits, prevents navigation and does not retry or close automa
  expect(input).toHaveValue('456');expect(patch).toHaveBeenCalledTimes(1)
  expect(screen.getByRole('button',{name:'Pular'})).toBeDisabled();expect(close).not.toHaveBeenCalled()
  fireEvent.click(screen.getByRole('button',{name:'Descartar edição da IE'}))
- expect(input).toHaveValue('');expect(screen.getByRole('button',{name:'Salvar e próximo'})).toBeEnabled()
+ expect(input).toHaveValue('');expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
 })
 it('a conflict keeps the draft until explicit reload of that unit',async()=>{
  const patch=vi.fn(async()=>Response.json({error:'state_registration_conflict'},{status:409}))
@@ -59,7 +59,7 @@ it('a conflict keeps the draft until explicit reload of that unit',async()=>{
  fireEvent.click(screen.getByRole('button',{name:'Recarregar IE'}))
  await waitFor(()=>expect(input).toHaveValue('999'))
  expect(screen.getByLabelText('Inscrição Estadual — Matriz')).toHaveValue('123')
- expect(screen.getByRole('button',{name:'Salvar e próximo'})).toBeEnabled()
+ expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
 })
 it('saving one IE locks the other unit and card navigation until readback completes',async()=>{
  let resolve!:(value:Response)=>void
