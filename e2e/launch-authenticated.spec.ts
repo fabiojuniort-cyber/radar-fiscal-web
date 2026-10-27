@@ -851,6 +851,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.route('**/build-version.json*',route=>route.fulfill({json:{id:'new-deployment-after-this-build'}}))
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
   await expect(page.getByRole('alert')).toContainText('Há uma versão nova do TriFaros. Recarregue a página para continuar.')
+  await expect(page.getByRole('alert')).toBeVisible()
   await expect(draft).toHaveValue('Rascunho preservado')
   await page.screenshot({path:testInfo.outputPath('08-nova-versao-rascunho.png'),fullPage:false})
 

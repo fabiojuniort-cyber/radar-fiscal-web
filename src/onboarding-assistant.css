@@ -13,3 +13,7 @@
 @keyframes onb-load{from{transform:translateX(-100%)}to{transform:translateX(390%)}}
 @media(max-width:600px){.onb-dialog{width:calc(100vw - 20px);max-height:94vh;border-radius:20px}.onb-top{padding:24px 55px 0 20px}.onb-body{padding:24px 20px}.onb-body h2{font-size:22px}.onb-company-grid{grid-template-columns:1fr;padding:18px;gap:16px}.onb-footer{padding:14px 18px;gap:8px}.onb-footer>div{gap:9px}.onb-footer>div{flex-wrap:wrap;justify-content:flex-end}.onb-footer span{font-size:10px}.onb-primary{padding:0 13px;font-size:12px!important}.onb-secondary{padding:0 12px}.onb-search-row{flex-wrap:wrap}.onb-search{min-width:100%!important}.onb-suggestion small{max-width:40%}.onb-top>span{font-size:10px}.onb-unit select{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.onb-loading-track i{animation:none}.onb-progress i{transition:none}}
+
+/* The notice must remain visible while the company page or a long card is scrolled. */
+.tp-app>.tp-version-notice{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 36px #18243833}
+.onb-body>.tp-version-notice{position:sticky;top:0;z-index:2;margin:0 0 16px}
