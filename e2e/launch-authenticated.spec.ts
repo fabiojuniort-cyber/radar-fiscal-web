@@ -5,6 +5,12 @@ test.use({video:'on',actionTimeout:15000})
 const tenantId = '11111111-1111-4111-8111-111111111111'
 const companyId = '22222222-2222-4222-8222-222222222222'
 const establishmentId = '33333333-3333-4333-8333-333333333333'
+const extraSegmentActivities=[
+    ['construction','Construção','4120400'],['energy','Energia','3511501'],
+    ['industry','Indústria','2833000'],['mining','Mineração','0710301'],
+    ['chemicals','Química','2013402'],['technology','Tecnologia','6201501'],
+    ['transport','Transporte','4930202'],['tourism','Turismo','5510801'],
+  ] as const
 const branchId='33333333-3333-4333-8333-333333333334'
 const publicationId = '55555555-5555-4555-8555-555555555555'
 const releaseId = '77777777-7777-4777-8777-777777777777'
@@ -389,7 +395,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           code: '0111301',
           description: 'Cultivo de arroz',
           isPrimary: true,
-        }],
+        },...extraSegmentActivities.map(([,label,code])=>({code,description:label+' — atividade sintética',isPrimary:false}))],
       }, ...(branchAdded?[{
         id:branchId,companyId,cnpj:'11222333000262',name:'Filial teste',typeCode:'OFFICE',isHeadOffice:false,uf:'GO',
         municipalityName:'Goiânia',municipalityIbgeCode:'5208707',postalCode:null,street:null,streetNumber:null,complement:null,district:null,businessLocationCode:null,
@@ -685,12 +691,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     cards:[{establishmentId,cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]}]}
   // Synthetic Agrex acceptance fixture: nine segments produce twelve steps.
   // No production customer data or live registry response is used here.
-  for(const [code,label,cnae] of [
-    ['construction','Construção','4120400'],['energy','Energia','3511501'],
-    ['industry','Indústria','2833000'],['mining','Mineração','0710301'],
-    ['chemicals','Química','2013402'],['technology','Tecnologia','6201501'],
-    ['transport','Transporte','4930202'],['tourism','Turismo','5510801'],
-  ]){
+  for(const [code,label,cnae] of extraSegmentActivities){
     assistantData.cards.push({establishmentId,cnaeCode:cnae!,description:label!+' — atividade sintética',segmentCode:'sector.'+code,segmentLabel:label!,phraseSegment:'generico',suggestions:[]})
     assistantData.concepts.push({code:'sector.'+code,label:label!,dimensionCode:'sector'})
   }
@@ -707,15 +708,15 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   })
   await page.getByLabel('CNPJ da matriz').fill('11222333000181')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
-  await page.screenshot({path:testInfo.outputPath('01-cnpj.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('01-cnpj.png'),fullPage:false})
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
   // ONB-03 opens the assistant, leaving company and units on one screen.
   const assistant=page.getByRole('dialog',{name:'Assistente do perfil tributário'})
   await expect(assistant).toBeVisible()
   await expect(assistant.getByRole('status')).toBeVisible()
-  await page.screenshot({path:testInfo.outputPath('02-animacao.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('02-animacao.png'),fullPage:false})
   await expect(assistant.getByRole('heading',{name:'Estes são os dados da sua empresa?',exact:true})).toBeVisible({timeout:10000})
-  await page.screenshot({path:testInfo.outputPath('03-card-empresa.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('03-card-empresa.png'),fullPage:false})
   // IE can be edited and read back without leaving the modal (all four viewports).
   let currentIe='10.123.456-2'
   await page.route(`**/api/v1/companies/${companyId}/establishments/${establishmentId}/state-registration`,async route=>{
@@ -740,25 +741,25 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await ie.fill('10.123.456-2')
   await assistant.getByRole('button',{name:'Salvar IE',exact:true}).click()
   await expect(assistant.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
-  await page.screenshot({path:testInfo.outputPath('04-card-estabelecimentos-ie.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('04-card-estabelecimentos-ie.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
   await expect(assistant.getByRole('heading',{name:'Agropecuária: o que você compra, vende ou produz?'})).toBeVisible()
   await expect(assistant.getByRole('checkbox',{name:/Arroz/})).not.toBeChecked()
-  await assistant.getByText('Ver as 1 atividades deste segmento',{exact:true}).click()
+  await assistant.getByText('Ver 1 atividade deste segmento',{exact:true}).click()
   await expect(assistant.getByText(/0111301.*Cultivo de arroz/)).toBeVisible()
   await expect(assistant.getByText('NCM 1006',{exact:true})).toBeVisible()
-  await page.screenshot({path:testInfo.outputPath('05a-sugestoes-sem-preselecao.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('05a-sugestoes-sem-preselecao.png'),fullPage:false})
   await assistant.getByRole('checkbox',{name:/Arroz/}).check()
-  await page.screenshot({path:testInfo.outputPath('05-cnae-0111301-arroz-1006.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('05-cnae-0111301-arroz-1006.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
   for(const label of ['Construção','Energia','Indústria','Mineração','Química','Tecnologia','Transporte','Turismo']){
     await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible()
     await expect(assistant.getByText('Não há sugestões publicadas para esta unidade. Busque um item ou pule esta etapa.')).toBeVisible()
-    await page.screenshot({path:testInfo.outputPath('segmento-'+label+'.png'),fullPage:true})
+    await page.screenshot({path:testInfo.outputPath('segmento-'+label+'.png'),fullPage:false})
     await assistant.getByRole('button',{name:'Pular',exact:true}).click()
   }
   await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil',exact:true})).toBeVisible()
-  await page.screenshot({path:testInfo.outputPath('06-resumo.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('06-resumo.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Concluir perfil',exact:true}).click()
   await expect(assistant).toHaveCount(0)
 
@@ -789,7 +790,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(assistant.getByRole('checkbox',{name:/Arroz/})).not.toBeChecked()
   expect(assistantData.state.units[branchId]).toBeUndefined()
   expect((assistantData.state.units[establishmentId]!.cards['segment:sector.agro'] as {ncmCodes:string[]}).ncmCodes).toEqual(['1006'])
-  await page.screenshot({path:testInfo.outputPath('07-filial-nova-vazia.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('07-filial-nova-vazia.png'),fullPage:false})
   await assistant.getByRole('button',{name:'Fechar assistente'}).click()
 
   // A successful second registration must never expose the cached first profile
@@ -851,7 +852,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
   await expect(page.getByRole('alert')).toContainText('Há uma versão nova do TriFaros. Recarregue a página para continuar.')
   await expect(draft).toHaveValue('Rascunho preservado')
-  await page.screenshot({path:testInfo.outputPath('08-nova-versao-rascunho.png'),fullPage:true})
+  await page.screenshot({path:testInfo.outputPath('08-nova-versao-rascunho.png'),fullPage:false})
 
   await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
   await page.getByRole('button', { name: 'Abrir configurações', exact: true }).click()
