@@ -1,3 +1,4 @@
+import {nextOnboardingPhrase} from './onboarding-phrase-random'
 import * as Dialog from '@radix-ui/react-dialog'
 import {useEffect,useMemo,useState} from 'react'
 import {X,Check,Sparkles,Search} from 'lucide-react'
@@ -24,16 +25,17 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
  const [explicitNcms,setExplicitNcms]=useState<Record<string,string[]>>({})
  const pendingIe=units.some(u=>{const d=ieDrafts[u.id];return d&&(d.value.trim()||null)!==d.baseline})
  const [editingCompany,setEditingCompany]=useState(false),[name,setName]=useState(''),[location,setLocation]=useState('')
- const path='/api/v1/companies/'+companyId+'/onboarding'
+ const scopedUnit=initialEstablishmentId??units.find(u=>u.isHeadOffice)?.id??units[0]?.id
+ const path='/api/v1/companies/'+companyId+'/onboarding'+(scopedUnit?'?establishmentId='+scopedUnit:'')
  const head=units.find(u=>u.isHeadOffice)??units[0]
  const chooseStep=(result:AssistantData)=>initialEstablishmentId?Math.max(0,assistantSteps(result).findIndex(s=>'activities'in s&&s.activities.some(a=>a.establishmentId===initialEstablishmentId))):initialStep(result)
  const load=async()=>{const result=await assistantRequest<AssistantData>(apiFetch,tenantId,path);setData(result);setIndex(chooseStep(result));setError('')}
  useEffect(()=>{let active=true;assistantRequest<AssistantData>(apiFetch,tenantId,path).then(result=>{if(active){setData(result);setIndex(chooseStep(result))}}).catch(()=>{if(active)setError('Não foi possível carregar o assistente.')});assistantRequest<{items:{segment:string;phrases:string[]}[]}>(apiFetch,tenantId,'/api/v1/onboarding/phrases').then(r=>{if(active)setPhrases(r.items)}).catch(()=>{});return()=>{active=false}},[apiFetch,tenantId,path,initialEstablishmentId])
  useEffect(()=>{if(!importing)return;const timer=setTimeout(()=>setImporting(false),6000);return()=>clearTimeout(timer)},[importing])
  const groups=data?segmentSteps(data):[]
- useEffect(()=>{if(!importing)return;const tags=data?.cards[0]?.phraseSegments??[data?.cards[0]?.phraseSegment??'generico'];const matched=phrases.filter(p=>tags.includes(p.segment)).flatMap(p=>p.phrases);const pool=matched.length?matched:phrases.find(p=>p.segment==='generico')?.phrases??['Preparando seu perfil…'];const pick=()=>setPhrase(previous=>{const different=pool.filter(value=>value!==previous);const choices=different.length?different:pool;return choices[Math.floor(Math.random()*choices.length)]??'Preparando seu perfil…'});pick();const timer=setInterval(pick,2500);return()=>clearInterval(timer)},[importing,phrases,data])
+ useEffect(()=>{if(!importing)return;const tags=data?.cards[0]?.phraseSegments??[data?.cards[0]?.phraseSegment??'generico'];const matched=phrases.filter(p=>tags.includes(p.segment)).flatMap(p=>p.phrases);const pool=matched.length?matched:phrases.find(p=>p.segment==='generico')?.phrases??['Preparando seu perfil…'];const pick=()=>setPhrase(nextOnboardingPhrase(pool));pick();const timer=setInterval(pick,2500);return()=>clearInterval(timer)},[importing,phrases,data])
  const steps=data?assistantSteps(data):[],step=steps[index],segment=step&&'activities'in step?step:undefined
- const activityList=segment?[...new Map(segment.activities.map(a=>[a.cnaeCode,a])).values()]:[]
+ const activityList=segment?[...new Map(segment.activities.filter(a=>a.establishmentId===unitId).map(a=>[a.cnaeCode,a])).values()]:[]
  const activityCount=data?new Set(data.cards.map(a=>a.cnaeCode)).size:0
  const members=segment?[...new Set(segment.activities.map(a=>a.establishmentId))]:[]
  useEffect(()=>{if(!data||!segment)return;const next:Record<string,Choice>={};for(const id of [...new Set(segment.activities.map(a=>a.establishmentId))]){next[id]=effectiveChoice(data,id)}setDrafts(next);setExplicitNcms(Object.fromEntries(Object.entries(next).map(([id,c])=>[id,c.ncmCodes])));const first=initialEstablishmentId&&next[initialEstablishmentId]?initialEstablishmentId:Object.keys(next).find(id=>!segmentComplete(data,segment,id))??Object.keys(next)[0]??'';setUnitId(first);setReviewed([...new Set([first,...Object.keys(next).filter(id=>segmentComplete(data,segment,id))])]);setQuery('');setMore(false)},[data,index])

@@ -2,6 +2,15 @@ import type {AssistantData,CardChoice,EffectiveProfile,SegmentStep} from './onbo
 export type Choice={conceptCodes:string[];ncmCodes:string[]}
 export type ProductRow={key:string;label:string;product:string;ncms:string[]}
 export const unique=(items:string[])=>[...new Set(items)]
+/** Suggestions are only a draft. Reopening a reviewed card never re-adds removals. */
+export function suggestedDraft(data:AssistantData,step:SegmentStep,id:string):Choice{
+ const saved=effectiveChoice(data,id)
+ const unit=data.state.units[id]
+ if(unit?.cards[step.id]||unit?.cards.profile)return saved
+ const activities=step.activities.filter(a=>a.establishmentId===id)
+ const products=unique(activities.flatMap(a=>a.suggestions.filter(s=>s.kind==='PRODUCT').map(s=>s.target)))
+ return {conceptCodes:unique([...saved.conceptCodes,...products]),ncmCodes:unique([...saved.ncmCodes,...activities.flatMap(a=>a.suggestions.filter(s=>s.kind==='NCM').map(s=>s.target)),...data.concepts.filter(c=>products.includes(c.code)).flatMap(c=>c.ncmCodes??[])])}
+}
 export function effectiveChoice(data:AssistantData,id:string):Choice{
  const explicit=data.effectiveProfiles?.find(p=>p.establishmentId===id)
  if(explicit)return {conceptCodes:[...explicit.conceptCodes],ncmCodes:[...explicit.ncmCodes]}
