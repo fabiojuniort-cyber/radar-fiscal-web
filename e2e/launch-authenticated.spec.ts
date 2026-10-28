@@ -757,6 +757,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible()
   await assistant.getByRole('button',{name:'Concluir perfil'}).click();await expect(assistant).toHaveCount(0)
   const profilePage=page.locator('.onb-profile-page');await expect(profilePage.getByRole('heading',{name:'Perfil tributário',exact:true})).toBeVisible();await expect(page.locator('.tp-company-management')).toHaveCount(0);await expect(page.locator('.tp-establishment-management')).toHaveCount(0)
+  expect((await profilePage.getByRole('button',{name:'Editar Produtos e NCMs',exact:true}).boundingBox())!.height).toBeLessThanOrEqual(64)
   await page.screenshot({path:testInfo.outputPath('onb035-09-perfil-matriz-por-dimensao.png'),fullPage:true})
   await profilePage.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributo',exact:true})).toBeVisible();await expect(assistant.getByRole('checkbox',{name:'ICMS',exact:true})).toBeChecked()
   await page.screenshot({path:testInfo.outputPath('onb035-09-editar-reabre-card-tributo.png'),fullPage:false})
