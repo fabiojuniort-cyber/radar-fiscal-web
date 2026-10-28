@@ -11,7 +11,7 @@ const fixture=():AssistantData=>({version:7,release:{id:'release-19',version:'v1
  cards:[{establishmentId:'head',cnaeCode:'0111301',description:'Cultivo de arroz',segmentCode:'sector.agro',segmentLabel:'Agropecuária',phraseSegment:'agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agropecuária'},{kind:'NCM',target:'1006',segment:'Agropecuária'}]}]})
 it('groups multiple CNAEs in one segment with preselected published suggestions and no write',async()=>{
  const data=fixture();data.cards.push({...data.cards[0]!,cnaeCode:'0111302',description:'Milho'})
- expect(segmentSteps(data)).toHaveLength(1);expect(initialStep(data)).toBe(2)
+ expect(segmentSteps(data)).toHaveLength(1);expect(initialStep(data)).toBe(1)
  const api=vi.fn(async(url:RequestInfo|URL,_init?:RequestInit)=>Response.json(String(url).endsWith('/phrases')?{items:[]}:data))
  render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[unit]} onClose={vi.fn()} onSaved={vi.fn()}/>)
  expect(await screen.findByRole('heading',{name:'Agropecuária: o que você compra, vende ou produz?'})).toBeInTheDocument()
@@ -63,7 +63,7 @@ it('resumes a partly completed old segment with prior choices and remaining acti
  const group=segmentSteps(data)[0]!;
  expect(segmentChoice(data,group,'head')?.conceptCodes).toEqual(['product.rice']);
  expect(segmentComplete(data,group,'head')).toBe(false);
- expect(initialStep(data)).toBe(2);
+ expect(initialStep(data)).toBe(1);
 });
 
 it('uses segmentCards while the legacy API field stays one row per CNAE',()=>{
@@ -114,3 +114,4 @@ it('mark all selects only products and their own evidence, leaving independent C
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
  expect(writes).toEqual([{selectionMode:'EFFECTIVE',expectedVersion:7,releaseId:'release-19',cardId:'segment:sector.agro',status:'CONFIRMED',conceptCodes:[],ncmCodes:[],units:[{establishmentId:'head',conceptCodes:['product.rice','product.bran'],ncmCodes:['1006','2302','2716']}]}])
 })
+

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {effectiveChoice,productRows,toggleProduct,suggestedDraft} from './onboarding-selection'
-import {segmentSteps,type AssistantData} from './onboarding-assistant-api'
+import {segmentSteps,type ActivityCard,type AssistantData} from './onboarding-assistant-api'
 const data:AssistantData={version:3,release:{id:'v19',version:'v1.9.0'},companyName:'Test',state:{completed:false,cards:{},units:{}},concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product',ncmCodes:['1006']},{code:'product.bran',label:'Farelo',dimensionCode:'product',ncmCodes:['2302']}],cards:[{establishmentId:'head',cnaeCode:'0111301',description:'Test',phraseSegment:'agro',segmentCode:'sector.agro',suggestions:[{kind:'PRODUCT',target:'product.rice',segment:'Agro'},{kind:'PRODUCT',target:'product.bran',segment:'Agro'},{kind:'NCM',target:'1006',segment:'Agro'},{kind:'NCM',target:'2302',segment:'Agro'},{kind:'NCM',target:'2716',segment:'Agro'}]}]}
 it('each product receives only its own evidence; independent CNAE NCM is never attached',()=>{
  const rows=productRows(data,segmentSteps(data)[0]!,'head');expect(rows.map(r=>[r.label,r.ncms])).toEqual([['Arroz',['1006']],['Farelo',['2302']]])
@@ -19,4 +19,14 @@ it('preselection is a pure per-unit draft and never restores removals on a revie
  expect(suggestedDraft(data,step,'branch')).toEqual({conceptCodes:[],ncmCodes:[]});expect(JSON.stringify(data)).toBe(copy)
  const reviewed={...data,state:{...data.state,units:{head:{cards:{[step.id]:{status:'CONFIRMED' as const,conceptCodes:[],ncmCodes:[]}}}}}}
  expect(suggestedDraft(reviewed,step,'head')).toEqual({conceptCodes:[],ncmCodes:[]})
+})
+
+
+import {suggestionCounts} from './onboarding-selection'
+it('counts unique own-unit suggestions separately from saved/manual and sibling choices',()=>{
+ const data={concepts:[{code:'product.rice',label:'Arroz',dimensionCode:'product',ncmCodes:['1006','1006']}],cards:[],state:{units:{},cards:{},completed:false}} as unknown as AssistantData
+ const own={establishmentId:'a',cnaeCode:'0111301',suggestions:[{kind:'PRODUCT',target:'product.rice'},{kind:'PRODUCT',target:'product.rice'},{kind:'NCM',target:'2716'}]} as ActivityCard
+ const sibling={...own,establishmentId:'b',suggestions:[{kind:'PRODUCT',target:'product.sibling'},{kind:'NCM',target:'9999'}]} as ActivityCard
+ const step={id:'segment:agro',title:'Agro',code:'agro',activities:[own,{...own,cnaeCode:'0111302'},sibling]}
+ expect(suggestionCounts(data,step,'a')).toEqual({cnaes:2,products:1,ncms:2,linkedNcms:1,independentNcms:1})
 })

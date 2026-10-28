@@ -20,7 +20,7 @@ export function segmentSteps(data:AssistantData):SegmentStep[]{
 export type DimensionStep={id:string;title:string;dimensions:string[]}
 export function dimensionSteps(data:AssistantData):DimensionStep[]{return data.dimensions?profileDimensionGroups.map(g=>({id:'dimension-group:'+g.code,title:g.title,dimensions:g.dimensions})):[]}
 export function dimensionStepComplete(data:AssistantData,step:DimensionStep){return !!choiceFor(data,step.id)||step.dimensions.filter(code=>data.dimensions?.some(d=>d.code===code)).every(code=>!!choiceFor(data,'dimension:'+code))}
-export function assistantSteps(data:AssistantData){return [{id:'company',title:'Dados cadastrais'}, {id:'establishments',title:'Inscrição Estadual'},...segmentSteps(data),...dimensionSteps(data),{id:'summary',title:'Resumo'}]}
+export function assistantSteps(data:AssistantData){return [{id:'company',title:'Empresa e Inscrição Estadual'},...segmentSteps(data),...dimensionSteps(data),{id:'summary',title:'Resumo'}]}
 export function choiceFor(data:AssistantData,id:string,unit?:string){return unit?data.state.units[unit]?.cards[id]:data.state.cards[id]}
 export function segmentChoice(data:AssistantData,segment:SegmentStep,unit:string):CardChoice|undefined{
  const direct=choiceFor(data,segment.id,unit);if(direct)return direct
@@ -40,4 +40,5 @@ export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:stri
  const response=await apiFetch(path,{method:body?'PUT':'GET',headers:{'x-tenant-id':tenantId,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})})
  const result=await response.json();if(!response.ok)throw new Error(result.error??'request_failed');return result
 }
+
 
