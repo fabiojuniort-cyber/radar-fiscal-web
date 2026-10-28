@@ -14,8 +14,9 @@ const natures = { operative: 'Dispositivo do ato', historical: 'Redação anteri
 const passage = (nature: string, text: string, key: string) => ({ key, partId: key, parentKey: null, depth: 0, type: 'clause', structure: 'Cláusula', label: '', text,
   nature, natureLabel: natures[nature as keyof typeof natures], validity: 'unknown', validityLabel: 'Não determinada', reasons: ['nenhuma regra reconheceu este bloco'], references: [], ncm: [],
   ai: { anchor: text, structure: 'Nota de alteração', nature: 'editorial_note', natureLabel: 'Nota editorial', validity: 'not_determined', validityLabel: 'Não determinada',
-    evidence: 'estilo "NotaAlteracao"', explanation: 'Nota do editor.', secondCheck: { agrees: true, note: 'Releitura confirma.' } } })
-const described = (nature: string) => ({ status: 'complete', statusLabel: 'Completo', passages: [passage(nature, 'Acrescentado pelo Ajuste Exemplo.', 'a'.repeat(16))],
+    evidence: 'estilo "NotaAlteracao"', explanation: 'Nota do editor.', secondCheck: { agrees: true, note: 'Releitura confirma.' } },
+  correction: null, effectiveNature: nature, effectiveNatureLabel: natures[nature as keyof typeof natures] })
+const described = (nature: string) => ({ status: 'complete', statusLabel: 'Completo', documentHash: 'd'.repeat(64), corrections: { applied: [], stale: [] }, passages: [passage(nature, 'Acrescentado pelo Ajuste Exemplo.', 'a'.repeat(16))],
   review: nature === 'ambiguous' ? [{ sampleId: 's1', partKey: 'a'.repeat(16), kind: 'not_recognized', title: 'Trecho não reconhecido', detail: 'x' }] : [], counts: {} })
 const analysis = (after: string) => ({ basedOnVersion: 0, changes: 1, totals: { samples: 1, passages: 1, changedPassages: after === 'ambiguous' ? 0 : 1, samplesChanged: after === 'ambiguous' ? 0 : 1, reviewBefore: 1, reviewAfter: after === 'ambiguous' ? 1 : 0 },
   samples: [{ id: 's1', title: 'Ajuste fictício', source: 'CONFAZ', provenance: { kind: 'synthetic', note: '' }, before: described('ambiguous'), after: described(after),
@@ -28,7 +29,10 @@ function mockApi(opts: { saveStatus?: number } = {}) {
     calls.push({ method, url, body })
     if (url.endsWith('/anatomy-config')) return json({ current: { versionId: null, version: 0, origin: 'shipped', corrections: [], rules: [] },
       catalog: [{ path: 'classes.editorialNote', group: 'classes', field: 'editorialNote', title: 'Estilo de nota editorial', help: 'h', example: 'Remisso', produces: 'editorial_note', kind: 'style' }],
-      samples: [{ id: 's1', title: 'Ajuste fictício', source: 'CONFAZ', family: null, format: 'html', provenance: { kind: 'synthetic', note: '' }, covers: [], annotated: 1 }], natures, sources: { CONFAZ: 'CONFAZ' } })
+      samples: [{ id: 's1', documentId: 's1', version: 'v1', documentHash: 'd'.repeat(64), title: 'Ajuste fictício', source: 'CONFAZ', family: null, format: 'html', provenance: { kind: 'synthetic', note: '' }, covers: [], annotated: 1 }], natures, sources: { CONFAZ: 'CONFAZ' } })
+    if (url.endsWith('/documents/s1/analyses') && method === 'GET') return json([])
+    if (url.endsWith('/documents/s1/analyses')) return json({ analysisRecordId: 'r1', documentId: 's1', documentVersion: 'v1', documentHash: 'd'.repeat(64), configVersion: 0, configVersionId: null,
+      engineAnalysisId: 'e'.repeat(64), correctionsApplied: [], correctionsStale: [], described: described('ambiguous') }, 201)
     if (url.endsWith('/analysis')) return json(analysis(body?.changes?.length ? 'editorial_note' : 'ambiguous'))
     if (url.endsWith('/suggestions')) return json({ wantedLabel: 'Nota editorial', unsupported: null, suggestions: [{ scope: { level: 'source', source: 'CONFAZ' }, path: 'classes.editorialNote', action: 'add', literal: 'NotaAlteracao',
       description: 'Incluir "NotaAlteracao" em estilo de nota editorial — Fonte: CONFAZ', why: 'O bloco usa o estilo "NotaAlteracao".' }] })
@@ -88,5 +92,26 @@ describe('ANAT-CONFIG-01 screen', () => {
     expect(screen.getByRole('button', { name: 'Recarregar a versão atual' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /Desfazer/u }))
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  })
+
+  it('passage correction needs a reason and is bound to the document version and passage', async () => {
+    const { apiFetch, calls } = mockApi(); renderPage(apiFetch)
+    fireEvent.click((await screen.findAllByText('Acrescentado pelo Ajuste Exemplo.'))[0]!)
+    const panel = await screen.findByRole('region', { name: 'Trecho selecionado' })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Registrar correção' }))
+    expect(within(panel).getByRole('alert').textContent).toMatch(/Informe o motivo/u)
+    fireEvent.change(within(panel).getByLabelText('Motivo (obrigatório)'), { target: { value: 'É nota do editor' } })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Registrar correção' }))
+    fireEvent.click(screen.getByRole('button', { name: /Testar alterações/u }))
+    await screen.findByText(/Resultado do teste/u)
+    const body = calls.filter((c) => c.url.endsWith('/analysis')).at(-1)!.body as { corrections: unknown[] }
+    expect(body.corrections).toEqual([{ documentId: 's1', documentHash: 'd'.repeat(64), partKey: 'a'.repeat(16), expected: 'editorial_note', reason: 'É nota do editor' }])
+  })
+
+  it('new analysis of the document calls the consumer and reports the configuration version used', async () => {
+    const { apiFetch, calls } = mockApi(); renderPage(apiFetch)
+    fireEvent.click(await screen.findByRole('button', { name: /Nova análise deste documento/u }))
+    expect((await screen.findByText(/Análise registrada: documento v1, configuração versão 0/u))).toBeTruthy()
+    expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/documents/s1/analyses'))).toBe(true)
   })
 })

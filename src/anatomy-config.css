@@ -100,3 +100,8 @@
 /* The site stylesheet colours plain paragraphs; inside this screen text follows the screen's own tokens. */
 .ac-app p:not(.ac-muted):not(.ac-warn):not(.ac-ok):not(.ac-banner), .ac-app li, .ac-app dd { color: var(--ac-fg); }
 .ac-app .ac-error p, .ac-app .ac-error li { color: inherit; }
+.ac-analysis { display: grid; gap: 6px; font-family: Inter, system-ui, sans-serif; font-size: 14px; border-bottom: 1px solid var(--ac-line); padding-bottom: 8px; }
+.ac-analysis > .ac-row > button { font: inherit; font-size: .86rem; border-radius: 3px; padding: 6px 12px; border: 1px solid var(--ac-accent); background: var(--ac-accent); color: var(--ac-paper); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.ac-seg.corr { outline: 2px dashed var(--ac-accent); outline-offset: 1px; }
+.ac-corr { border: 1px solid var(--ac-accent); border-radius: 4px; padding: 6px 8px; display: grid; gap: 2px; }
+.ac-corr p { margin: 0; }

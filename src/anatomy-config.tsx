@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import {
-  AnatomyConfigError, anatomyConfigApi, describeChange, sameChange, scopeLabel,
-  type Analysis, type AnatomyConfigApi, type Change, type Correction, type Described, type Nature, type Overview, type Passage, type Scope, type Suggestion,
+  AnatomyConfigError, anatomyConfigApi, describeChange, sameChange, scopeLabel, toInput,
+  type Analysis, type AnalysisRecord, type AnatomyConfigApi, type Change, type CorrectionInput, type Described, type Nature, type Overview, type Passage, type Scope, type Suggestion,
 } from './anatomy-config-api'
 import type { ProductApiFetch } from './product-api'
 import './anatomy-config.css'
@@ -29,7 +29,7 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('trecho')
   const [changes, setChanges] = useState<Change[]>([])
-  const [corrections, setCorrections] = useState<Correction[] | null>(null) // null = unchanged from the version in force
+  const [corrections, setCorrections] = useState<CorrectionInput[] | null>(null) // null = unchanged from the version in force
   const [preview, setPreview] = useState<{ signature: string; analysis: Analysis } | null>(null)
   const [showAfter, setShowAfter] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
@@ -41,7 +41,7 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   if (overview.isError) return <Shell><p className="ac-error" role="alert">{(overview.error as AnatomyConfigError).message}</p></Shell>
   if (!overview.data) return <Shell><p className="ac-muted">Carregando a configuração…</p></Shell>
   const ov = overview.data
-  const effectiveCorrections = corrections ?? ov.current.corrections
+  const effectiveCorrections: CorrectionInput[] = corrections ?? ov.current.corrections.map(toInput)
   const signature = JSON.stringify({ changes, corrections: effectiveCorrections })
   const dirty = changes.length > 0 || corrections !== null
   const tested = preview !== null && preview.signature === signature
@@ -61,8 +61,9 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
     else if (!changes.some((x) => sameChange(x, c))) setChanges([...changes, c])
     setNotice(null); setError(null)
   }
-  const setCorrection = (c: Correction | null, key: string) => {
-    const rest = effectiveCorrections.filter((x) => !(x.sampleId === activeSample && x.partKey === key))
+  const activeSummary = ov.samples.find((s) => s.id === activeSample)
+  const setCorrection = (c: CorrectionInput | null, key: string) => {
+    const rest = effectiveCorrections.filter((x) => !(activeSummary && x.documentId === activeSummary.documentId && x.documentHash === activeSummary.documentHash && x.partKey === key))
     setCorrections(c ? [...rest, c] : rest); setNotice(null); setError(null)
   }
   const run = async (label: string, fn: () => Promise<void>) => {
@@ -103,7 +104,7 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
           return (
             <button key={s.id} type="button" aria-pressed={s.id === activeSample} onClick={() => { setSampleId(s.id); setSelected(null) }}>
               <span className="ac-chip ac-src">{ov.sources[s.source] ?? s.source}</span>
-              <span>{s.title}</span>
+              <span>{s.title} <span className="ac-muted">({s.version})</span></span>
               {n !== null && n > 0 && <span className="ac-count" aria-label={`${n} casos a conferir`}>{n}</span>}
             </button>
           )
@@ -127,8 +128,8 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
           <ul>
             {described?.passages.map((p) => (
               <li key={p.key} style={{ paddingLeft: `${p.depth * 12}px` }}>
-                <button type="button" aria-current={p.key === selected} aria-label={`${p.structure}: ${p.natureLabel}`} onClick={() => { setSelected(p.key); setTab('trecho') }}>
-                  <span className={`ac-dot k-${p.nature}`} aria-hidden="true" />
+                <button type="button" aria-current={p.key === selected} aria-label={`${p.structure}: ${p.effectiveNatureLabel}`} onClick={() => { setSelected(p.key); setTab('trecho') }}>
+                  <span className={`ac-dot k-${p.effectiveNature}`} aria-hidden="true" />
                   <span className="ac-tree-label">{p.structure}{p.type !== 'unidentified' && p.label && p.label.length < 28 ? ` · ${p.label}` : ''}</span>
                 </button>
               </li>
@@ -137,14 +138,16 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
         </nav>
 
         <article className="ac-doc" aria-label="Texto do ato">
+          {activeSummary && <DocumentAnalysis key={activeSummary.id} api={api} sampleId={activeSummary.id} documentId={activeSummary.documentId} version={ov.current.version} />}
           {sa && <div className="ac-doc-head">{sa.title} · {ov.sources[sa.source] ?? sa.source} · resultado {described?.statusLabel.toLowerCase()}{tested && showAfter ? ' · mostrando a proposta' : ''}</div>}
           {described?.passages.map((p) => {
             const ch = changedKeys.get(p.key)
             return (
-              <button type="button" key={p.key} data-k={p.nature} className={`ac-seg${p.key === selected ? ' sel' : ''}${ch && showAfter ? ' chg' : ''}`}
+              <button type="button" key={p.key} data-k={p.effectiveNature} className={`ac-seg${p.correction ? ' corr' : ''}${p.key === selected ? ' sel' : ''}${ch && showAfter ? ' chg' : ''}`}
                 style={{ marginLeft: `${Math.min(p.depth, 3) * 18}px` }} onClick={() => { setSelected(p.key); setTab('trecho') }}
-                aria-label={`${p.structure}: ${p.natureLabel}`}>
+                aria-label={`${p.structure}: ${p.effectiveNatureLabel}`}>
                 {ch && showAfter && <span className="ac-was">antes: {ch.fromLabel}</span>}
+                {p.correction && <span className="ac-was">corrigido pelo administrador (motor: {p.natureLabel})</span>}
                 {p.text || <i>(sem texto próprio)</i>}
               </button>
             )
@@ -158,7 +161,8 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
             ))}
           </div>
           {tab === 'trecho' && <PassagePanel ov={ov} api={api} sampleId={activeSample} passage={passage}
-            correction={effectiveCorrections.find((c) => c.sampleId === activeSample && c.partKey === selected) ?? null}
+            sample={activeSummary ?? null}
+            pendingCorrection={effectiveCorrections.find((c) => activeSummary && c.documentId === activeSummary.documentId && c.documentHash === activeSummary.documentHash && c.partKey === selected) ?? null}
             onCorrect={(c) => passage && setCorrection(c, passage.key)} onAdd={addChange} />}
           {tab === 'regras' && <RulesPanel ov={ov} changes={changes} onAdd={addChange} />}
           {tab === 'conferencia' && <ReviewPanel ov={ov} items={reviewAll} onOpen={(sid, key) => { setSampleId(sid); setSelected(key); setTab('trecho') }} />}
@@ -225,10 +229,11 @@ function Shell({ children }: { children: React.ReactNode }) {
   return <main className="ac-app"><Link className="ac-back" to="/painel"><ArrowLeft size={15} /> Voltar ao painel</Link>{children}</main>
 }
 
-function PassagePanel({ ov, api, sampleId, passage, correction, onCorrect, onAdd }: {
-  ov: Overview; api: AnatomyConfigApi; sampleId: string | null; passage: Passage | null; correction: Correction | null
-  onCorrect: (c: Correction | null) => void; onAdd: (c: Change) => void
+function PassagePanel({ ov, api, sampleId, sample, passage, pendingCorrection, onCorrect, onAdd }: {
+  ov: Overview; api: AnatomyConfigApi; sampleId: string | null; sample: Overview['samples'][number] | null; passage: Passage | null; pendingCorrection: CorrectionInput | null
+  onCorrect: (c: CorrectionInput | null) => void; onAdd: (c: Change) => void
 }) {
+  const [reason, setReason] = useState('')
   const [fix, setFix] = useState<Nature>('editorial_note')
   const [wanted, setWanted] = useState<Nature>('editorial_note')
   const [sug, setSug] = useState<{ suggestions: Suggestion[]; unsupported: string | null } | null>(null)
@@ -237,6 +242,8 @@ function PassagePanel({ ov, api, sampleId, passage, correction, onCorrect, onAdd
   const [err, setErr] = useState<string | null>(null)
   if (!passage || !sampleId) return <section className="ac-panel"><p className="ac-muted">Clique num trecho do texto ou da estrutura para ver como ele foi lido.</p></section>
   const ai = passage.ai
+  // The correction in force is listed among the corrections kept by the proposal; it is not a new one.
+  const savedHere = !!passage.correction && !!pendingCorrection && pendingCorrection.expected === passage.correction.expected && pendingCorrection.reason === passage.correction.reason
   const scopeFor = (s: Suggestion, i: number): Scope | null => {
     const v = scopeChoice[i] ?? 'source'
     if (v === 'default') return { level: 'default' }
@@ -247,7 +254,8 @@ function PassagePanel({ ov, api, sampleId, passage, correction, onCorrect, onAdd
     <section className="ac-panel" aria-label="Trecho selecionado">
       <dl className="ac-dims">
         <dt>Estrutura</dt><dd>{passage.structure}{passage.label && passage.label.length < 40 ? ` — ${passage.label}` : ''}</dd>
-        <dt>Natureza</dt><dd><span className={`ac-chip k-${passage.nature}`}>{passage.natureLabel}</span></dd>
+        <dt>Natureza</dt><dd><span className={`ac-chip k-${passage.effectiveNature}`}>{passage.effectiveNatureLabel}</span>{passage.correction && <span className="ac-muted"> (corrigida)</span>}</dd>
+        <dt>Resultado do motor</dt><dd>{passage.natureLabel}</dd>
         <dt>Vigência</dt><dd>{passage.validityLabel}<span className="ac-muted"> (notas e estilos não decidem a vigência)</span></dd>
       </dl>
       {passage.reasons.length > 0 && <p className="ac-why"><b>Por que:</b> {passage.reasons.join('; ')}.</p>}
@@ -267,11 +275,26 @@ function PassagePanel({ ov, api, sampleId, passage, correction, onCorrect, onAdd
       ) : <p className="ac-muted">A IA não tem leitura própria para este trecho.</p>}
 
       <h3>Corrigir só este trecho</h3>
-      <p className="ac-muted">Vale apenas para este trecho deste ato. Fica registrada e entra na lista de conferência até uma regra atendê-la; sozinha, não muda o processamento.</p>
-      {correction && <p className="ac-ok">Sua correção: {ov.natures[correction.expected]}. <button type="button" className="ac-link" onClick={() => onCorrect(null)}>Retirar correção</button></p>}
+      <p className="ac-muted">Vale só para este trecho desta versão do ato. Nas novas análises é aplicada sobre o resultado do motor, que continua visível. Se o documento mudar, a correção fica desatualizada e não é aplicada.</p>
+      {passage.correction && (
+        <div className="ac-corr" role="note" aria-label="Correção administrativa aplicada">
+          <p><b>Correção administrativa aplicada:</b> {passage.correction.expectedLabel} (o motor produziu "{passage.natureLabel}")</p>
+          {savedHere && <button type="button" className="ac-link" onClick={() => onCorrect(null)}>Retirar correção</button>}
+          <p className="ac-muted">Motivo: {passage.correction.reason} · por {ov.current.corrections.find((c) => c.partKey === passage.key)?.authorEmail ?? 'administrador'}
+            {passage.correction.sinceVersion ? ` · desde a versão ${passage.correction.sinceVersion}` : ''}{passage.correction.createdAt ? ` · ${fmtDate(passage.correction.createdAt)}` : ''}</p>
+        </div>
+      )}
+      {pendingCorrection && !savedHere && <p className="ac-ok">Correção nesta proposta: {ov.natures[pendingCorrection.expected]} — {pendingCorrection.reason}. <button type="button" className="ac-link" onClick={() => onCorrect(null)}>Retirar correção</button></p>}
       <div className="ac-row">
         <label className="ac-field">Este trecho é<select id="ac-fix" value={fix} onChange={(e) => setFix(e.target.value as Nature)}>{NATURES.map((n) => <option key={n} value={n}>{ov.natures[n]}</option>)}</select></label>
-        <button type="button" className="ac-secondary" onClick={() => onCorrect({ sampleId, partKey: passage.key, expected: fix })}>Registrar correção</button>
+      </div>
+      <label className="ac-field">Motivo (obrigatório)<input id="ac-fix-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: é a assinatura do ato" /></label>
+      {err === 'reason' && <p className="ac-error" role="alert">Informe o motivo da correção (pelo menos 3 caracteres).</p>}
+      <div className="ac-row">
+        <button type="button" className="ac-secondary" disabled={!sample} onClick={() => {
+          if (reason.trim().length < 3) { setErr('reason'); return }
+          setErr(null); onCorrect({ documentId: sample!.documentId, documentHash: sample!.documentHash, partKey: passage.key, expected: fix, reason: reason.trim() }); setReason('')
+        }}>Registrar correção</button>
       </div>
 
       <h3>Criar regra para trechos semelhantes</h3>
@@ -282,7 +305,7 @@ function PassagePanel({ ov, api, sampleId, passage, correction, onCorrect, onAdd
           try { setSug(await api.suggestions({ sampleId, text: passage.text, wanted })) } catch (e) { setErr(e instanceof AnatomyConfigError ? e.message : 'Não foi possível buscar sugestões.') }
         }}>Ver sugestão</button>
       </div>
-      {err && <p className="ac-error" role="alert">{err}</p>}
+      {err && err !== 'reason' && <p className="ac-error" role="alert">{err}</p>}
       {sug?.unsupported && <p className="ac-warn">{sug.unsupported}</p>}
       {sug?.suggestions.map((s, i) => (
         <div key={i} className="ac-sug">
@@ -420,6 +443,38 @@ function HistoryPanel({ api, ov, dirty, onRestored }: { api: AnatomyConfigApi; o
             {typeof a.data.version === 'number' ? ` · versão ${a.data.version}` : ''}{typeof a.data.code === 'string' ? ` · ${a.data.code === 'STALE_VERSION' ? 'versão desatualizada' : a.data.code}` : ''} · {a.actorEmail ?? 'administrador'}</li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+/** The real consumer on screen: a new, recorded analysis of this document with the configuration in force. */
+function DocumentAnalysis({ api, sampleId, documentId, version }: { api: AnatomyConfigApi; sampleId: string; documentId: string; version: number }) {
+  const history = useQuery({ queryKey: ['anat-config-doc', documentId, version], queryFn: () => api.documentAnalyses(documentId) })
+  const [last, setLast] = useState<AnalysisRecord | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  return (
+    <section className="ac-analysis" aria-label="Nova análise do documento">
+      <div className="ac-row">
+        <button type="button" disabled={busy} onClick={async () => {
+          setBusy(true); setErr(null)
+          try { setLast(await api.analyzeDocument(sampleId)); await history.refetch() } catch (e) { setErr(e instanceof AnatomyConfigError ? e.message : 'Não foi possível analisar.') } finally { setBusy(false) }
+        }}><Play size={15} /> Nova análise deste documento</button>
+        <span className="ac-muted">Usa a configuração em uso (versão {version}) e as correções vigentes. A análise fica registrada; as anteriores são mantidas.</span>
+      </div>
+      {err && <p className="ac-error" role="alert">{err}</p>}
+      {last && (
+        <p className="ac-ok" role="status">Análise registrada: documento {last.documentVersion}, configuração versão {last.configVersion}, {last.correctionsApplied.length} correção(ões) aplicada(s)
+          {last.correctionsStale.length ? `, ${last.correctionsStale.length} desatualizada(s) não aplicada(s)` : ''}.</p>
+      )}
+      {history.data && history.data.length > 0 && (
+        <details><summary className="ac-muted">Análises registradas deste documento ({history.data.length})</summary>
+          <ul className="ac-audit">{history.data.map((h) => (
+            <li key={h.id}>{fmtDate(h.createdAt)} · documento {h.documentVersion} · configuração v{h.configVersion} · {h.correctionsApplied.length} correção(ões) aplicada(s)
+              {h.correctionsStale.length ? ` · ${h.correctionsStale.length} desatualizada(s)` : ''} · {h.requestedByEmail ?? 'administrador'}</li>
+          ))}</ul>
+        </details>
+      )}
     </section>
   )
 }

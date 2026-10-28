@@ -9,11 +9,14 @@ const BASE = '/api/v1/admin/anatomy-config'
 export type Nature = 'operative' | 'historical' | 'editorial_note' | 'amendment' | 'structure' | 'ambiguous'
 export type Scope = { level: 'default' } | { level: 'source'; source: string } | { level: 'family'; source: string; family: string }
 export interface Change { scope: Scope; path: string; action: 'add' | 'remove'; literal: string }
-export interface Correction { sampleId: string; partKey: string; expected: Nature; note?: string }
+/** What the client sends: a passage correction bound to one document version and passage. Author/date are set by the server. */
+export interface CorrectionInput { documentId: string; documentHash: string; partKey: string; expected: Nature; reason: string }
+export interface Correction extends CorrectionInput { author?: string; authorEmail?: string | null; createdAt?: string; sinceVersion?: number }
+export const toInput = (c: CorrectionInput): CorrectionInput => ({ documentId: c.documentId, documentHash: c.documentHash, partKey: c.partKey, expected: c.expected, reason: c.reason })
 export interface FieldInfo { path: string; group: string; field: string; title: string; help: string; example: string; produces: string; kind: string }
 export interface RuleRow { scope: Scope; scopeLabel: string; path: string; title: string; help: string; literals: string[] }
 export type Provenance = { kind: 'synthetic'; note: string } | { kind: 'official'; url: string; consultedAt: string; version: string; reason: string }
-export interface SampleSummary { id: string; title: string; source: string; family: string | null; format: string; provenance: Provenance; covers: string[]; annotated: number }
+export interface SampleSummary { id: string; documentId: string; version: string; documentHash: string; title: string; source: string; family: string | null; format: string; provenance: Provenance; covers: string[]; annotated: number }
 export interface Overview {
   current: { versionId: string | null; version: number; origin: 'saved' | 'shipped'; corrections: Correction[]; kind?: string; author?: string; createdAt?: string; note?: string | null; rules: RuleRow[] }
   catalog: FieldInfo[]; samples: SampleSummary[]; natures: Record<Nature, string>; sources: Record<string, string>
@@ -21,9 +24,16 @@ export interface Overview {
 export interface AiReading { anchor: string; structure: string; nature: Nature; natureLabel: string; validity: string; validityLabel: string; evidence: string; explanation: string;
   references?: string[]; ambiguity?: string; secondCheck: { agrees: boolean; note: string } }
 export interface Passage { key: string; partId: string; parentKey: string | null; depth: number; type: string; structure: string; label: string; text: string;
-  nature: Nature; natureLabel: string; validity: string; validityLabel: string; reasons: string[]; references: string[]; ncm: string[]; ai: AiReading | null }
+  nature: Nature; natureLabel: string; validity: string; validityLabel: string; reasons: string[]; references: string[]; ncm: string[]; ai: AiReading | null
+  correction: { expected: Nature; expectedLabel: string; reason: string; author: string | null; createdAt: string | null; sinceVersion: number | null } | null
+  effectiveNature: Nature; effectiveNatureLabel: string }
 export interface ReviewItem { sampleId: string; partKey: string | null; kind: string; title: string; detail: string }
-export interface Described { status: string; statusLabel: string; passages: Passage[]; review: ReviewItem[]; counts: Record<Nature, number> }
+export interface Described { status: string; statusLabel: string; documentHash: string; passages: Passage[]; review: ReviewItem[]; counts: Record<Nature, number>
+  corrections: { applied: { partKey: string; correction: Correction }[]; stale: { correction: Correction; why: 'document_changed' | 'passage_not_found' }[] } }
+export interface AnalysisRecord { analysisRecordId: string; documentId: string; documentVersion: string; documentHash: string; configVersion: number; configVersionId: string | null
+  engineAnalysisId: string; correctionsApplied: { partKey: string; expected: Nature; author: string | null }[]; correctionsStale: { partKey: string; why: string }[]; described: Described }
+export interface AnalysisHistoryRow { id: string; documentId: string; documentVersion: string; configVersion: number; engineAnalysisId: string
+  correctionsApplied: unknown[]; correctionsStale: unknown[]; requestedByEmail: string | null; createdAt: string }
 export interface SampleAnalysis { id: string; title: string; source: string; provenance: Provenance; before: Described; after: Described
   diff: { changed: { key: string; structure: string; text: string; from: Nature; fromLabel: string; to: Nature; toLabel: string }[]; appeared: number; disappeared: number; reviewBefore: number; reviewAfter: number } }
 export interface Analysis { basedOnVersion: number; changes: number; totals: { samples: number; passages: number; changedPassages: number; samplesChanged: number; reviewBefore: number; reviewAfter: number }; samples: SampleAnalysis[] }
@@ -51,12 +61,15 @@ async function call<T>(apiFetch: ProductApiFetch, method: string, path: string, 
 }
 export const anatomyConfigApi = (apiFetch: ProductApiFetch) => ({
   overview: () => call<Overview>(apiFetch, 'GET', ''),
-  analysis: (body: { changes?: Change[]; corrections?: Correction[] }, signal?: AbortSignal) => call<Analysis>(apiFetch, 'POST', '/analysis', body, signal),
+  analysis: (body: { changes?: Change[]; corrections?: CorrectionInput[] }, signal?: AbortSignal) => call<Analysis>(apiFetch, 'POST', '/analysis', body, signal),
   suggestions: (body: { sampleId: string; text: string; wanted: Nature }) => call<{ wantedLabel: string; suggestions: Suggestion[]; unsupported: string | null }>(apiFetch, 'POST', '/suggestions', body),
-  save: (body: { basedOnVersion: number; changes: Change[]; corrections: Correction[]; note?: string }) => call<{ versionId: string; version: number }>(apiFetch, 'POST', '/save', body),
+  save: (body: { basedOnVersion: number; changes: Change[]; corrections: CorrectionInput[]; note?: string }) => call<{ versionId: string; version: number }>(apiFetch, 'POST', '/save', body),
   restore: (body: { basedOnVersion: number; versionId: string; note?: string }) => call<{ versionId: string; version: number }>(apiFetch, 'POST', '/restore', body),
   versions: () => call<VersionRow[]>(apiFetch, 'GET', '/versions'),
   audit: () => call<AuditRow[]>(apiFetch, 'GET', '/audit'),
+  /** New analysis of ONE document with the configuration in force (recorded; earlier analyses kept). */
+  analyzeDocument: (sampleId: string) => call<AnalysisRecord>(apiFetch, 'POST', `/documents/${encodeURIComponent(sampleId)}/analyses`),
+  documentAnalyses: (documentId: string) => call<AnalysisHistoryRow[]>(apiFetch, 'GET', `/documents/${encodeURIComponent(documentId)}/analyses`),
 })
 export type AnatomyConfigApi = ReturnType<typeof anatomyConfigApi>
 
