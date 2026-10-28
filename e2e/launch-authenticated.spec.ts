@@ -1,3 +1,4 @@
+import {profileDimensionGroups} from '../src/onboarding-dimensions'
 import agrex from './fixtures/agrex-35.json' with {type:'json'}
 import { expect, test } from '@playwright/test'
 
@@ -695,7 +696,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       assistantData.state.units[id]??={cards:{}}
       const profile=assistantData.effectiveProfiles.find(p=>p.establishmentId===id)!
       if(b.units){expect(b.units.map((u:{establishmentId:string})=>u.establishmentId)).toEqual([id]);Object.assign(profile,b.units[0])}
-      else if(b.cardId.startsWith('dimension:')){expect(b.establishmentId).toBe(id);const dimension=b.cardId.slice(10);if(b.status==='CONFIRMED')profile.conceptCodes=[...profile.conceptCodes.filter(c=>!assistantData.concepts.some(v=>v.code===c&&v.dimensionCode===dimension)),...b.conceptCodes]}
+      else if(b.cardId.startsWith('dimension-group:')){expect(b.establishmentId).toBe(id);const group=profileDimensionGroups.find(g=>'dimension-group:'+g.code===b.cardId)!;expect(group).toBeTruthy();if(b.status==='CONFIRMED')profile.conceptCodes=[...profile.conceptCodes.filter(c=>!assistantData.concepts.some(v=>v.code===c&&group.dimensions.includes(v.dimensionCode))),...b.conceptCodes]}
       else if(b.cardId==='profile'){Object.assign(profile,{conceptCodes:b.conceptCodes,ncmCodes:b.ncmCodes,legacyFields:b.legacyFields??profile.legacyFields,historicalCodes:[]})}
       assistantData.state.units[id]!.cards[b.cardId]=choice
       assistantData.version++
@@ -749,17 +750,17 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click();expect(assistantData.effectiveProfiles[0]!.ncmCodes).not.toContain('10011090')
   const otherSegments=[...new Set(agrex.cards.map(c=>c.segmentLabel))].filter(label=>label!=='Agropecuária, pesca e insumos agrícolas').sort((a,b)=>a.localeCompare(b,'pt-BR'))
   for(const label of otherSegments){await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible();await assistant.getByRole('button',{name:'Pular',exact:true}).click()}
-  for(const [code,title,,label] of dimensionFixtures){
-    await expect(assistant.getByRole('heading',{name:title,exact:true})).toBeVisible();await assistant.getByRole('textbox',{name:'Buscar '+title}).fill(label!);await assistant.getByRole('checkbox',{name:label!,exact:true}).check()
-    await assistant.getByRole('heading',{name:title,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb035-08-dimensao-'+code+'.png'),fullPage:false})
-    await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
+  for(const group of profileDimensionGroups){
+    await expect(assistant.getByRole('heading',{name:group.title,exact:true})).toBeVisible();const before=profileWrites;await expect(assistant.locator('.onb-dimension-section')).toHaveCount(group.dimensions.length);await assistant.getByRole('heading',{name:group.title,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb035-08-card-'+group.code+'.png'),fullPage:false})
+    for(const code of group.dimensions){const [,title,,label]=dimensionFixtures.find(([c])=>c===code)!;const section=assistant.getByRole('region',{name:title!,exact:true});await section.getByRole('textbox',{name:'Buscar '+title}).fill(label!);await section.getByRole('checkbox',{name:label!,exact:true}).check();expect(profileWrites).toBe(before);await section.getByRole('heading',{name:title!,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb035-08-grupo-'+group.code+'-secao-'+code+'.png'),fullPage:false})}
+    await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await expect.poll(()=>profileWrites).toBe(before+1)
   }
   await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible()
   await assistant.getByRole('button',{name:'Concluir perfil'}).click();await expect(assistant).toHaveCount(0)
   const profilePage=page.locator('.onb-profile-page');await expect(profilePage.getByRole('heading',{name:'Perfil tributário',exact:true})).toBeVisible();await expect(page.locator('.tp-company-management')).toHaveCount(0);await expect(page.locator('.tp-establishment-management')).toHaveCount(0)
   expect((await profilePage.getByRole('button',{name:'Editar Produtos e NCMs',exact:true}).boundingBox())!.height).toBeLessThanOrEqual(64)
   await page.screenshot({path:testInfo.outputPath('onb035-09-perfil-matriz-por-dimensao.png'),fullPage:true})
-  await profilePage.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributo',exact:true})).toBeVisible();await expect(assistant.getByRole('checkbox',{name:'ICMS',exact:true})).toBeChecked()
+  await profilePage.getByRole('button',{name:'Editar Tributos e regime',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributos e regime',exact:true})).toBeVisible();await expect(assistant.getByRole('checkbox',{name:'ICMS',exact:true})).toBeChecked();await expect(assistant.getByRole('checkbox',{name:'Lucro real',exact:true})).toBeChecked()
   await page.screenshot({path:testInfo.outputPath('onb035-09-editar-reabre-card-tributo.png'),fullPage:false})
   await assistant.getByRole('checkbox',{name:'ICMS',exact:true}).uncheck();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Fechar assistente'}).click();await expect(profilePage.getByText('Nenhuma escolha nesta dimensão').first()).toBeVisible()
   // Historical choices remain readable and removable only through explicit, versioned save.
@@ -784,7 +785,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
   await expect(assistant.getByRole('heading',{name:'Transporte e logística: o que você compra, vende ou produz?'})).toBeVisible();await expect(assistant.getByRole('checkbox',{name:/Arroz/})).toHaveCount(0);await expect(assistant.getByText('Ver 1 atividade deste segmento')).toBeVisible();expect(JSON.stringify(assistantData.effectiveProfiles[0])).toBe(matrixSnapshot)
   await page.screenshot({path:testInfo.outputPath('onb035-07-filial-so-cnae-transporte-sem-agro.png'),fullPage:false});await assistant.getByRole('button',{name:'Pular',exact:true}).click()
-  for(const [,title] of dimensionFixtures){await expect(assistant.getByRole('heading',{name:title,exact:true})).toBeVisible();await assistant.getByRole('button',{name:'Pular',exact:true}).click()}
+  for(const group of profileDimensionGroups){await expect(assistant.getByRole('heading',{name:group.title,exact:true})).toBeVisible();await assistant.getByRole('button',{name:'Pular',exact:true}).click()}
   await assistant.getByRole('button',{name:'Concluir perfil'}).click();await expect(profilePage.getByRole('heading',{name:'Perfil tributário',exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('onb035-09-perfil-filial-isolado.png'),fullPage:true});await profilePage.getByRole('button',{name:'Voltar aos CNPJs'}).click()
 
   // A successful second registration must never expose the cached first profile

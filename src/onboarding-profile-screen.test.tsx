@@ -9,6 +9,6 @@ it('groups all dimensions and permits correcting a legacy regime even without an
  render(<OnboardingProfileScreen apiFetch={api} tenantId="tenant" companyId="company" unit={{id:'head',name:'Matriz',cnpj:'10515785000199',isHeadOffice:true} as Establishment} onEdit={onEdit} onBack={vi.fn()}/>)
  await screen.findByText('Regime declarado: Lucro Real')
  for(const [,label] of profileDimensions)expect(screen.getByRole('heading',{name:label})).toBeInTheDocument()
- fireEvent.click(screen.getByRole('button',{name:'Editar Tributo'}));expect(onEdit).toHaveBeenLastCalledWith('dimension:tax')
+ fireEvent.click(screen.getByRole('button',{name:'Editar Tributos e regime'}));expect(onEdit).toHaveBeenLastCalledWith('dimension-group:tax_regime')
  fireEvent.click(screen.getByRole('button',{name:'Editar regime declarado'}));expect(onEdit).toHaveBeenLastCalledWith('profile')
 })

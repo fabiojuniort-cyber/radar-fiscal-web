@@ -1,4 +1,4 @@
-import {profileDimensions} from './onboarding-dimensions'
+import {profileDimensionGroups} from './onboarding-dimensions'
 import type {ProductApiFetch} from './product-api'
 export type CardChoice={status:'CONFIRMED'|'SKIPPED';conceptCodes:string[];ncmCodes:string[]}
 export type ActivityCard={establishmentId:string;cnaeCode:string;description:string;segmentCode?:string;segmentLabel?:string;phraseSegment:string;phraseSegments?:string[];suggestions:{kind:string;target:string;segment:string}[]}
@@ -17,8 +17,9 @@ export function segmentSteps(data:AssistantData):SegmentStep[]{
  }
  return [...groups.values()].sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'))
 }
-export type DimensionStep={id:string;title:string;dimension:string}
-export function dimensionSteps(data:AssistantData):DimensionStep[]{return profileDimensions.filter(([code])=>data.dimensions?.some(d=>d.code===code)).map(([code,title])=>({id:'dimension:'+code,title,dimension:code}))}
+export type DimensionStep={id:string;title:string;dimensions:string[]}
+export function dimensionSteps(data:AssistantData):DimensionStep[]{return data.dimensions?profileDimensionGroups.map(g=>({id:'dimension-group:'+g.code,title:g.title,dimensions:g.dimensions})):[]}
+export function dimensionStepComplete(data:AssistantData,step:DimensionStep){return !!choiceFor(data,step.id)||step.dimensions.filter(code=>data.dimensions?.some(d=>d.code===code)).every(code=>!!choiceFor(data,'dimension:'+code))}
 export function assistantSteps(data:AssistantData){return [{id:'company',title:'Dados cadastrais'}, {id:'establishments',title:'Inscrição Estadual'},...segmentSteps(data),...dimensionSteps(data),{id:'summary',title:'Resumo'}]}
 export function choiceFor(data:AssistantData,id:string,unit?:string){return unit?data.state.units[unit]?.cards[id]:data.state.cards[id]}
 export function segmentChoice(data:AssistantData,segment:SegmentStep,unit:string):CardChoice|undefined{
@@ -32,7 +33,7 @@ export function segmentComplete(data:AssistantData,segment:SegmentStep,unit:stri
 }
 export function initialStep(data:AssistantData){
  const steps=assistantSteps(data)
- const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentComplete(data,step,id)):!choiceFor(data,step.id))
+ const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentComplete(data,step,id)):'dimensions'in step?!dimensionStepComplete(data,step):!choiceFor(data,step.id))
  return index<0?steps.length-1:index
 }
 export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:string,path:string,body?:unknown):Promise<T>{
