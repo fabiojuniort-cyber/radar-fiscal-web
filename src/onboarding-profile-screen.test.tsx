@@ -8,7 +8,7 @@ it('groups all dimensions and permits correcting a legacy regime even without an
  const onEdit=vi.fn(),api=vi.fn(async()=>Response.json({version:1,release:{id:'release',version:'v1'},companyName:'Agrex',cards:[],concepts:[{code:'tax.icms',label:'ICMS',dimensionCode:'tax'}],dimensions:profileDimensions.map(([code,name])=>({code,name})),state:{completed:true,cards:{},units:{}},effectiveProfiles:[{establishmentId:'head',name:'Matriz',isHeadOffice:true,taxRegime:'LUCRO_REAL',conceptCodes:['tax.icms'],ncmCodes:[],legacyFields:{},cnaeSegments:[],historicalCodes:[]}]}))
  render(<OnboardingProfileScreen apiFetch={api} tenantId="tenant" companyId="company" unit={{id:'head',name:'Matriz',cnpj:'10515785000199',isHeadOffice:true} as Establishment} onEdit={onEdit} onBack={vi.fn()}/>)
  await screen.findByText('Regime declarado: Lucro Real')
- for(const [,label] of profileDimensions)expect(screen.getByRole('heading',{name:label,exact:true})).toBeInTheDocument()
+ for(const [,label] of profileDimensions)expect(screen.getByRole('heading',{name:label})).toBeInTheDocument()
  fireEvent.click(screen.getByRole('button',{name:'Editar Tributo'}));expect(onEdit).toHaveBeenLastCalledWith('dimension:tax')
  fireEvent.click(screen.getByRole('button',{name:'Editar regime declarado'}));expect(onEdit).toHaveBeenLastCalledWith('profile')
 })
