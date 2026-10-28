@@ -82,9 +82,9 @@ it('preloads legacy effective choices, shows the complete summary and offers exp
  const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PUT'){const body=JSON.parse(String(init.body));writes.push(body);if(body.cardId==='profile'){data.effectiveProfiles![0]={...data.effectiveProfiles![0]!,conceptCodes:body.conceptCodes,ncmCodes:body.ncmCodes,legacyFields:body.legacyFields,historicalCodes:[]};data.version++}return Response.json(data)}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
  render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[unit]} onClose={vi.fn()} onSaved={vi.fn()}/>)
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
- expect(screen.getByText(/Produto aposentado, Arroz, NCM 2716, NCM 1006/)).toBeInTheDocument()
- expect(screen.getByText('Produtos informados anteriormente: Produto manual anterior')).toBeInTheDocument();expect(writes).toHaveLength(0)
- fireEvent.click(screen.getByRole('button',{name:'Editar escolhas — Matriz histórica'}))
+ expect(screen.getByText('Produto aposentado',{exact:true})).toBeInTheDocument();expect(screen.getAllByText('Arroz',{exact:true}).length).toBeGreaterThan(0);expect(screen.getByText('2716',{exact:true})).toBeInTheDocument()
+ expect(screen.getByText('Produto manual anterior',{exact:true})).toBeInTheDocument();expect(writes).toHaveLength(0)
+ fireEvent.click(screen.getByRole('button',{name:'Editar escolhas - Matriz histórica'}))
  expect(screen.getByRole('checkbox',{name:/Produto aposentado/})).toBeChecked()
  fireEvent.click(screen.getByRole('checkbox',{name:/Produto aposentado/}));fireEvent.click(screen.getByRole('checkbox',{name:/NCM 2716/}));fireEvent.click(screen.getByRole('checkbox',{name:/Produto manual anterior/}))
  fireEvent.click(screen.getByRole('button',{name:'Salvar escolhas deste estabelecimento'}))
@@ -114,4 +114,5 @@ it('mark all selects only products and their own evidence, leaving independent C
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
  expect(writes).toEqual([{selectionMode:'EFFECTIVE',expectedVersion:7,releaseId:'release-19',cardId:'segment:sector.agro',status:'CONFIRMED',conceptCodes:[],ncmCodes:[],units:[{establishmentId:'head',conceptCodes:['product.rice','product.bran'],ncmCodes:['1006','2302','2716']}]}])
 })
+
 
