@@ -51,3 +51,7 @@
 @media(max-width:640px){.onb-dimension-section .onb-suggestions,.onb-profile-grid{grid-template-columns:1fr}.onb-profile-header{align-items:flex-start;flex-direction:column;padding:12px 0}.onb-profile-header h2{font-size:18px}.onb-profile-block{padding:14px}}
 
 .tp-panel-card.onb-profile-page{overflow:visible}.tp-panel-card.onb-profile-page .onb-link{box-shadow:none;border:0;background:transparent;color:#1F4FD8;padding:6px 0;min-height:30px;font-weight:600}
+
+
+/* ONB-03.7: published taxonomy groups; responsive choices retain the 3/2/1 layout. */
+.onb-taxonomy-group{margin:14px 0}.onb-dialog fieldset button.onb-taxonomy-toggle{display:block;width:100%;text-align:left;margin:0 0 8px;padding:12px;background:#f6f8fc;color:#253b5e;font-weight:600;font-size:13px;border:1px solid #e6ebf3}.onb-taxonomy-toggle:focus-visible{outline:2px solid #1F4FD8;outline-offset:2px}

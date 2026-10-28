@@ -5,7 +5,7 @@ export type ActivityCard={establishmentId:string;cnaeCode:string;description:str
 export type EffectiveProfile={establishmentId:string;name:string;isHeadOffice:boolean;taxRegime:string;conceptCodes:string[];ncmCodes:string[];legacyFields:Record<string,string[]>;cnaeSegments:{cnaeCode:string;segmentCode:string|null}[];historicalCodes:string[]}
 export type AssistantData={version:number;release:{id:string;version:string};companyName:string;companyCnpj?:string;
  state:{completed:boolean;cards:Record<string,CardChoice>;units:Record<string,{baseConceptCodes?:string[];baseNcmCodes?:string[];cards:Record<string,CardChoice>}>};
- dimensions?:{code:string;name:string}[];effectiveProfiles?:EffectiveProfile[];historicalConcepts?:{code:string;label:string;dimensionCode:string}[];concepts:{code:string;label:string;dimensionCode:string;ncmCodes?:string[]}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
+ taxonomyGroups?:{code:string;label:string;dimensionCode:string;displayOrder:number}[];dimensions?:{code:string;name:string}[];effectiveProfiles?:EffectiveProfile[];historicalConcepts?:{code:string;label:string;dimensionCode:string}[];concepts:{code:string;label:string;dimensionCode:string;groupCode?:string|null;ncmCodes?:string[]}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
 export type SegmentStep={id:string;title:string;code:string;activities:ActivityCard[]}
 export function scopedAssistant(data:AssistantData,id:string):AssistantData{return {...data,cards:data.cards.filter(c=>c.establishmentId===id),...(data.segmentCards?{segmentCards:data.segmentCards.filter(c=>c.establishmentId===id)}:{}),...(data.effectiveProfiles?{effectiveProfiles:data.effectiveProfiles.filter(p=>p.establishmentId===id)}:{})}}
 export function segmentSteps(data:AssistantData):SegmentStep[]{
@@ -40,5 +40,6 @@ export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:stri
  const response=await apiFetch(path,{method:body?'PUT':'GET',headers:{'x-tenant-id':tenantId,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})})
  const result=await response.json();if(!response.ok)throw new Error(result.error??'request_failed');return result
 }
+
 
 
