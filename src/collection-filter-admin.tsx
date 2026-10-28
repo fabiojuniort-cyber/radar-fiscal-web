@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { anatomyConfigEnabled } from './anatomy-config-flag'
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
@@ -162,6 +163,7 @@ function CollectionFilterAdminContent({apiFetch}:{apiFetch:ProductApiFetch}) {
       <nav aria-label="Áreas administrativas">
         <Link to="/admin/taxonomia">Taxonomia</Link>
         <Link to="/admin/administradores">Administradores</Link>
+        {anatomyConfigEnabled() && <Link to="/admin/anatomia">Anatomia dos atos</Link>}
         <button type="button" onClick={()=>setScopePurgeOpen(true)}>Reaplicar filtro ao acervo</button>
       </nav>
     </header>

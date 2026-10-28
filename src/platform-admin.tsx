@@ -1,4 +1,5 @@
 import {OnboardingPhraseEditor} from './onboarding-phrase-editor'
+import { anatomyConfigEnabled } from './anatomy-config-flag'
 import * as Dialog from '@radix-ui/react-dialog'
 import {
   ArrowLeft,
@@ -149,6 +150,7 @@ export function PlatformAdministratorsPage({
         <nav aria-label="Áreas administrativas">
           <Link to="/admin/taxonomia">Taxonomia</Link>
           <Link to="/admin/filtro-coleta">Filtro de Coleta</Link>
+          {anatomyConfigEnabled() && <Link to="/admin/anatomia">Anatomia dos atos</Link>}
         </nav>
       </header>
 

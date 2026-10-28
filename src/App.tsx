@@ -39,6 +39,8 @@ import { PlatformAdministratorsPage } from './platform-admin'
 import { CollectionFilterAdminPage } from './collection-filter-admin'
 import { AnatomyRulesAdminPage } from './anatomy-rules-admin'
 import { anatomyRulesAdminEnabled } from './anatomy-rules-flag'
+import { AnatomyConfigPage } from './anatomy-config'
+import { anatomyConfigEnabled } from './anatomy-config-flag'
 import { TaxonomyAdminPage } from './taxonomy-admin'
 import {
   PRIVACY_POLICY,
@@ -163,7 +165,14 @@ function AppContent() {
 
   // ANAT-ADMIN-01 P4: off unless the build sets VITE_ENABLE_ANAT_RULES_ADMIN=true (not enabled for real users).
   if (location.pathname === '/admin/anatomia-regras') {
+    // ANAT-CONFIG-01 replaces the double-approval screen when its own flag is on.
+    if (anatomyConfigEnabled()) return <Navigate to="/admin/anatomia" replace />
     return anatomyRulesAdminEnabled() ? <AuthenticatedAnatomyRulesAdmin /> : <Navigate to="/" replace />
+  }
+
+  // ANAT-CONFIG-01: off unless the build sets VITE_ENABLE_ANAT_CONFIG=true.
+  if (location.pathname === '/admin/anatomia') {
+    return anatomyConfigEnabled() ? <AuthenticatedAnatomyConfig /> : <Navigate to="/" replace />
   }
 
   return (
@@ -268,6 +277,20 @@ function AuthenticatedAnatomyRulesAdmin() {
   }
 
   return <AnatomyRulesAdminPage apiFetch={apiFetch} userId={me.user.id} />
+}
+
+function AuthenticatedAnatomyConfig() {
+  const { me, checked, ensureSession, apiFetch } = useAuthSession()
+
+  useEffect(() => {
+    if (!me && !checked) void ensureSession()
+  }, [me, checked, ensureSession])
+
+  if (!me) {
+    return checked ? <Navigate to="/" replace /> : <main className="auth-panel-loading">Verificando acesso…</main>
+  }
+
+  return <AnatomyConfigPage apiFetch={apiFetch} />
 }
 
 function AuthenticatedPublicationDetail({
