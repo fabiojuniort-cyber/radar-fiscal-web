@@ -42,9 +42,12 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   if (!overview.data) return <Shell><p className="ac-muted">Carregando a configuração…</p></Shell>
   const ov = overview.data
   const effectiveCorrections: CorrectionInput[] = corrections ?? ov.current.corrections.map(toInput)
-  const signature = JSON.stringify({ changes, corrections: effectiveCorrections })
+  // CONFIG-R2-02: a test is bound to the version it ran on. If the version in force changes (another administrator
+  // saved), the test no longer counts and the proposal must be tested again; the save sends the TESTED base version.
+  const signature = JSON.stringify({ base: ov.current.version, changes, corrections: effectiveCorrections })
   const dirty = changes.length > 0 || corrections !== null
-  const tested = preview !== null && preview.signature === signature
+  const tested = preview !== null && preview.signature === signature && preview.analysis.basedOnVersion === ov.current.version
+  const staleTest = preview !== null && preview.analysis.basedOnVersion !== ov.current.version
   const analysis = tested && showAfter ? preview.analysis : base.data
   const activeSample = sampleId ?? ov.samples[0]?.id ?? null
   const sa = analysis?.samples.find((s) => s.id === activeSample)
@@ -73,9 +76,12 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   const test = () => run('Testando no conjunto de exemplos…', async () => {
     const analysis = await api.analysis({ changes, corrections: effectiveCorrections })
     setPreview({ signature, analysis }); setShowAfter(true)
+    // The server tested on the version in force; if this screen shows another one, refresh it (the test then has to be redone).
+    if (analysis.basedOnVersion !== ov.current.version) await qc.invalidateQueries({ queryKey: ['anat-config'] })
   })
   const save = () => run('Salvando e aplicando…', async () => {
-    const r = await api.save({ basedOnVersion: ov.current.version, changes, corrections: effectiveCorrections, ...(note.trim() ? { note: note.trim() } : {}) })
+    if (!tested) return
+    const r = await api.save({ basedOnVersion: preview.analysis.basedOnVersion, changes, corrections: effectiveCorrections, ...(note.trim() ? { note: note.trim() } : {}) })
     reset(); await qc.invalidateQueries({ queryKey: ['anat-config'] }); await qc.invalidateQueries({ queryKey: ['anat-config-versions'] })
     setNotice(`Configuração salva e aplicada (versão ${r.version}). Vale para as novas análises; nada do acervo foi reprocessado.`)
   })
@@ -193,6 +199,7 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
                 {preview.analysis.totals.changedPassages === 0 && <p className="ac-muted">Nenhum trecho dos exemplos muda. Salvar ainda é possível (por exemplo, para registrar correções).</p>}
               </div>
             )}
+            {staleTest && <p className="ac-warn" role="status">A configuração em uso mudou: o teste foi feito na versão {preview!.analysis.basedOnVersion} e a tela mostra a versão {ov.current.version}. Teste de novo antes de salvar.</p>}
             {busy && <p className="ac-muted" role="status">{busy}</p>}
             {error && (
               <div className="ac-error" role="alert">
@@ -213,7 +220,7 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
                 <p>Ao salvar, a configuração é validada e passa a valer imediatamente para as <b>novas análises</b>. Nada do acervo é reprocessado. A versão atual fica no histórico e pode ser restaurada.</p>
                 <label className="ac-field">Observação (opcional)<input id="ac-note" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: estilo de nota do CONFAZ" /></label>
                 <div className="ac-actions">
-                  <button type="button" disabled={!!busy} onClick={save}><Save size={15} /> Confirmar e salvar</button>
+                  <button type="button" disabled={!!busy || !tested} onClick={save}><Save size={15} /> Confirmar e salvar</button>
                   <button type="button" className="ac-secondary" onClick={() => setConfirming(false)}>Voltar</button>
                 </div>
               </div>

@@ -22,18 +22,18 @@ const analysis = (after: string) => ({ basedOnVersion: 0, changes: 1, totals: { 
   samples: [{ id: 's1', title: 'Ajuste fictício', source: 'CONFAZ', provenance: { kind: 'synthetic', note: '' }, before: described('ambiguous'), after: described(after),
     diff: { changed: after === 'ambiguous' ? [] : [{ key: 'a'.repeat(16), structure: 'Cláusula', text: 'Acrescentado', from: 'ambiguous', fromLabel: natures.ambiguous, to: after, toLabel: natures.editorial_note }], appeared: 0, disappeared: 0, reviewBefore: 1, reviewAfter: 0 } }] })
 
-function mockApi(opts: { saveStatus?: number } = {}) {
+function mockApi(opts: { saveStatus?: number; version?: { current: number } } = {}) {
   const calls: { method: string; url: string; body: unknown }[] = []
   const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input); const method = init?.method ?? 'GET'; const body = init?.body ? JSON.parse(String(init.body)) : undefined
     calls.push({ method, url, body })
-    if (url.endsWith('/anatomy-config')) return json({ current: { versionId: null, version: 0, origin: 'shipped', corrections: [], rules: [] },
+    if (url.endsWith('/anatomy-config')) return json({ current: { versionId: null, version: opts.version?.current ?? 0, origin: 'shipped', corrections: [], rules: [] },
       catalog: [{ path: 'classes.editorialNote', group: 'classes', field: 'editorialNote', title: 'Estilo de nota editorial', help: 'h', example: 'Remisso', produces: 'editorial_note', kind: 'style' }],
       samples: [{ id: 's1', documentId: 's1', version: 'v1', documentHash: 'd'.repeat(64), title: 'Ajuste fictício', source: 'CONFAZ', family: null, format: 'html', provenance: { kind: 'synthetic', note: '' }, covers: [], annotated: 1 }], natures, sources: { CONFAZ: 'CONFAZ' } })
     if (url.endsWith('/documents/s1/analyses') && method === 'GET') return json([])
     if (url.endsWith('/documents/s1/analyses')) return json({ analysisRecordId: 'r1', documentId: 's1', documentVersion: 'v1', documentHash: 'd'.repeat(64), configVersion: 0, configVersionId: null,
       engineAnalysisId: 'e'.repeat(64), correctionsApplied: [], correctionsStale: [], described: described('ambiguous') }, 201)
-    if (url.endsWith('/analysis')) return json(analysis(body?.changes?.length ? 'editorial_note' : 'ambiguous'))
+    if (url.endsWith('/analysis')) return json({ ...analysis(body?.changes?.length ? 'editorial_note' : 'ambiguous'), basedOnVersion: opts.version?.current ?? 0 })
     if (url.endsWith('/suggestions')) return json({ wantedLabel: 'Nota editorial', unsupported: null, suggestions: [{ scope: { level: 'source', source: 'CONFAZ' }, path: 'classes.editorialNote', action: 'add', literal: 'NotaAlteracao',
       description: 'Incluir "NotaAlteracao" em estilo de nota editorial — Fonte: CONFAZ', why: 'O bloco usa o estilo "NotaAlteracao".' }] })
     if (url.endsWith('/save')) return opts.saveStatus === 409 ? json({ error: 'STALE_VERSION', message: 'Outra pessoa salvou uma configuração depois que você começou.' }, 409) : json({ versionId: 'v1', version: 1 }, 201)
@@ -41,7 +41,7 @@ function mockApi(opts: { saveStatus?: number } = {}) {
   }) as unknown as ProductApiFetch
   return { apiFetch, calls }
 }
-const renderPage = (apiFetch: ProductApiFetch) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><AnatomyConfigPage apiFetch={apiFetch} /></MemoryRouter></QueryClientProvider>)
+const renderPage = (apiFetch: ProductApiFetch, client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => render(<QueryClientProvider client={client}><MemoryRouter><AnatomyConfigPage apiFetch={apiFetch} /></MemoryRouter></QueryClientProvider>)
 async function proposeRule() {
   fireEvent.click((await screen.findAllByText('Acrescentado pelo Ajuste Exemplo.'))[0]!)
   const panel = await screen.findByRole('region', { name: 'Trecho selecionado' })
@@ -113,5 +113,29 @@ describe('ANAT-CONFIG-01 screen', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Nova análise deste documento/u }))
     expect((await screen.findByText(/Análise registrada: documento v1, configuração versão 0/u))).toBeTruthy()
     expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/documents/s1/analyses'))).toBe(true)
+  })
+
+  it('CONFIG-R2-02: a test made on another base version no longer allows saving; the save sends the tested base', async () => {
+    const version = { current: 1 }
+    const { apiFetch, calls } = mockApi({ version })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    renderPage(apiFetch, client)
+    await proposeRule()
+    fireEvent.click(screen.getByRole('button', { name: /Testar alterações/u }))
+    await screen.findByText(/Resultado do teste/u)
+    expect((screen.getByRole('button', { name: /Salvar configuração/u }) as HTMLButtonElement).disabled).toBe(false)
+    // Another administrator saves: the overview refreshes to version 2 with the same pending edits.
+    version.current = 2
+    await client.invalidateQueries({ queryKey: ['anat-config'] })
+    await screen.findByText(/o teste foi feito na versão 1 e a tela mostra a versão 2/u)
+    expect((screen.getByRole('button', { name: /Salvar configuração/u }) as HTMLButtonElement).disabled).toBe(true)
+    expect(calls.some((c) => c.url.endsWith('/save'))).toBe(false)
+    // Re-test on the new base; the save then carries the base version of THAT test.
+    fireEvent.click(screen.getByRole('button', { name: /Testar alterações/u }))
+    await waitFor(() => expect((screen.getByRole('button', { name: /Salvar configuração/u }) as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: /Salvar configuração/u }))
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar e salvar/u }))
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith('/save')).length).toBe(1))
+    expect((calls.find((c) => c.url.endsWith('/save'))!.body as { basedOnVersion: number }).basedOnVersion).toBe(2)
   })
 })

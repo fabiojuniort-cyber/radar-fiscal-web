@@ -134,9 +134,15 @@ test('fluxo completo: análise antes → corrigir trecho e regra → salvar (apl
   await expect(page.getByRole('region', { name: 'Casos que precisam de conferência' }).getByText('Correção desatualizada (não aplicada)')).toBeVisible()
   await shot(page, '08-versao-modificada-correcao-desatualizada')
 
-  // 10. Concurrency: Bruno has version 1 open; Ana saves version 2 (removing the correction); Bruno's save is refused.
+  // 10. Concurrency: Bruno opens version 1 and TESTS his proposal on it; Ana then saves version 2 (removing the
+  //     correction); Bruno's save, based on his tested version 1, is refused with 409 and his edits stay.
   const ctxB = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const b = await ctxB.newPage()
   await as(b, 'bruno'); await ready(b)
+  await b.getByRole('tab', { name: 'Regras' }).click()
+  await b.getByLabel('Tipo de regra').selectOption('classes.editorialNote')
+  await b.getByLabel('Texto', { exact: true }).fill('NotaBruno')
+  await b.getByRole('button', { name: 'Adicionar à proposta' }).click()
+  const confirmB = await testAndSave(b, 'Bruno (sintético)')
   await openDoc(page, /redação anterior e nota de alteração/u)
   await page.locator('.ac-seg', { hasText: SIGNATURE }).click()
   await page.getByRole('tab', { name: 'Trecho' }).click()
@@ -144,11 +150,7 @@ test('fluxo completo: análise antes → corrigir trecho e regra → salvar (apl
   await (await testAndSave(page, 'Sem a correção da assinatura (sintético)')).getByRole('button', { name: 'Confirmar e salvar' }).click()
   await expect(page.getByText(/versão 2/u).first()).toBeVisible()
   expect(await newAnalysis(page)).toContain('configuração versão 2, 0 correção(ões) aplicada(s)')
-  await b.getByRole('tab', { name: 'Regras' }).click()
-  await b.getByLabel('Tipo de regra').selectOption('classes.editorialNote')
-  await b.getByLabel('Texto', { exact: true }).fill('NotaBruno')
-  await b.getByRole('button', { name: 'Adicionar à proposta' }).click()
-  await (await testAndSave(b, 'Bruno (sintético)')).getByRole('button', { name: 'Confirmar e salvar' }).click()
+  await confirmB.getByRole('button', { name: 'Confirmar e salvar' }).click()
   await expect(b.getByRole('alert')).toContainText('Outra pessoa salvou uma configuração depois que você começou')
   await expect(b.getByText(/Incluir "NotaBruno"/u)).toBeVisible()
   await b.screenshot({ path: `${dir}/${info.project.name}-09-concorrencia-bruno.png`, fullPage: true })
