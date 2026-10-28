@@ -4,7 +4,7 @@ import {profileDimensions} from './onboarding-dimensions'
 import {OnboardingCompanyData} from './onboarding-company-data'
 import {nextOnboardingPhrase} from './onboarding-phrase-random'
 import * as Dialog from '@radix-ui/react-dialog'
-import {useEffect,useMemo,useState} from 'react'
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
 import {X,Check,Sparkles,Search} from 'lucide-react'
 import {type ProductApiFetch,type Establishment} from './product-api'
 import {searchNcmCatalog} from './product-ncm-api'
@@ -16,11 +16,13 @@ import './onboarding-assistant.css'
 export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,onSaved,initialEstablishmentId,versionChanged=false,animate=false,initialCardId,onComplete}:{
  apiFetch:ProductApiFetch;tenantId:string;companyId:string;units:Establishment[];onClose:()=>void;onSaved:()=>void;initialEstablishmentId?:string;versionChanged?:boolean;animate?:boolean;initialCardId?:string;onComplete?:(unitId:string)=>void
 }){
+ const bodyRef=useRef<HTMLDivElement>(null)
  const [data,setData]=useState<AssistantData|null>(null),[index,setIndex]=useState(0)
  const [reviewed,setReviewed]=useState<string[]>([])
  const [drafts,setDrafts]=useState<Record<string,Choice>>({}),[unitId,setUnitId]=useState('')
  const [query,setQuery]=useState(''),[ncmResults,setNcmResults]=useState<{code:string;description:string}[]>([]),[more,setMore]=useState(false)
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[importing,setImporting]=useState(animate)
+ useLayoutEffect(()=>{if(bodyRef.current)bodyRef.current.scrollTop=0},[index,importing])
  const [phrases,setPhrases]=useState<{segment:string;phrases:string[]}[]>([]),[phrase,setPhrase]=useState('Preparando seu perfil…')
  const [editingProfile,setEditingProfile]=useState<string|null>(null)
  const [explicitNcms,setExplicitNcms]=useState<Record<string,string[]>>({})
@@ -71,7 +73,7 @@ export function OnboardingAssistant({apiFetch,tenantId,companyId,units,onClose,o
   <Dialog.Title className="onb-sr">Assistente do perfil tributário</Dialog.Title><p id="onb-description" className="onb-sr">Confira os dados e escolha os itens por estabelecimento. Você pode fechar e retomar depois.</p>
   <button type="button" className="onb-close" aria-label="Fechar assistente" disabled={busy} onClick={onClose}><X size={22}/></button>
   <header className="onb-top"><span>{importing?'MONTANDO SEU PERFIL · '+(data?.cards[0]?.segmentLabel??groups[0]?.title??'SUA EMPRESA'):'PASSO '+(index+1)+' DE '+steps.length+' · '+(step?.title??'CARREGANDO').toLocaleUpperCase('pt-BR')}</span>{!importing&&<div className="onb-progress"><i style={{width:importing?'75%':((index+1)/Math.max(1,steps.length)*100)+'%'}}/></div>}</header>
-  <div className="onb-body"><BuildVersionNotice visible={versionChanged}/>{error&&!versionChanged&&<div role="alert" className="onb-error">{error}{data&&(error.includes('versão anterior')||error.includes('NCMs salvas'))&&<button onClick={()=>{setIndex(steps.length-1);setError('')}}>Abrir resumo para editar</button>}{!data&&<button onClick={()=>void load()}>Tentar novamente</button>}</div>}
+  <div className="onb-body" ref={bodyRef}><BuildVersionNotice visible={versionChanged}/>{error&&!versionChanged&&<div role="alert" className="onb-error">{error}{data&&(error.includes('versão anterior')||error.includes('NCMs salvas'))&&<button onClick={()=>{setIndex(steps.length-1);setError('')}}>Abrir resumo para editar</button>}{!data&&<button onClick={()=>void load()}>Tentar novamente</button>}</div>}
   {importing?<section className="onb-import" role="status"><Sparkles size={42}/><h2>{phrase}</h2><p>Encontramos {activityCount} {activityCount===1?'atividade':'atividades'} em {groups.length} {groups.length===1?'segmento':'segmentos'}.</p><div className="onb-loading-track"><i/></div></section>:!data||!step?<p role="status">Carregando seu perfil…</p>:<>
    {step.id==='company'&&<><h2>Estes são os dados da sua unidade?</h2>{head&&<OnboardingCompanyData unit={head} legalName={data.companyName} apiFetch={apiFetch} tenantId={tenantId} companyId={companyId} locked={busy||versionChanged} onEditing={setEditingCompany} onSaved={(legalName,unit)=>{setCorrected(unit);setData(d=>d?{...d,companyName:legalName}:d);onSaved()}}/>}</>}
    {segment&&<fieldset className="onb-segment-fields" disabled={busy||versionChanged}><h2>{segment.title}: o que você compra, vende ou produz?</h2><p>Sugestões a partir de {activityList.length} {activityList.length===1?'atividade':'atividades'} de {segment.title}.</p>

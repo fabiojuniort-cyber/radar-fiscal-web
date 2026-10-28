@@ -769,13 +769,15 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   expect(new Set(agrex.cards.map(c=>c.cnaeCode)).size).toBe(35);
   const agroSummary=assistant.getByRole('region',{name:'Agropecuária, pesca e insumos agrícolas',exact:true});
   await expect(agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip')).toHaveCount(8);
+  expect(await assistant.locator('.onb-body').evaluate(el=>el.scrollTop)).toBe(0);
   await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-blocos.png')});
   await agroSummary.getByRole('group',{name:'Produtos',exact:true}).getByRole('button',{name:/ver todos/}).click();
   await expect(agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip')).toHaveCount(33);
   expect(await agroSummary.locator('.onb-summary-chip-row').evaluateAll(rows=>rows.every(row=>row.children.length<=8))).toBe(true);
+  await assistant.locator('.onb-body').evaluate(el=>{el.scrollTop=0});
   await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-produtos-expandidos.png')});
   await agroSummary.getByRole('group',{name:'NCMs',exact:true}).getByRole('button',{name:/ver todos/}).click();
-  await agroSummary.getByRole('group',{name:'NCMs',exact:true}).scrollIntoViewIfNeeded();
+  await agroSummary.getByRole('group',{name:'NCMs',exact:true}).getByRole('heading').scrollIntoViewIfNeeded();
   await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-ncms-expandidos.png')});
   await assistant.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributos e regime',exact:true})).toBeVisible();
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
