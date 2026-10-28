@@ -1,0 +1,1379 @@
+{
+  "provenance": {
+    "cnpj": "10515785000199",
+    "companyName": "AGREX DO BRASIL LTDA",
+    "publicSource": "https://procuracnpj.com.br/cnpj/10515785000199/agrex-do-brasil-ltda",
+    "publicCnaes": 35,
+    "primaryCnae": "4623108",
+    "limitations": "35 public CNAEs; controlled API acceptance fixture, not a production profile or live registry/SEFAZ readback. Suggestions exercise the published-release API contract; source reference workbooks precede v1.9.0 and are not asserted to be an exact current publication snapshot. Rice/1006 is the explicit PO acceptance pair. 1066000 grouped in Alimentos for the 15-activity Agro scenario.",
+    "referenceSegmentSha256": "588a89871044a1ca67036fb5c17cdba3ba70f447bd1412fc476f14bb1d6440cd",
+    "referenceProductSha256": "35e886e711f0c1c793daaa6a5e61c5500f3ab235913b9bc8e026ea8d8fc0db49"
+  },
+  "cards": [
+    {
+      "cnaeCode": "0111301",
+      "description": "Cultivo de arroz",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.rice",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1006",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0111302",
+      "description": "Cultivo de milho",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110060",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10059010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0111399",
+      "description": "Cultivo de outros cereais não especificados anteriormente",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110020",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110030",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110040",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110050",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110060",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110080",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110110",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01110120",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10011090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10019090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10020090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10030091",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10030098",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10030099",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10040090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10059010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10061092",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10070090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10081090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10082090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10083090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "10089090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0112101",
+      "description": "Cultivo de algodão herbáceo",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01120010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.caroco_de_algodao",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01120030",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "12072090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "52010010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "52010020",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0115600",
+      "description": "Cultivo de soja",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_01150010",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "12010090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0141501",
+      "description": "Produção de sementes certificadas, exceto de forrageiras para pasto",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.soybean_seed",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.corn_seed",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "100510",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "120110",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "0161099",
+      "description": "Atividades de apoio à agricultura não especificadas anteriormente",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "0210107",
+      "description": "Extração de madeira em florestas plantadas",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02111030",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02113060",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02113070",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02114030",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02121020",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02121030",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02121040",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02121050",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02125100",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02126080",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02128150",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_02129050",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "06029090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "08011190",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "08109000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "12079990",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "12099900",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "12119090",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "13019000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "13021990",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "14019000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "44031000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "44032000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "44034000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "44039000",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "53059091",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "1066000",
+      "description": "Fabricação de alimentos para animais",
+      "segmentCode": "sector.alimentos",
+      "segmentLabel": "Alimentos, bebidas e tabaco",
+      "phraseSegment": "generico",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10662050",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "23091000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "23099010",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "23099030",
+          "segment": "Alimentos, bebidas e tabaco"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "1069400",
+      "description": "Moagem e fabricação de produtos de origem vegetal não especificados anteriormente",
+      "segmentCode": "sector.alimentos",
+      "segmentLabel": "Alimentos, bebidas e tabaco",
+      "phraseSegment": "generico",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692010",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692025",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692030",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692045",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692050",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.ibge_10692060",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11029000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11031900",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11032000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11041200",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11041900",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11042200",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11042900",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11043000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11061000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11062000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "11063000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "19041000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "19042000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "19049000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "23024000",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "23025000",
+          "segment": "Alimentos, bebidas e tabaco"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4612500",
+      "description": "Representantes comerciais e agentes do comércio de combustíveis, minerais, produtos siderúrgicos e químicos",
+      "segmentCode": "sector.comercio",
+      "segmentLabel": "Comércio multissetorial, holdings e atividades transversais",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "4623106",
+      "description": "Comércio atacadista de sementes, flores, plantas e gramas",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.soybean_seed",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.corn_seed",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "100510",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "120110",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4623108",
+      "description": "Comércio atacadista de matérias-primas agrícolas com atividade de fracionamento e acondicionamento associada",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.soy",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.corn",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.wheat",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.rice",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.beans",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "0713",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1001",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1005",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1006",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1201",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4623109",
+      "description": "Comércio atacadista de alimentos para animais",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "4623199",
+      "description": "Comércio atacadista de matérias-primas agrícolas não especificadas anteriormente",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.soy",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.corn",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.wheat",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.rice",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.beans",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "0713",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1001",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1005",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1006",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        },
+        {
+          "kind": "NCM",
+          "target": "1201",
+          "segment": "Agropecuária, pesca e insumos agrícolas"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4632003",
+      "description": "Comércio atacadista de cereais e leguminosas beneficiados, farinhas, amidos e féculas, com atividade de fracionamento e acondicionamento associada",
+      "segmentCode": "sector.alimentos",
+      "segmentLabel": "Alimentos, bebidas e tabaco",
+      "phraseSegment": "generico",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.soy",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.corn",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.wheat",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.rice",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "PRODUCT",
+          "target": "product.beans",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "0713",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "1001",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "1005",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "1006",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "1201",
+          "segment": "Alimentos, bebidas e tabaco"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4637199",
+      "description": "Comércio atacadista especializado em outros produtos alimentícios não especificados anteriormente",
+      "segmentCode": "sector.alimentos",
+      "segmentLabel": "Alimentos, bebidas e tabaco",
+      "phraseSegment": "generico",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.salt",
+          "segment": "Alimentos, bebidas e tabaco"
+        },
+        {
+          "kind": "NCM",
+          "target": "2501",
+          "segment": "Alimentos, bebidas e tabaco"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4683400",
+      "description": "Comércio atacadista de defensivos agrícolas, adubos, fertilizantes e corretivos do solo",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "4692300",
+      "description": "Comércio atacadista de mercadorias em geral, com predominância de insumos agropecuários",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "4732600",
+      "description": "Comércio varejista de lubrificantes",
+      "segmentCode": "sector.energia",
+      "segmentLabel": "Energia, petróleo, gás e combustíveis",
+      "phraseSegment": "generico",
+      "suggestions": [
+        {
+          "kind": "PRODUCT",
+          "target": "product.lubricants",
+          "segment": "Energia, petróleo, gás e combustíveis"
+        },
+        {
+          "kind": "NCM",
+          "target": "271019",
+          "segment": "Energia, petróleo, gás e combustíveis"
+        }
+      ]
+    },
+    {
+      "cnaeCode": "4930202",
+      "description": "Transporte rodoviário de carga, exceto produtos perigosos e mudanças, intermunicipal, interestadual e internacional",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "5211701",
+      "description": "Armazéns gerais - emissão de warrant",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "5211799",
+      "description": "Depósitos de mercadorias para terceiros, exceto armazéns gerais e guarda-móveis",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "5212500",
+      "description": "Carga e descarga",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "5231102",
+      "description": "Atividades do Operador Portuário",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "5250805",
+      "description": "Operador de transporte multimodal - OTM",
+      "segmentCode": "sector.transporte",
+      "segmentLabel": "Transporte e logística",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "6463800",
+      "description": "Outras sociedades de participação, exceto holdings",
+      "segmentCode": "sector.comercio",
+      "segmentLabel": "Comércio multissetorial, holdings e atividades transversais",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "6612604",
+      "description": "Corretoras de contratos de mercadorias",
+      "segmentCode": "sector.financas",
+      "segmentLabel": "Finanças, seguros e previdência",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "6810202",
+      "description": "Aluguel de imóveis próprios",
+      "segmentCode": "sector.imobiliario",
+      "segmentLabel": "Imobiliário",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "7120100",
+      "description": "Testes e análises técnicas",
+      "segmentCode": "sector.consultoria",
+      "segmentLabel": "Consultoria, pesquisa e serviços técnicos",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "7490103",
+      "description": "Serviços de agronomia e de consultoria às atividades agrícolas e pecuárias",
+      "segmentCode": "sector.agro",
+      "segmentLabel": "Agropecuária, pesca e insumos agrícolas",
+      "phraseSegment": "agro",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "7490104",
+      "description": "Atividades de intermediação e agenciamento de serviços e negócios em geral, exceto imobiliários",
+      "segmentCode": "sector.apoio",
+      "segmentLabel": "RH, facilities e apoio empresarial",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "7729202",
+      "description": "Aluguel de móveis, utensílios e aparelhos de uso doméstico e pessoal; instrumentos musicais",
+      "segmentCode": "sector.locacao",
+      "segmentLabel": "Locação, licenciamento e gestão de ativos",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "7820500",
+      "description": "Locação de mão de obra temporária",
+      "segmentCode": "sector.apoio",
+      "segmentLabel": "RH, facilities e apoio empresarial",
+      "phraseSegment": "generico",
+      "suggestions": []
+    },
+    {
+      "cnaeCode": "8211300",
+      "description": "Serviços combinados de escritório e apoio administrativo",
+      "segmentCode": "sector.apoio",
+      "segmentLabel": "RH, facilities e apoio empresarial",
+      "phraseSegment": "generico",
+      "suggestions": []
+    }
+  ],
+  "concepts": [
+    {
+      "code": "product.ibge_01110020",
+      "label": "Arroz em casca",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10061092"
+      ]
+    },
+    {
+      "code": "product.rice",
+      "label": "Arroz",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "1006"
+      ]
+    },
+    {
+      "code": "product.ibge_01110060",
+      "label": "Milho em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10059010"
+      ]
+    },
+    {
+      "code": "product.ibge_01110010",
+      "label": "Alpiste",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10083090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110030",
+      "label": "Aveia em casca (grão)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10040090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110040",
+      "label": "Centeio em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10020090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110050",
+      "label": "Cevada em casca",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10030091",
+        "10030098",
+        "10030099"
+      ]
+    },
+    {
+      "code": "product.ibge_01110080",
+      "label": "Painço em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10082090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110090",
+      "label": "Sorgo em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10070090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110110",
+      "label": "Trigo preto em grão (trigo sarraceno ou trigo mourisco)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10081090"
+      ]
+    },
+    {
+      "code": "product.ibge_01110120",
+      "label": "Triticale em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "10089090"
+      ]
+    },
+    {
+      "code": "product.ibge_01120010",
+      "label": "Algodão herbáceo em caroço",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "52010010"
+      ]
+    },
+    {
+      "code": "product.caroco_de_algodao",
+      "label": "Caroço de algodão",
+      "dimensionCode": "product",
+      "ncmCodes": []
+    },
+    {
+      "code": "product.ibge_01120030",
+      "label": "Pluma de algodão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "52010020"
+      ]
+    },
+    {
+      "code": "product.ibge_01150010",
+      "label": "Soja em grão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "12010090"
+      ]
+    },
+    {
+      "code": "product.soybean_seed",
+      "label": "Semente de soja",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "120110"
+      ]
+    },
+    {
+      "code": "product.corn_seed",
+      "label": "Semente de milho",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "100510"
+      ]
+    },
+    {
+      "code": "product.ibge_02111030",
+      "label": "Outras espécies florestais madeireiras, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "06029090"
+      ]
+    },
+    {
+      "code": "product.ibge_02113060",
+      "label": "Mudas certificadas de outras espécies florestais, exceto transgênicas, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "06029090"
+      ]
+    },
+    {
+      "code": "product.ibge_02113070",
+      "label": "Sementes Certificadas de Espécies Florestais, exceto transgênicas",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "12099900"
+      ]
+    },
+    {
+      "code": "product.ibge_02114030",
+      "label": "Sementes transgênicas de outras espécies florestais",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "12099900"
+      ]
+    },
+    {
+      "code": "product.ibge_02121020",
+      "label": "Madeira em tora para outras finalidades, exceto para papel e celulose (silvicultura)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "44031000",
+        "44032000",
+        "44034000",
+        "44039000"
+      ]
+    },
+    {
+      "code": "product.ibge_02121030",
+      "label": "Madeira em tora para outras finalidades, exceto para papel e celulose (extrativa)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "44031000",
+        "44032000",
+        "44034000",
+        "44039000"
+      ]
+    },
+    {
+      "code": "product.ibge_02121040",
+      "label": "Madeira em tora para papel e celulose (silvicultura)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "44032000"
+      ]
+    },
+    {
+      "code": "product.ibge_02121050",
+      "label": "Madeira em tora para papel e celulose (extrativa)",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "44032000"
+      ]
+    },
+    {
+      "code": "product.ibge_02125100",
+      "label": "Outros óleos, gorduras vegetais ou resinas da exploração florestal, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "08011190",
+        "12079990",
+        "12119090",
+        "13019000"
+      ]
+    },
+    {
+      "code": "product.ibge_02126080",
+      "label": "Outros produtos aromáticos, medicinais, tóxicos ou corantes da exploração florestal, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "12119090",
+        "13021990"
+      ]
+    },
+    {
+      "code": "product.ibge_02128150",
+      "label": "Outras frutas da exploração Florestal, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "08109000"
+      ]
+    },
+    {
+      "code": "product.ibge_02129050",
+      "label": "Outros produtos da exploração florestal, n. e.",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "08011190"
+      ]
+    },
+    {
+      "code": "product.ibge_10662050",
+      "label": "Rações utilizadas na alimentação de animais",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "23091000",
+        "23099010",
+        "23099030"
+      ]
+    },
+    {
+      "code": "product.ibge_10692010",
+      "label": "Alimentos à base de cereais ou de flocos de cereais",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "19041000",
+        "19042000",
+        "19049000"
+      ]
+    },
+    {
+      "code": "product.ibge_10692025",
+      "label": "Farelos e outros resíduos de cereais e de leguminosas",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "23024000",
+        "23025000"
+      ]
+    },
+    {
+      "code": "product.ibge_10692030",
+      "label": "Farinhas de araruta",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "11029000"
+      ]
+    },
+    {
+      "code": "product.ibge_10692045",
+      "label": "Farinhas e pós dos legumes de vagem",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "11061000",
+        "11062000",
+        "11063000"
+      ]
+    },
+    {
+      "code": "product.ibge_10692050",
+      "label": "Grãos e gérmens de cereais inteiros",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "11041200",
+        "11041900",
+        "11042200",
+        "11042900",
+        "11043000"
+      ]
+    },
+    {
+      "code": "product.ibge_10692060",
+      "label": "Grumos, sêmolas e pellets de aveia e de outros cereais",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "11031900",
+        "11032000"
+      ]
+    },
+    {
+      "code": "product.soy",
+      "label": "Soja",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "1201"
+      ]
+    },
+    {
+      "code": "product.corn",
+      "label": "Milho",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "1005"
+      ]
+    },
+    {
+      "code": "product.wheat",
+      "label": "Trigo",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "1001"
+      ]
+    },
+    {
+      "code": "product.beans",
+      "label": "Feijão",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "0713"
+      ]
+    },
+    {
+      "code": "product.salt",
+      "label": "Sal",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "2501"
+      ]
+    },
+    {
+      "code": "product.lubricants",
+      "label": "Lubrificantes",
+      "dimensionCode": "product",
+      "ncmCodes": [
+        "271019"
+      ]
+    },
+    {
+      "code": "sector.agro",
+      "label": "Agropecuária, pesca e insumos agrícolas",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.alimentos",
+      "label": "Alimentos, bebidas e tabaco",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.comercio",
+      "label": "Comércio multissetorial, holdings e atividades transversais",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.energia",
+      "label": "Energia, petróleo, gás e combustíveis",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.transporte",
+      "label": "Transporte e logística",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.financas",
+      "label": "Finanças, seguros e previdência",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.imobiliario",
+      "label": "Imobiliário",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.consultoria",
+      "label": "Consultoria, pesquisa e serviços técnicos",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.apoio",
+      "label": "RH, facilities e apoio empresarial",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    },
+    {
+      "code": "sector.locacao",
+      "label": "Locação, licenciamento e gestão de ativos",
+      "dimensionCode": "sector",
+      "ncmCodes": []
+    }
+  ]
+}

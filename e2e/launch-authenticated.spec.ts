@@ -1,8 +1,12 @@
+import agrex from './fixtures/agrex-35.json' with {type:'json'}
 import { expect, test } from '@playwright/test'
+
+test.use({video:'on',actionTimeout:15000})
 
 const tenantId = '11111111-1111-4111-8111-111111111111'
 const companyId = '22222222-2222-4222-8222-222222222222'
 const establishmentId = '33333333-3333-4333-8333-333333333333'
+const branchId='33333333-3333-4333-8333-333333333334'
 const publicationId = '55555555-5555-4555-8555-555555555555'
 const releaseId = '77777777-7777-4777-8777-777777777777'
 
@@ -35,9 +39,12 @@ const archiveItem = {
 }
 
 test('authenticated product v2 works end-to-end with current navigation and account setup', async ({ page }, testInfo) => {
+  test.setTimeout(120000)
   const archiveRequests: URL[] = []
+  let branchAdded=false
   let companyCreated = false
   let profileSaved = false
+  let currentIe='10.123.456-2'
 
   await page.route('**/auth/login', (route) => route.fulfill({
     status: 200,
@@ -287,9 +294,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         },
         companies: companyCreated ? [{
           id: companyId,
-          legalName: 'Empresa Launch Ltda',
+          legalName: 'AGREX — ambiente de teste',
           tradeName: 'Empresa Launch',
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           isActive: true,
           establishmentCount: 1,
           businessLocationCode: 'MATRIZ-01',
@@ -303,7 +310,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       cnpj: string
       businessLocationCode?: string
     }
-    expect(payload.cnpj).toBe('11222333000181')
+    expect(payload.cnpj).toBe('10515785000199')
     expect(payload.businessLocationCode).toBe('MATRIZ-01')
     companyCreated = true
     await route.fulfill({
@@ -312,15 +319,15 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       body: JSON.stringify({
         company: {
           id: companyId,
-          legalName: 'Empresa Launch Ltda',
+          legalName: 'AGREX — ambiente de teste',
           tradeName: 'Empresa Launch',
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           businessLocationCode: 'MATRIZ-01',
         },
         establishment: {
           id: establishmentId,
           companyId,
-          cnpj: '11222333000181',
+          cnpj: '10515785000199',
           name: 'Matriz Goiânia',
           typeCode: 'HEAD_OFFICE',
           isHeadOffice: true,
@@ -333,14 +340,14 @@ test('authenticated product v2 works end-to-end with current navigation and acco
           complement: null,
           district: 'Centro',
           businessLocationCode: 'MATRIZ-01',
-          stateRegistration: '10.123.456-2',
+          stateRegistration: currentIe,
           stateRegistrationStatus: 'ATIVO - HABILITADO',
           stateRegistrationLookupStatus: 'SUCCESS',
           stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
           stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
           cnaes: [{
-            code: '4683400',
-            description: 'Comércio atacadista de defensivos agrícolas',
+            code: '0111301',
+            description: 'Cultivo de arroz',
             isPrimary: true,
           }],
         },
@@ -361,7 +368,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       items: companyCreated ? [{
         id: establishmentId,
         companyId,
-        cnpj: '11222333000181',
+        cnpj: '10515785000199',
         name: 'Matriz Goiânia',
         typeCode: 'HEAD_OFFICE',
         isHeadOffice: true,
@@ -374,18 +381,19 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         complement: null,
         district: 'Centro',
         businessLocationCode: 'MATRIZ-01',
-        stateRegistration: '10.123.456-2',
+        stateRegistration: currentIe,
         stateRegistrationStatus: 'ATIVO - HABILITADO',
         stateRegistrationLookupStatus: 'SUCCESS',
         stateRegistrationSource: 'SEFAZ_GO_SINTEGRA',
         stateRegistrationCheckedAt: '2026-09-30T10:00:00.000Z',
         isActive: true,
-        cnaes: [{
-          code: '4683400',
-          description: 'Comércio atacadista de defensivos agrícolas',
-          isPrimary: true,
-        }],
-      }] : [],
+        cnaes: agrex.cards.map(c=>({code:c.cnaeCode,description:c.description,isPrimary:c.cnaeCode===agrex.provenance.primaryCnae})),
+      }, ...(branchAdded?[{
+        id:branchId,companyId,cnpj:'11222333000262',name:'Filial teste',typeCode:'OFFICE',isHeadOffice:false,uf:'GO',
+        municipalityName:'Goiânia',municipalityIbgeCode:'5208707',postalCode:null,street:null,streetNumber:null,complement:null,district:null,businessLocationCode:null,
+        stateRegistration:null,stateRegistrationStatus:null,stateRegistrationLookupStatus:'UNAVAILABLE',stateRegistrationSource:null,stateRegistrationCheckedAt:null,isActive:true,
+        cnaes:[{code:'0111301',description:'Cultivo de arroz',isPrimary:true}],
+      }]:[])] : [],
     }),
   }))
 
@@ -453,7 +461,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     contentType: 'application/json',
     body: JSON.stringify({
       segments: [],
-      cnaes: [{ cnaeCode: '4683400', isPrimary: true, segments: [{ code: 'sector.wholesale', label: 'Comércio atacadista' }] }],
+      cnaes: [{ cnaeCode: '0111301', isPrimary: true, segments: [{ code: 'sector.wholesale', label: 'Comércio atacadista' }] }],
     }),
   }))
 
@@ -472,7 +480,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       expect(payload.personalization.ncmCodes).toEqual([])
       // The user changed the CNAE's segment in the CNAE table.
       expect(payload.personalization.taxonomy?.cnaeSegments).toEqual([
-        { cnaeCode: '4683400', segmentCode: 'sector.agri_inputs' },
+        { cnaeCode: '0111301', segmentCode: 'sector.agri_inputs' },
       ])
     }
 
@@ -668,51 +676,152 @@ test('authenticated product v2 works end-to-end with current navigation and acco
 
   await page.getByRole('button', { name: 'Empresas', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Empresas da conta', level: 2 })).toBeVisible()
-  await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'generico',phrases:['Preparando o perfil.'],version_no:1}]}}))
-  await page.route(`**/api/v1/companies/${companyId}/onboarding`,route=>route.fulfill({json:{version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'Empresa Launch Ltda',state:{completed:false,cards:{},units:{}},concepts:[],cards:[{establishmentId,cnaeCode:'4683400',description:'Insumos agrícolas',phraseSegment:'generico',suggestions:[]}]}}))
-  await page.getByLabel('CNPJ da matriz').fill('11222333000181')
+  await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'agro',phrases:['Contando os grãos da safra.','Conferindo se o trator tem NCM.','Regando o perfil tributário.'],version_no:1},{segment:'generico',phrases:['Preparando seu perfil.'],version_no:1}]}}))
+  const assistantData={version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'AGREX — ambiente de teste',companyCnpj:agrex.provenance.cnpj,
+    state:{completed:false,cards:{} as Record<string,unknown>,units:{} as Record<string,{cards:Record<string,unknown>}>},
+    concepts:[...agrex.concepts],cards:agrex.cards.map(c=>({...c,establishmentId})),
+    historicalConcepts:[{code:'product.retired',label:'Produto histórico de teste',dimensionCode:'product'}],
+    effectiveProfiles:[{establishmentId,name:'Matriz Goiânia',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:[] as string[],ncmCodes:[] as string[],legacyFields:{} as Record<string,string[]>,cnaeSegments:[],historicalCodes:[] as string[]}]}
+  expect(new Set(assistantData.cards.map(c=>c.cnaeCode)).size).toBe(35)
+  expect(assistantData.cards.filter(c=>c.segmentCode==='sector.agro')).toHaveLength(15)
+  await page.route(`**/api/v1/companies/${companyId}/onboarding`,async route=>{
+    if(route.request().method()==='PUT'){
+      const b=route.request().postDataJSON()
+      expect(b.expectedVersion).toBe(assistantData.version)
+      const choice={status:b.status,conceptCodes:b.conceptCodes,ncmCodes:b.ncmCodes}
+      if(b.units){for(const u of b.units){assistantData.state.units[u.establishmentId]??={cards:{}};assistantData.state.units[u.establishmentId]!.cards[b.cardId]={status:b.status,conceptCodes:u.conceptCodes,ncmCodes:u.ncmCodes};Object.assign(assistantData.effectiveProfiles.find(p=>p.establishmentId===u.establishmentId)!,u)}}
+      else if(b.cardId==='profile'){const p=assistantData.effectiveProfiles.find(p=>p.establishmentId===b.establishmentId)!;Object.assign(p,{conceptCodes:b.conceptCodes,ncmCodes:b.ncmCodes,legacyFields:b.legacyFields??p.legacyFields,historicalCodes:[]});assistantData.state.units[b.establishmentId]??={cards:{}};assistantData.state.units[b.establishmentId]!.cards.profile=choice}
+      else assistantData.state.cards[b.cardId]=choice
+      assistantData.version++;assistantData.state.completed=b.cardId==='summary'
+    }
+    await route.fulfill({json:{...assistantData,segmentCards:assistantData.cards}})
+  })
+  await page.getByLabel('CNPJ da matriz').fill('10515785000199')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
+  await page.screenshot({path:testInfo.outputPath('01-cnpj.png'),fullPage:false})
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
   // ONB-03 opens the assistant, leaving company and units on one screen.
   const assistant=page.getByRole('dialog',{name:'Assistente do perfil tributário'})
   await expect(assistant).toBeVisible()
-  await expect(assistant.getByRole('heading',{name:'Empresa',exact:true})).toBeVisible({timeout:10000})
-  await assistant.getByRole('button',{name:'Fechar assistente'}).click()
-  await expect(page.getByRole('tab',{name:'Empresa e filiais'})).toHaveAttribute('aria-selected','true')
-  await expect(page.getByRole('tab',{name:/Estabelecimentos/})).toHaveCount(0)
-  await expect(page.getByText('Empresa Launch Ltda').first()).toBeVisible()
-  await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
-  await expect(page.getByText('4683400')).toBeVisible()
-  await expect(page.getByText('10.123.456-2')).toBeVisible()
-
-  await page.getByRole('tab', { name: /Perfil tributário/ }).click()
-  await expect(page.getByRole('button', { name: 'Adicionar produto', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Adicionar NCM', exact: true })).toBeVisible()
-  const cnaeSegment = page.getByRole('combobox', { name: 'Segmento do CNAE 4683400' })
-  await expect(cnaeSegment).toHaveValue('sector.wholesale')
-  await cnaeSegment.selectOption('sector.agri_inputs')
-  // The CNAE segment shows as selected in the Segmento card, marked as from the CNAE.
-  const companyTaxonomy = page.getByRole('region', { name: 'Taxonomia da empresa', exact: true })
-  const segmentCard = companyTaxonomy.getByRole('region', { name: 'Setor', exact: true })
-  const segmentSelected = segmentCard.getByLabel('Selecionados')
-  await expect(segmentSelected).toContainText('Insumos agrícolas')
-  await expect(segmentSelected).toContainText('do CNAE 4683400')
-  // Removing it there asks first and clears the CNAE row.
-  await segmentSelected.getByRole('button', { name: 'Remover Insumos agrícolas' }).click()
-  await expect(page.getByRole('dialog', { name: 'Remover segmento?' })).toBeVisible()
-  await page.getByRole('dialog', { name: 'Remover segmento?' }).getByRole('button', { name: 'Remover', exact: true }).click()
-  await expect(cnaeSegment).toHaveValue('')
-  await expect(segmentSelected).not.toContainText('Insumos agrícolas')
-  await cnaeSegment.selectOption('sector.agri_inputs')
-  // Card NCM between Produto and the next card.
-  await expect(companyTaxonomy.getByRole('region', { name: 'NCM', exact: true })).toBeVisible()
-  await page.locator('.tp-profile-declared').getByLabel('Regime tributário').selectOption('LUCRO_REAL')
-  await page.getByLabel('Palavras-chave adicionais').fill('crédito presumido')
-  for (const label of ['ICMS', 'Agronegócio', 'Fertilizantes', 'Venda', 'NF-e', 'EFD']) {
-    await companyTaxonomy.getByText(label, { exact: true }).click()
+  await expect(assistant.getByRole('status')).toBeVisible()
+  await expect(assistant.locator('.onb-progress')).toHaveCount(0)
+  await expect(assistant.locator('.onb-loading-track')).toHaveCount(1)
+  await page.screenshot({path:testInfo.outputPath('02-animacao.png'),fullPage:false})
+  await expect(assistant.getByRole('heading',{name:'Estes são os dados da sua empresa?',exact:true})).toBeVisible({timeout:10000})
+  await expect(assistant.locator('.onb-counter')).toBeVisible()
+  const actions=await assistant.locator('.onb-footer').evaluate(el=>{const a=el.children[0]!.getBoundingClientRect(),b=el.children[1]!.getBoundingClientRect();return {sameRow:Math.max(a.top,b.top)<Math.min(a.bottom,b.bottom),overflow:el.scrollWidth>el.clientWidth}})
+  expect(actions).toEqual({sameRow:true,overflow:false})
+  await page.screenshot({path:testInfo.outputPath('03-card-empresa.png'),fullPage:false})
+  // IE can be edited and read back without leaving the modal (all four viewports).
+  await page.route(`**/api/v1/companies/${companyId}/establishments/${establishmentId}/state-registration`,async route=>{
+    expect(route.request().method()).toBe('PATCH')
+    expect(route.request().headers()['x-tenant-id']).toBe(tenantId)
+    const body=route.request().postDataJSON()
+    expect(Object.keys(body).sort()).toEqual(['expectedStateRegistration','stateRegistration'])
+    expect(body.expectedStateRegistration).toBe(currentIe)
+    currentIe=body.stateRegistration
+    await route.fulfill({json:{establishmentId,stateRegistration:currentIe,stateRegistrationSource:'MANUAL'}})
+  })
+  await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
+  await expect(assistant.getByRole('heading',{name:'Confira seus estabelecimentos',exact:true})).toBeVisible()
+  const ie=assistant.getByLabel('Inscrição Estadual — Matriz Goiânia')
+  await ie.fill('109876543')
+  await expect(assistant.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
+  await expect(assistant.getByRole('button',{name:'Salvar IE',exact:true})).toHaveCount(0)
+  await page.screenshot({path:testInfo.outputPath('04-card-estabelecimentos-ie.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
+  await expect(assistant.getByRole('heading',{name:'Agropecuária, pesca e insumos agrícolas: o que você compra, vende ou produz?'})).toBeVisible()
+  expect(currentIe).toBe('109876543')
+  await expect(assistant.getByRole('checkbox',{name:/^Arroz NCM 1006$/})).not.toBeChecked()
+  await assistant.getByText('Ver 15 atividades deste segmento',{exact:true}).click()
+  await expect(assistant.getByText(/0111301.*Cultivo de arroz/)).toBeVisible()
+  await expect(assistant.getByText('NCM 1006',{exact:true})).toBeVisible()
+  await page.screenshot({path:testInfo.outputPath('05a-sugestoes-sem-preselecao.png'),fullPage:false})
+  await expect(assistant.locator('.onb-suggestions .onb-suggestion')).toHaveCount(8)
+  await expect(assistant.getByRole('button',{name:/sugestões · mostrar mais/})).toBeVisible()
+  await assistant.getByRole('button',{name:/sugestões · mostrar mais/}).scrollIntoViewIfNeeded()
+  await page.screenshot({path:testInfo.outputPath('05b-agro-15-cnaes-mostrar-mais.png'),fullPage:false})
+  await assistant.getByRole('button',{name:/sugestões · mostrar mais/}).click()
+  await expect(assistant.locator('.onb-suggestions .onb-suggestion')).toHaveCount(33)
+  await page.screenshot({path:testInfo.outputPath('05c-agro-expandido.png'),fullPage:false})
+  await assistant.getByRole('checkbox',{name:/^Arroz NCM 1006$/}).check()
+  await expect(assistant.locator('.onb-counter')).toContainText('1 item')
+  await expect(assistant.locator('.onb-counter')).toContainText('1 NCM')
+  await page.screenshot({path:testInfo.outputPath('05-cnae-0111301-arroz-1006.png'),fullPage:false})
+  const independentNcms=assistant.locator('.onb-ncm-suggestions')
+  await independentNcms.getByRole('heading').scrollIntoViewIfNeeded()
+  await expect(independentNcms.getByRole('checkbox',{name:'NCM 10011090',exact:true})).not.toBeChecked()
+  await page.screenshot({path:testInfo.outputPath('05d-ncms-independentes-desmarcadas.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Salvar e continuar'}).click()
+  const otherSegments=[...new Set(agrex.cards.map(c=>c.segmentLabel))].filter(label=>label!=='Agropecuária, pesca e insumos agrícolas').sort((a,b)=>a.localeCompare(b,'pt-BR'))
+  for(const [number,label] of otherSegments.entries()){
+    await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible()
+    await assistant.locator('.onb-body').evaluate(el=>el.scrollTo(0,0))
+    await page.screenshot({path:testInfo.outputPath('segmento-'+number+'.png'),fullPage:false})
+    await assistant.getByRole('button',{name:'Pular',exact:true}).click()
   }
-  await page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true }).click()
-  await expect(page.getByText('Perfil v1')).toBeVisible()
+  await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil',exact:true})).toBeVisible()
+  await expect(assistant.locator('.onb-progress i')).toHaveAttribute('style','width: 100%;')
+  await expect(assistant.getByRole('button',{name:'Revisar',exact:true})).toHaveCount(0)
+  await page.screenshot({path:testInfo.outputPath('06-resumo.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Concluir perfil',exact:true}).click()
+  await expect(assistant).toHaveCount(0)
+
+  await expect(page.getByRole('heading',{name:'Empresa e filiais',exact:true})).toBeVisible()
+  await expect(page.getByRole('tab',{name:/Estabelecimentos/})).toHaveCount(0)
+  await expect(page.getByText('AGREX — ambiente de teste').first()).toBeVisible()
+  await expect(page.getByText('MATRIZ-01').first()).toBeVisible()
+  await expect(page.getByText(agrex.provenance.primaryCnae,{exact:true})).toBeVisible()
+  await expect(page.getByText('109876543')).toBeVisible()
+  // Read-only reopen of a historical profile; only this isolated mocked record is edited.
+  Object.assign(assistantData.effectiveProfiles[0]!,{conceptCodes:['product.rice','product.retired'],ncmCodes:['1006','2716'],legacyFields:{products:['Escolha manual anterior'],operations:['Revenda']},historicalCodes:['product.retired']})
+  await page.getByRole('button',{name:'Abrir assistente',exact:true}).click()
+  await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible()
+  await assistant.locator('.onb-body').evaluate(el=>el.scrollTo(0,el.scrollHeight))
+  await page.screenshot({path:testInfo.outputPath('06b-legado-resumo-completo.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Editar escolhas — Matriz Goiânia'}).click()
+  await assistant.getByRole('checkbox',{name:/Produto histórico de teste/}).scrollIntoViewIfNeeded()
+  await expect(assistant.getByRole('checkbox',{name:/Produto histórico de teste/})).toBeChecked()
+  await page.screenshot({path:testInfo.outputPath('06c-legado-aberto-no-assistente.png'),fullPage:false})
+  await assistant.getByRole('checkbox',{name:/Produto histórico de teste/}).click()
+  await expect(assistant.getByRole('checkbox',{name:/Produto histórico de teste/})).toHaveCount(0)
+  await assistant.getByRole('checkbox',{name:'NCM 2716'}).click()
+  await expect(assistant.getByRole('checkbox',{name:'NCM 2716'})).toHaveCount(0)
+  await assistant.getByRole('checkbox',{name:/Escolha manual anterior/}).click()
+  await expect(assistant.getByRole('checkbox',{name:/Escolha manual anterior/})).toHaveCount(0)
+  await assistant.getByRole('button',{name:'Salvar escolhas deste estabelecimento'}).click()
+  await expect(assistant.getByRole('button',{name:'Cancelar edição'})).toHaveCount(0)
+  expect(assistantData.effectiveProfiles[0]!.conceptCodes).toEqual(['product.rice'])
+  expect(assistantData.effectiveProfiles[0]!.ncmCodes).toEqual(['1006'])
+  await assistant.locator('.onb-body').evaluate(el=>el.scrollTo(0,el.scrollHeight))
+  await page.screenshot({path:testInfo.outputPath('06d-legado-corrigido-salvo.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Fechar assistente'}).click()
+
+  await expect(page.getByRole('tab',{name:/Perfil tributário/})).toHaveCount(0)
+  await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
+
+  // Add a filial after the matrix was concluded: it has its own empty card.
+  await page.route(`**/api/v1/companies/${companyId}/establishments/from-cnpj`,async route=>{
+    expect(route.request().postDataJSON().cnpj).toBe('11222333000262')
+    expect(route.request().postDataJSON().typeCode).toBe('OFFICE')
+    expect(route.request().headers()['x-tenant-id']).toBe(tenantId)
+    branchAdded=true;assistantData.state.completed=false
+    assistantData.cards.push({...assistantData.cards.find(c=>c.cnaeCode==='0111301')!,establishmentId:branchId});assistantData.effectiveProfiles.push({establishmentId:branchId,name:'Filial nova de teste',isHeadOffice:false,taxRegime:'NAO_INFORMADO',conceptCodes:[],ncmCodes:[],legacyFields:{},cnaeSegments:[],historicalCodes:[]})
+    await route.fulfill({status:201,json:{establishment:{id:branchId}}})
+  })
+  await page.getByRole('button',{name:'Adicionar estabelecimento',exact:true}).click()
+  await page.getByLabel('CNPJ do estabelecimento').fill('11222333000262')
+  await page.getByLabel('Tipo',{exact:true}).selectOption('OFFICE')
+  await page.getByRole('button',{name:'Consultar CNPJ e adicionar',exact:true}).click()
+  await expect(assistant).toBeVisible()
+  await expect(assistant.getByRole('heading',{name:'Agropecuária, pesca e insumos agrícolas: o que você compra, vende ou produz?'})).toBeVisible({timeout:10000})
+  await expect(assistant.getByLabel('Estabelecimento',{exact:false})).toHaveValue(branchId)
+  await expect(assistant.getByRole('checkbox',{name:/Arroz/})).not.toBeChecked()
+  expect(assistantData.state.units[branchId]).toBeUndefined()
+  expect(assistantData.effectiveProfiles.find(p=>p.establishmentId===establishmentId)!.ncmCodes).toEqual(['1006'])
+  expect(assistantData.effectiveProfiles.find(p=>p.establishmentId===branchId)!.ncmCodes).toEqual([])
+  await page.screenshot({path:testInfo.outputPath('07-filial-nova-vazia.png'),fullPage:false})
+  await assistant.getByRole('button',{name:'Fechar assistente'}).click()
 
   // A successful second registration must never expose the cached first profile
   // while the account readback is still in flight.
@@ -732,7 +841,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
       tenant: { id: tenantId, name: 'Empresa Launch', slug: 'empresa-launch', status: 'ACTIVE' },
       onboarding: { companyName: 'Empresa Launch', cnpj: null, createdAt: '2026-09-30T00:00:00.000Z' },
       companies: [
-        { id: companyId, legalName: 'Empresa Launch Ltda', cnpj: '11222333000181', isActive: true, establishmentCount: 1 },
+        { id: companyId, legalName: 'AGREX — ambiente de teste', cnpj: '10515785000199', isActive: true, establishmentCount: 1 },
         { id: secondCompanyId, legalName: 'Segunda Empresa Ltda', cnpj: '04252011000110', isActive: true, establishmentCount: 1 },
       ],
     } })
@@ -749,12 +858,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
         : { items: [] }
     return route.fulfill({ json })
   })
-  await page.getByRole('tab', { name: /Empresa e filiais/ }).click()
   await page.getByRole('button', { name: 'Adicionar empresa', exact: true }).click()
   await page.getByLabel('CNPJ da matriz').fill('04252011000110')
   await page.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }).click()
   await expect.poll(() => accountReadbackStarted).toBe(true)
-  await expect(page.getByRole('tab', { name: /Empresa e filiais/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading',{name:'Empresa e filiais',exact:true})).toBeVisible()
   await expect(page.getByText('Carregando empresa selecionada…', { exact: true })).toBeVisible()
   await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true })).toHaveCount(0)
@@ -763,12 +871,25 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   releaseAccount()
   await expect(page.getByRole('dialog',{name:'Assistente do perfil tributário'})).toBeVisible()
   await page.getByRole('button',{name:'Fechar assistente'}).click()
-  await page.getByRole('tab',{name:/Perfil tributário/}).click()
-  await expect(page.locator('.tp-tax-profile-editor')).toBeVisible()
-  await expect(page.locator('.tp-profile-context')).toContainText('04.252.011/0001-10')
-  await expect(page.locator('.tp-profile-context')).not.toContainText('11.222.333/0001-81')
-  await expect(page.getByRole('button', { name: 'Salvar Perfil Tributário', exact: true })).toBeVisible()
+  await expect(page.locator('.tp-tax-profile-editor')).toHaveCount(0)
+  await expect(page.getByRole('tab',{name:/Perfil tributário/})).toHaveCount(0)
   expect(oldCompanyWrites).toBe(0)
+  // A new deployment keeps the open form draft and prevents further writes.
+  await page.getByRole('button',{name:'Editar empresa',exact:true}).last().click()
+  const draft=page.getByLabel('Razão social',{exact:true})
+  await draft.fill('Rascunho preservado')
+  await page.route('**/build-version.json*',route=>route.fulfill({json:{id:'new-deployment-after-this-build'}}))
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
+  await expect(page.getByRole('alert')).toContainText('Há uma versão nova do TriFaros. Recarregue a página para continuar.')
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(draft).toHaveValue('Rascunho preservado')
+  await page.getByRole('alert').scrollIntoViewIfNeeded()
+  const overlap=await page.evaluate(()=>{const notice=document.querySelector('.tp-version-notice')!.getBoundingClientRect(),input=document.querySelector('input[aria-label=\"Razão social\"]')?.getBoundingClientRect();return input?notice.top<input.bottom&&notice.bottom>input.top:false})
+  expect(overlap).toBe(false)
+  await page.screenshot({path:testInfo.outputPath('08-nova-versao-rascunho.png'),fullPage:false})
+  await draft.scrollIntoViewIfNeeded()
+  await expect(draft).toHaveValue('Rascunho preservado')
+  await page.screenshot({path:testInfo.outputPath('08b-rascunho-acessivel-sem-sobreposicao.png'),fullPage:false})
 
   await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click()
   await page.getByRole('button', { name: 'Abrir configurações', exact: true }).click()
@@ -778,3 +899,4 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
 })
+

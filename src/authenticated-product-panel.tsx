@@ -1,3 +1,4 @@
+import { useBuildVersionGuard, BuildVersionNotice } from './build-version'
 import { OnboardingAssistant } from './onboarding-assistant'
 import {
   useMutation,
@@ -474,10 +475,11 @@ const CATALOG_AGGREGATE_STALE_MS = 30 * 60_000
 
 export function AuthenticatedProductPanel({
   identity,
-  apiFetch,
+  apiFetch: rawApiFetch,
   onExit,
   exitError,
 }: Props) {
+  const { apiFetch, newVersion } = useBuildVersionGuard(rawApiFetch)
   const queryClient = useQueryClient()
   const persisted = readPanelState()
   const [selectedTenantId, setSelectedTenantId] =
@@ -512,7 +514,7 @@ export function AuthenticatedProductPanel({
   )
   const [assistantOpen,setAssistantOpen]=useState(false)
   const [assistantAnimate,setAssistantAnimate]=useState(false)
-  const [orgTab, setOrgTab] = useState<OrgTab>(persisted?.orgTab ?? 'empresa')
+  const [assistantUnit,setAssistantUnit]=useState<string|undefined>()
   const [userMenu, setUserMenu] = useState(false)
   const [tenantMenu, setTenantMenu] = useState(false)
   const [selectedCompanyId, setSelectedCompanyId] =
@@ -534,7 +536,7 @@ export function AuthenticatedProductPanel({
         actType,
         archiveTag,
         archiveView,
-        orgTab,
+
         selectedCompanyId,
       }),
     )
@@ -550,13 +552,13 @@ export function AuthenticatedProductPanel({
     actType,
     archiveTag,
     archiveView,
-    orgTab,
     selectedCompanyId,
   ])
 
   useEffect(() => {
     setSelectedCompanyId('')
-    setOrgTab('empresa')
+    setAssistantOpen(false)
+    setAssistantUnit(undefined)
   }, [tenantId])
 
   const sourcesQuery = useQuery({
@@ -820,6 +822,7 @@ export function AuthenticatedProductPanel({
 
   return (
     <div className="tp-app" data-panel-mode="authenticated">
+      <BuildVersionNotice visible={newVersion}/>
       <header className="tp-header">
         <div className="tp-header-primary">
           <button
@@ -890,7 +893,6 @@ export function AuthenticatedProductPanel({
                     type="button"
                     onClick={() => {
                       setScreen('empresas')
-                      setOrgTab('empresa')
                       setTenantMenu(false)
                     }}
                   >
@@ -1628,72 +1630,24 @@ export function AuthenticatedProductPanel({
               <h1>{selectedCompany?.legalName ?? 'Empresas da conta'}</h1>
             </div>
 
-            <div className="tp-org-tabs" role="tablist" aria-label="Organização">
-              <button role="tab" aria-selected={orgTab!=='perfil'} onClick={()=>setOrgTab('empresa')}>Empresa e filiais</button>
-              <button role="tab" aria-selected={orgTab==='perfil'} onClick={()=>setOrgTab('perfil')}>Perfil tributário</button>
-              {selectedCompany&&<button onClick={()=>{setAssistantAnimate(false);setAssistantOpen(true)}}>Abrir assistente</button>}
+            <div className="tp-org-tabs">
+              <h2>Empresa e filiais</h2>
+              {selectedCompany&&<button onClick={()=>{setAssistantUnit(undefined);setAssistantAnimate(false);setAssistantOpen(true)}}>Abrir assistente</button>}
             </div>
-            {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} animate={assistantAnimate} onClose={()=>setAssistantOpen(false)} onSaved={()=>void queryClient.invalidateQueries({queryKey:['launch','tax-profile']})}/>}
-
-            {!tenantId ? (
-              <ErrorState title="Conta sem tenant ativo" />
-            ) : accountQuery.isPending ? (
-              <LoadingState />
-            ) : accountQuery.isError ? (
-              <ErrorState />
-            ) : orgTab !== 'perfil' ? (
-              <>
-              <CompanySection
-                apiFetch={apiFetch}
-                tenantId={tenantId}
-                account={account!}
-                selectedCompanyId={selectedCompany?.id ?? ''}
-                onSelect={setSelectedCompanyId}
-                onOpenEstablishments={() => setOrgTab('empresa')}
-                onOpenProfile={() => {setAssistantAnimate(true);setAssistantOpen(true);setOrgTab('empresa')}}
-                onChanged={() => {
-                  void queryClient.invalidateQueries({ queryKey: ['launch', 'account', tenantId] })
-                  void queryClient.invalidateQueries({ queryKey: ['launch', 'establishments'] })
-                }}
-              />
+            {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id+':'+(assistantUnit??'all')} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} initialEstablishmentId={assistantUnit} versionChanged={newVersion} animate={assistantAnimate} onClose={()=>setAssistantOpen(false)} onSaved={()=>{void queryClient.invalidateQueries({queryKey:['launch','tax-profile']});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>}
+            {!tenantId?<ErrorState title="Conta sem tenant ativo"/>:accountQuery.isPending?<LoadingState/>:accountQuery.isError?<ErrorState/>:<>
+              <CompanySection apiFetch={apiFetch} tenantId={tenantId} account={account!} selectedCompanyId={selectedCompany?.id??''}
+                onSelect={setSelectedCompanyId} onOpenEstablishments={()=>document.getElementById('company-units')?.scrollIntoView({behavior:'smooth'})}
+                onOpenProfile={()=>{setAssistantUnit(undefined);setAssistantAnimate(true);setAssistantOpen(true)}}
+                onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','account',tenantId]});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>
               {!selectedCompany&&selectedCompanyId&&(accountQuery.isFetching?<LoadingState text="Carregando empresa selecionada…"/>:<ErrorState title="Empresa selecionada indisponível"/>)}
-              {selectedCompany&&<EstablishmentSection apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} companyCnpj={selectedCompany.cnpj} items={establishmentsQuery.data??[]} types={typesQuery.data??[]} loading={establishmentsQuery.isPending||typesQuery.isPending} error={establishmentsQuery.isError||typesQuery.isError} onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','establishments']});void queryClient.invalidateQueries({queryKey:['launch','account']})}} onOpenProfile={()=>{setAssistantAnimate(true);setAssistantOpen(true)}}/>}
-              </>
-            ) : !selectedCompany && selectedCompanyId ? (
-              accountQuery.isFetching ? (
-                <LoadingState text="Carregando empresa selecionada…" />
-              ) : (
-                <ErrorState title="Empresa selecionada indisponível" />
-              )
-            ) : !selectedCompany ? (
-              <EmptyState title="Cadastre a empresa primeiro">
-                O Perfil Tributário e os estabelecimentos dependem da empresa.
-              </EmptyState>
-            ) : (
-              <TaxProfileSection
-                key={selectedCompany.id}
-                apiFetch={apiFetch}
-                tenantId={tenantId}
-                company={selectedCompany}
-                establishments={establishmentsQuery.data ?? []}
-                profile={profileQuery.data ?? null}
-                taxonomyOptions={taxonomyOptionsQuery.data ?? { release: null, dimensions: [] }}
-                loading={
-                  profileQuery.isPending ||
-                  establishmentsQuery.isPending ||
-                  taxonomyOptionsQuery.isPending
-                }
-                error={
-                  profileQuery.isError ||
-                  establishmentsQuery.isError ||
-                  taxonomyOptionsQuery.isError
-                }
-                onChanged={() =>
-                  void queryClient.invalidateQueries({ queryKey: ['launch', 'tax-profile'] })
-                }
-              />
-            )}
+              {selectedCompany&&<section id="company-units"><EstablishmentSection apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} companyCnpj={selectedCompany.cnpj}
+                items={establishmentsQuery.data??[]} types={typesQuery.data??[]} loading={establishmentsQuery.isPending||typesQuery.isPending} error={establishmentsQuery.isError||typesQuery.isError}
+                onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','establishments']});void queryClient.invalidateQueries({queryKey:['launch','account']})}}
+                onOpenProfile={(unitId)=>{setAssistantUnit(unitId);setAssistantAnimate(!unitId);setAssistantOpen(true)}}/></section>}
+            </>}
           </>
+
         )}
 
         {screen === 'config' && (
@@ -2193,7 +2147,7 @@ export function CompanySection({
                 Abrir estabelecimentos
               </button>
               <button type="button" onClick={() => { onSelect(company.id); onOpenProfile() }}>
-                Abrir perfil tributário
+                Abrir assistente da empresa
               </button>
               <button type="button" onClick={() => beginEdit(company)}>
                 <Pencil size={14} /> Editar empresa
@@ -2295,7 +2249,7 @@ function EstablishmentSection({
   loading: boolean
   error: boolean
   onChanged: () => void
-  onOpenProfile: () => void
+  onOpenProfile: (unitId?:string) => void
 }) {
   const [creating, setCreating] = useState(false)
   const [cnpj, setCnpj] = useState('')
@@ -2449,7 +2403,7 @@ function EstablishmentSection({
           </label>
           <label>
             Tipo
-            <select value={typeCode} onChange={(event) => setTypeCode(event.target.value)}>
+            <select aria-label="Tipo" value={typeCode} onChange={(event) => setTypeCode(event.target.value)}>
               {types
                 .filter((type) => type.code !== 'HEAD_OFFICE')
                 .map((type) => (
@@ -2521,6 +2475,7 @@ function EstablishmentSection({
                 >
                   Atualizar cadastro CNPJ e IE
                 </button>
+                <button type="button" onClick={()=>onOpenProfile(item.id)}>Editar perfil desta unidade</button>
                 <button type="button" onClick={() => beginEdit(item)}>
                   {manualIeActionLabel(item.stateRegistration, item.stateRegistrationLookupStatus)}
                 </button>
@@ -2723,621 +2678,3 @@ function EstablishmentSection({
   )
 }
 
-export function TaxProfileSection({
-  apiFetch,
-  tenantId,
-  company,
-  establishments,
-  profile,
-  taxonomyOptions,
-  loading,
-  error,
-  onChanged,
-}: {
-  apiFetch: ProductApiFetch
-  tenantId: string
-  company: AccountCompany
-  establishments: Establishment[]
-  profile: Awaited<ReturnType<typeof fetchTaxProfile>>
-  taxonomyOptions: TaxonomyProfileOptions
-  loading: boolean
-  error: boolean
-  onChanged: () => void
-}) {
-  const [baseVersion,setBaseVersion]=useState(profile?.versionNo??0)
-  const [taxRegime, setTaxRegime] = useState(profile?.taxRegime ?? 'NAO_INFORMADO')
-  const [keywords, setKeywords] = useState(profile?.personalization.keywords?.join(', ') ?? '')
-  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(
-    () => new Set(profile?.personalization.taxonomy?.conceptCodes ?? []),
-  )
-  // Segment chosen by the user for each CNAE; absent = the CNAE's own.
-  // '' = the user removed the CNAE's segment.
-  const savedCnaeSegments = () =>
-    Object.fromEntries(
-      (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode ?? '']),
-    ) as Record<string, string>
-  const [cnaeSegments, setCnaeSegments] = useState<Record<string, string>>(savedCnaeSegments)
-  const [profileNcms, setProfileNcms] = useState<string[]>(() => profile?.personalization.ncmCodes ?? [])
-  type UnitOverride = { taxRegime: string; conceptCodes: string[]; ncmCodes: string[] }
-  const emptyOverride = (): UnitOverride =>
-    ({ taxRegime: 'NAO_INFORMADO', conceptCodes: [], ncmCodes: [] })
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, UnitOverride>>(
-    () => Object.fromEntries(
-      (profile?.personalization.establishmentOverrides ?? [])
-        .map((unit) => [unit.establishmentId, {
-          taxRegime: unit.taxRegime,
-          conceptCodes: unit.conceptCodes,
-          ncmCodes: unit.ncmCodes,
-        }]),
-    ),
-  )
-  const [unitId, setUnitId] = useState(establishments[0]?.id ?? '')
-  const updateUnit = (id: string, update: (current: UnitOverride) => UnitOverride) => {
-    setUnitOverrides((current) => ({
-      ...current,
-      [id]: update(current[id] ?? emptyOverride()),
-    }))
-  }
-  useEffect(() => {
-    setUnitId((current) => establishments.some((unit) => unit.id === current)
-      ? current
-      : establishments[0]?.id ?? '')
-  }, [establishments])
-  const [segmentRemoval, setSegmentRemoval] = useState<DerivedTag | null>(null)
-  const [profileWelcome, setProfileWelcome] = useState<{
-    companyId: string; cnaeText: string; phase: number
-  } | null>(null)
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('tribusca.onboarding.welcome')
-      const value = raw ? JSON.parse(raw) as { companyId: string; cnaeText: string } : null
-      setProfileWelcome(value?.companyId === company.id
-        ? { companyId: value.companyId, cnaeText: value.cnaeText, phase: 0 }
-        : null)
-    } catch { setProfileWelcome(null) }
-  }, [company.id])
-  useEffect(() => {
-    if (!profileWelcome) return
-    const timers = [
-      window.setTimeout(() => setProfileWelcome((current) =>
-        current ? { ...current, phase: 1 } : null), 2000),
-      window.setTimeout(() => setProfileWelcome((current) =>
-        current ? { ...current, phase: 2 } : null), 4000),
-      window.setTimeout(() => {
-        try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
-        setProfileWelcome(null)
-      }, 6000),
-    ]
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [profileWelcome?.companyId])
-  const dismissProfileWelcome = () => {
-    try { sessionStorage.removeItem('tribusca.onboarding.welcome') } catch { /* optional */ }
-    setProfileWelcome(null)
-  }
-
-
-  useEffect(() => {
-    setBaseVersion(profile?.versionNo??0)
-    setTaxRegime(profile?.taxRegime ?? 'NAO_INFORMADO')
-    setKeywords(profile?.personalization.keywords?.join(', ') ?? '')
-    setSelectedCodes(new Set(profile?.personalization.taxonomy?.conceptCodes ?? []))
-    setCnaeSegments(
-      Object.fromEntries(
-        (profile?.personalization.taxonomy?.cnaeSegments ?? []).map((item) => [item.cnaeCode, item.segmentCode ?? '']),
-      ),
-    )
-    setProfileNcms(profile?.personalization.ncmCodes ?? [])
-    setUnitOverrides(Object.fromEntries(
-      (profile?.personalization.establishmentOverrides ?? [])
-        .map((unit) => [unit.establishmentId, {
-          taxRegime: unit.taxRegime,
-          conceptCodes: unit.conceptCodes,
-          ncmCodes: unit.ncmCodes,
-        }]),
-    ))
-  }, [profile])
-
-  // TAX-11: the API returns only the dimensions the curator made visible, in
-  // the configured order. Older payloads (no profileOrder) keep the legacy set.
-  // CNAE activities (7-digit items) are not markers: the segment of each
-  // CNAE is chosen in the CNAE table instead.
-  const profileDimensions = useMemo(
-    () =>
-      taxonomyOptions.dimensions
-        .filter(
-          (dimension) =>
-            dimension.profileOrder !== undefined || PROFILE_DIMENSION_CODES.has(dimension.code),
-        )
-        .map((dimension) =>
-          dimension.officialCodeType === 'CNAE'
-            ? {
-                ...dimension,
-                concepts: dimension.concepts.filter(
-                  (concept) => !(concept.officialCodes ?? []).some((code) => /^\d{7}$/.test(code.replace(/\D/g, ''))),
-                ),
-              }
-            : dimension,
-        )
-        .sort((left, right) => (left.profileOrder ?? 0) - (right.profileOrder ?? 0)),
-    [taxonomyOptions.dimensions],
-  )
-
-  const suggestionsQuery = useQuery({
-    queryKey: ['launch', 'taxonomy-suggestions', tenantId, company.id],
-    queryFn: () => fetchTaxonomySuggestions(apiFetch, tenantId, company.id),
-    retry: false,
-  })
-  const suggestions = useMemo(
-    () =>
-      new Map(
-        (suggestionsQuery.data?.segments ?? []).map((segment) => [segment.conceptCode, segment.strength] as const),
-      ),
-    [suggestionsQuery.data],
-  )
-  const cnaeSuggestions = useMemo(
-    () => new Map((suggestionsQuery.data?.cnaes ?? []).map((item) => [item.cnaeCode, item.segments] as const)),
-    [suggestionsQuery.data],
-  )
-  const segmentOptions = useMemo(() => taxonomyOptions.segments ?? [], [taxonomyOptions.segments])
-  const segmentFor = useCallback(
-    (cnaeCode: string) => {
-      const digits = cnaeCode.replace(/\D/g, '')
-      const suggested = cnaeSuggestions.get(digits)?.[0]?.code ?? ''
-      // A segment saved under an older taxonomy that the published Segmento
-      // table no longer has gives way to the CNAE's current segment.
-      const saved = cnaeSegments[digits]
-      const chosen =
-        saved && segmentOptions.length > 0 && !segmentOptions.some((option) => option.code === saved)
-          ? undefined
-          : saved
-      return chosen !== undefined ? { code: chosen, suggested: chosen === suggested } : { code: suggested, suggested: true }
-    },
-    [cnaeSegments, cnaeSuggestions, segmentOptions],
-  )
-  const offeredCodes = useMemo(
-    () => new Set(profileDimensions.flatMap((dimension) => dimension.concepts.map((concept) => concept.code))),
-    [profileDimensions],
-  )
-
-  const setMany = (codes: string[], checked: boolean) => {
-    setSelectedCodes((current) => {
-      const next = new Set(current)
-      for (const code of codes) {
-        if (checked) next.add(code)
-        else next.delete(code)
-      }
-      return next
-    })
-  }
-
-  // Legacy label fields include hidden-but-selected concepts as well.
-  const selectedLabels = (dimensionCode: string) =>
-    taxonomyOptions.conceptIndex
-      ? taxonomyOptions.conceptIndex
-          .filter((concept) => concept.dimensionCode === dimensionCode && selectedCodes.has(concept.code))
-          .map((concept) => concept.label)
-      : profileDimensions
-          .find((dimension) => dimension.code === dimensionCode)
-          ?.concepts.filter((concept) => selectedCodes.has(concept.code))
-          .map((concept) => concept.label) ?? []
-
-  const profileCnaeCodes = useMemo(
-    () => [...new Set(establishments.flatMap((item) => item.cnaes).map((cnae) => cnae.code.replace(/\D/g, '')))]
-      .filter((code) => code.length === 7)
-      .sort(),
-    [establishments],
-  )
-
-  // Segments set on the CNAE table show as selected in the Segmento card.
-  const segmentLabelOf = useMemo(() => new Map(segmentOptions.map((option) => [option.code, option.label])), [segmentOptions])
-  const derivedSegments = useMemo(() => {
-    const byCode = new Map<string, string[]>()
-    for (const cnaeCode of profileCnaeCodes) {
-      const code = segmentFor(cnaeCode).code
-      if (!code || !segmentLabelOf.has(code)) continue
-      byCode.set(code, [...(byCode.get(code) ?? []), cnaeCode])
-    }
-    return [...byCode.entries()]
-      .map(([code, cnaeCodes]): DerivedTag => ({
-        code,
-        label: segmentLabelOf.get(code)!,
-        source: cnaeCodes.length === 1 ? `do CNAE ${cnaeCodes[0]}` : `dos CNAEs ${cnaeCodes.join(', ')}`,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
-  }, [profileCnaeCodes, segmentFor, segmentLabelOf])
-
-  // Removing a CNAE segment in the card leaves those CNAEs without a segment.
-  const removeSegment = (code: string) => {
-    setCnaeSegments((current) => {
-      const next = { ...current }
-      for (const cnaeCode of profileCnaeCodes) if (segmentFor(cnaeCode).code === code) next[cnaeCode] = ''
-      return next
-    })
-    setSelectedCodes((current) => {
-      const next = new Set(current)
-      next.delete(code)
-      return next
-    })
-  }
-
-  // NCMs set on the CNAE table (shared cache with the CNAE table).
-  const cnaeNcmsQuery = useQuery({
-    queryKey: ['cnae-ncms', tenantId, company.id],
-    queryFn: () => fetchCompanyCnaeNcms(apiFetch, tenantId, company.id),
-    retry: false,
-  })
-  const productProfilesQuery = useQuery({
-    queryKey: ['product-ncm-profiles', tenantId, company.id],
-    queryFn: () => fetchCompanyProductProfiles(apiFetch, tenantId, company.id),
-    retry: false,
-  })
-  const derivedNcms = useMemo(() => {
-    const items = new Map<string, { code: string; officialCode: string; description: string; source: string }>()
-    for (const ncm of cnaeNcmsQuery.data ?? []) {
-      items.set(ncm.code, { code: ncm.code, officialCode: ncm.officialCode, description: ncm.description, source: `do CNAE ${ncm.cnaeCode}` })
-    }
-    for (const product of productProfilesQuery.data ?? []) {
-      for (const ncm of product.ncms) {
-        if (!items.has(ncm.code)) {
-          items.set(ncm.code, { code: ncm.code, officialCode: ncm.officialCode, description: ncm.description, source: `de ${product.productLabel}` })
-        }
-      }
-    }
-    return [...items.values()].sort((a, b) => a.code.localeCompare(b.code))
-  }, [cnaeNcmsQuery.data, productProfilesQuery.data])
-
-  // Chosen tags plus those from the CNAE table (segments and NCMs).
-  const markerCount =
-    new Set([...selectedCodes, ...derivedSegments.map((tag) => tag.code)]).size +
-    new Set([...profileNcms, ...derivedNcms.map((item) => item.code)]).size
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      saveTaxProfile(apiFetch, tenantId, company.id, {
-        expectedVersion: baseVersion,
-        taxRegime,
-        segments: [...new Set([...derivedSegments.map((tag) => tag.label), ...selectedLabels('sector')])],
-        activities: selectedLabels('operation'),
-        personalization: {
-          taxes: selectedLabels('tax'),
-          products: selectedLabels('product'),
-          operations: selectedLabels('operation'),
-          documents: selectedLabels('document'),
-          obligations: selectedLabels('obligation'),
-          keywords: splitCsv(keywords),
-          ncmCodes: profileNcms,
-          establishmentOverrides: Object.entries(unitOverrides)
-            .filter(([id]) => establishments.some((unit) => unit.id === id && unit.isActive))
-            .map(([establishmentId, values]) => ({
-              establishmentId,
-              taxRegime: values.taxRegime,
-              conceptCodes: [...new Set(values.conceptCodes)].sort(),
-              ncmCodes: [...new Set(values.ncmCodes)].sort(),
-            })),
-          taxonomy: taxonomyOptions.release
-            ? {
-                releaseId: taxonomyOptions.release.id,
-                releaseVersion: taxonomyOptions.release.version,
-                // Keep hidden-but-still-published selections; drop only codes
-                // that the current release no longer contains.
-                conceptCodes: [...selectedCodes]
-                  .filter((code) =>
-                    taxonomyOptions.conceptCodes
-                      ? taxonomyOptions.conceptCodes.includes(code)
-                      : offeredCodes.has(code),
-                  )
-                  .sort(),
-                // Effective segment of every company CNAE (suggested or chosen).
-                // Effective segment of every company CNAE; null when removed.
-                cnaeSegments: profileCnaeCodes.flatMap((cnaeCode): Array<{ cnaeCode: string; segmentCode: string | null }> => {
-                  const code = segmentFor(cnaeCode).code
-                  if (segmentOptions.some((option) => option.code === code)) return [{ cnaeCode, segmentCode: code }]
-                  return cnaeSegments[cnaeCode] === '' ? [{ cnaeCode, segmentCode: null }] : []
-                }),
-              }
-            : null,
-        },
-      }),
-    onSuccess: onChanged,
-  })
-
-  if (loading) return <LoadingState />
-  if (error) return <ErrorState />
-
-  const ufs = [...new Set(establishments.map((item) => item.uf))].sort()
-  const municipalities = [...new Set(
-    establishments
-      .map((item) => item.municipalityName)
-      .filter((value): value is string => Boolean(value)),
-  )].sort()
-  const stateRegistrations = [...new Set(
-    establishments
-      .map((item) => item.stateRegistration)
-      .filter((value): value is string => Boolean(value)),
-  )].sort()
-  const cnaes = [...new Map(
-    establishments
-      .flatMap((item) => item.cnaes)
-      .map((cnae) => [cnae.code, cnae]),
-  ).values()].sort((left, right) => left.code.localeCompare(right.code))
-
-  const toggleCode = (code: string) => {
-    setSelectedCodes((current) => {
-      const next = new Set(current)
-      if (next.has(code)) next.delete(code)
-      else next.add(code)
-      return next
-    })
-  }
-
-  return (
-    <form
-      className="tp-tax-profile-editor"
-      onSubmit={(event) => {
-        event.preventDefault()
-        mutation.mutate()
-      }}
-    >
-      <div className="tp-company-section-head">
-        <div>
-          <h2>Perfil Tributário</h2>
-          <p>
-            Contexto cadastral e fiscal usado para aproximar publicações do negócio da empresa.
-          </p>
-        </div>
-        {profile && <span className="tp-profile-version">Perfil v{profile.versionNo}</span>}
-      </div>
-
-      {profileWelcome && (
-        <section className="tp-onboarding-welcome" role="status" aria-live="polite">
-          <strong>Empresa cadastrada com sucesso!</strong>
-          <p>
-            {profileWelcome.phase === 0
-              ? 'Primeiro sinal captado: sua empresa já faz parte do TriFaros.'
-              : profileWelcome.phase === 1
-                ? 'Atividade principal: ' + profileWelcome.cnaeText + '. O radar já sabe por onde começar.'
-                : 'Agora revise produtos, NCMs e outras informações reais do seu Perfil Tributário.'}
-          </p>
-          <div className="tp-onboarding-steps" aria-hidden="true">
-            <span className="tp-onboarding-progress"
-              style={{ width: ((profileWelcome.phase + 1) / 3 * 100) + '%' }} />
-          </div>
-          <button type="button" className="btn" onClick={dismissProfileWelcome}>Dispensar boas-vindas</button>
-        </section>
-      )}
-
-      <section className="tp-profile-context">
-        <div className="tp-profile-section-title">
-          <h3>Contexto cadastral automático</h3>
-          <details className="tp-profile-help">
-            <summary><HelpCircle size={14} /> O que são estes dados?</summary>
-            <p>São informações do cadastro da empresa e de seus estabelecimentos.
-              O CNAE sugere atividades, mas não comprova quais produtos ela comercializa.</p>
-          </details>
-        </div>
-        <div className="tp-context-grid">
-          <article><span>CNPJ da matriz</span><strong>{formatCnpj(company.cnpj)}</strong></article>
-          <article><span>Estabelecimentos</span><strong>{establishments.length}</strong></article>
-          <article><span>UFs</span><strong>{ufs.join(', ') || '—'}</strong></article>
-          <article><span>Municípios</span><strong>{municipalities.join(', ') || '—'}</strong></article>
-          <article><span>Inscrições estaduais</span><strong>{stateRegistrations.join(', ') || '—'}</strong></article>
-        </div>
-
-        <div className="tp-profile-cnaes tp-profile-cnaes-table">
-          <strong>CNAEs capturados</strong>
-          {cnaes.length ? (
-            <ProductNcmProfiles
-              apiFetch={apiFetch}
-              tenantId={tenantId}
-              companyId={company.id}
-              cnaes={cnaes}
-              segmentOptions={segmentOptions}
-              segmentFor={segmentFor}
-              onSegmentChange={(cnaeCode, segmentCode) =>
-                setCnaeSegments((current) => ({ ...current, [cnaeCode.replace(/\D/g, '')]: segmentCode }))
-              }
-              products={taxonomyOptions.products ?? []}
-            />
-          ) : (
-            <p>Nenhum CNAE cadastrado.</p>
-          )}
-        </div>
-      </section>
-
-      <section className="tp-profile-declared">
-        <div className="tp-profile-section-title">
-          <h3>Informações fiscais declaradas</h3>
-          <details className="tp-profile-help">
-            <summary><HelpCircle size={14} /> Como preencher?</summary>
-            <p>Informe o regime tributário e palavras-chave conforme a realidade da empresa.
-              Estes dados são declarados por você, não confirmados por consulta ao CNPJ.</p>
-          </details>
-        </div>
-        <div className="launch-form-grid">
-          <label>
-            Regime tributário
-            <select value={taxRegime} onChange={(event) => setTaxRegime(event.target.value)}>
-              <option value="NAO_INFORMADO">Não informado</option>
-              <option value="LUCRO_REAL">Lucro Real</option>
-              <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
-              <option value="SIMPLES_NACIONAL">Simples Nacional</option>
-              <option value="IMUNE_ISENTA">Imune/Isenta</option>
-              <option value="OUTRO">Outro</option>
-            </select>
-          </label>
-          <label>
-            Palavras-chave adicionais
-            <input
-              value={keywords}
-              onChange={(event) => setKeywords(event.target.value)}
-              placeholder="ex.: crédito presumido, barter"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="tp-profile-taxonomy" aria-label="Taxonomia da empresa">
-        <div className="tp-profile-section-title">
-          <h3>Taxonomia TriFaros</h3>
-          <p>Revise as sugestões por CNAE e selecione somente o que realmente se aplica.
-            Os conceitos vêm da versão publicada da Taxonomia TriFaros.</p>
-          <details className="tp-profile-help">
-            <summary><HelpCircle size={14} /> Como as sugestões são usadas?</summary>
-            <p>Segmento, produto e NCM são sinais diferentes para comparar o perfil com
-              as legislações. Uma sugestão não significa que a empresa pratica aquela
-              atividade: confirme antes de salvar. Alguns segmentos derivados dos CNAEs
-              também são registrados ao salvar o perfil.</p>
-          </details>
-        </div>
-
-        {taxonomyOptions.release ? (
-          <div className="tp-taxonomy-grid">
-            {profileDimensions.flatMap((dimension, index) => {
-              const isSegment = dimension.code === 'sector' || dimension.officialCodeType === 'CNAE'
-              const card = (
-                <TaxonomyDimensionPicker
-                  dimension={dimension}
-                  selected={selectedCodes}
-                  onToggle={toggleCode}
-                  onSetMany={setMany}
-                  suggestions={suggestions}
-                  {...(isSegment ? { derived: derivedSegments, onRemoveDerived: setSegmentRemoval } : {})}
-                  key={dimension.code}
-                />
-              )
-              // Card NCM right after Produto (or first, without Produto).
-              const ncmCard = (
-                <NcmProfileCard
-                  key="ncm"
-                  apiFetch={apiFetch}
-                  codes={profileNcms}
-                  onChange={setProfileNcms}
-                  derived={derivedNcms}
-                />
-              )
-              const hasProduct = profileDimensions.some((item) => item.code === 'product')
-              if (dimension.code === 'product') return [card, ncmCard]
-              if (!hasProduct && index === 0) return [ncmCard, card]
-              return [card]
-            })}
-          </div>
-        ) : (
-          <div className="tp-taxonomy-unavailable">
-            <strong>Taxonomia indisponível</strong>
-          </div>
-        )}
-      </section>
-
-      <section className="tp-profile-taxonomy tp-establishment-profile" aria-label="Perfil por estabelecimento">
-        <div className="tp-profile-section-title">
-          <h3>Particularidades dos estabelecimentos</h3>
-          <p>Cada matriz ou filial tem suas próprias seleções. Uma filial nova começa vazia,
-            sem copiar o perfil da matriz ou das demais unidades.</p>
-        </div>
-        <label>
-          Estabelecimento
-          <select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
-            {establishments.filter((unit) => unit.isActive).map((unit) => (
-              <option value={unit.id} key={unit.id}>
-                {unit.name} · {unit.uf} · {formatCnpj(unit.cnpj)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {establishments.filter((unit) => unit.isActive).map((unit) => {
-          if (unit.id !== unitId) return null
-          const current = unitOverrides[unit.id] ?? emptyOverride()
-          const selectedForUnit = new Set(current.conceptCodes)
-          const relevantDimensions = profileDimensions.filter((dim) =>
-            ['sector', 'product', 'operation', 'tax', 'document', 'obligation'].includes(dim.code))
-          const toggle = (code: string) => updateUnit(unit.id, (value) => ({
-            ...value,
-            conceptCodes: value.conceptCodes.includes(code)
-              ? value.conceptCodes.filter((item) => item !== code)
-              : [...value.conceptCodes, code],
-          }))
-          const setManyUnit = (codes: string[], checked: boolean) => {
-            updateUnit(unit.id, (value) => ({
-              ...value,
-              conceptCodes: [...new Set(
-                checked
-                  ? [...value.conceptCodes, ...codes]
-                  : value.conceptCodes.filter((code) => !codes.includes(code)),
-              )],
-            }))
-          }
-          return (
-            <div key={unit.id} className="tp-establishment-override">
-              <p><strong>{unit.name}</strong> — {unit.uf}
-                {unit.municipalityName ? ' / ' + unit.municipalityName : ''}.
-                As seleções abaixo só se aplicam a esta unidade.</p>
-              <label>
-                Regime tributário desta unidade
-                <select value={current.taxRegime}
-                  onChange={(event) => updateUnit(unit.id, (value) => ({
-                    ...value, taxRegime: event.target.value,
-                  }))}>
-                  <option value="NAO_INFORMADO">Não informado</option>
-                  <option value="LUCRO_REAL">Lucro Real</option>
-                  <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
-                  <option value="SIMPLES_NACIONAL">Simples Nacional</option>
-                  <option value="IMUNE_ISENTA">Imune/Isenta</option>
-                  <option value="OUTRO">Outro</option>
-                </select>
-              </label>
-              {taxonomyOptions.release ? (
-                <div className="tp-taxonomy-grid">
-                  {relevantDimensions.map((dimension) => (
-                    <TaxonomyDimensionPicker
-                      key={unit.id + ':' + dimension.code}
-                      dimension={dimension}
-                      selected={selectedForUnit}
-                      onToggle={toggle}
-                      onSetMany={setManyUnit}
-                    />
-                  ))}
-                  <NcmProfileCard
-                    key={unit.id + ':ncm'}
-                    apiFetch={apiFetch}
-                    codes={current.ncmCodes}
-                    onChange={(codes) => updateUnit(unit.id, (value) => ({
-                      ...value, ncmCodes: codes,
-                    }))}
-                    derived={[]}
-                  />
-                </div>
-              ) : (
-                <p>Aguardando a publicação de uma versão da Taxonomia TriFaros.</p>
-              )}
-            </div>
-          )
-        })}
-      </section>
-
-      {segmentRemoval && (
-        <DangerConfirmDialog
-          title="Remover segmento?"
-          description={`“${segmentRemoval.label}” veio ${segmentRemoval.source}. Ao remover, esses CNAEs ficam sem segmento na tabela de CNAEs. A alteração vale ao salvar o perfil.`}
-          confirmLabel="Remover"
-          pending={false}
-          onCancel={() => setSegmentRemoval(null)}
-          onConfirm={() => {
-            removeSegment(segmentRemoval.code)
-            setSegmentRemoval(null)
-          }}
-        />
-      )}
-
-      {mutation.isError && (
-        <p className="auth-error" role="alert">Não foi possível salvar o perfil: {mutation.error.message}</p>
-      )}
-
-      <div className="tp-profile-save">
-        <div><strong>{markerCount} marcador(es)</strong></div>
-        <button className="btn" type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Salvando…' : 'Salvar Perfil Tributário'}
-        </button>
-      </div>
-    </form>
-  )
-}

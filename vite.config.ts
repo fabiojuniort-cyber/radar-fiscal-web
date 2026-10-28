@@ -8,8 +8,10 @@ const appProxy = apiTarget ? {
   '/public': { target: apiTarget, changeOrigin: true, secure: true },
 } : undefined
 
+const buildId=process.env.RAILWAY_GIT_COMMIT_SHA??process.env.GITHUB_SHA??('local-'+Date.now())
 export default defineConfig({
-  plugins: [react()],
+  define:{'import.meta.env.VITE_APP_BUILD_ID':JSON.stringify(buildId)},
+  plugins: [react(),{name:'trifaros-build-version',generateBundle(){this.emitFile({type:'asset',fileName:'build-version.json',source:JSON.stringify({id:buildId})})}}],
   server: { proxy: appProxy },
   preview: {
     allowedHosts: [
