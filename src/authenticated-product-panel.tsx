@@ -315,7 +315,6 @@ function SectionHeading({
   description,
 }: {
   eyebrow?: string
-  scope?: string
   title: string
   description: string
 }) {
@@ -1642,7 +1641,7 @@ export function AuthenticatedProductPanel({
             </div>
             </>}
             {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id+':'+(assistantUnit??'all')} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} initialEstablishmentId={assistantUnit} initialCardId={assistantCard} onComplete={id=>{setAssistantOpen(false);setAssistantCard(undefined);setProfileUnit(id)}} versionChanged={newVersion} animate={assistantAnimate} onClose={()=>{setAssistantOpen(false);setAssistantCard(undefined)}} onSaved={()=>{void queryClient.invalidateQueries({queryKey:['launch','tax-profile']});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>}
-            {profileUnit&&selectedCompany&&tenantId&&establishmentsQuery.data?.find(u=>u.id===profileUnit)&&<OnboardingProfileScreen key={profileUnit+':'+assistantOpen} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} unit={establishmentsQuery.data.find(u=>u.id===profileUnit)!} onBack={()=>setProfileUnit(undefined)} onEdit={card=>{setAssistantUnit(profileUnit);setAssistantCard(card);setAssistantAnimate(false);setAssistantOpen(true)}}/>}
+            {profileUnit&&selectedCompany&&tenantId&&establishmentsQuery.data?.find(u=>u.id===profileUnit)&&<OnboardingProfileScreen key={profileUnit+':'+assistantOpen} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} unit={establishmentsQuery.data.find(u=>u.id===profileUnit)!} types={typesQuery.data??[]} onBack={()=>setProfileUnit(undefined)} onEdit={card=>{setAssistantUnit(profileUnit);setAssistantCard(card);setAssistantAnimate(false);setAssistantOpen(true)}}/>}
             {!profileUnit&&<>
             {!tenantId?<ErrorState title="Conta sem tenant ativo"/>:accountQuery.isPending?<LoadingState/>:accountQuery.isError?<ErrorState/>:<>
               <CompanySection apiFetch={apiFetch} tenantId={tenantId} account={account!} selectedCompanyId={selectedCompany?.id??''}

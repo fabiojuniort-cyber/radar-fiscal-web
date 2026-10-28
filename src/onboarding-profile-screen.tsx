@@ -16,17 +16,19 @@ function SelectedBlock({title,items,edit,onEdit,historical=false}:{title:string;
   </div>
  </section>
 }
-export function OnboardingProfileScreen({apiFetch,tenantId,companyId,unit,onEdit,onBack}:{apiFetch:ProductApiFetch;tenantId:string;companyId:string;unit:Establishment;onEdit:(card:string)=>void;onBack:()=>void}){
- const [data,setData]=useState<AssistantData|null>(null),[error,setError]=useState(false)
+export function OnboardingProfileScreen({apiFetch,tenantId,companyId,unit,types=[],onEdit,onBack}:{apiFetch:ProductApiFetch;tenantId:string;companyId:string;unit:Establishment;types?:{code:string;name:string}[];onEdit:(card:string)=>void;onBack:()=>void}){
+ const [data,setData]=useState<AssistantData|null>(null),[error,setError]=useState(false),[headerOffset,setHeaderOffset]=useState(0)
+ useEffect(()=>{const header=document.querySelector('.tp-header');if(!header)return;const measure=()=>setHeaderOffset(Math.ceil(header.getBoundingClientRect().height));measure();if(typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(measure);observer.observe(header);return()=>observer.disconnect()},[])
  useEffect(()=>{let active=true;assistantRequest<AssistantData>(apiFetch,tenantId,`/api/v1/companies/${companyId}/onboarding?establishmentId=${unit.id}`).then(r=>{if(active)setData(r)}).catch(()=>{if(active)setError(true)});return()=>{active=false}},[apiFetch,tenantId,companyId,unit.id])
  const profile=data&&profiles(data).find(p=>p.establishmentId===unit.id)
  const selected=(code:string)=>!data||!profile?[]:profile.conceptCodes.filter(c=>(data.concepts.find(v=>v.code===c)??data.historicalConcepts?.find(v=>v.code===c))?.dimensionCode===code).map(c=>conceptLabel(data,c))
  const legacyMap:Record<string,string>={taxes:'tax',products:'product',operations:'operation',documents:'document',obligations:'obligation',keywords:'theme',segments:'sector',activities:'actuacao'}
  const withLegacy=(code:string)=>unique([...selected(code),...Object.entries(profile?.legacyFields??{}).filter(([key])=>legacyMap[key]===code).flatMap(([,values])=>values)])
- const sectors=profile&&data?unique([...withLegacy('sector'),...profile.cnaeSegments.flatMap(c=>c.segmentCode?[conceptLabel(data,c.segmentCode)]:[]),...segmentSteps(data).filter(g=>g.activities.some(a=>a.establishmentId===unit.id)).map(g=>g.title)]):[]
+ const chosenSectors=profile&&data?unique([...withLegacy('sector'),...profile.cnaeSegments.flatMap(c=>c.segmentCode?[conceptLabel(data,c.segmentCode)]:[])]):[]
+ const sectors=chosenSectors.length?chosenSectors:data?unique(segmentSteps(data).filter(g=>g.activities.some(a=>a.establishmentId===unit.id)).map(g=>g.title)):[]
  const unknown=profile&&data?profile.conceptCodes.filter(c=>![...data.concepts,...data.historicalConcepts??[]].some(v=>v.code===c)):[]
  return <section className="tp-panel-card onb-profile-page">
-  <header className="onb-profile-header"><div><button className="onb-link" onClick={onBack}>Voltar aos CNPJs</button><h1>Perfil tributário</h1><h2>{data?.companyName??unit.name}</h2><p>CNPJ {formatProfileCnpj(unit.cnpj)} · {unit.isHeadOffice?'Matriz':'Filial'} · {unit.typeCode??'Tipo não informado'} · {unit.uf??'UF não informada'} · IE {unit.stateRegistration||'Não informada'}</p></div><button className="onb-secondary" onClick={()=>onEdit('company')}>Editar dados e IE</button></header>
+  <header className="onb-profile-header" style={{top:headerOffset}}><div><button className="onb-link" onClick={onBack}>Voltar aos CNPJs</button><h1>Perfil tributário</h1><h2>{data?.companyName??unit.name}</h2><p>CNPJ {formatProfileCnpj(unit.cnpj)} · {unit.isHeadOffice?'Matriz':'Filial'} · {types.find(t=>t.code===unit.typeCode)?.name??unit.typeCode??'Tipo não informado'} · {unit.uf??'UF não informada'} · IE {unit.stateRegistration||'Não informada'}</p></div><button className="onb-secondary" onClick={()=>onEdit('company')}>Editar dados e IE</button></header>
   {error?<p role="alert">Não foi possível carregar o perfil.</p>:!profile||!data?<p role="status">Carregando perfil…</p>:<div className="onb-profile-grid">
    <SelectedBlock title="Segmento" items={sectors} edit="segments" onEdit={onEdit}/>
    <SelectedBlock title="Produtos" items={withLegacy('product')} historical={profile.historicalCodes.some(c=>(data.historicalConcepts?.find(v=>v.code===c)?.dimensionCode)==='product')} edit={profile.historicalCodes.some(c=>(data.historicalConcepts?.find(v=>v.code===c)?.dimensionCode)==='product')?'profile':'segments'} onEdit={onEdit}/>
