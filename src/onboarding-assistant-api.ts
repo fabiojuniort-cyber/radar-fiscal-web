@@ -1,11 +1,13 @@
+import {profileDimensionGroups} from './onboarding-dimensions'
 import type {ProductApiFetch} from './product-api'
 export type CardChoice={status:'CONFIRMED'|'SKIPPED';conceptCodes:string[];ncmCodes:string[]}
 export type ActivityCard={establishmentId:string;cnaeCode:string;description:string;segmentCode?:string;segmentLabel?:string;phraseSegment:string;phraseSegments?:string[];suggestions:{kind:string;target:string;segment:string}[]}
 export type EffectiveProfile={establishmentId:string;name:string;isHeadOffice:boolean;taxRegime:string;conceptCodes:string[];ncmCodes:string[];legacyFields:Record<string,string[]>;cnaeSegments:{cnaeCode:string;segmentCode:string|null}[];historicalCodes:string[]}
 export type AssistantData={version:number;release:{id:string;version:string};companyName:string;companyCnpj?:string;
  state:{completed:boolean;cards:Record<string,CardChoice>;units:Record<string,{baseConceptCodes?:string[];baseNcmCodes?:string[];cards:Record<string,CardChoice>}>};
- effectiveProfiles?:EffectiveProfile[];historicalConcepts?:{code:string;label:string;dimensionCode:string}[];concepts:{code:string;label:string;dimensionCode:string;ncmCodes?:string[]}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
+ dimensions?:{code:string;name:string}[];effectiveProfiles?:EffectiveProfile[];historicalConcepts?:{code:string;label:string;dimensionCode:string}[];concepts:{code:string;label:string;dimensionCode:string;ncmCodes?:string[]}[];cards:ActivityCard[];segmentCards?:ActivityCard[]}
 export type SegmentStep={id:string;title:string;code:string;activities:ActivityCard[]}
+export function scopedAssistant(data:AssistantData,id:string):AssistantData{return {...data,cards:data.cards.filter(c=>c.establishmentId===id),...(data.segmentCards?{segmentCards:data.segmentCards.filter(c=>c.establishmentId===id)}:{}),...(data.effectiveProfiles?{effectiveProfiles:data.effectiveProfiles.filter(p=>p.establishmentId===id)}:{})}}
 export function segmentSteps(data:AssistantData):SegmentStep[]{
  const groups=new Map<string,SegmentStep>()
  for(const card of data.segmentCards??data.cards){
@@ -15,7 +17,10 @@ export function segmentSteps(data:AssistantData):SegmentStep[]{
  }
  return [...groups.values()].sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'))
 }
-export function assistantSteps(data:AssistantData){return [{id:'company',title:'Empresa'}, {id:'establishments',title:'Estabelecimentos'},...segmentSteps(data),{id:'summary',title:'Resumo'}]}
+export type DimensionStep={id:string;title:string;dimensions:string[]}
+export function dimensionSteps(data:AssistantData):DimensionStep[]{return data.dimensions?profileDimensionGroups.map(g=>({id:'dimension-group:'+g.code,title:g.title,dimensions:g.dimensions})):[]}
+export function dimensionStepComplete(data:AssistantData,step:DimensionStep){return !!choiceFor(data,step.id)||step.dimensions.filter(code=>data.dimensions?.some(d=>d.code===code)).every(code=>!!choiceFor(data,'dimension:'+code))}
+export function assistantSteps(data:AssistantData){return [{id:'company',title:'Dados cadastrais'}, {id:'establishments',title:'Inscrição Estadual'},...segmentSteps(data),...dimensionSteps(data),{id:'summary',title:'Resumo'}]}
 export function choiceFor(data:AssistantData,id:string,unit?:string){return unit?data.state.units[unit]?.cards[id]:data.state.cards[id]}
 export function segmentChoice(data:AssistantData,segment:SegmentStep,unit:string):CardChoice|undefined{
  const direct=choiceFor(data,segment.id,unit);if(direct)return direct
@@ -28,7 +33,7 @@ export function segmentComplete(data:AssistantData,segment:SegmentStep,unit:stri
 }
 export function initialStep(data:AssistantData){
  const steps=assistantSteps(data)
- const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentComplete(data,step,id)):!choiceFor(data,step.id))
+ const index=steps.findIndex(step=>'activities'in step?[...new Set(step.activities.map(a=>a.establishmentId))].some(id=>!segmentComplete(data,step,id)):'dimensions'in step?!dimensionStepComplete(data,step):!choiceFor(data,step.id))
  return index<0?steps.length-1:index
 }
 export async function assistantRequest<T>(apiFetch:ProductApiFetch,tenantId:string,path:string,body?:unknown):Promise<T>{

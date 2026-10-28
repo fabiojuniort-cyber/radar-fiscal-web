@@ -323,6 +323,7 @@ export async function createCompanyFromCnpj(
   tenantId: string,
   cnpj: string,
   businessLocationCode?: string,
+  typeCode = 'HEAD_OFFICE',
 ): Promise<CnpjRegistryResult> {
   const normalizedCnpj = cnpj.replace(/\D/g, '')
   if (!isValidCnpj(normalizedCnpj)) throw new Error('invalid_cnpj')
@@ -336,6 +337,7 @@ export async function createCompanyFromCnpj(
     }),
     body: JSON.stringify({
       cnpj: normalizedCnpj,
+            typeCode,
       businessLocationCode:
         normalizedBusinessLocation ?? undefined,
     }),
@@ -371,6 +373,8 @@ export async function createCompanyFromCnpj(
             businessLocationCode:
               normalizedBusinessLocation ?? undefined,
             ...input,
+            resolveCompanyByRoot:true,
+            typeCode,
           }),
         },
       )
