@@ -686,10 +686,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
     concepts:[...agrex.concepts,...dimensionFixtures.map(([dimensionCode,,code,label])=>({dimensionCode,code,label,ncmCodes:[] as string[]}))],cards:agrex.cards.map(c=>({...c,establishmentId})),
     historicalConcepts:[{code:'product.retired',label:'Produto histórico de teste',dimensionCode:'product'}],
     effectiveProfiles:[{establishmentId,name:'Matriz Goiânia',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:[] as string[],ncmCodes:[] as string[],legacyFields:{} as Record<string,string[]>,cnaeSegments:[],historicalCodes:[] as string[]}]}
-  let profileWrites=0,corrections=0
+  let profileWrites=0,corrections=0,assistantGets=0
   await page.route(`**/api/v1/companies/${companyId}/onboarding?*`,async route=>{
     const id=new URL(route.request().url()).searchParams.get('establishmentId')!
     expect([establishmentId,branchId]).toContain(id)
+    if(route.request().method()==='GET')assistantGets++;
     if(route.request().method()==='PUT'){
       const b=route.request().postDataJSON();expect(b.expectedVersion).toBe(assistantData.version);profileWrites++
       const choice={status:b.status,conceptCodes:b.conceptCodes,ncmCodes:b.ncmCodes}
@@ -732,9 +733,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await expect(grid.getByText(/Avenida Teste/)).toBeVisible()
   await assistant.getByRole('button',{name:'Corrigir algum dado'}).click();await grid.getByLabel('Logradouro').fill('Avenida corrigida');await grid.getByLabel('Inscrição Estadual').fill('109876543');await grid.getByRole('button',{name:'Salvar correção'}).click();await expect(grid.getByText(/Avenida corrigida/)).toBeVisible();expect(corrections).toBe(1);expect(profileWrites).toBe(0)
   await expect(assistant.getByText('109876543',{exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('onb036-03-empresa-ie-unificadas.png'),fullPage:false});
-  const advanceStarted=Date.now();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
+  const getsBeforeAdvance=assistantGets;const advanceStarted=Date.now();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
   await expect(assistant.getByRole('heading',{name:'Agropecuária, pesca e insumos agrícolas: o que você compra, vende ou produz?'})).toBeVisible()
-  const advanceMs=Date.now()-advanceStarted;expect(advanceMs).toBeLessThan(1000);await testInfo.attach('onb036-save-ui-time.json',{body:JSON.stringify({ms:advanceMs,source:'controlled browser API',target:'<1000ms',noRefetch:true}),contentType:'application/json'});
+  const advanceMs=Date.now()-advanceStarted;expect(assistantGets).toBe(getsBeforeAdvance);expect(advanceMs).toBeLessThan(1000);await testInfo.attach('onb036-save-ui-time.json',{body:JSON.stringify({ms:advanceMs,source:'controlled browser API',target:'<1000ms',noRefetch:true}),contentType:'application/json'});
   const writesBefore=profileWrites
   await expect(assistant.getByRole('checkbox',{name:/^Arroz NCM 1006$/})).toBeChecked()
   await assistant.getByRole('checkbox',{name:/^Arroz NCM 1006$/}).scrollIntoViewIfNeeded()
@@ -750,6 +751,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   for(const label of otherSegments){await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible();await assistant.getByRole('button',{name:'Pular',exact:true}).click()}
   for(const group of profileDimensionGroups){
     await expect(assistant.getByRole('heading',{name:group.title,exact:true})).toBeVisible();const before=profileWrites;const cols=(page.viewportSize()?.width??1440)<=640?1:(page.viewportSize()?.width??1440)<=1100?2:3;expect(await assistant.locator('.onb-dimension-section .onb-suggestions').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(cols);await expect(assistant.locator('.onb-dimension-section')).toHaveCount(group.dimensions.length);await assistant.getByRole('heading',{name:group.title,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb036-08-card-'+group.code+'.png'),fullPage:false})
+    if(group.code==='tax_regime'&&(page.viewportSize()?.width??0)===1440){
+      await page.setViewportSize({width:900,height:1100});expect(await assistant.locator('.onb-dimension-section .onb-suggestions').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2);await page.screenshot({path:testInfo.outputPath('onb036-04-tablet-duas-colunas.png'),fullPage:false});await page.setViewportSize({width:1440,height:900});
+    }
     for(const code of group.dimensions){const [,title,,label]=dimensionFixtures.find(([c])=>c===code)!;const section=assistant.getByRole('region',{name:title!,exact:true});await section.getByRole('textbox',{name:'Buscar '+title}).fill(label!);await section.getByRole('checkbox',{name:label!,exact:true}).check();expect(profileWrites).toBe(before);await section.getByRole('heading',{name:title!,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb036-08-grupo-'+group.code+'-secao-'+code+'.png'),fullPage:false})}
     await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await expect.poll(()=>profileWrites).toBe(before+1)
   }
