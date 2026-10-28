@@ -1641,7 +1641,7 @@ export function AuthenticatedProductPanel({
             </div>
             </>}
             {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id+':'+(assistantUnit??'all')} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} initialEstablishmentId={assistantUnit} initialCardId={assistantCard} onComplete={id=>{setAssistantOpen(false);setAssistantCard(undefined);setProfileUnit(id)}} versionChanged={newVersion} animate={assistantAnimate} onClose={()=>{setAssistantOpen(false);setAssistantCard(undefined)}} onSaved={()=>{void queryClient.invalidateQueries({queryKey:['launch','tax-profile']});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>}
-            {profileUnit&&selectedCompany&&tenantId&&establishmentsQuery.data?.find(u=>u.id===profileUnit)&&<OnboardingProfileScreen key={profileUnit+':'+assistantOpen} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} unit={establishmentsQuery.data.find(u=>u.id===profileUnit)!} onBack={()=>setProfileUnit(undefined)} onEdit={card=>{setAssistantUnit(profileUnit);setAssistantCard(card);setAssistantAnimate(false);setAssistantOpen(true)}}/>}
+            {profileUnit&&selectedCompany&&tenantId&&establishmentsQuery.data?.find(u=>u.id===profileUnit)&&<OnboardingProfileScreen key={profileUnit+':'+assistantOpen} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} unit={establishmentsQuery.data.find(u=>u.id===profileUnit)!} types={typesQuery.data??[]} onBack={()=>setProfileUnit(undefined)} onEdit={card=>{setAssistantUnit(profileUnit);setAssistantCard(card);setAssistantAnimate(false);setAssistantOpen(true)}}/>}
             {!profileUnit&&<>
             {!tenantId?<ErrorState title="Conta sem tenant ativo"/>:accountQuery.isPending?<LoadingState/>:accountQuery.isError?<ErrorState/>:<>
               <CompanySection apiFetch={apiFetch} tenantId={tenantId} account={account!} selectedCompanyId={selectedCompany?.id??''}
@@ -1926,6 +1926,7 @@ function registrationAddress(item: Establishment) {
 }
 
 export function DangerConfirmDialog({
+  scope,
   title,
   description,
   confirmLabel,
@@ -1934,6 +1935,7 @@ export function DangerConfirmDialog({
   onCancel,
   onConfirm,
 }: {
+  scope?: string
   title: string
   description: string
   confirmLabel: string
@@ -1954,7 +1956,7 @@ export function DangerConfirmDialog({
         <div>
           <span className="tp-confirm-eyebrow">Confirmação</span>
           <h3 id="tp-confirm-title">{title}</h3>
-          <p>{description}</p>
+          <p>{description}</p>{scope&&<p>{scope}</p>}
         </div>
         {error && <p className="auth-error" role="alert">Não foi possível concluir a exclusão.</p>}
         <div className="tp-confirm-actions">
@@ -2179,6 +2181,7 @@ export function CompanySection({
       {deleteCandidate && (
         <DangerConfirmDialog
           title="Excluir definitivamente?"
+          scope="Serão apagados a empresa, seus perfis e todos os CNPJs da mesma raiz nesta conta, inclusive filiais cadastradas separadamente. Outras raízes e contas serão preservadas."
           description="Excluir definitivamente. Esta ação não pode ser desfeita."
           confirmLabel="Excluir"
           pending={deleteMutation.isPending}
@@ -2362,7 +2365,7 @@ function EstablishmentSection({
         <div>
           <h2>Estabelecimentos</h2>
           <p>
-            Matriz e filiais da empresa ativa. A consulta pelo CNPJ atualiza endereço e CNAEs
+            Matriz e filiais da empresa ativa. A consulta cadastral acontece somente ao adicionar o CNPJ. Endereço e IE podem ser corrigidos manualmente
             e tenta recuperar a Inscrição Estadual quando houver fonte estadual suportada.
           </p>
         </div>
@@ -2463,13 +2466,6 @@ function EstablishmentSection({
                 ) : '—'}
               </span>
               <div className="tp-row-actions">
-                <button
-                  type="button"
-                  disabled={refreshMutation.isPending}
-                  onClick={() => refreshMutation.mutate(item.id)}
-                >
-                  Atualizar cadastro CNPJ e IE
-                </button>
                 <button type="button" onClick={()=>onOpenProfile(item.id)}>Ver perfil tributário</button>
                 <button type="button" onClick={() => beginEdit(item)}>
                   {manualIeActionLabel(item.stateRegistration, item.stateRegistrationLookupStatus)}
@@ -2672,4 +2668,5 @@ function EstablishmentSection({
     </div>
   )
 }
+
 
