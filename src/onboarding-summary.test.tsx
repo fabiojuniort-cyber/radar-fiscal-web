@@ -14,5 +14,6 @@ it('shows effective products and NCMs separately, eight chips per row, expands a
  expect(agro.getByText('1006.30.21',{exact:true})).toBeInTheDocument();expect(within(screen.getByRole('region',{name:'Outros produtos e NCMs salvos'})).getByText('2716')).toBeInTheDocument();expect(screen.getByText('Produto legado')).toBeInTheDocument()
  fireEvent.click(agro.getByRole('button',{name:'Editar Agropecuária'}));expect(onEditCard).toHaveBeenCalledWith('segment:sector.agro')
  fireEvent.click(within(screen.getByRole('region',{name:'Tributo'})).getByRole('button',{name:'Editar Tributo'}));expect(onEditCard).toHaveBeenCalledWith('dimension-group:tax_regime')
+ fireEvent.click(within(screen.getByRole('region',{name:'Regime'})).getByRole('button',{name:'Editar Regime'}));expect(onEditProfile).toHaveBeenCalledWith('unit');
  fireEvent.click(screen.getByRole('button',{name:'Editar escolhas - Unidade teste'}));expect(onEditProfile).toHaveBeenCalledWith('unit');expect(JSON.stringify(data)).toBe(snapshot)
 })
