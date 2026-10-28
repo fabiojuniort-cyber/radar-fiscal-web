@@ -15,7 +15,7 @@ function mount(patch:(body:Record<string,unknown>)=>Promise<Response>,reloadUnit
   if(String(url).endsWith('/establishments'))return Response.json({items:reloadUnits})
   return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)
  })
- render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[head,branch]} onClose={close} onSaved={saved}/>)
+ render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[head,branch]} initialEstablishmentId="branch" initialCardId="establishments" onClose={close} onSaved={saved}/>)
  return {api,close,saved}
 }
 it('saves only the selected unit IE inside the popup, preserving card version and other fields',async()=>{
@@ -58,7 +58,7 @@ it('a conflict keeps the draft until explicit reload of that unit',async()=>{
  expect(input).toHaveValue('456');expect(patch).toHaveBeenCalledTimes(1)
  fireEvent.click(screen.getByRole('button',{name:'Recarregar IE'}))
  await waitFor(()=>expect(input).toHaveValue('999'))
- expect(screen.getByLabelText('Inscrição Estadual — Matriz')).toHaveValue('123')
+ expect(screen.queryByLabelText('Inscrição Estadual — Matriz')).not.toBeInTheDocument()
  expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
 })
 it('saving one IE locks the other unit and card navigation until readback completes',async()=>{
@@ -66,7 +66,7 @@ it('saving one IE locks the other unit and card navigation until readback comple
  mount(()=>new Promise(r=>{resolve=r}))
  const input=await screen.findByLabelText('Inscrição Estadual — Filial')
  fireEvent.change(input,{target:{value:'456'}});fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- expect(screen.getByLabelText('Inscrição Estadual — Matriz')).toBeDisabled()
+ expect(screen.queryByLabelText('Inscrição Estadual — Matriz')).not.toBeInTheDocument()
  expect(screen.getByRole('button',{name:'Fechar assistente'})).toBeDisabled()
  resolve(Response.json({establishmentId:'branch',stateRegistration:'456',stateRegistrationSource:'MANUAL'}))
  await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
@@ -78,7 +78,7 @@ it('late establishment readback initializes IE CAS without overwriting a draft',
  const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PATCH'){patches.push(JSON.parse(String(init.body)));return Response.json({establishmentId:'head',stateRegistration:'456',stateRegistrationSource:'MANUAL'})}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
  const props={apiFetch:api,tenantId:'tenant',companyId:'company',onClose:vi.fn(),onSaved:vi.fn()}
  const view=render(<OnboardingAssistant {...props} units={[]}/>)
- await screen.findByRole('heading',{name:'Confira seus estabelecimentos'})
+ expect(screen.getByRole('status')).toHaveTextContent('Carregando seu perfil')
  view.rerender(<OnboardingAssistant {...props} units={[head]}/>)
  const input=await screen.findByLabelText('Inscrição Estadual — Matriz');expect(input).toHaveValue('123')
  fireEvent.change(input,{target:{value:'456'}})

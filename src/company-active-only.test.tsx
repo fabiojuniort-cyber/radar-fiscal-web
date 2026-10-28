@@ -20,7 +20,7 @@ it('shows support guidance for a legacy company conflict without retrying or del
       selectedCompanyId="" onSelect={vi.fn()} onOpenEstablishments={vi.fn()}
       onOpenProfile={vi.fn()} onChanged={changed} />
   </QueryClientProvider>)
-  fireEvent.change(screen.getByLabelText('CNPJ da matriz'), { target: { value: '11222333000181' } })
+  fireEvent.change(screen.getByLabelText('CNPJ'), { target: { value: '11222333000181' } })
   fireEvent.click(screen.getByRole('button', { name: 'Consultar CNPJ e cadastrar' }))
   expect(await screen.findByText(message)).toBeInTheDocument()
   expect(api.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(1)

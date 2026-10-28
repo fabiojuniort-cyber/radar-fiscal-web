@@ -1,3 +1,5 @@
+import {OnboardingProfileScreen} from './onboarding-profile-screen'
+import type {EstablishmentType} from './product-api'
 import { useBuildVersionGuard, BuildVersionNotice } from './build-version'
 import { OnboardingAssistant } from './onboarding-assistant'
 import {
@@ -515,6 +517,7 @@ export function AuthenticatedProductPanel({
   const [assistantOpen,setAssistantOpen]=useState(false)
   const [assistantAnimate,setAssistantAnimate]=useState(false)
   const [assistantUnit,setAssistantUnit]=useState<string|undefined>()
+  const [profileUnit,setProfileUnit]=useState<string|undefined>(),[assistantCard,setAssistantCard]=useState<string|undefined>()
   const [userMenu, setUserMenu] = useState(false)
   const [tenantMenu, setTenantMenu] = useState(false)
   const [selectedCompanyId, setSelectedCompanyId] =
@@ -559,6 +562,8 @@ export function AuthenticatedProductPanel({
     setSelectedCompanyId('')
     setAssistantOpen(false)
     setAssistantUnit(undefined)
+    setProfileUnit(undefined)
+    setAssistantCard(undefined)
   }, [tenantId])
 
   const sourcesQuery = useQuery({
@@ -1619,7 +1624,7 @@ export function AuthenticatedProductPanel({
 
         {screen === 'empresas' && (
           <>
-            <div className="tp-company-context-head">
+            {!profileUnit&&<><div className="tp-company-context-head">
               <span>
                 Empresa ativa
                 {selectedCompany
@@ -1632,19 +1637,23 @@ export function AuthenticatedProductPanel({
 
             <div className="tp-org-tabs">
               <h2>Empresa e filiais</h2>
-              {selectedCompany&&<button onClick={()=>{setAssistantUnit(undefined);setAssistantAnimate(false);setAssistantOpen(true)}}>Abrir assistente</button>}
+
             </div>
-            {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id+':'+(assistantUnit??'all')} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} initialEstablishmentId={assistantUnit} versionChanged={newVersion} animate={assistantAnimate} onClose={()=>setAssistantOpen(false)} onSaved={()=>{void queryClient.invalidateQueries({queryKey:['launch','tax-profile']});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>}
+            </>}
+            {assistantOpen&&tenantId&&selectedCompany&&<OnboardingAssistant key={selectedCompany.id+':'+(assistantUnit??'all')} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} units={establishmentsQuery.data??[]} initialEstablishmentId={assistantUnit} initialCardId={assistantCard} onComplete={id=>{setAssistantOpen(false);setAssistantCard(undefined);setProfileUnit(id)}} versionChanged={newVersion} animate={assistantAnimate} onClose={()=>{setAssistantOpen(false);setAssistantCard(undefined)}} onSaved={()=>{void queryClient.invalidateQueries({queryKey:['launch','tax-profile']});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>}
+            {profileUnit&&selectedCompany&&tenantId&&establishmentsQuery.data?.find(u=>u.id===profileUnit)&&<OnboardingProfileScreen key={profileUnit+':'+assistantOpen} apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} unit={establishmentsQuery.data.find(u=>u.id===profileUnit)!} onBack={()=>setProfileUnit(undefined)} onEdit={card=>{setAssistantUnit(profileUnit);setAssistantCard(card);setAssistantAnimate(false);setAssistantOpen(true)}}/>}
+            {!profileUnit&&<>
             {!tenantId?<ErrorState title="Conta sem tenant ativo"/>:accountQuery.isPending?<LoadingState/>:accountQuery.isError?<ErrorState/>:<>
               <CompanySection apiFetch={apiFetch} tenantId={tenantId} account={account!} selectedCompanyId={selectedCompany?.id??''}
-                onSelect={setSelectedCompanyId} onOpenEstablishments={()=>document.getElementById('company-units')?.scrollIntoView({behavior:'smooth'})}
-                onOpenProfile={()=>{setAssistantUnit(undefined);setAssistantAnimate(true);setAssistantOpen(true)}}
+                onSelect={id=>{setSelectedCompanyId(id);setProfileUnit(undefined)}} onOpenEstablishments={()=>document.getElementById('company-units')?.scrollIntoView({behavior:'smooth'})}
+                types={typesQuery.data??[]} onOpenProfile={(unitId)=>{setAssistantUnit(unitId);setAssistantCard(undefined);setAssistantAnimate(true);setAssistantOpen(true)}}
                 onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','account',tenantId]});void queryClient.invalidateQueries({queryKey:['launch','establishments']})}}/>
               {!selectedCompany&&selectedCompanyId&&(accountQuery.isFetching?<LoadingState text="Carregando empresa selecionada…"/>:<ErrorState title="Empresa selecionada indisponível"/>)}
               {selectedCompany&&<section id="company-units"><EstablishmentSection apiFetch={apiFetch} tenantId={tenantId} companyId={selectedCompany.id} companyCnpj={selectedCompany.cnpj}
                 items={establishmentsQuery.data??[]} types={typesQuery.data??[]} loading={establishmentsQuery.isPending||typesQuery.isPending} error={establishmentsQuery.isError||typesQuery.isError}
                 onChanged={()=>{void queryClient.invalidateQueries({queryKey:['launch','establishments']});void queryClient.invalidateQueries({queryKey:['launch','account']})}}
-                onOpenProfile={(unitId)=>{setAssistantUnit(unitId);setAssistantAnimate(!unitId);setAssistantOpen(true)}}/></section>}
+                onOpenProfile={(unitId)=>{setProfileUnit(unitId);setAssistantCard(undefined)}}/></section>}
+            </>}
             </>}
           </>
 
@@ -1971,6 +1980,7 @@ export function CompanySection({
   onOpenEstablishments,
   onOpenProfile,
   onChanged,
+  types=[],
 }: {
   apiFetch: ProductApiFetch
   tenantId: string
@@ -1978,10 +1988,12 @@ export function CompanySection({
   selectedCompanyId: string
   onSelect: (companyId: string) => void
   onOpenEstablishments: () => void
-  onOpenProfile: () => void
+  onOpenProfile: (unitId?:string) => void
+  types?:EstablishmentType[]
   onChanged: () => void
 }) {
   const [cnpj, setCnpj] = useState('')
+  const [typeCode,setTypeCode]=useState('HEAD_OFFICE')
   const [businessLocationCode, setBusinessLocationCode] = useState('')
   const [creating, setCreating] = useState(account.companies.length === 0)
   const [editing, setEditing] = useState<AccountCompany | null>(null)
@@ -1990,14 +2002,14 @@ export function CompanySection({
   const [deleteCandidate, setDeleteCandidate] = useState<AccountCompany | null>(null)
   const createMutation = useMutation({
     mutationFn: () =>
-      createCompanyFromCnpj(apiFetch, tenantId, cnpj, businessLocationCode),
+      createCompanyFromCnpj(apiFetch, tenantId, cnpj, businessLocationCode,typeCode),
     onSuccess: (result) => {
       onSelect(result.company.id)
       setCreating(false)
       setCnpj('')
       setBusinessLocationCode('')
       onChanged()
-      onOpenProfile()
+      onOpenProfile(result.establishment.id)
     },
   })
 
@@ -2041,14 +2053,12 @@ export function CompanySection({
         <div>
           <h2>Empresas da conta</h2>
           <p>
-            Informe o CNPJ da matriz e, se desejar, o Local Negócio. O TriFaros consulta
-            o cadastro CNPJ, cria a matriz, registra os CNAEs e consulta a Inscrição Estadual
-            quando a fonte estadual estiver disponível.
+            Informe o CNPJ e o tipo da unidade. Se a raiz já existe nesta conta, ela será cadastrada como filial da empresa correspondente. Uma nova raiz cria uma empresa e sua matriz.
           </p>
         </div>
         {!creating && (
           <button className="btn" type="button" onClick={() => setCreating(true)}>
-            Adicionar empresa
+            Adicionar CNPJ
           </button>
         )}
       </div>
@@ -2062,7 +2072,7 @@ export function CompanySection({
           }}
         >
           <label>
-            CNPJ da matriz
+            CNPJ
             <input
               value={cnpj}
               onChange={(event) => setCnpj(event.target.value)}
@@ -2077,10 +2087,11 @@ export function CompanySection({
             <input
               value={businessLocationCode}
               onChange={(event) => setBusinessLocationCode(event.target.value)}
-              placeholder="Código interno da matriz"
+              placeholder="Código interno da unidade"
               maxLength={80}
             />
           </label>
+          <label>Tipo de estabelecimento<select aria-label="Tipo de estabelecimento" value={typeCode} onChange={e=>setTypeCode(e.target.value)}>{(types.length?types:[{code:'HEAD_OFFICE',name:'Matriz'}]).map(type=><option key={type.code} value={type.code}>{type.name}</option>)}</select></label>
           <button className="btn" type="submit" disabled={createMutation.isPending}>
             {createMutation.isPending ? 'Consultando CNPJ…' : 'Consultar CNPJ e cadastrar'}
           </button>
@@ -2145,9 +2156,6 @@ export function CompanySection({
               )}
               <button type="button" onClick={() => { onSelect(company.id); onOpenEstablishments() }}>
                 Abrir estabelecimentos
-              </button>
-              <button type="button" onClick={() => { onSelect(company.id); onOpenProfile() }}>
-                Abrir assistente da empresa
               </button>
               <button type="button" onClick={() => beginEdit(company)}>
                 <Pencil size={14} /> Editar empresa
@@ -2358,20 +2366,7 @@ function EstablishmentSection({
             e tenta recuperar a Inscrição Estadual quando houver fonte estadual suportada.
           </p>
         </div>
-        {!creating && (
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              setCnpj('')
-              setBusinessLocationCode('')
-              setTypeCode('OTHER')
-              setCreating(true)
-            }}
-          >
-            Adicionar estabelecimento
-          </button>
-        )}
+
       </div>
 
       {creating && (
@@ -2475,7 +2470,7 @@ function EstablishmentSection({
                 >
                   Atualizar cadastro CNPJ e IE
                 </button>
-                <button type="button" onClick={()=>onOpenProfile(item.id)}>Editar perfil desta unidade</button>
+                <button type="button" onClick={()=>onOpenProfile(item.id)}>Ver perfil tributário</button>
                 <button type="button" onClick={() => beginEdit(item)}>
                   {manualIeActionLabel(item.stateRegistration, item.stateRegistrationLookupStatus)}
                 </button>

@@ -6,10 +6,12 @@ export function nextOnboardingPhrase(pool: string[], random = () => {
   return values[0]! / 0x100000000
 }) {
   const unique = [...new Set(pool.filter(Boolean))]
+  try { previousPhrase = sessionStorage.getItem('trifaros.onboarding.last-phrase') ?? previousPhrase } catch { /* Storage may be disabled. */ }
   const candidates = unique.filter(value => value !== previousPhrase)
   const available = candidates.length ? candidates : unique
   if (!available.length) return 'Preparando seu perfil…'
   const phrase = available[Math.min(available.length - 1, Math.floor(random() * available.length))]!
   previousPhrase = phrase
+  try { sessionStorage.setItem('trifaros.onboarding.last-phrase', phrase) } catch { /* In-memory protection remains available. */ }
   return phrase
 }
