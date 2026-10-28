@@ -707,7 +707,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   })
   await page.route(`**/api/v1/companies/${companyId}/establishments/${establishmentId}/onboarding-data`,async route=>{
     corrections++;const b=route.request().postDataJSON();correctionAddress=b.values.street;expect(b.expected.street).toBe('Avenida Teste');expect(b.expected.stateRegistration).toBe(currentIe);currentIe=b.values.stateRegistration;expect(b.values.street).toBe('Avenida corrigida');
-    await route.fulfill({json:{establishmentId,...b.values}})
+    await route.fulfill({json:{establishmentId,...b.values,stateRegistrationSource:'MANUAL'}})
   })
   await page.getByLabel('CNPJ',{exact:true}).fill('10515785000199')
   await page.getByLabel('Local Negócio').first().fill('MATRIZ-01')
@@ -733,7 +733,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await grid.getByRole('button',{name:'Cancelar correção'}).click();expect(corrections).toBe(0)
   await expect(grid.getByText(/Avenida Teste/)).toBeVisible()
   await assistant.getByRole('button',{name:'Corrigir algum dado'}).click();await grid.getByLabel('Logradouro').fill('Avenida corrigida');await grid.getByLabel('Inscrição Estadual').fill('109876543');await grid.getByRole('button',{name:'Salvar correção'}).click();await expect(grid.getByText(/Avenida corrigida/)).toBeVisible();expect(corrections).toBe(1);expect(profileWrites).toBe(0)
-  await expect(assistant.getByText('109876543',{exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('onb036-03-empresa-ie-unificadas.png'),fullPage:false});
+  await expect(assistant.getByText('109876543',{exact:true})).toBeVisible();await expect(assistant.getByText('Informada manualmente',{exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('onb036-03-empresa-ie-unificadas.png'),fullPage:false});
   const getsBeforeAdvance=assistantGets;const advanceStarted=Date.now();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
   await expect(assistant.getByRole('heading',{name:'Agropecuária, pesca e insumos agrícolas: o que você compra, vende ou produz?'})).toBeVisible()
   const advanceMs=Date.now()-advanceStarted;expect(assistantGets).toBe(getsBeforeAdvance);expect(advanceMs).toBeLessThan(1000);await testInfo.attach('onb036-save-ui-time.json',{body:JSON.stringify({ms:advanceMs,source:'controlled browser API',target:'<1000ms',noRefetch:true}),contentType:'application/json'});
