@@ -40,7 +40,7 @@ describe('ONB-02 R9 permanent company deletion', () => {
     const api = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }))
     await deleteCompany(api, 'synthetic-tenant', 'synthetic-company')
     const headers = new Headers(api.mock.calls[0]?.[1]?.headers)
-    expect(headers.get('X-Company-Delete-Intent')).toBe('permanent-v1')
+    expect(headers.get('X-Company-Delete-Intent')).toBe('permanent-root-v1')
     expect(headers.get('X-Tenant-Id')).toBe('synthetic-tenant')
     expect(api.mock.calls[0]?.[1]?.body).toBeUndefined()
   })
@@ -72,7 +72,8 @@ describe('ONB-02 R9 permanent company deletion', () => {
     expect(api).toHaveBeenCalledTimes(1)
     expect(api.mock.calls[0]?.[0]).toBe('/api/v1/companies/synthetic-company')
     expect(api.mock.calls[0]?.[1]?.method).toBe('DELETE')
-    expect(new Headers(api.mock.calls[0]?.[1]?.headers).get('X-Company-Delete-Intent')).toBe('permanent-v1')
+    expect(new Headers(api.mock.calls[0]?.[1]?.headers).get('X-Company-Delete-Intent')).toBe('permanent-root-v1')
     expect(api.mock.calls.some(([url]) => String(url).includes('company-audit-history'))).toBe(false)
   })
 })
+

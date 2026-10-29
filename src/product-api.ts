@@ -414,7 +414,7 @@ export async function deleteCompany(
 ): Promise<void> {
   const response = await apiFetch('/api/v1/companies/' + companyId, {
     method: 'DELETE',
-    headers: tenantHeaders(tenantId, { 'X-Company-Delete-Intent': 'permanent-v1' }),
+    headers: tenantHeaders(tenantId, { 'X-Company-Delete-Intent': 'permanent-root-v1' }),
   })
 
   if (!response.ok) {
@@ -909,3 +909,4 @@ export async function fetchPublicationAffinity(
 
   return requireJson<PublicationAffinity>(response)
 }
+

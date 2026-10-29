@@ -38,3 +38,13 @@ export function segmentSnapshot(data:AssistantData,step:SegmentStep,id:string):C
  if(!effective.conceptCodes.some(c=>targets.has(c))&&!effective.ncmCodes.some(c=>targets.has(c)))return undefined
  return {status:'CONFIRMED',conceptCodes:effective.conceptCodes.filter(c=>targets.has(c)),ncmCodes:effective.ncmCodes.filter(c=>targets.has(c))}
 }
+
+
+/** Pure suggestion audit: exclude saved/manual selections and every other unit. */
+export function suggestionCounts(data:AssistantData,step:SegmentStep,id:string){
+ const cards=step.activities.filter(a=>a.establishmentId===id)
+ const products=unique(cards.flatMap(c=>c.suggestions.filter(s=>s.kind==='PRODUCT').map(s=>s.target)))
+ const linkedNcms=unique(data.concepts.filter(c=>products.includes(c.code)).flatMap(c=>c.ncmCodes??[]))
+ const independentNcms=unique(cards.flatMap(c=>c.suggestions.filter(s=>s.kind==='NCM').map(s=>s.target))).filter(n=>!linkedNcms.includes(n))
+ return {cnaes:new Set(cards.map(c=>c.cnaeCode)).size,products:products.length,ncms:unique([...linkedNcms,...independentNcms]).length,linkedNcms:linkedNcms.length,independentNcms:independentNcms.length}
+}

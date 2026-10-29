@@ -1,90 +1,32 @@
 import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react'
 import {afterEach,expect,it,vi} from 'vitest'
 import {OnboardingAssistant} from './onboarding-assistant'
+import {correctionValues} from './onboarding-company-data'
 import type {AssistantData} from './onboarding-assistant-api'
 import type {Establishment} from './product-api'
 afterEach(cleanup)
-const branch={id:'branch',companyId:'company',name:'Filial',uf:'GO',stateRegistration:null,stateRegistrationSource:null} as Establishment
-const head={...branch,id:'head',name:'Matriz',stateRegistration:'123'} as Establishment
-const fixture=():AssistantData=>({version:7,release:{id:'release-19',version:'v1.9.0'},companyName:'Synthetic',
- state:{completed:false,cards:{company:{status:'CONFIRMED',conceptCodes:[],ncmCodes:[]}},units:{}},cards:[],concepts:[]})
-function mount(patch:(body:Record<string,unknown>)=>Promise<Response>,reloadUnits=[head,branch]){
- const data=fixture(),close=vi.fn(),saved=vi.fn()
- const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{
-  if(init?.method==='PATCH')return patch(JSON.parse(String(init.body)))
-  if(String(url).endsWith('/establishments'))return Response.json({items:reloadUnits})
-  return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)
- })
- render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[head,branch]} initialEstablishmentId="branch" initialCardId="establishments" onClose={close} onSaved={saved}/>)
- return {api,close,saved}
+const unit={id:'branch',companyId:'company',name:'Filial',cnpj:'10515785000270',cnaes:[],uf:'GO',stateRegistration:null,stateRegistrationSource:null,businessLocationCode:null,street:null,streetNumber:null,district:null,complement:null,municipalityName:null,municipalityIbgeCode:null,postalCode:null} as unknown as Establishment
+function mount(patch:(body:Record<string,unknown>)=>Promise<Response>){
+ const data:AssistantData={version:7,release:{id:'release',version:'v1.9'},companyName:'Synthetic',state:{completed:false,cards:{},units:{}},cards:[],concepts:[]}
+ const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>init?.method==='PATCH'?patch(JSON.parse(String(init.body))):Response.json(String(url).endsWith('/phrases')?{items:[]}:data))
+ const close=vi.fn();render(<OnboardingAssistant apiFetch={api} tenantId="tenant" companyId="company" units={[unit]} initialEstablishmentId="branch" initialCardId="establishments" onClose={close} onSaved={vi.fn()}/>);return {api,close}
 }
-it('saves only the selected unit IE inside the popup, preserving card version and other fields',async()=>{
- const patch=vi.fn(async()=>Response.json({establishmentId:'branch',stateRegistration:'456',stateRegistrationSource:'MANUAL'}))
- const {api,close,saved}=mount(patch)
- const input=await screen.findByLabelText('Inscrição Estadual — Filial')
- fireEvent.change(input,{target:{value:' 456 '}})
- expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
- expect(screen.queryByRole('button',{name:'Salvar IE'})).not.toBeInTheDocument()
- fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
- expect(patch).toHaveBeenCalledWith({expectedStateRegistration:null,stateRegistration:'456'})
- expect(screen.getByRole('dialog')).toBeInTheDocument();expect(close).not.toHaveBeenCalled()
- expect(saved).toHaveBeenCalledTimes(2)
- const call=api.mock.calls.find(([,init])=>init?.method==='PATCH')!
- expect(call[0]).toBe('/api/v1/companies/company/establishments/branch/state-registration')
- expect(call[1]?.headers).toMatchObject({'X-Tenant-Id':'tenant'})
- expect(JSON.parse(String(call[1]?.body))).toEqual({expectedStateRegistration:null,stateRegistration:'456'})
- expect(api.mock.calls.filter(([,init])=>init?.method==='PUT')).toHaveLength(1)
- expect(screen.getByRole('button',{name:'Concluir perfil'})).toBeEnabled()
+it('unifies IE in card one and atomically saves registration + IE with a displayed baseline',async()=>{
+ const patch=vi.fn(async body=>Response.json({establishmentId:'branch',...body.values,stateRegistrationSource:'MANUAL'}));const {api}=mount(patch)
+ await screen.findByRole('heading',{name:'Estes são os dados da sua unidade?'})
+ expect(screen.queryByText('Confira seus estabelecimentos')).not.toBeInTheDocument();expect(screen.getByText('Inscrição Estadual')).toBeInTheDocument()
+ fireEvent.click(screen.getByRole('button',{name:'Corrigir algum dado'}));fireEvent.change(screen.getByLabelText('Inscrição Estadual'),{target:{value:'456'}});fireEvent.change(screen.getByLabelText('Logradouro'),{target:{value:'Rua nova'}})
+ expect(api.mock.calls.filter(([,i])=>i?.method==='PATCH')).toHaveLength(0)
+ fireEvent.click(screen.getByRole('button',{name:'Salvar correção'}));await waitFor(()=>expect(screen.queryByLabelText('Inscrição Estadual')).not.toBeInTheDocument())
+ expect(patch).toHaveBeenCalledWith({expected:correctionValues(unit,'Synthetic'),values:{...correctionValues(unit,'Synthetic'),stateRegistration:'456',street:'Rua nova'}})
+ expect(api.mock.calls.find(([,i])=>i?.method==='PATCH')?.[0]).toContain('/branch/onboarding-data')
+ expect(screen.getByText('456')).toBeInTheDocument();expect(screen.queryByRole('button',{name:'Salvar IE'})).not.toBeInTheDocument()
 })
-it('retains failed edits, prevents navigation and does not retry or close automatically',async()=>{
- const patch=vi.fn(async()=>Response.json({error:'unavailable'},{status:503}))
- const {close}=mount(patch)
- const input=await screen.findByLabelText('Inscrição Estadual — Filial')
- fireEvent.change(input,{target:{value:'456'}})
- fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- await screen.findByRole('alert')
- expect(input).toHaveValue('456');expect(patch).toHaveBeenCalledTimes(1)
- expect(screen.getByRole('button',{name:'Pular'})).toBeDisabled();expect(close).not.toHaveBeenCalled()
- fireEvent.click(screen.getByRole('button',{name:'Descartar edição da IE'}))
- expect(input).toHaveValue('');expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
+it('retains all fields on a CAS conflict and never retries the mutation',async()=>{
+ const patch=vi.fn(async()=>Response.json({error:'registration_data_conflict'},{status:409}));mount(patch)
+ fireEvent.click(await screen.findByRole('button',{name:'Corrigir algum dado'}));fireEvent.change(screen.getByLabelText('Inscrição Estadual'),{target:{value:'456'}});fireEvent.click(screen.getByRole('button',{name:'Salvar correção'}))
+ expect(await screen.findByRole('alert')).toHaveTextContent('Os dados mudaram');expect(screen.getByLabelText('Inscrição Estadual')).toHaveValue('456');expect(patch).toHaveBeenCalledTimes(1);expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeDisabled()
 })
-it('a conflict keeps the draft until explicit reload of that unit',async()=>{
- const patch=vi.fn(async()=>Response.json({error:'state_registration_conflict'},{status:409}))
- mount(patch,[head,{...branch,stateRegistration:'999'}])
- const input=await screen.findByLabelText('Inscrição Estadual — Filial')
- fireEvent.change(input,{target:{value:'456'}});fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- expect(await screen.findByRole('alert')).toHaveTextContent('A IE mudou em outra tela')
- expect(input).toHaveValue('456');expect(patch).toHaveBeenCalledTimes(1)
- fireEvent.click(screen.getByRole('button',{name:'Recarregar IE'}))
- await waitFor(()=>expect(input).toHaveValue('999'))
- expect(screen.queryByLabelText('Inscrição Estadual — Matriz')).not.toBeInTheDocument()
- expect(screen.getByRole('button',{name:'Salvar e continuar'})).toBeEnabled()
-})
-it('saving one IE locks the other unit and card navigation until readback completes',async()=>{
- let resolve!:(value:Response)=>void
- mount(()=>new Promise(r=>{resolve=r}))
- const input=await screen.findByLabelText('Inscrição Estadual — Filial')
- fireEvent.change(input,{target:{value:'456'}});fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- expect(screen.queryByLabelText('Inscrição Estadual — Matriz')).not.toBeInTheDocument()
- expect(screen.getByRole('button',{name:'Fechar assistente'})).toBeDisabled()
- resolve(Response.json({establishmentId:'branch',stateRegistration:'456',stateRegistrationSource:'MANUAL'}))
- await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
- expect(screen.getByRole('button',{name:'Concluir perfil'})).toBeEnabled()
-})
-
-it('late establishment readback initializes IE CAS without overwriting a draft',async()=>{
- const data=fixture(),patches:unknown[]=[]
- const api=vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{if(init?.method==='PATCH'){patches.push(JSON.parse(String(init.body)));return Response.json({establishmentId:'head',stateRegistration:'456',stateRegistrationSource:'MANUAL'})}return Response.json(String(url).endsWith('/phrases')?{items:[]}:data)})
- const props={apiFetch:api,tenantId:'tenant',companyId:'company',onClose:vi.fn(),onSaved:vi.fn()}
- const view=render(<OnboardingAssistant {...props} units={[]}/>)
- expect(screen.getByRole('status')).toHaveTextContent('Carregando seu perfil')
- view.rerender(<OnboardingAssistant {...props} units={[head]}/>)
- const input=await screen.findByLabelText('Inscrição Estadual — Matriz');expect(input).toHaveValue('123')
- fireEvent.change(input,{target:{value:'456'}})
- view.rerender(<OnboardingAssistant {...props} units={[{...head,name:'Matriz'}]}/>)
- expect(input).toHaveValue('456')
- fireEvent.click(screen.getByRole('button',{name:'Salvar e continuar'}))
- await screen.findByRole('heading',{name:'Tudo pronto! Confira seu perfil'})
- expect(patches).toEqual([{expectedStateRegistration:'123',stateRegistration:'456'}])
+it('cancel correction never persists IE or address',async()=>{
+ const patch=vi.fn();mount(patch);fireEvent.click(await screen.findByRole('button',{name:'Corrigir algum dado'}));fireEvent.change(screen.getByLabelText('Inscrição Estadual'),{target:{value:'456'}});fireEvent.click(screen.getByRole('button',{name:'Cancelar correção'}));expect(patch).not.toHaveBeenCalled();expect(screen.getByText('Não informada')).toBeInTheDocument()
 })
