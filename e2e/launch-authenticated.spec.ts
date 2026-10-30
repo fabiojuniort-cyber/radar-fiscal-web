@@ -686,10 +686,11 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const groupCode=(dimensionCode:string|undefined,code:string|undefined)=>dimensionCode==='tax'&&code==='tax.irpj'?'tax.income':dimensionCode+'.primary';
   taxonomyGroups.push({dimensionCode:'tax',code:'tax.income',label:'Renda e lucro',displayOrder:2});
   extraDimensionOptions.push(['tax','tax.irpj','IRPJ']);
+  const homonyms=agrex.concepts.filter(c=>c.dimensionCode==='product').slice(-2).map(c=>c.code);
   const assistantData={version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'AGREX - ambiente de teste',companyCnpj:agrex.provenance.cnpj,
     state:{completed:false,cards:{} as Record<string,unknown>,units:{} as Record<string,{cards:Record<string,unknown>}>},
     taxonomyGroups,dimensions:dimensionFixtures.map(([code,name])=>({code,name})),
-    concepts:[...agrex.concepts,...dimensionFixtures.map(([dimensionCode,,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]})),...extraDimensionOptions.map(([dimensionCode,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]}))],cards:agrex.cards.map(c=>({...c,establishmentId})),
+    concepts:[...agrex.concepts.map(c=>homonyms.includes(c.code)?{...c,label:'Produto de mesmo nome'}:c),...dimensionFixtures.map(([dimensionCode,,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]})),...extraDimensionOptions.map(([dimensionCode,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]}))],cards:agrex.cards.map(c=>({...c,establishmentId})),
     historicalConcepts:[{code:'product.retired',label:'Produto histórico de teste',dimensionCode:'product'}],
     effectiveProfiles:[{establishmentId,name:'Matriz Goiânia',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:[] as string[],ncmCodes:[] as string[],legacyFields:{} as Record<string,string[]>,cnaeSegments:[],historicalCodes:[] as string[]}]}
   let profileWrites=0,corrections=0,assistantGets=0
@@ -782,6 +783,9 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-blocos.png')});
   await agroSummary.getByRole('group',{name:'Produtos',exact:true}).getByRole('button',{name:/ver todos/}).click();
   await expect(agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip')).toHaveCount(33);
+  const sameNameChips=agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip').filter({hasText:'Produto de mesmo nome'});
+  await expect(sameNameChips).toHaveCount(2);expect(await sameNameChips.evaluateAll(chips=>new Set(chips.map(c=>c.getAttribute('data-code'))).size)).toBe(2);
+  await sameNameChips.first().scrollIntoViewIfNeeded();await assistant.screenshot({path:testInfo.outputPath('onb038-resumo-produtos-homonimos.png')});
   expect(await agroSummary.locator('.onb-summary-chip-row').evaluateAll(rows=>rows.every(row=>row.children.length<=8))).toBe(true);
   await assistant.locator('.onb-body').evaluate(el=>{el.scrollTop=0});
   await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-produtos-expandidos.png')});
