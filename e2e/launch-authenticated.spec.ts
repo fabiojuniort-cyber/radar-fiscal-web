@@ -681,10 +681,14 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.route('**/api/v1/onboarding/phrases',route=>route.fulfill({json:{items:[{segment:'agro',phrases:['Contando os grãos da safra.','Conferindo se o trator tem NCM.','Regando o perfil tributário.']},{segment:'generico',phrases:['Conferindo as escolhas.','Preparando seu perfil.','Organizando as atividades.']}]}}))
   const dimensionFixtures=[['tax','Tributo','tax.icms','ICMS'],['regime','Regime','regime.lucro_real','Lucro real'],['operation','Operação','operation.venda','Venda'],['operation_purpose','Finalidade','operation_purpose.revenda','Revenda'],['document','Documento','document.nfe','NF-e'],['obligation','Obrigação','obligation.efd','EFD'],['actuacao','Atuação','actuacao.transportador','Transportador'],['subject','Sujeito','subject.contribuinte','Contribuinte'],['theme','Tema','theme.credito','Crédito tributário']]
   const extraDimensionOptions=[['tax','tax.ipi','IPI'],['tax','tax.pis','PIS'],['regime','regime.lucro_presumido','Lucro presumido'],['regime','regime.simples_nacional','Simples Nacional'],['operation','operation.compra','Compra'],['operation','operation.importacao','Importação'],['operation_purpose','operation_purpose.consumo','Consumo'],['operation_purpose','operation_purpose.industrializacao','Industrialização'],['document','document.cte','CT-e'],['document','document.nfse','NFS-e'],['obligation','obligation.sped','SPED'],['obligation','obligation.dctf','DCTF'],['actuacao','actuacao.industrial','Industrial'],['actuacao','actuacao.comerciante','Comerciante'],['subject','subject.pessoa_juridica','Pessoa jurídica'],['subject','subject.responsavel','Responsável tributário'],['theme','theme.isencao','Isenção'],['theme','theme.diferimento','Diferimento']]
+  const taxonomyGroups=dimensionFixtures.map(([dimensionCode])=>({dimensionCode,code:dimensionCode+'.primary',label:dimensionCode==='tax'?'Tributos sobre consumo':dimensionCode==='obligation'?'SPED':'Grupo publicado de '+dimensionCode,displayOrder:1}));
+  const groupCode=(dimensionCode:string|undefined,code:string|undefined)=>dimensionCode==='tax'&&code==='tax.irpj'?'tax.income':dimensionCode+'.primary';
+  taxonomyGroups.push({dimensionCode:'tax',code:'tax.income',label:'Renda e lucro',displayOrder:2});
+  extraDimensionOptions.push(['tax','tax.irpj','IRPJ']);
   const assistantData={version:0,release:{id:releaseId,version:'v1.9.0'},companyName:'AGREX - ambiente de teste',companyCnpj:agrex.provenance.cnpj,
     state:{completed:false,cards:{} as Record<string,unknown>,units:{} as Record<string,{cards:Record<string,unknown>}>},
-    dimensions:dimensionFixtures.map(([code,name])=>({code,name})),
-    concepts:[...agrex.concepts,...dimensionFixtures.map(([dimensionCode,,code,label])=>({dimensionCode,code,label,ncmCodes:[] as string[]})),...extraDimensionOptions.map(([dimensionCode,code,label])=>({dimensionCode,code,label,ncmCodes:[] as string[]}))],cards:agrex.cards.map(c=>({...c,establishmentId})),
+    taxonomyGroups,dimensions:dimensionFixtures.map(([code,name])=>({code,name})),
+    concepts:[...agrex.concepts,...dimensionFixtures.map(([dimensionCode,,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]})),...extraDimensionOptions.map(([dimensionCode,code,label])=>({dimensionCode,code,label,groupCode:groupCode(dimensionCode,code),ncmCodes:[] as string[]}))],cards:agrex.cards.map(c=>({...c,establishmentId})),
     historicalConcepts:[{code:'product.retired',label:'Produto histórico de teste',dimensionCode:'product'}],
     effectiveProfiles:[{establishmentId,name:'Matriz Goiânia',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:[] as string[],ncmCodes:[] as string[],legacyFields:{} as Record<string,string[]>,cnaeSegments:[],historicalCodes:[] as string[]}]}
   let profileWrites=0,corrections=0,assistantGets=0
@@ -751,13 +755,32 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   const otherSegments=[...new Set(agrex.cards.map(c=>c.segmentLabel))].filter(label=>label!=='Agropecuária, pesca e insumos agrícolas').sort((a,b)=>a.localeCompare(b,'pt-BR'))
   for(const label of otherSegments){await expect(assistant.getByRole('heading',{name:label+': o que você compra, vende ou produz?'})).toBeVisible();await assistant.getByRole('button',{name:'Pular',exact:true}).click()}
   for(const group of profileDimensionGroups){
-    await expect(assistant.getByRole('heading',{name:group.title,exact:true})).toBeVisible();const before=profileWrites;const cols=(page.viewportSize()?.width??1440)<=640?1:(page.viewportSize()?.width??1440)<=1100?2:3;expect(await assistant.locator('.onb-dimension-section .onb-suggestions').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(cols);await expect(assistant.locator('.onb-dimension-section')).toHaveCount(group.dimensions.length);await assistant.getByRole('heading',{name:group.title,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb036-08-card-'+group.code+'.png'),fullPage:false})
+    await expect(assistant.getByRole('heading',{name:group.title,exact:true})).toBeVisible();
+    await assistant.screenshot({path:testInfo.outputPath('onb037-grupos-'+group.code+'.png')});
+    if(group.code==='tax_regime'){const tax=assistant.getByRole('region',{name:'Tributo',exact:true});const consume=tax.getByRole('button',{name:/Tributos sobre consumo/});await consume.click();await expect(consume).toHaveAttribute('aria-expanded','false');await expect(tax.getByRole('checkbox',{name:'ICMS',exact:true})).toHaveCount(0);await tax.getByRole('textbox').fill('ICMS');await expect(tax.getByRole('checkbox',{name:'ICMS',exact:true})).toBeVisible();await assistant.screenshot({path:testInfo.outputPath('onb037-busca-grupo-recolhido.png')});await tax.getByRole('textbox').fill('');await consume.click();}
+    const before=profileWrites;const cols=(page.viewportSize()?.width??1440)<=640?1:(page.viewportSize()?.width??1440)<=1100?2:3;expect(await assistant.locator('.onb-dimension-section .onb-suggestions').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(cols);await expect(assistant.locator('.onb-dimension-section')).toHaveCount(group.dimensions.length);await assistant.getByRole('heading',{name:group.title,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb036-08-card-'+group.code+'.png'),fullPage:false})
     if(group.code==='tax_regime'&&(page.viewportSize()?.width??0)===1440){
       await page.setViewportSize({width:900,height:1100});expect(await assistant.locator('.onb-dimension-section .onb-suggestions').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2);await page.screenshot({path:testInfo.outputPath('onb036-04-tablet-duas-colunas.png'),fullPage:false});await page.setViewportSize({width:1440,height:900});
     }
     for(const code of group.dimensions){const [,title,,label]=dimensionFixtures.find(([c])=>c===code)!;const section=assistant.getByRole('region',{name:title!,exact:true});await section.getByRole('textbox',{name:'Buscar '+title}).fill(label!);await section.getByRole('checkbox',{name:label!,exact:true}).check();expect(profileWrites).toBe(before);await section.getByRole('heading',{name:title!,exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('onb036-08-grupo-'+group.code+'-secao-'+code+'.png'),fullPage:false})}
     await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await expect.poll(()=>profileWrites).toBe(before+1)
   }
+  await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible();
+  expect(new Set(agrex.cards.map(c=>c.cnaeCode)).size).toBe(35);
+  const agroSummary=assistant.getByRole('region',{name:'Agropecuária, pesca e insumos agrícolas',exact:true});
+  await expect(agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip')).toHaveCount(8);
+  expect(await assistant.locator('.onb-body').evaluate(el=>el.scrollTop)).toBe(0);
+  await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-blocos.png')});
+  await agroSummary.getByRole('group',{name:'Produtos',exact:true}).getByRole('button',{name:/ver todos/}).click();
+  await expect(agroSummary.getByRole('group',{name:'Produtos',exact:true}).locator('.onb-profile-chip')).toHaveCount(33);
+  expect(await agroSummary.locator('.onb-summary-chip-row').evaluateAll(rows=>rows.every(row=>row.children.length<=8))).toBe(true);
+  await assistant.locator('.onb-body').evaluate(el=>{el.scrollTop=0});
+  await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-produtos-expandidos.png')});
+  await agroSummary.getByRole('group',{name:'NCMs',exact:true}).getByRole('button',{name:/ver todos/}).click();
+  await agroSummary.getByRole('group',{name:'NCMs',exact:true}).getByRole('heading').scrollIntoViewIfNeeded();
+  await assistant.screenshot({path:testInfo.outputPath('onb037-resumo-ncms-expandidos.png')});
+  await assistant.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributos e regime',exact:true})).toBeVisible();
+  await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
   await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible()
   await assistant.getByRole('button',{name:'Concluir perfil'}).click();await expect(assistant).toHaveCount(0)
   const profilePage=page.locator('.onb-profile-page');await expect(profilePage.getByRole('heading',{name:'Perfil tributário',exact:true})).toBeVisible();await expect(page.locator('.tp-company-management')).toHaveCount(0);await expect(page.locator('.tp-establishment-management')).toHaveCount(0)
@@ -871,5 +894,6 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
 })
+
 
 
