@@ -36,6 +36,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Link } from 'react-router-dom'
 
 import { BrandMark } from './brand-mark'
+import { anatomyConfigEnabled } from './anatomy-config-flag'
 import { manualIeActionLabel, manualIeHelperText } from './t06-ie-manual'
 import type { PanelIdentity } from './panel-experience'
 import { NewsSection as LiveNewsSection } from './news-section'
@@ -987,6 +988,12 @@ export function AuthenticatedProductPanel({
                         <ShieldCheck size={16} />
                         Filtro de Coleta
                       </Link>
+                      {anatomyConfigEnabled() && (
+                        <Link to="/admin/anatomia" className="tp-user-admin-link">
+                          <ShieldCheck size={16} />
+                          Anatomia dos atos
+                        </Link>
+                      )}
                     </>
                   )}
                   <button type="button" onClick={() => void onExit()}>
