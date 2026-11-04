@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, History, ListChecks, Play, RotateCcw, Save, Undo2, Wand2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -9,6 +9,7 @@ import {
 } from './anatomy-config-api'
 import type { ProductApiFetch } from './product-api'
 import './anatomy-config.css'
+import { AnatomyBreadcrumb, AnatomyTree } from './anatomy-tree'
 
 /**
  * ANAT-CONFIG-01 (tribusca-control#116): accessible anatomy configuration. The administrator sees the act and its
@@ -27,6 +28,12 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
   const base = useQuery({ queryKey: ['anat-config-analysis', overview.data?.current.version], queryFn: () => api.analysis({}), enabled: !!overview.data })
   const [sampleId, setSampleId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  // ANAT-NAV-01: bring the selected passage into view in the text column.
+  useEffect(() => {
+    if (!selected) return
+    const el = document.querySelector<HTMLElement>(`[data-passage="${CSS.escape(selected)}"]`)
+    el?.scrollIntoView?.({ block: 'nearest' })
+  }, [selected])
   const [tab, setTab] = useState<Tab>('trecho')
   const [changes, setChanges] = useState<Change[]>([])
   const [corrections, setCorrections] = useState<CorrectionInput[] | null>(null) // null = unchanged from the version in force
@@ -128,28 +135,20 @@ export function AnatomyConfigPage({ apiFetch }: { apiFetch: ProductApiFetch }) {
       </div>
 
       <div className="ac-grid">
-        <nav className="ac-tree" aria-label="Estrutura do ato">
+        <nav className="ac-tree" aria-label="Navegação pela estrutura">
           <h2>Estrutura</h2>
           {!described && <p className="ac-muted">{base.isError ? (base.error as AnatomyConfigError).message : 'Analisando os exemplos…'}</p>}
-          <ul>
-            {described?.passages.map((p) => (
-              <li key={p.key} style={{ paddingLeft: `${p.depth * 12}px` }}>
-                <button type="button" aria-current={p.key === selected} aria-label={`${p.structure}: ${p.effectiveNatureLabel}`} onClick={() => { setSelected(p.key); setTab('trecho') }}>
-                  <span className={`ac-dot k-${p.effectiveNature}`} aria-hidden="true" />
-                  <span className="ac-tree-label">{p.structure}{p.type !== 'unidentified' && p.label && p.label.length < 28 ? ` · ${p.label}` : ''}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {described && <AnatomyTree passages={described.passages} selected={selected} onSelect={(k) => { setSelected(k); setTab('trecho') }} />}
         </nav>
 
         <article className="ac-doc" aria-label="Texto do ato">
           {activeSummary && <DocumentAnalysis key={activeSummary.id} api={api} sampleId={activeSummary.id} documentId={activeSummary.documentId} version={ov.current.version} />}
+          {described && <AnatomyBreadcrumb passages={described.passages} selected={selected} onSelect={(k) => { setSelected(k); setTab('trecho') }} />}
           {sa && <div className="ac-doc-head">{sa.title} · {ov.sources[sa.source] ?? sa.source} · resultado {described?.statusLabel.toLowerCase()}{tested && showAfter ? ' · mostrando a proposta' : ''}</div>}
           {described?.passages.map((p) => {
             const ch = changedKeys.get(p.key)
             return (
-              <button type="button" key={p.key} data-k={p.effectiveNature} className={`ac-seg${p.correction ? ' corr' : ''}${p.key === selected ? ' sel' : ''}${ch && showAfter ? ' chg' : ''}`}
+              <button type="button" key={p.key} data-k={p.effectiveNature} data-passage={p.key} className={`ac-seg${p.correction ? ' corr' : ''}${p.key === selected ? ' sel' : ''}${ch && showAfter ? ' chg' : ''}`}
                 style={{ marginLeft: `${Math.min(p.depth, 3) * 18}px` }} onClick={() => { setSelected(p.key); setTab('trecho') }}
                 aria-label={`${p.structure}: ${p.effectiveNatureLabel}`}>
                 {ch && showAfter && <span className="ac-was">antes: {ch.fromLabel}</span>}
