@@ -1,0 +1,22 @@
+# F2-D01 / #123 — identidade do Perfil legado
+
+Aprovado expressamente pelo Fábio em 04/11/2026. Registro da instrução: tribusca-control#123, comentário 6630980325; controle da Frente 2: #124.
+
+## AS IS e TO BE
+
+Antes, a tela transformava códigos em rótulos e deduplicava os rótulos. Dois produtos de códigos distintos com o mesmo nome viravam um chip. Depois, cada item conserva identidade e rótulo separados: código canônico define identidade/deduplicação/key, nome serve apenas para apresentação. Códigos repetidos contam uma vez; homônimos distintos permanecem selecionados e visíveis separadamente.
+
+A tela aplica esse contrato a conceitos atuais, conceitos de versões anteriores, segmentos e NCMs. Campos antigos de texto livre não têm código canônico: sua identidade local é composta por campo e valor, sem inventar um conceito taxonômico nem fundi-los a um conceito só por coincidência de nome. O regime declarado também conserva sua identidade própria. Nada disso altera a taxonomia ou converte dados no carregamento.
+
+O editor clona o perfil e deduplica códigos do rascunho. Remover uma opção remove somente aquele código; nome compartilhado não remove outro produto. O perfil recebido permanece intacto; persistência segue apenas a ação explícita de salvar no fluxo existente, com os contratos de versão e tenant inalterados.
+
+## Validação
+
+Testes da tela: homônimos de códigos diferentes (atual e histórico), repetição do mesmo código, texto legado de mesmo nome, contagem, expansão e ação Editar. Testes do editor: códigos homônimos independentes, deduplicação e salvamento explícito sem mutar o perfil recebido, NCMs/regime/textos preservados.
+
+O cenário real de navegação e onboarding em launch-authenticated.spec.ts passa a exigir 33 chips no Perfil legado, incluindo os dois data-code distintos com rótulo igual. Injeta repetição dos códigos no payload mockado de perfil existente para provar que a contagem não infla. O mesmo fluxo exerce edição posterior de perfil e correção de escolha histórica. Dados sintéticos/fixtures e API interceptada; não é sessão produtiva.
+
+Browser local: Firefox, desktop 1440x900 e mobile 390x844. Chromium permanece indisponível neste ambiente por erro de socket; CI integral do GitHub deve validar o HEAD final separadamente. Nenhum green antigo será reutilizado como CI deste pacote. Evidências/ZIP e resultados finais são vinculados na #123 e #124.
+
+Sem migration, backfill, alteração da taxonomia, merge, deploy ou escrita em perfis produtivos. PR isolado; revisão independente obrigatória, sem autoaprovação.
+

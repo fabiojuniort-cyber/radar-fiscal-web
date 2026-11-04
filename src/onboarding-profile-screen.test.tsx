@@ -26,3 +26,23 @@ it('shows separate chip blocks, CNPJ format, CNAE segments, 12-item expansion an
  fireEvent.click(screen.getByRole('button',{name:'Adicionar Tributo'}));expect(edit).toHaveBeenLastCalledWith('dimension-group:tax_regime')
  expect(document.querySelectorAll('.onb-profile-block')).toHaveLength(12)
 })
+
+
+it('keeps homonymous canonical products separate, deduplicates repeated codes and preserves legacy text',async()=>{
+ const concepts=[{code:'product.wheat',label:'Produto de mesmo nome',dimensionCode:'product'}]
+ const historicalConcepts=[{code:'product.beans',label:'Produto de mesmo nome',dimensionCode:'product'}]
+ const api=vi.fn(async()=>Response.json({version:7,release:{id:'r',version:'v1.9.0'},companyName:'Empresa de teste',cards:[],concepts,historicalConcepts,state:{completed:true,cards:{},units:{}},effectiveProfiles:[{establishmentId:'head',name:'Matriz',isHeadOffice:true,taxRegime:'NAO_INFORMADO',conceptCodes:['product.wheat','product.beans','product.wheat','product.beans'],ncmCodes:['1006','1006'],legacyFields:{products:['Produto de mesmo nome','Produto de mesmo nome']},cnaeSegments:[],historicalCodes:['product.beans']}]}))
+ const onEdit=vi.fn()
+ render(<OnboardingProfileScreen apiFetch={api} tenantId="tenant" companyId="company" unit={{id:'head',name:'Matriz',cnpj:'10515785000199',isHeadOffice:true} as Establishment} onEdit={onEdit} onBack={vi.fn()}/>)
+ await screen.findByRole('heading',{name:'Produtos · 3'})
+ const block=screen.getByRole('region',{name:'Produtos'})
+ const chips=Array.from(block.querySelectorAll('.onb-profile-chip'))
+ expect(chips).toHaveLength(3)
+ expect(chips.filter(c=>c.getAttribute('data-code')) .map(c=>c.getAttribute('data-code'))).toEqual(['product.wheat','product.beans'])
+ expect(chips.every(c=>c.textContent==='Produto de mesmo nome')).toBe(true)
+ expect(screen.getByRole('region',{name:'NCMs'}).querySelectorAll('.onb-profile-chip')).toHaveLength(1)
+ fireEvent.click(screen.getByRole('button',{name:'Editar Produtos'}))
+ expect(onEdit).toHaveBeenCalledWith('profile')
+ expect(api).toHaveBeenCalledTimes(1)
+ expect(api).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({method:'GET'}))
+})

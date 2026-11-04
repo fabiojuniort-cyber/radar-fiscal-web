@@ -795,6 +795,8 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await assistant.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributos e regime',exact:true})).toBeVisible();
   await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();
   await expect(assistant.getByRole('heading',{name:'Tudo pronto! Confira seu perfil'})).toBeVisible()
+  // Repeated persisted codes must not create extra chips when the legacy page opens.
+  assistantData.effectiveProfiles[0]!.conceptCodes.push('product.wheat','product.beans')
   await assistant.getByRole('button',{name:'Concluir perfil'}).click();await expect(assistant).toHaveCount(0)
   const profilePage=page.locator('.onb-profile-page');await expect(profilePage.getByRole('heading',{name:'Perfil tributário',exact:true})).toBeVisible();await expect(page.locator('.tp-company-management')).toHaveCount(0);await expect(page.locator('.tp-establishment-management')).toHaveCount(0)
   await expect(profilePage.locator('.onb-profile-block')).toHaveCount(12);await expect(profilePage.getByText('CNPJ 10.515.785/0001-99',{exact:false})).toBeVisible();
@@ -802,8 +804,8 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.screenshot({path:testInfo.outputPath('onb036-09-perfil-matriz-por-dimensao.png'),fullPage:true})
   await profilePage.getByRole('heading',{name:/^Tema ·/}).scrollIntoViewIfNeeded();const stickyY=(await profilePage.locator('.onb-profile-header').boundingBox())!.y;const expectedStickyY=await page.locator('.tp-header').evaluate(el=>['sticky','fixed'].includes(getComputedStyle(el).position)?Math.ceil(el.getBoundingClientRect().height):0);expect(Math.abs(stickyY-expectedStickyY)).toBeLessThanOrEqual(2);await page.screenshot({path:testInfo.outputPath('onb036-05-cabecalho-fixo.png'),fullPage:false});await page.evaluate(()=>window.scrollTo(0,0));
   const productBlock=profilePage.getByRole('region',{name:'Produtos',exact:true});await expect(productBlock.locator('.onb-profile-chip')).toHaveCount(12);await productBlock.getByRole('button',{name:/ver todos/}).click();
-  // A tela de Perfil ainda deduplica pelo nome; o Resumo do assistente acima comprova os 33 códigos e os dois homônimos. Não ampliar ONB-03.8 para esta tela.
-  await expect(productBlock.locator('.onb-profile-chip')).toHaveCount(32);await page.screenshot({path:testInfo.outputPath('onb036-05-perfil-produtos-ver-todos.png'),fullPage:true});await productBlock.getByRole('button',{name:'ver menos',exact:true}).click();
+  // F2-D01/#123: o Perfil legado também mantém identidade por código, incluindo homônimos.
+  await expect(productBlock.locator('.onb-profile-chip')).toHaveCount(33);const profileHomonyms=productBlock.locator('.onb-profile-chip').filter({hasText:'Produto de mesmo nome'});await expect(profileHomonyms).toHaveCount(2);expect(await profileHomonyms.evaluateAll(chips=>new Set(chips.map(c=>c.getAttribute('data-code'))).size)).toBe(2);await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:testInfo.outputPath('onb036-05-perfil-produtos-ver-todos.png'),fullPage:true});await productBlock.screenshot({path:testInfo.outputPath('f2-123-produtos-33-homonimos.png')});await productBlock.getByRole('button',{name:'ver menos',exact:true}).click();
   await profilePage.getByRole('button',{name:'Editar Tributo',exact:true}).click();await expect(assistant.getByRole('heading',{name:'Tributos e regime',exact:true})).toBeVisible();await expect(assistant.getByRole('checkbox',{name:'ICMS',exact:true})).toBeChecked();await expect(assistant.getByRole('checkbox',{name:'Lucro real',exact:true})).toBeChecked()
   await page.screenshot({path:testInfo.outputPath('onb036-09-editar-reabre-card-tributo.png'),fullPage:false})
   await assistant.getByRole('checkbox',{name:'ICMS',exact:true}).uncheck();await assistant.getByRole('button',{name:'Salvar e continuar'}).click();await assistant.getByRole('button',{name:'Fechar assistente'}).click();await expect(profilePage.getByText(/Nada selecionado/).first()).toBeVisible()
@@ -909,6 +911,7 @@ test('authenticated product v2 works end-to-end with current navigation and acco
   await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
   await expect(page).toHaveURL(/\/$/)
 })
+
 
 
 
