@@ -7,12 +7,13 @@ const tokenB='b'.repeat(64)
 const confirmationA='c'.repeat(64)
 const confirmationB='d'.repeat(64)
 
-async function setup(page:Page,drift=false) {
-  let portariaMode='KEEP_IF_TAX_TERM'
+async function setup(page:Page,drift=false,destructive=false) {
+  let portariaMode='KEEP_ALWAYS'
   let resolved=false
   let previews=0
   let purgeAttempts=0
   const saveBodies:Record<string,unknown>[]=[]
+  const confirmBodies:Record<string,unknown>[]=[]
   await page.route('**/auth/refresh',r=>r.fulfill({json:{accessToken:'admin-token',tokenType:'Bearer',expiresIn:900}}))
   await page.route('**/auth/me',r=>r.fulfill({json:{user:{id:'admin',email:'admin@example.test'},memberships:[]}}))
   await page.route('**/api/v1/admin/me',r=>r.fulfill({json:{platformAdmin:true}}))
@@ -45,6 +46,12 @@ async function setup(page:Page,drift=false) {
     }
     if(method==='POST'&&pathname.endsWith('/direct-rule/confirm')){
       purgeAttempts+=1
+      if(destructive){
+        const body=r.request().postDataJSON() as Record<string,unknown>
+        confirmBodies.push(body)
+        portariaMode=body.mode as string
+        return r.fulfill({json:{changed:false,deletedCount:2,restantes:0,revision:6}})
+      }
       return r.fulfill({status:403,json:{error:'historical_purge_forbidden_in_save_test'}})
     }
     if(method==='GET'&&pathname.endsWith('/state')){
@@ -70,12 +77,12 @@ async function setup(page:Page,drift=false) {
   await expect(page.getByRole('heading',{name:'Filtro de coleta'})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Nomes de ato'})).toBeVisible()
   await expect(page.getByLabel('Modo PORTARIA')).toBeVisible()
-  return {saveBodies,getPreviews:()=>previews,getPurgeAttempts:()=>purgeAttempts}
+  return {saveBodies,confirmBodies,getPreviews:()=>previews,getPurgeAttempts:()=>purgeAttempts}
 }
 
 test('F3 Tipos: prévia mostra protegidas e salvar classificação não exclui histórico',async({page})=>{
   const {saveBodies,getPreviews,getPurgeAttempts}=await setup(page)
-  await page.getByLabel('Modo PORTARIA').selectOption('EXCLUDE_ALWAYS')
+  await page.getByLabel('Modo PORTARIA').selectOption('KEEP_IF_TAX_TERM')
   const dialog=page.getByRole('dialog',{name:'Classificar Nome do ato'})
   await expect(dialog).toBeVisible()
   await expect(dialog.getByLabel('Fonte')).toHaveValue('dou')
@@ -83,7 +90,7 @@ test('F3 Tipos: prévia mostra protegidas e salvar classificação não exclui h
   await expect(dialog.getByLabel('Nome do ato')).toHaveValue('PORTARIA')
   await dialog.getByRole('button',{name:'Consultar prévia F3'}).click()
   await expect(dialog.getByRole('status')).toContainText('2 publicações históricas correspondem à regra')
-  await expect(dialog.getByRole('status')).toContainText('Não serão apagadas ao salvar')
+  await expect(dialog.getByRole('status')).toContainText('Nenhuma publicação será apagada ao salvar')
   await expect(dialog.getByRole('status')).toContainText('3 protegidas')
   await expect(dialog.getByRole('status')).toContainText('2 com empresa cliente')
   await expect(dialog.getByRole('status')).toContainText('1 com outra origem oficial')
@@ -92,10 +99,10 @@ test('F3 Tipos: prévia mostra protegidas e salvar classificação não exclui h
   expect(saveBodies).toHaveLength(0)
   await dialog.getByRole('button',{name:'Salvar classificação sem excluir'}).click()
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByLabel('Modo PORTARIA')).toHaveValue('EXCLUDE_ALWAYS')
+  await expect(page.getByLabel('Modo PORTARIA')).toHaveValue('KEEP_IF_TAX_TERM')
   expect(saveBodies).toHaveLength(1)
   expect(saveBodies[0]).toMatchObject({sourceCode:'dou',section:'DO1',
-    canonicalType:'PORTARIA',mode:'EXCLUDE_ALWAYS',expectedCount:2,
+    canonicalType:'PORTARIA',mode:'KEEP_IF_TAX_TERM',expectedCount:2,
     previewToken:tokenA,confirmationToken:confirmationA,policyRevision:5})
   expect(getPurgeAttempts()).toBe(0)
 })
@@ -108,7 +115,7 @@ test('F3 Novos tipos: prévia vencida bloqueia save e exige nova prévia/confirm
   await expect(page.getByRole('dialog',{name:'Classificar novo Nome do ato'})).toHaveCount(0)
   const dialog=page.getByRole('dialog',{name:'Classificar Nome do ato'})
   await expect(dialog.getByLabel('Nome do ato')).toHaveValue('Ato Novo')
-  await dialog.getByLabel('Modo').selectOption('EXCLUDE_UNLESS_STRONG')
+  await dialog.getByLabel('Modo').selectOption('KEEP_IF_TAX_TERM')
   await dialog.getByRole('button',{name:'Consultar prévia F3'}).click()
   await expect(dialog.getByRole('status')).toContainText('2 publicações históricas correspondem à regra')
   await dialog.getByRole('button',{name:'Salvar classificação sem excluir'}).click()
@@ -129,7 +136,29 @@ test('F3 Novos tipos: prévia vencida bloqueia save e exige nova prévia/confirm
   expect(saveBodies).toHaveLength(2)
   expect(saveBodies[1]).toMatchObject({newTypeId,expectedCount:3,
     previewToken:tokenB,confirmationToken:confirmationB,policyRevision:6,
-    mode:'EXCLUDE_UNLESS_STRONG'})
+    mode:'KEEP_IF_TAX_TERM'})
   expect(getPurgeAttempts()).toBe(0)
   await expect(page.getByText('Nenhum tipo novo pendente.')).toBeVisible()
 })
+
+
+for(const mode of ['EXCLUDE_ALWAYS','EXCLUDE_UNLESS_STRONG']){
+  test('F3 salva e exclui somente após confirmação explícita: '+mode,async({page},testInfo)=>{
+    const {saveBodies,confirmBodies}=await setup(page,false,true)
+    await page.getByLabel('Modo PORTARIA').selectOption(mode)
+    const dialog=page.getByRole('dialog',{name:'Classificar Nome do ato'})
+    await dialog.getByRole('button',{name:'Consultar prévia F3'}).click()
+    await expect(dialog.getByRole('status')).toContainText('2 publicações serão apagadas ao salvar')
+    await expect(dialog.getByRole('status')).toContainText('3 protegidas')
+    expect(confirmBodies).toHaveLength(0)
+    await page.screenshot({path:testInfo.outputPath('f3-save-delete-preview.png'),fullPage:true})
+    await dialog.getByRole('button',{name:'Salvar e excluir 2 publicações'}).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByLabel('Modo PORTARIA')).toHaveValue(mode)
+    expect(saveBodies).toHaveLength(0)
+    expect(confirmBodies).toHaveLength(1)
+    expect(confirmBodies[0]).toMatchObject({sourceCode:'dou',section:'DO1',
+      canonicalType:'PORTARIA',mode,expectedCount:2,previewToken:tokenA,
+      confirmationToken:confirmationA,policyRevision:5,resume:false})
+  })
+}

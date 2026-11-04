@@ -299,7 +299,7 @@ export async function previewDirectCollectionFilterRule(
 }
 
 // Classification is a safe policy write. No existing publication is deleted.
-// Historical purges use a separate backend command and are NEVER part of save.
+// KEEP modes use safe save. Explicit EXCLUDE confirmation uses the separate confirm command.
 export async function saveDirectCollectionFilterRule(
   apiFetch: ProductApiFetch,
   input: CollectionFilterDirectRuleInput,
@@ -337,6 +337,8 @@ export async function applyDirectCollectionFilterRule(
   input: CollectionFilterDirectRuleInput & {
     expectedCount: number
     previewToken: string
+    confirmationToken: string
+    policyRevision: number
     resume?: boolean
   },
 ): Promise<CollectionFilterDirectConfirmResult> {
@@ -391,3 +393,4 @@ export async function confirmOutOfScopePublications(
     },
   ))
 }
+
