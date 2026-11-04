@@ -1,3 +1,11 @@
+# Estado atual — integração F2 em branch isolada — 04/11/2026
+
+O incremento #141 @ b74678a7d463f2a928de5ece333831d7da401777 recebeu APPROVED técnico independente em [6642909957](https://github.com/fabiojuniort-cyber/radar-fiscal-web/pull/141#issuecomment-6642909957). CI41908237120 SUCCESS:312 unidades,204 browser passaram/24 ignorados. [ZIP visual](https://chatgpt.com/library?file_id=libfile_0cba723f4a648191a4ffe0fc38df805f&account_id=personal), SHA2567c307591b77a22376651e784c69b6dc45aaac35a116d1b8f1a57adb5ac9898b6.
+
+A observação mobile não é bloqueante: ações são alcançadas por rolagem interna e e2e confirma o clique. Nenhuma alteração de UI foi acrescentada. A integração combina #141/#142 por commits de merge normais em branch isolada, base main3489453c, sem merge em main/deploy. Produto/testes deste pacote preservados por blob hash; novo CI integral é exigido no HEAD combinado. Revisão anterior não significa integração produtiva.
+
+## Histórico preservado (pendências abaixo superadas pelo estado acima)
+
 # F3-SAVE-DELETE-01
 
 Fábio solicitou em 14/10/2026 que salvar um modo Excluir também exclua o histórico elegível. Governança: https://github.com/fabiojuniort-cyber/tribusca-control/issues/113.

@@ -1,3 +1,11 @@
+# Estado atual — integração F2 em branch isolada — 04/11/2026
+
+#142 @3b34075193f11c54b8dafc1bb34588956a9b1cd7 recebeu APPROVED técnico independente em [6642909571](https://github.com/fabiojuniort-cyber/radar-fiscal-web/pull/142#issuecomment-6642909571), incluindo5/5 testes focados independentes. CI41908172089 SUCCESS:302 unidades,196 browser passaram/24 ignorados. [ZIP visual](https://chatgpt.com/library?file_id=libfile_0cba723f4a648191a4ffe0fc38df805f&account_id=personal), SHA2567c307591b77a22376651e784c69b6dc45aaac35a116d1b8f1a57adb5ac9898b6.
+
+A prova de códigos distintos vem das asserções DOM/testes; o ZIP mostra rótulos, contador33 e legado. Integração preparada com #141 por merges normais sobre main3489453c em branch isolada. Sem conflitos de arquivos, sem mudanças funcionais adicionais; preservar tenant/versão/gravação explícita. Novo CI integral exigido no HEAD combinado. Nenhuma migration/backfill/taxonomia/produção. As referências históricas abaixo a browser/ZIP/CI/revisão pendentes não descrevem o estado atual.
+
+## Histórico preservado
+
 # F2-D01 / #123 — identidade do Perfil legado
 
 Aprovado expressamente pelo Fábio em 04/11/2026. Registro da instrução: tribusca-control#123, comentário 6630980325; controle da Frente 2: #124.
