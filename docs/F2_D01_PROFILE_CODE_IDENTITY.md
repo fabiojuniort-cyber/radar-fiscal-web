@@ -1,8 +1,15 @@
+## Checkpoint vigente — 04/11/2026
+Frente 2: **10% — 5/50 entregas aceitas**, denominador fixo; +0 neste complemento. Aceite técnico não equivale a integração/liberação.
+#143 @61b086c80bfaed8743702972d5009e4c1395b59e: APPROVED técnico incremental pelo COORD. CI combinado [41930862808](https://github.com/fabiojuniort-cyber/radar-fiscal-web/actions/runs/41930862808) SUCCESS:314 unidades,204 browser PASS/24 ignorados, typecheck/builds. [ZIP combinado](https://chatgpt.com/library?file_id=libfile_94afcfbbf654819188057c75ccf8f188&account_id=personal), SHA256 6910e56eb32517f02de7cbb2d7504c7908f7a95da4127a2834f9c84bad37ee61. Este complemento altera somente três documentos; não atribuir o CI anterior ao novo SHA documental.
+Railway: a consulta nativa anterior concluiu status com serviço web05-preview, projeto tribusca-web-preview-web05, ambiente19ba8e37-8c3f-4538-8e7f-45d250165ff2, repositório radar-fiscal-web, último deploy48f2557d-b050-4ace-8122-35f5f781970b SUCCESS, commit3489453c/main e domínio www.trifaros.com.br. Isso descreve o deploy observado, não comprova branch binding atual ou regra checkSuites/autodeploy.
+Na nova leitura de environment config, o CLI retornou “Environment ... not found” no contexto local vinculado; também advertiu falha ao persistir refresh OAuth (acesso negado). Nenhuma configuração/autenticação foi alterada. Regra atual de publicação permanece NOT_PROVEN; não presumir que CI impede publicação após merge.
+
+
 # Estado atual — integração F2 em branch isolada — 04/11/2026
 
 #142 @3b34075193f11c54b8dafc1bb34588956a9b1cd7 recebeu APPROVED técnico independente em [6642909571](https://github.com/fabiojuniort-cyber/radar-fiscal-web/pull/142#issuecomment-6642909571), incluindo5/5 testes focados independentes. CI41908172089 SUCCESS:302 unidades,196 browser passaram/24 ignorados. [ZIP visual](https://chatgpt.com/library?file_id=libfile_0cba723f4a648191a4ffe0fc38df805f&account_id=personal), SHA2567c307591b77a22376651e784c69b6dc45aaac35a116d1b8f1a57adb5ac9898b6.
 
-A prova de códigos distintos vem das asserções DOM/testes; o ZIP mostra rótulos, contador33 e legado. Integração preparada com #141 por merges normais sobre main3489453c em branch isolada. Sem conflitos de arquivos, sem mudanças funcionais adicionais; preservar tenant/versão/gravação explícita. Novo CI integral exigido no HEAD combinado. Nenhuma migration/backfill/taxonomia/produção. As referências históricas abaixo a browser/ZIP/CI/revisão pendentes não descrevem o estado atual.
+A prova de códigos distintos vem das asserções DOM/testes; o ZIP mostra rótulos, contador33 e legado. Integração preparada com #141 por merges normais sobre main3489453c em branch isolada. Sem conflitos de arquivos, sem mudanças funcionais adicionais; preservar tenant/versão/gravação explícita. CI combinado concluído conforme checkpoint vigente acima. Nenhuma migration/backfill/taxonomia/produção. As referências históricas abaixo a browser/ZIP/CI/revisão pendentes não descrevem o estado atual.
 
 ## Histórico preservado
 

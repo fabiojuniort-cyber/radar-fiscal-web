@@ -1,5 +1,12 @@
 # F2 — integração revisável de web #141 e #142
 
+## Checkpoint vigente — 04/11/2026
+Frente 2: **10% — 5/50 entregas aceitas**, denominador fixo; +0 neste complemento. Aceite técnico não equivale a integração/liberação.
+#143 @61b086c80bfaed8743702972d5009e4c1395b59e: APPROVED técnico incremental pelo COORD. CI combinado [41930862808](https://github.com/fabiojuniort-cyber/radar-fiscal-web/actions/runs/41930862808) SUCCESS:314 unidades,204 browser PASS/24 ignorados, typecheck/builds. [ZIP combinado](https://chatgpt.com/library?file_id=libfile_94afcfbbf654819188057c75ccf8f188&account_id=personal), SHA256 6910e56eb32517f02de7cbb2d7504c7908f7a95da4127a2834f9c84bad37ee61. Este complemento altera somente três documentos; não atribuir o CI anterior ao novo SHA documental.
+Railway: a consulta nativa anterior concluiu status com serviço web05-preview, projeto tribusca-web-preview-web05, ambiente19ba8e37-8c3f-4538-8e7f-45d250165ff2, repositório radar-fiscal-web, último deploy48f2557d-b050-4ace-8122-35f5f781970b SUCCESS, commit3489453c/main e domínio www.trifaros.com.br. Isso descreve o deploy observado, não comprova branch binding atual ou regra checkSuites/autodeploy.
+Na nova leitura de environment config, o CLI retornou “Environment ... not found” no contexto local vinculado; também advertiu falha ao persistir refresh OAuth (acesso negado). Nenhuma configuração/autenticação foi alterada. Regra atual de publicação permanece NOT_PROVEN; não presumir que CI impede publicação após merge.
+
+
 Data04/11/2026. Controle#124; autorização6642917997. Sem merge em main, deploy ou operação produtiva.
 
 ## Composição e conflitos
@@ -25,7 +32,7 @@ CI original #14141908237120 e #14241908172089 verdes não substituem CI combinad
 
 Um futuro merge/push em main aciona o Frontend CI conforme .github/workflows/ci.yml. Nenhuma autorização para esse merge foi dada.
 GitHub commit status da main3489453c registra Railway success em31/10/2026, contexto tribusca-web-preview-web05 / web05-preview e descrição www.trifaros.com.br, deployment48f2557d-b050-4ace-8122-35f5f781970b. Isso prova associação histórica daquele commit/deploy, **não a configuração atual de autodeploy/checkSuites/branch**.
-Consulta nativa railway status não concluiu comprovação: refreshOAuth não pôde persistir sessão (acesso negado). Não foram alteradas autenticação, variáveis ou configuração e nenhum Railway AI Agent foi usado. A vinculação atual/branch/gates/autodeploy é NOT_PROVEN por essa leitura; não afirmar que esperar CI garante impedir deploy após merge.
+Consulta nativa anterior concluiu status, como registrado no checkpoint vigente acima. A leitura adicional de environment config não resolveu branch binding/checkSuites; a regra atual continua NOT_PROVEN.
 Consequência conservadora para decisão: tratar futuro merge em main como potencial publicação imediata da web e exigir conferir a configuração nativa antes de autorização final. Não desligar/autorização presumida. Backend/worker/scheduler não são modificados por este pacote web; nenhum deploy deles proposto.
 
 ## Verificações para a futura etapa, sem executar produção
@@ -36,4 +43,4 @@ Consequência conservadora para decisão: tratar futuro merge em main como poten
 4. Smoke inicialmente só leitura: carregamento web, navegação/perfil existente e ausência de regressão visual. Não confirmar exclusão real nem salvar perfil produtivo como smoke sem autorização própria. Preview/confirm destrutivo usa laboratório e dados sintéticos, não clientes reais.
 5. Se houver erro, preservar evidências e propor recuperação. Um revert é commit novo e pode gerar outro autodeploy; não executar automaticamente.
 
-Avanço Frente2 permanece6%/3de50 até reconciliação do marco de aceite; revisão técnica não é integração/liberação produtiva.
+Avanço Frente2: 10%/5 de50 aceitas. Revisão técnica não é integração/liberação produtiva.
