@@ -26,3 +26,11 @@ Sem migration, backfill, alteração da taxonomia, merge, deploy ou escrita em p
 
 Fluxo completo Firefox em 1440x900 e 390x844: 2/2 PASS, incluindo os códigos duplicados no payload do Perfil legado, 33 chips únicos, dois homônimos com data-code distintos, navegação e edição histórica explícita. As capturas de viewport separam contador e homônimos para manter a leitura com o cabeçalho sticky; não alteram o CSS para capturar. O ZIP conserva hashes, fontes dos arquivos e limites da evidência. CI integral do HEAD final e revisão independente continuam pendentes; não houve merge/deploy.
 
+
+## Retomada após recriação do ambiente
+
+A captura de viewport usa scroll instantâneo e aguarda dois frames, evitando registrar uma animação de scroll ainda em andamento. O código do produto não muda neste ajuste do ensaio.
+
+Após a recriação do ambiente, os testes locais fora da ANAT passaram novamente (279 testes/47 arquivos) e typecheck PASS. As execuções Firefox anteriores (2/2) são históricas: os PNGs não ficaram disponíveis após a interrupção, e o ambiente novo não iniciou Firefox (Could not find profile folder), inclusive com diretório persistente. Chromium também falhou no startup por socket não permitido. O navegador conectado não estava disponível e a alternativa bloqueou arquivo local por política de URL. Nenhum desses erros equivale a regressão demonstrada do produto.
+
+ZIP visual continua pendente: não afirmar capturas finais entregues ou substituir esse gate por logs/unidades. CI integral também continua pendente de diagnóstico do startup_failure. O novo ajuste de captura ainda exige execução de browser no HEAD final; somente os testes de lógica/typecheck foram reconfirmados nesta retomada.
