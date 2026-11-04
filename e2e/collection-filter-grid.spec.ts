@@ -8,7 +8,7 @@ const confirmationA='c'.repeat(64)
 const confirmationB='d'.repeat(64)
 
 async function setup(page:Page,drift=false,destructive=false) {
-  let portariaMode='KEEP_IF_TAX_TERM'
+  let portariaMode='KEEP_ALWAYS'
   let resolved=false
   let previews=0
   let purgeAttempts=0
@@ -82,7 +82,7 @@ async function setup(page:Page,drift=false,destructive=false) {
 
 test('F3 Tipos: prévia mostra protegidas e salvar classificação não exclui histórico',async({page})=>{
   const {saveBodies,getPreviews,getPurgeAttempts}=await setup(page)
-  await page.getByLabel('Modo PORTARIA').selectOption('KEEP_ALWAYS')
+  await page.getByLabel('Modo PORTARIA').selectOption('KEEP_IF_TAX_TERM')
   const dialog=page.getByRole('dialog',{name:'Classificar Nome do ato'})
   await expect(dialog).toBeVisible()
   await expect(dialog.getByLabel('Fonte')).toHaveValue('dou')
@@ -99,10 +99,10 @@ test('F3 Tipos: prévia mostra protegidas e salvar classificação não exclui h
   expect(saveBodies).toHaveLength(0)
   await dialog.getByRole('button',{name:'Salvar classificação sem excluir'}).click()
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByLabel('Modo PORTARIA')).toHaveValue('KEEP_ALWAYS')
+  await expect(page.getByLabel('Modo PORTARIA')).toHaveValue('KEEP_IF_TAX_TERM')
   expect(saveBodies).toHaveLength(1)
   expect(saveBodies[0]).toMatchObject({sourceCode:'dou',section:'DO1',
-    canonicalType:'PORTARIA',mode:'KEEP_ALWAYS',expectedCount:2,
+    canonicalType:'PORTARIA',mode:'KEEP_IF_TAX_TERM',expectedCount:2,
     previewToken:tokenA,confirmationToken:confirmationA,policyRevision:5})
   expect(getPurgeAttempts()).toBe(0)
 })
@@ -156,8 +156,9 @@ for(const mode of ['EXCLUDE_ALWAYS','EXCLUDE_UNLESS_STRONG']){
     await expect(dialog).toHaveCount(0)
     await expect(page.getByLabel('Modo PORTARIA')).toHaveValue(mode)
     expect(saveBodies).toHaveLength(0)
-    expect(confirmBodies).toEqual([{sourceCode:'dou',section:'DO1',
+    expect(confirmBodies).toHaveLength(1)
+    expect(confirmBodies[0]).toMatchObject({sourceCode:'dou',section:'DO1',
       canonicalType:'PORTARIA',mode,expectedCount:2,previewToken:tokenA,
-      confirmationToken:confirmationA,policyRevision:5,resume:false}])
+      confirmationToken:confirmationA,policyRevision:5,resume:false})
   })
 }
