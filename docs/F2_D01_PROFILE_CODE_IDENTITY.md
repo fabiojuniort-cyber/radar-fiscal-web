@@ -20,3 +20,9 @@ Browser local: Firefox, desktop 1440x900 e mobile 390x844. Chromium permanece in
 
 Sem migration, backfill, alteração da taxonomia, merge, deploy ou escrita em perfis produtivos. PR isolado; revisão independente obrigatória, sem autoaprovação.
 
+## Resultado final local
+
+5 testes focados PASS. Regressão local fora da ANAT: 275 testes passaram em 46 arquivos; os 4 testes restantes de importação passaram após recuperar o JSON original pelo blob (arquivo maior que 1 MB, indisponível via Contents). Total local não-ANAT: 279 testes / 47 arquivos PASS, sem alteração do JSON versionado. Typecheck e build da aplicação PASS.
+
+Fluxo completo Firefox em 1440x900 e 390x844: 2/2 PASS, incluindo os códigos duplicados no payload do Perfil legado, 33 chips únicos, dois homônimos com data-code distintos, navegação e edição histórica explícita. As capturas de viewport separam contador e homônimos para manter a leitura com o cabeçalho sticky; não alteram o CSS para capturar. O ZIP conserva hashes, fontes dos arquivos e limites da evidência. CI integral do HEAD final e revisão independente continuam pendentes; não houve merge/deploy.
+
