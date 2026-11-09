@@ -93,10 +93,10 @@ describe('L-11 filtro direto DOU',()=>{
     fireEvent.click(await screen.findByRole('button',{name:'Classificar'}))
     expect(screen.getByText('Classificar Nome do ato')).toBeInTheDocument()
     expect(screen.queryByText('Classificar novo Nome do ato')).not.toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
+    fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'KEEP_ALWAYS'}})
     fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
     await screen.findByText(/12 publicações históricas correspondem à regra/)
-    expect(screen.getByText(/Não serão apagadas ao salvar/)).toBeInTheDocument()
+    expect(screen.getByText(/Nenhuma publicação será apagada ao salvar/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
     await waitFor(()=>expect(calls.some(v=>v.endsWith('/direct-rule/save'))).toBe(true))
     expect(calls.some(v=>v.endsWith('/direct-rule/confirm'))).toBe(false)
@@ -294,7 +294,7 @@ describe('F3-UX-01 sugestões de títulos na classificação',()=>{
       expect(typeInput.value).toBe('Despacho do Secretário Adjunto')
       expect(screen.getByRole('combobox',{name:'Fonte'})).toHaveValue(source)
       expect(screen.getByRole('textbox',{name:'Nome do ato'})).toHaveValue('Despacho do Secretário Adjunto')
-      fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'EXCLUDE_ALWAYS'}})
+      fireEvent.change(screen.getByLabelText('Modo'),{target:{value:'KEEP_ALWAYS'}})
       fireEvent.click(screen.getByRole('button',{name:'Consultar prévia F3'}))
       await screen.findByText(/7 publicações históricas correspondem à regra/)
       fireEvent.click(screen.getByRole('button',{name:'Salvar classificação sem excluir'}))
@@ -302,10 +302,11 @@ describe('F3-UX-01 sugestões de títulos na classificação',()=>{
       expect(operations.map(x=>x.path.split('/').pop())).toEqual(['preview','save'])
       for(const op of operations)expect(op.body).toMatchObject({
         sourceCode:source,canonicalType:'Despacho do Secretário Adjunto',
-        newTypeId:typeId,mode:'EXCLUDE_ALWAYS'})
+        newTypeId:typeId,mode:'KEEP_ALWAYS'})
       expect(operations[1]?.body).toMatchObject({
         expectedCount:7,policyRevision:2,confirmationToken:'b'.repeat(64)})
     },
   )
 })
+
 
