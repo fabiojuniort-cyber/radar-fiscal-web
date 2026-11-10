@@ -28,9 +28,34 @@ describe('public Coverage API mapping', () => {
   it('translates backend statuses without changing their meaning', () => {
     expect(translatePublicStatus('ONLINE')).toBe('Online')
     expect(translatePublicStatus('UNSTABLE')).toBe('Em validação')
-    expect(translatePublicStatus('UNAVAILABLE')).toBe('Em validação')
+    expect(translatePublicStatus('UNAVAILABLE')).toBe('Indisponível')
     expect(translatePublicStatus('NOT_CONSULTED')).toBe('Ainda não consultada')
   })
+
+  it.each(['UNSTABLE', 'UNAVAILABLE'] as const)(
+    'preserves the last successful collection and Acervo totals for %s',
+    (status) => {
+      const lastSuccessAt = '2026-10-21T17:01:00.000Z'
+      const presentation = toCoveragePresentation(
+        source({
+          status,
+          lastRunStatus: 'FETCH_FAILED',
+          lastSuccessAt,
+          lastAttemptAt: '2026-11-10T12:00:00.000Z',
+          importedToday: 0,
+          totalPublications: 2913,
+        }),
+        true,
+      )
+
+      expect(presentation).toEqual({
+        status: status === 'UNAVAILABLE' ? 'Indisponível' : 'Em validação',
+        lastSuccessAt: formatLastSuccessAt(lastSuccessAt),
+        importedToday: '0',
+        totalPublications: '2913',
+      })
+    },
+  )
 
   it('maps federal sources by stable code', () => {
     const items = [
