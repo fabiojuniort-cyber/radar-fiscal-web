@@ -758,10 +758,11 @@ test('WEB-11 — claims públicos e Cobertura com API oficial', async ({ page })
 
   const confazCard = federalCards.filter({ hasText: 'CONFAZ' }).first()
   await expect(confazCard.locator('.collection-status')).toHaveText('Coleta Em validação')
+  await expect(confazCard.locator('.coverage-metrics dd').nth(2)).toHaveText('88')
 
   const nfeCard = federalCards.filter({ hasText: 'NF-e / ENCAT' }).first()
-  await expect(nfeCard.locator('.collection-status')).toHaveText('Coleta Em validação')
-  await expect(nfeCard.locator('.coverage-metrics dd').first()).toHaveText('—')
+  await expect(nfeCard.locator('.collection-status')).toHaveText('Coleta Indisponível')
+  await expect(nfeCard.locator('.coverage-metrics dd')).toHaveText(['—', '0', '42'])
 
   const spedCard = federalCards.filter({ hasText: 'SPED' }).first()
   await expect(spedCard.locator('.collection-status')).toHaveText('Coleta Ainda não consultada')
