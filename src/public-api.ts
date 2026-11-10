@@ -24,7 +24,7 @@ export type PublicSourcesResponse = {
 }
 
 export type CoveragePresentation = {
-  status: 'Online' | 'Em validação' | 'Ainda não consultada' | '—'
+  status: 'Online' | 'Em validação' | 'Indisponível' | 'Ainda não consultada' | '—'
   lastSuccessAt: string
   importedToday: string
   totalPublications: string
@@ -74,8 +74,9 @@ export function translatePublicStatus(status: PublicSourceStatus): CoveragePrese
     case 'ONLINE':
       return 'Online'
     case 'UNSTABLE':
-    case 'UNAVAILABLE':
       return 'Em validação'
+    case 'UNAVAILABLE':
+      return 'Indisponível'
     case 'NOT_CONSULTED':
       return 'Ainda não consultada'
   }
