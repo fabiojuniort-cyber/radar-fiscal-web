@@ -669,6 +669,19 @@ describe('TriFaros release candidate WEB-11', () => {
         importedToday: 0,
         totalPublications: 91,
       },
+      {
+        code: 'confaz',
+        name: 'CONFAZ',
+        jurisdictionLevel: 'FEDERAL',
+        uf: null,
+        isActive: true,
+        status: 'UNSTABLE',
+        lastRunStatus: 'PARTIAL',
+        lastSuccessAt: '2026-09-26T12:00:00.000Z',
+        lastAttemptAt: '2026-09-28T13:40:00.000Z',
+        importedToday: 0,
+        totalPublications: 18,
+      },
     ]
     vi.stubGlobal('fetch', vi.fn(async () => sourcesResponse(items)))
 
@@ -682,9 +695,16 @@ describe('TriFaros release candidate WEB-11', () => {
 
     const spCard = screen.getByText('São Paulo / SP').closest('.coverage-card')
     expect(spCard).not.toBeNull()
-    await waitFor(() => expect(within(spCard as HTMLElement).getByText('Coleta Em validação')).toBeInTheDocument())
+    await waitFor(() => expect(within(spCard as HTMLElement).getByText('Coleta Indisponível')).toBeInTheDocument())
     expect(within(spCard as HTMLElement).getByText('0')).toBeInTheDocument()
     expect(within(spCard as HTMLElement).getByText('91')).toBeInTheDocument()
+    expect(within(spCard as HTMLElement).getByText(/27\/09\/2026/)).toBeInTheDocument()
+
+    const confazCard = screen.getByText('CONFAZ').closest('.coverage-card')
+    expect(confazCard).not.toBeNull()
+    await waitFor(() => expect(within(confazCard as HTMLElement).getByText('Coleta Em validação')).toBeInTheDocument())
+    expect(within(confazCard as HTMLElement).getByText('18')).toBeInTheDocument()
+    expect(within(confazCard as HTMLElement).getByText(/26\/09\/2026/)).toBeInTheDocument()
   })
 
   it('keeps planned-but-absent Coverage sources as Ainda não consultada after a successful response', async () => {
