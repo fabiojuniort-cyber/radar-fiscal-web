@@ -1057,7 +1057,7 @@ function PasswordField({ label, value, onChange, disabled }: {
   const id = useId()
   return <div className="password-control"><label htmlFor={id}>{label}</label><div className="password-visibility-field">
     <input id={id} type={visible ? 'text' : 'password'} autoComplete="new-password" value={value} onChange={event => onChange(event.target.value)} disabled={disabled} required />
-    <button type="button" disabled={disabled} aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible(current => !current)}>
+    <button type="button" disabled={disabled} title={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible(current => !current)}>
       {visible ? <Eye size={20} strokeWidth={1.9} aria-hidden="true" /> : <EyeOff size={20} strokeWidth={1.9} aria-hidden="true" />}
     </button>
   </div></div>

@@ -24,6 +24,18 @@ function passwords() {
 }
 
 describe('AUTH-RESET UI, synthetic scenarios 1–3', () => {
+  it.each(['/nova-senha', '/nova-senha/'])('cleans query-only tokens on %s without accepting them', path => {
+    vi.stubGlobal('fetch', vi.fn())
+    window.history.replaceState(null, '', path + '?token=' + token)
+    render(<MemoryRouter><PasswordResetPage onLogin={vi.fn()} /></MemoryRouter>)
+    expect(window.location.search).toBe('')
+    expect(window.location.hash).toBe('')
+    expect(document.body.textContent).not.toContain(token)
+    expect(JSON.stringify([localStorage, sessionStorage])).not.toContain(token)
+    expect(screen.getByRole('button', { name: 'Salvar nova senha' })).toBeDisabled()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('submits the forgot modal and gives only the neutral message', async () => {
     const fetcher = vi.fn(async (url: string) => new Response(JSON.stringify(
       url === '/auth/password/forgot' ? { status: 'if_account_exists' } : { items: [] },

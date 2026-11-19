@@ -30,10 +30,11 @@ test('scenario 1: recovery request returns only the neutral message', async ({ p
   expect(requests).toBe(1)
 })
 
-test('scenario 2: opening the link cleans its fragment and does not consume it', async ({ page }) => {
+for (const resetPath of ['/nova-senha', '/nova-senha/']) {
+test('scenario 2: opening ' + resetPath + ' cleans its fragment and does not consume it', async ({ page }) => {
   let resetRequests = 0
   await page.route('**/auth/password/reset', async route => { resetRequests++; await route.fulfill({ status: 204 }) })
-  const response = await page.goto('/nova-senha#token=' + token)
+  const response = await page.goto(resetPath + '#token=' + token)
   expect(response?.status()).toBe(200)
   expect(response?.headers()['referrer-policy']).toBe('no-referrer')
   expect(response?.headers()['cache-control']).toContain('no-store')
@@ -42,12 +43,25 @@ test('scenario 2: opening the link cleans its fragment and does not consume it',
   expect(csp).toContain("connect-src 'self'")
   expect(csp).toContain("frame-ancestors 'none'")
   expect(csp).not.toContain('unsafe-eval')
-  await expect(page).toHaveURL('http://127.0.0.1:4173/nova-senha')
+  await expect(page).toHaveURL('http://127.0.0.1:4173' + resetPath)
   await expect(page.getByRole('heading', { name: 'Nova senha', exact: true })).toBeVisible()
   expect(resetRequests).toBe(0)
   expect(await page.content()).not.toContain(token)
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain(token)
 })
+
+test('query-only token on ' + resetPath + ' is removed without being accepted', async ({ page }) => {
+  let resetRequests = 0
+  await page.route('**/auth/password/reset', async route => { resetRequests++; await route.fulfill({ status: 204 }) })
+  const response = await page.goto(resetPath + '?token=' + token)
+  expect(response?.headers()['cache-control']).toBe('no-store')
+  await expect(page).toHaveURL('http://127.0.0.1:4173' + resetPath)
+  await expect(page.getByRole('button', { name: 'Salvar nova senha' })).toBeDisabled()
+  expect(resetRequests).toBe(0)
+  expect(await page.content()).not.toContain(token)
+  expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain(token)
+})
+}
 
 test('scenario 3: voluntary password reset submits once and returns to login after 204', async ({ page }) => {
   let resets = 0

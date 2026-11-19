@@ -11,6 +11,11 @@ const resetPageHeaders: Plugin = {
       if (/^\/nova-senha\/?$/.test((request.url ?? '').split('?')[0])) {
         response.setHeader('Referrer-Policy', 'no-referrer')
         response.setHeader('Content-Security-Policy', resetCsp)
+        // Keep the route policy when Vite's SPA fallback sets its own cache header.
+        const setHeader = response.setHeader.bind(response)
+        response.setHeader = (name, value) => setHeader(
+          name, name.toLowerCase() === 'cache-control' ? 'no-store' : value,
+        )
         response.setHeader('Cache-Control', 'no-store')
       }
       next()

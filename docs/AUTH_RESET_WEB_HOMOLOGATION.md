@@ -74,7 +74,11 @@ não se declara cenário4 PASS por mocks Web ou pelo CI histórico do315.
 
 ## Gates
 
-PR deve permanecer Draft. Revisão independente, homologação conjunta e condições
+A passagem a Ready foi autorizada para executar a regressão integral no candidato corrigido. Revisão independente, homologação conjunta e condições
 operacionais de ativação da Issue9 continuam pendentes. Sem merge/deploy,
 ativação, envio real, secrets, flags ou operação produtiva. F2 permanece28%(14/50)
 até aceite formal. Nenhum prazo produtivo é criado por este documento.
+
+## Correções da revisão incremental
+
+O preview fixa Cache-Control no-store para as duas formas da rota mesmo quando o fallback SPA tenta aplicar no-cache. A prova deve usar o header real do documento servido. URLs com query sem fragmento são limpas antes do render e seus tokens são recusados. Os campos de senha incluem title coerente com o nome acessível. A matriz browser cobre as duas formas da rota e query-only. A exposição inicial de query ao servidor precede o JavaScript e continua sendo motivo para emitir links apenas com fragmento.

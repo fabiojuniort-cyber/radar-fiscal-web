@@ -5,7 +5,7 @@ let tokenInMemory: string | null = null
 export function capturePasswordResetToken(): string | null {
   if (typeof window === 'undefined' || !/^\/nova-senha\/?$/.test(window.location.pathname)) return null
   const fragment = window.location.hash
-  if (!fragment) return tokenInMemory
+  if (!fragment && !window.location.search) return tokenInMemory
   tokenInMemory = null
   // Remove the fragment (and any unsupported query) before parsing or rendering.
   try {
