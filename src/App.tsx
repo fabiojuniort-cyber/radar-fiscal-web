@@ -49,6 +49,8 @@ import {
 } from './legal-content'
 import { PublicExperience } from './public-experience'
 import { getPasswordChecks, isStrongPassword } from './password'
+import { PasswordResetApiError, confirmPasswordReset, requestPasswordReset } from './password-reset-api'
+import { capturePasswordResetToken, clearPasswordResetToken } from './password-reset-token'
 import {
   SignupApiError,
   registerPublicAccount,
@@ -116,7 +118,9 @@ function App() {
 function AppContent() {
   const location = useLocation()
   const demoAccessEnabled = isDemoAccessEnabled()
-  const [authView, setAuthView] = useState<AuthView | null>(null)
+  const [authView, setAuthView] = useState<AuthView | null>(() =>
+    new URLSearchParams(location.search).get('entrar') === '1' ? 'login' : null,
+  )
   const authReturnFocus = useRef<HTMLElement | null>(null)
   const openAuth: OpenAuth = (view, returnFocus) => {
     authReturnFocus.current = returnFocus
@@ -128,6 +132,11 @@ function AppContent() {
     window.requestAnimationFrame(() => {
       if (target?.isConnected) target.focus()
     })
+  }
+
+  if (/^\/nova-senha\/?$/.test(location.pathname)) {
+    // A fresh document drops the route-specific CSP before the public shell.
+    return <PasswordResetPage onLogin={() => window.location.replace('/?entrar=1')} />
   }
 
   if (location.pathname === DEMO_PATH) {
@@ -959,6 +968,7 @@ function LoginForm({
         {login.isError && <p className="auth-error" role="alert">Não foi possível entrar. Verifique suas credenciais e tente novamente.</p>}
         <button className="btn full" type="submit" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</button>
       </form>
+      <button className="text-button standalone" type="button" onClick={() => onView('forgot')}>Esqueci minha senha</button>
       {demoAccessEnabled && (
         <div className="demo-login-option">
           <div className="demo-login-separator" aria-hidden="true"><span>ou</span></div>
@@ -974,15 +984,148 @@ function LoginForm({
 }
 
 function ForgotPassword({ onView }: { onView: (view: AuthView) => void }) {
+  const [email, setEmail] = useState('')
+  const [pending, setPending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<PasswordResetApiError | null>(null)
+  const [retrySeconds, setRetrySeconds] = useRetryDelay()
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (pending || retrySeconds > 0) return
+    setPending(true)
+    setError(null)
+    try {
+      await requestPasswordReset(email)
+      setEmail('')
+      setSent(true)
+    } catch (cause) {
+      const failure = resetFailure(cause)
+      setError(failure)
+      setRetrySeconds(failure.retryAfterSeconds ?? 0)
+    } finally { setPending(false) }
+  }
   return (
     <>
       <Dialog.Title>Recuperar senha</Dialog.Title>
       <p className="dialog-intro">
-        Para recuperar o acesso, entre em contato pelo canal de suporte da TriFaros.
+        Informe seu e-mail para solicitar instruções de recuperação.
       </p>
+      {sent ? <p className="auth-success" role="status">Se houver uma conta elegível para este e-mail, você receberá as instruções de recuperação.</p> : (
+        <form className="auth-form" onSubmit={submit}>
+          <label>E-mail<input type="email" autoComplete="email" maxLength={320} value={email} onChange={event => setEmail(event.target.value)} required disabled={pending} /></label>
+          {error && <p className="auth-error" role="alert">{resetErrorMessage(error)}</p>}
+          <button className="btn full" type="submit" disabled={pending || retrySeconds > 0}>{pending ? 'Solicitando…' : retrySeconds > 0 ? `Aguarde ${retrySeconds}s` : 'Enviar instruções'}</button>
+        </form>
+      )}
       <p className="auth-switch"><button type="button" onClick={() => onView('login')}>Voltar para Entrar</button></p>
     </>
   )
+}
+
+function resetFailure(cause: unknown): PasswordResetApiError {
+  return cause instanceof PasswordResetApiError ? cause : new PasswordResetApiError('unexpected_error')
+}
+
+function resetErrorMessage(error: PasswordResetApiError): string {
+  switch (error.code) {
+    case 'invalid_request': return 'Revise o e-mail informado e tente novamente.'
+    case 'invalid_token': return 'Este link é inválido, expirou ou já foi usado. Volte para Entrar e solicite uma nova recuperação.'
+    case 'too_many_requests': return 'Muitas tentativas. Aguarde o prazo indicado e tente novamente.'
+    case 'unavailable': return 'A recuperação de senha está temporariamente indisponível. Tente novamente mais tarde.'
+    case 'network_error': return 'Não foi possível concluir a recuperação. Verifique sua conexão e tente novamente.'
+    default: return 'Não foi possível concluir a recuperação agora. Tente novamente.'
+  }
+}
+
+function useRetryDelay(): [number, (seconds: number) => void] {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    if (seconds <= 0) return
+    const timer = window.setTimeout(() => setSeconds(value => Math.max(0, value - 1)), 1000)
+    return () => window.clearTimeout(timer)
+  }, [seconds])
+  return [seconds, setSeconds]
+}
+
+function PasswordField({ label, value, onChange, disabled }: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+}) {
+  const [visible, setVisible] = useState(false)
+  const id = useId()
+  return <div className="password-control"><label htmlFor={id}>{label}</label><div className="password-visibility-field">
+    <input id={id} type={visible ? 'text' : 'password'} autoComplete="new-password" value={value} onChange={event => onChange(event.target.value)} disabled={disabled} required />
+    <button type="button" disabled={disabled} title={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible(current => !current)}>
+      {visible ? <Eye size={20} strokeWidth={1.9} aria-hidden="true" /> : <EyeOff size={20} strokeWidth={1.9} aria-hidden="true" />}
+    </button>
+  </div></div>
+}
+
+export function PasswordResetPage({ onLogin }: { onLogin: () => void }) {
+  const [token, setToken] = useState(capturePasswordResetToken)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<PasswordResetApiError | null>(null)
+  const [retrySeconds, setRetrySeconds] = useRetryDelay()
+  const checks = getPasswordChecks(password)
+  const match = password.length > 0 && password === confirm
+  const valid = Boolean(token) && isStrongPassword(password) && match
+  useEffect(() => () => clearPasswordResetToken(), [])
+  const leave = () => {
+    clearPasswordResetToken()
+    setToken(null)
+    setPassword('')
+    setConfirm('')
+    onLogin()
+  }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!valid || !token || pending || retrySeconds > 0) return
+    setPending(true)
+    setError(null)
+    try {
+      await confirmPasswordReset({ token, password, confirmPassword: confirm })
+      leave()
+    } catch (cause) {
+      const failure = resetFailure(cause)
+      setError(failure)
+      setPassword('')
+      setConfirm('')
+      setRetrySeconds(failure.retryAfterSeconds ?? 0)
+      if (failure.code === 'invalid_token') {
+        clearPasswordResetToken()
+        setToken(null)
+      }
+    } finally { setPending(false) }
+  }
+  return <Dialog.Root open onOpenChange={open => { if (!open && !pending) leave() }}>
+    <Dialog.Portal><Dialog.Overlay className="dialog-overlay" />
+      <Dialog.Content className="dialog-content" aria-describedby={undefined}>
+        <BrandMark compact />
+        <Dialog.Title>Nova senha</Dialog.Title>
+        <p className="dialog-intro">Defina uma nova senha para sua conta.</p>
+        {!token && !error && <p className="auth-error" role="alert">Abra o link de recuperação recebido para definir uma nova senha.</p>}
+        <form className="auth-form" onSubmit={submit}>
+          <PasswordField label="Senha" value={password} onChange={setPassword} disabled={pending || !token} />
+          <PasswordField label="Confirmar senha" value={confirm} onChange={setConfirm} disabled={pending || !token} />
+          <div className="password-rules" aria-label="Requisitos da senha">
+            <PasswordRule ok={checks.minLength} text="Mínimo de 8 caracteres" />
+            <PasswordRule ok={checks.uppercase} text="Uma letra maiúscula" />
+            <PasswordRule ok={checks.lowercase} text="Uma letra minúscula" />
+            <PasswordRule ok={checks.number} text="Um número" />
+            <PasswordRule ok={checks.special} text="Um caractere especial" />
+            <PasswordRule ok={match} text="As senhas coincidem" />
+          </div>
+          {error && <p className="auth-error" role="alert">{resetErrorMessage(error)}</p>}
+          <button className="btn full" type="submit" disabled={!valid || pending || retrySeconds > 0}>{pending ? 'Salvando…' : retrySeconds > 0 ? `Aguarde ${retrySeconds}s` : 'Salvar nova senha'}</button>
+        </form>
+        <p className="auth-switch"><button type="button" disabled={pending} onClick={leave}>Voltar para Entrar</button></p>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 }
 
 function PasswordFlow({
