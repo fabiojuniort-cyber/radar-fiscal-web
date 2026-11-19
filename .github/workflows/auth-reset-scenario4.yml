@@ -1,0 +1,81 @@
+name: AUTH-RESET Web Backend scenario 4 disposable
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/auth-reset-scenario4.yml'
+      - 'ops/auth-reset/scenario4.ts'
+permissions:
+  contents: read
+jobs:
+  scenario4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_DB: radar_fiscal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-synthetic-only
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_ENV: test
+      LOG_LEVEL: silent
+      AUTH_PASSWORD_RESET_ENABLED: 'false'
+      AUTH_PASSWORD_RESET_JANITOR_ENABLED: 'false'
+      AUTH_REFRESH_COOKIE_NAME: radar_refresh_token
+      PUBLIC_API_ALLOWED_ORIGINS: https://127.0.0.1:4173
+      DB_POOL_MAX: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fabiojuniort-cyber/radar-fiscal-backend
+          ref: f4b1ef11865c35570e224d3ea79fcf6301baea98
+          path: backend
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fabiojuniort-cyber/radar-fiscal-web
+          ref: dbf7e8f41ffc672cfb6bfa6bba12f6aef119c6e0
+          path: web
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Confirm immutable candidates and synthetic configuration
+        run: |
+          test "$(git -C backend rev-parse HEAD)" = f4b1ef11865c35570e224d3ea79fcf6301baea98
+          test "$(git -C web rev-parse HEAD)" = dbf7e8f41ffc672cfb6bfa6bba12f6aef119c6e0
+          node --input-type=module <<'JS'
+          import {randomBytes} from 'node:crypto';
+          import {appendFileSync} from 'node:fs';
+          const password=randomBytes(24).toString('hex');
+          const values={DATABASE_ADMIN_URL:'postgresql://postgres:disposable-synthetic-only@localhost:5432/radar_fiscal_test',DATABASE_URL:'postgresql://radar_app_runtime:'+password+'@localhost:5432/radar_fiscal_test',DB_RUNTIME_PASSWORD:password,JWT_ACCESS_SECRET:randomBytes(32).toString('hex')};
+          for(const [name,value] of Object.entries(values)){console.log('::add-mask::'+value);appendFileSync(process.env.GITHUB_ENV,name+'='+value+'\n');}
+          JS
+      - name: Generate local-only TLS fixture
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/scenario4.key" -out "$RUNNER_TEMP/scenario4.crt" -days 1 -subj '/CN=127.0.0.1' >/dev/null 2>&1
+          echo "SCENARIO4_KEY_PATH=$RUNNER_TEMP/scenario4.key" >> "$GITHUB_ENV"
+          echo "SCENARIO4_CERT_PATH=$RUNNER_TEMP/scenario4.crt" >> "$GITHUB_ENV"
+      - name: Install candidate dependencies and compile
+        run: |
+          cd backend && npm ci && npm run build
+          cd ../web && npm ci && npm run build
+      - name: Prepare empty disposable PostgreSQL
+        working-directory: backend
+        run: npm run db:prepare
+      - name: Install isolated Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Six synthetic steps using real Web Fastify PostgreSQL and memory transport
+        working-directory: backend
+        run: |
+          cp ../harness/ops/auth-reset/scenario4.ts test/scenario4.diagnostic.ts
+          npx tsx test/scenario4.diagnostic.ts
