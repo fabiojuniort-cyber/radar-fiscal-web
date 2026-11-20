@@ -22,6 +22,7 @@ const gateway = 'public.platform_admin_set_dou_limits(uuid,jsonb,bigint,uuid,tex
 const role = 'radar_dou_limits_runtime';
 const markers = [];
 let phase = 'setup';
+let check = 'start';
 let app;
 let db;
 let browser;
@@ -92,6 +93,7 @@ try {
   markers.push(phase);
 
   phase = 'admin_access_and_editable_false';
+  check = 'session_and_admin_grant';
   const admin = await openSession();
   await db.query(`INSERT INTO public.platform_user_roles(user_id,role,granted_by) VALUES($1,'PLATFORM_ADMIN','ops-dl-ci')`, [admin.actor]);
   const { page } = admin;
@@ -99,22 +101,28 @@ try {
   const zip = card.getByRole('spinbutton', { name: /Arquivo ZIP INLABS/ });
   const save = card.getByRole('button', { name: 'Salvar limites' });
   await page.goto(origin + pagePath);
-  await expect(page.getByRole('heading', { name: 'Administradores' })).toBeVisible();
+  check = 'exact_admin_heading';
+  await expect(page.getByRole('heading', { name: 'Administradores', exact: true, level: 1 })).toBeVisible();
+  check = 'disabled_limit_controls';
   await expect(zip).toHaveValue('64');
   await expect(zip).toBeDisabled();
   await expect(save).toBeDisabled();
+  check = 'read_only_api_contract';
   const notEditable = await admin.context.request.get(origin + apiPath, { headers: admin.headers });
   assert.equal(notEditable.status(), 200);
   assert.equal((await notEditable.json()).editable, false);
   markers.push(phase);
 
   phase = 'save_config_audit_nonce';
+  check = 'provision_test_gateway';
   execFileSync(process.execPath, ['dist/infrastructure/database/provision-runtime-role.js'], { stdio: 'ignore' });
   await page.reload();
+  check = 'enable_limit_controls';
   await expect(zip).toBeEnabled();
   await zip.fill('32');
   const writeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === apiPath && r.request().method() === 'PUT');
   await save.click();
+  check = 'confirm_actual_write';
   assert.equal((await writeResponse).status(), 200);
   await expect(card.getByRole('status')).toHaveText('Limites salvos para as próximas execuções.');
   await page.reload();
@@ -128,6 +136,7 @@ try {
     return { config, audit, nonces };
   }
   const committed = await readState();
+  check = 'verify_database_effects';
   assert.deepEqual(committed, { config: savedLimits, audit: [{ entity_id: source, before_data: null, after_data: savedLimits }], nonces: 1 });
   markers.push(phase);
 
@@ -143,6 +152,7 @@ try {
   }
 
   phase = 'gateway_failure_real';
+  check = 'reject_without_state_change';
   await db.query(`REVOKE EXECUTE ON FUNCTION ${gateway} FROM ${role}`);
   try { await expectDeniedSave(503, gatewayMessage, '24'); }
   finally { await db.query(`GRANT EXECUTE ON FUNCTION ${gateway} TO ${role}`); }
@@ -153,6 +163,7 @@ try {
     ['invalid_signature_ui_simulated', 503, { error: 'dou_limits_store_not_ready', detail: 'dou_limits_signature_invalid', code: '42501' }, gatewayMessage, '26'],
   ]) {
     phase = caseName;
+    check = 'reject_without_state_change';
     const route = (request) => request.request().method() === 'PUT'
       ? request.fulfill({ status, json: body }) : request.fallback();
     await page.route(origin + apiPath, route);
@@ -164,7 +175,7 @@ try {
   console.log(JSON.stringify({ result: 'PASS', backendSha: process.env.OPS_BACKEND_SHA,
     webSha: process.env.OPS_WEB_SHA, checks: markers }));
 } catch {
-  console.log(JSON.stringify({ result: 'FAIL', phase, completed: markers }));
+  console.log(JSON.stringify({ result: 'FAIL', phase, check, completed: markers }));
   process.exitCode = 1;
 } finally {
   await browser?.close();
