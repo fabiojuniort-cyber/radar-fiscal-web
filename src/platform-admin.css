@@ -271,3 +271,22 @@
     justify-self: start;
   }
 }
+
+
+/* Download limits: separate operational card in the global admin area. */
+.pa-limit-form { display: grid; gap: 18px; margin-top: 18px; }
+.pa-limit-status { display: flex; align-items: flex-start; gap: 10px; padding: 14px; background: #eef6f5; border: 1px solid #c9ded9; border-radius: 12px; color: #245b55; }
+.pa-limit-status p { margin: 0; }
+.pa-limit-status svg { flex-shrink: 0; margin-top: 2px; }
+.pa-limit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.pa-limit-field { display: grid; gap: 7px; font-weight: 650; }
+.pa-limit-label { display: flex; align-items: center; gap: 8px; }
+.pa-limit-field input { min-height: 44px; border: 1px solid #cbd8d5; border-radius: 10px; padding: 0 12px; font: inherit; background: white; width: 100%; }
+.pa-limit-field input:disabled { background: #f1f5f4; color: #556765; cursor: not-allowed; }
+.pa-limit-field small { font-size: 12px; font-weight: 400; color: #667a77; line-height: 1.5; }
+.pa-limit-actions { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.pa-limit-actions button { border: 1px solid #b7ccca; border-radius: 10px; padding: 11px 15px; min-height: 44px; background: white; cursor: pointer; font: inherit; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; }
+.pa-limit-actions button[type="submit"] { background: #155e59; border-color: #155e59; color: white; }
+.pa-limit-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.pa-limit-success { margin: 0; color: #176245; font-weight: 650; }
+@media (max-width: 720px) { .pa-limit-grid { grid-template-columns: minmax(0, 1fr); } }

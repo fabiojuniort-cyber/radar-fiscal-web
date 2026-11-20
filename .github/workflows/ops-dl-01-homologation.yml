@@ -1,0 +1,102 @@
+name: OPS-DL-01 Web and Backend disposable homologation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/ops-dl-01-homologation.yml'
+      - 'ops/ops-dl-01/**'
+      - 'src/dou-download-limits-*'
+      - 'src/platform-admin*'
+permissions:
+  contents: read
+concurrency:
+  group: ops-dl-01-homologation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  paired:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_DB: radar_fiscal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-synthetic-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      OPS_BACKEND_SHA: 57e827a1b79266d45ad83a13fc4fe8f5d3425a55
+      OPS_WEB_SHA: ${{ github.event.pull_request.head.sha }}
+      NODE_ENV: test
+      LOG_LEVEL: silent
+      AUTH_REFRESH_COOKIE_NAME: radar_refresh_token
+      PUBLIC_API_ALLOWED_ORIGINS: https://127.0.0.1:4173
+      DB_POOL_MAX: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: web
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fabiojuniort-cyber/radar-fiscal-backend
+          ref: 57e827a1b79266d45ad83a13fc4fe8f5d3425a55
+          path: backend
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify immutable candidates and generate disposable configuration
+        run: |
+          set -euo pipefail
+          test "$(git -C web rev-parse HEAD)" = "$OPS_WEB_SHA"
+          test "$(git -C backend rev-parse HEAD)" = "$OPS_BACKEND_SHA"
+          node --input-type=module <<'JS'
+          import { randomBytes } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const runtime = randomBytes(32).toString('hex');
+          const ops = randomBytes(32).toString('hex');
+          const settings = {
+            DATABASE_ADMIN_URL: 'postgresql://postgres:disposable-synthetic-only@localhost:5432/radar_fiscal_test',
+            DATABASE_URL: 'postgresql://radar_app_runtime:' + runtime + '@localhost:5432/radar_fiscal_test',
+            DATABASE_DOU_LIMITS_URL: 'postgresql://radar_dou_limits_runtime:' + ops + '@localhost:5432/radar_fiscal_test',
+            DB_RUNTIME_PASSWORD: runtime,
+            DB_DOU_LIMITS_PASSWORD: ops,
+            DOU_LIMITS_SIGNING_SECRET: randomBytes(32).toString('hex'),
+            JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
+          };
+          for (const [name, value] of Object.entries(settings)) {
+            console.log('::add-mask::' + value);
+            appendFileSync(process.env.GITHUB_ENV, name + '=' + value + '\n');
+          }
+          JS
+      - name: Generate local TLS certificate
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/ops-preview.key" \
+            -out "$RUNNER_TEMP/ops-preview.crt" -days 1 -subj '/CN=127.0.0.1' >/dev/null 2>&1
+          echo "OPS_PREVIEW_KEY=$RUNNER_TEMP/ops-preview.key" >> "$GITHUB_ENV"
+          echo "OPS_PREVIEW_CERT=$RUNNER_TEMP/ops-preview.crt" >> "$GITHUB_ENV"
+      - name: Compile exact Backend and prepare empty PostgreSQL with gateway initially disabled
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+          env -u DB_DOU_LIMITS_PASSWORD -u DOU_LIMITS_SIGNING_SECRET npm run db:prepare
+      - name: Compile exact Web and install Chromium
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Exercise real Backend and Web preview, with two explicitly simulated UI rejections
+        working-directory: backend
+        run: |
+          cp ../web/ops/ops-dl-01/homologation.mjs test/ops-dl-01-homologation.mjs
+          node test/ops-dl-01-homologation.mjs
