@@ -82,6 +82,16 @@ async function renderDetail(
 }
 
 describe('Texto da legislação com identidade da fonte oficial', () => {
+  it('keeps a single official source link when origins are available', async () => {
+    await renderDetail('confaz')
+    expect(screen.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute(
+      'href',
+      detail('confaz').publication.officialUrl,
+    )
+    expect(screen.queryByRole('heading', { name: 'Origens oficiais' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /confaz confaz/i })).not.toBeInTheDocument()
+  })
+
   it('uses the CONVENIO_ICMS family contract for CONFAZ convênios', async () => {
     const body = await renderDetail('confaz')
     expect(body).toHaveAttribute('data-legal-template', 'CONVENIO_ICMS')
