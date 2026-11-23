@@ -64,10 +64,11 @@ async function renderDetail(
   sourceCode: string,
   effectiveUntil: unknown = null,
   actType = 'CONVÊNIO ICMS',
+  response: unknown = detail(sourceCode, effectiveUntil, actType),
 ) {
   const apiFetch = vi.fn(async (input: RequestInfo | URL) =>
     String(input) === '/api/v1/publications/pub-1'
-      ? json(detail(sourceCode, effectiveUntil, actType))
+      ? json(response)
       : json({ error: 'not_found' }, 404),
   ) as unknown as ProductApiFetch
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -78,10 +79,52 @@ async function renderDetail(
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  if (response !== undefined && (response as { version?: unknown }).version === null) {
+    return await screen.findByText('Nenhum link para a fonte oficial está disponível.')
+  }
   return (await screen.findByText('Publicado no DOU de 06.11.97.')).closest('.publication-preserved-html')
 }
 
 describe('Texto da legislação com identidade da fonte oficial', () => {
+  it('keeps a single official source link when origins are available', async () => {
+    await renderDetail('confaz')
+    expect(screen.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute(
+      'href',
+      detail('confaz').publication.officialUrl,
+    )
+    expect(screen.queryByRole('heading', { name: 'Origens oficiais' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /confaz confaz/i })).not.toBeInTheDocument()
+  })
+
+  it.each([{ sourceCodes: ['dou'] }, { sourceCodes: ['rfb', 'dou'] }])('falls back to the first official origin ($sourceCodes)', async ({ sourceCodes }) => {
+    const fixture = detail(sourceCodes[0]!)
+    const origins = sourceCodes.map((sourceCode) => ({
+      ...fixture.origins[0],
+      sourceCode,
+      sourceName: sourceCode.toUpperCase(),
+      officialUrl: `https://example.gov.br/${sourceCode}/ato`,
+    }))
+    await renderDetail(sourceCodes[0]!, null, 'CONVÊNIO ICMS', {
+      ...fixture,
+      publication: { ...fixture.publication, officialUrl: null },
+      origins,
+    })
+    expect(screen.getByRole('link', { name: 'Abrir fonte oficial' })).toHaveAttribute('href', origins[0]!.officialUrl)
+    expect(screen.queryByRole('heading', { name: 'Origens oficiais' })).not.toBeInTheDocument()
+  })
+
+  it('omits the source link and button instruction when no source URL is available', async () => {
+    const fixture = detail('dou')
+    await renderDetail('dou', null, 'CONVÊNIO ICMS', {
+      ...fixture,
+      publication: { ...fixture.publication, officialUrl: null },
+      version: null,
+      origins: [],
+    })
+    expect(screen.queryByRole('link', { name: 'Abrir fonte oficial' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Use “Abrir fonte oficial”/)).not.toBeInTheDocument()
+  })
+
   it('uses the CONVENIO_ICMS family contract for CONFAZ convênios', async () => {
     const body = await renderDetail('confaz')
     expect(body).toHaveAttribute('data-legal-template', 'CONVENIO_ICMS')
