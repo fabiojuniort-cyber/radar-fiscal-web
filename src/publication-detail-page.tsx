@@ -207,7 +207,9 @@ export function PublicationDetailPage({
   const {
     publication,
     version,
+    origins,
   } = detailQuery.data
+  const officialUrl = publication.officialUrl ?? origins[0]?.officialUrl
 
   const displayHtml = legalPresentation?.html ?? null
 
@@ -327,9 +329,9 @@ export function PublicationDetailPage({
           )}
 
           <div className="publication-document-actions">
-            {publication.officialUrl && (
+            {officialUrl && (
               <a
-                href={publication.officialUrl}
+                href={officialUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="publication-official-button"
@@ -406,7 +408,9 @@ export function PublicationDetailPage({
                 Conteúdo integral ainda não armazenado
               </strong>
               <p>
-                Use “Abrir fonte oficial” para consultar o documento na origem.
+                {officialUrl
+                  ? 'Use “Abrir fonte oficial” para consultar o documento na origem.'
+                  : 'Nenhum link para a fonte oficial está disponível.'}
               </p>
             </div>
           )}
