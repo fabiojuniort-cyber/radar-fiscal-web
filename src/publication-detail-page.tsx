@@ -207,7 +207,6 @@ export function PublicationDetailPage({
   const {
     publication,
     version,
-    origins,
   } = detailQuery.data
 
   const displayHtml = legalPresentation?.html ?? null
@@ -460,34 +459,6 @@ export function PublicationDetailPage({
           publicationId={publicationId}
         />
 
-        {origins.length > 0 && (
-          <section className="publication-origins-card">
-            <h2>Origens oficiais</h2>
-            <div className="publication-origin-list">
-              {origins.map((origin) => (
-                <a
-                  key={
-                    origin.sourceCode +
-                    origin.officialUrl
-                  }
-                  href={origin.officialUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>
-                    <strong>
-                      {origin.sourceName}
-                    </strong>
-                    <small>
-                      {origin.sourceCode}
-                    </small>
-                  </span>
-                  <ExternalLink size={16} />
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
       </main>
     </div>
   )
