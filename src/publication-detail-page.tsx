@@ -209,6 +209,7 @@ export function PublicationDetailPage({
     version,
     origins,
   } = detailQuery.data
+  const officialUrl = publication.officialUrl ?? origins[0]?.officialUrl
 
   const displayHtml = legalPresentation?.html ?? null
 
@@ -328,9 +329,9 @@ export function PublicationDetailPage({
           )}
 
           <div className="publication-document-actions">
-            {publication.officialUrl && (
+            {officialUrl && (
               <a
-                href={publication.officialUrl}
+                href={officialUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="publication-official-button"
@@ -407,7 +408,9 @@ export function PublicationDetailPage({
                 Conteúdo integral ainda não armazenado
               </strong>
               <p>
-                Use “Abrir fonte oficial” para consultar o documento na origem.
+                {officialUrl
+                  ? 'Use “Abrir fonte oficial” para consultar o documento na origem.'
+                  : 'Nenhum link para a fonte oficial está disponível.'}
               </p>
             </div>
           )}
@@ -460,34 +463,6 @@ export function PublicationDetailPage({
           publicationId={publicationId}
         />
 
-        {origins.length > 0 && (
-          <section className="publication-origins-card">
-            <h2>Origens oficiais</h2>
-            <div className="publication-origin-list">
-              {origins.map((origin) => (
-                <a
-                  key={
-                    origin.sourceCode +
-                    origin.officialUrl
-                  }
-                  href={origin.officialUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>
-                    <strong>
-                      {origin.sourceName}
-                    </strong>
-                    <small>
-                      {origin.sourceCode}
-                    </small>
-                  </span>
-                  <ExternalLink size={16} />
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
       </main>
     </div>
   )

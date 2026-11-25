@@ -30,7 +30,7 @@ jobs:
           --health-timeout 5s
           --health-retries 15
     env:
-      OPS_BACKEND_SHA: 57e827a1b79266d45ad83a13fc4fe8f5d3425a55
+      OPS_BACKEND_SHA: f37ceaef8480df086a36a90f958b13f3da828683
       OPS_WEB_SHA: ${{ github.event.pull_request.head.sha }}
       NODE_ENV: test
       LOG_LEVEL: silent
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: fabiojuniort-cyber/radar-fiscal-backend
-          ref: 57e827a1b79266d45ad83a13fc4fe8f5d3425a55
+          ref: f37ceaef8480df086a36a90f958b13f3da828683
           path: backend
           persist-credentials: false
       - uses: actions/setup-node@v4
