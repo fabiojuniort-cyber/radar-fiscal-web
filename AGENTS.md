@@ -151,3 +151,19 @@ ou CNPJ da auditoria/onboarding. Empresa excluída exige evidência COMPANY_PURG
 no mesmo tenant. Erro HTTP/consulta ou ausência sem evidência = Indisponível.
 O deploy e o backfill produtivo têm autorizações separadas; a exclusão fica
 temporariamente indisponível enquanto houver legado pendente.
+
+## Regra de produto: tags nos atos vêm só da Taxonomia TriBusca
+
+Decisão do proprietário (25/11/2026, tribusca-control#124). Vale para todos os repositórios.
+
+- Uma tag só pode ser atribuída a um ato se vier da **Taxonomia TriBusca publicada** (release `PUBLISHED`):
+  - termos e sinônimos dos conceitos da release;
+  - códigos oficiais (NCM, cClassTrib) ligados aos produtos e grupos da release;
+  - segmentos derivados pelas ligações da própria release (produto/grupo → CNAE/segmento).
+- A curadoria manual só pode adicionar ou remover **conceitos da release**. Nunca tags livres.
+- É **proibido** criar, filtrar ou derivar tags por regra fixa no código (regex, listas de palavras, prefixos ou atalhos) fora dos dados da taxonomia.
+  - Erro de classificação se corrige **nos dados da taxonomia** (curadoria e nova release), não no código.
+- Toda mudança que altere quais tags aparecem nos atos (motor de classificação, projeção, curadoria, release) é **decisão do proprietário**.
+  - Exige a aprovação explícita dele, mesmo com revisão independente APTA.
+  - A autorização permanente de merges **não** cobre esse tipo de mudança.
+- O frontend apenas exibe as tags que a API devolve. Ele não cria, não infere e não filtra tags por conta própria.
